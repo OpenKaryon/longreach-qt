@@ -1,0 +1,51 @@
+# Line-ending policy
+#
+# Everything in this repository is consumed inside Linux build containers:
+# Dockerfiles, the Makefile, shell fragments in RUN steps and the patches fed
+# to `git apply`. A stray CR in any of them is a build failure, not a cosmetic
+# problem -- `\r` ends up in shell commands and patch context lines alike.
+#
+# So: store text as LF in the repository and check it out as LF on every
+# platform, including Windows. Do not rely on core.autocrlf, which is a
+# per-clone setting and differs between machines; these rules travel with the
+# repository and win over it.
+* text=auto eol=lf
+
+# Spelled out for the files where a CRLF would bite hardest. These are already
+# covered by the rule above -- they are listed to make the intent explicit.
+Dockerfile.*    text eol=lf
+docker/**/Dockerfile text eol=lf
+Makefile        text eol=lf
+# Unified-diff context uses a single space on otherwise empty lines.
+*.patch         text eol=lf whitespace=-blank-at-eol
+*.diff          text eol=lf whitespace=-blank-at-eol
+*.sh            text eol=lf
+
+# Windows-native scripts, should any be added later, need real CRLF to run.
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# Binary artefacts: never normalize, never diff as text. Nothing here matches
+# today, but downloaded archives and build output must stay untouched if they
+# ever land in a working tree.
+*.7z            binary
+*.xz            binary
+*.gz            binary
+*.bz2           binary
+*.tar           binary
+*.png           binary
+*.jpg           binary
+*.ico           binary
+*.pdf           binary
+*.so            binary
+*.a             binary
+*.o             binary
+*.dll           binary
+*.exe           binary
+
+# Runtime evidence is stored byte for byte: reports record SHA-256 values of
+# these files as captured, including Windows line endings.
+artifacts/runtime-win7/** -text
+artifacts/runtime-linux-forward/** -text
+artifacts/runtime-jaguar/** -text

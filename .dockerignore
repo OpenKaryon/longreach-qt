@@ -1,0 +1,45 @@
+# Everything in this directory is sent to the Docker daemon before a build can
+# start, once per `docker build`. Only a few things actually need to travel:
+# the selected Dockerfile under docker/, the Qt source archive, the macOS SDK
+# tarball, and the small directories the Dockerfiles COPY (patches/, scripts/,
+# tests/). Without this file the working directory went too - which meant the
+# scratch downloads in tmp/ (a 1.4 GB SDK zip, at one point), the multi-megabyte
+# build logs and the whole .git history were shipped over and thrown away on
+# every single build.
+#
+# Note that build *arguments* are what pick the SDK, so the tarball cannot be
+# listed here - see docker/macos/*/Dockerfile.
+
+.git
+.gitignore
+tmp/
+artifacts/
+build/
+references/
+*.log
+README.md
+CHANGELOG.md
+docs/
+
+# The Qt 6 examples are bind-mounted into an already-built image at run time
+# (see the qt6-*-examples targets), never COPYed during a build, so they have
+# no reason to travel with the context. cmake/ is not listed: the Qt 6
+# Dockerfiles do COPY the toolchain files out of it.
+examples/
+
+# The same tarballs at the top level, from before downloads/ existed. Nothing
+# reads them any more, but a working copy that predates the move still has them,
+# and leaving them in the context doubles what is sent for no purpose. The
+# leading slash matters: it pins these to the root, so downloads/ is untouched.
+/qt-everywhere-*.tar.xz
+/MacOSX*.sdk.tar.*
+
+# Operating-system media for the test VMs (Jaguar, Lion). The VM scripts use
+# them from the host; no Dockerfile COPYs them, and at several GB they would
+# otherwise travel with the context of every build.
+downloads/jaguar/
+downloads/lion/
+
+# Local test material and backup archives: no Dockerfile COPYs them.
+lab/
+/*.zip

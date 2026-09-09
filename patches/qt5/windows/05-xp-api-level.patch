@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: target the Windows XP API level.
+#
+# Builds the tree against the XP API surface (_WIN32_WINNT/WINVER=0x0501) for the
+# MinGW cross build. This is the switch that turns the XP backport on; the other
+# patches in this directory then guard each Vista+/Win7+ API that this exposes.
+#
+# Note: the qmake 'mingw' scope IS active in the cross build, so WINVER comes from
+# qt_build_config.prf.
+#
+# Changes:
+#   qtbase/mkspecs/features/qt_build_config.prf
+#       set WINVER/_WIN32_WINNT to 0x0501
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/mkspecs/features/qt_build_config.prf b/qtbase/mkspecs/features/qt_build_config.prf
+index 511b158b9..ddb399c53 100644
+--- a/qtbase/mkspecs/features/qt_build_config.prf
++++ b/qtbase/mkspecs/features/qt_build_config.prf
+@@ -112,7 +112,11 @@ unix: CONFIG += explicitlib
+ macos: CONFIG += testcase_no_bundle
+ 
+ # Override MinGW's definition in _mingw.h
+-mingw: DEFINES += WINVER=0x0601 _WIN32_WINNT=0x0601
++# XP backport: target Windows XP (0x0501) instead of Windows 7 (0x0601). This is
++# the single global switch that makes the whole tree compile against the XP API
++# level; APIs newer than XP that Qt calls unconditionally then fail to compile and
++# are handled by the other xp- patches in patches/qt5/windows/ (GetTickCount64, CancelIoEx, ...).
++mingw: DEFINES += WINVER=0x0501 _WIN32_WINNT=0x0501
+ 
+ # By default, the following features should not be used in Qt's own
+ # implementation, so declare them invisible to Qt modules.

@@ -78,6 +78,10 @@ build-$(1)-examples:
 	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags "$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE)),--force,)
 endef
 
+# A bare `make` fetches the Qt 5 source archive.
+.DEFAULT_GOAL := download-qt5
+
+include $(PROJECT_DIR)mk/qt5.mk
 
 .PHONY: download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
 

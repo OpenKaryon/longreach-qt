@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows (all builds): replace C++17 std::size() with a portable array length.
+#
+# qlocale_win.cpp uses std::size(buf) from C++17 <iterator>, which fails on the
+# toolchains used here: gcc 5.3 (Ubuntu 16.04) has no std::size at all, and even
+# gcc 7.3 fails because this translation unit does not include <iterator>.
+# Replace it with a portable sizeof-based length.
+#
+# Not XP-specific: this is a toolchain-level fix needed by every Windows build.
+#
+# Changes:
+#   qtbase/src/corelib/text/qlocale_win.cpp
+#       use sizeof(a)/sizeof(a[0])
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/corelib/text/qlocale_win.cpp b/qtbase/src/corelib/text/qlocale_win.cpp
+index 9d9cefecb..83d96507d 100644
+--- a/qtbase/src/corelib/text/qlocale_win.cpp
++++ b/qtbase/src/corelib/text/qlocale_win.cpp
+@@ -495,7 +495,10 @@ QVariant QSystemLocalePrivate::toString(QTime time, QLocale::FormatType type)
+     auto formatStr = reinterpret_cast<const wchar_t *>(format.isEmpty() ? nullptr : format.utf16());
+ 
+     wchar_t buf[255];
+-    if (getTimeFormat(flags, &st, formatStr, buf, int(std::size(buf)))) {
++    // std::size() is C++17 <iterator>; use a portable array-length expression so
++    // this compiles on older toolchains (gcc 5.3) targeting XP/Win7. buf is a
++    // fixed C array, so sizeof division is exact.
++    if (getTimeFormat(flags, &st, formatStr, buf, int(sizeof(buf) / sizeof(buf[0])))) {
+         QString text = QString::fromWCharArray(buf);
+         if (substitution() == SAlways)
+             substituteDigits(text);

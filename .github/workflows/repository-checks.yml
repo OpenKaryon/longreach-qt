@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Python syntax
+        run: >-
+          python3 -c "import ast, pathlib;
+          [ast.parse(p.read_text(encoding='utf-8'), filename=str(p))
+          for p in pathlib.Path('scripts').rglob('*.py')]"
+      - name: Check API coverage inventory
+        run: python3 scripts/tests/check_coverage.py --gate
+      - name: Check license matrix
+        run: |
+          python3 -m json.tool licenses/module-matrix.json > /dev/null
+          python3 scripts/licenses/report.py --qt 4 --json > /dev/null
+          python3 scripts/licenses/report.py --qt 5 --json > /dev/null
+          python3 scripts/licenses/report.py --qt 6 --json > /dev/null
+      - name: Scan for host paths, keys and other leaks
+        run: python3 scripts/audit/repo_scan.py --spdx

@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: Qt Quick Controls 1 static plugin import fix.
+#
+# In the static prefix build, Styles/qmldir was copied over qml/QtQuick/Controls/qmldir,
+# so qmlimportscanner saw QtQuick.Controls.Styles and never added QtQuickControls1Plugin
+# to the application; Controls 1 QML examples then failed to start.
+#
+# Changes:
+#   qtquickcontrols/src/controls/Styles/styles.pri
+#       treat Styles/qmldir as a style resource, not a top-level QML_FILES entry
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtquickcontrols/src/controls/Styles/styles.pri b/qtquickcontrols/src/controls/Styles/styles.pri
+index c29cebfda..67c1ab76c 100644
+--- a/qtquickcontrols/src/controls/Styles/styles.pri
++++ b/qtquickcontrols/src/controls/Styles/styles.pri
+@@ -108,7 +108,6 @@ STYLES_QML_FILES += \
+     $$PWD/Base/images/knob.png \
+     $$PWD/Base/images/needle.png
+ 
+-AUX_QML_FILES += $$PWD/qmldir
+-static: QML_FILES += $$AUX_QML_FILES
++STYLES_QML_FILES += $$PWD/qmldir
+ ios:static: include(iOS/iOS.pri)
+ !qtquickcompiler|static: QML_FILES += $$STYLES_QML_FILES

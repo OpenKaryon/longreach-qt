@@ -1,0 +1,181 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: qtmultimedia DirectShow build and load fixes.
+#
+# EVR and Media Foundation are Vista+; linking them made the plugin unloadable on XP,
+# so the non-EVR DirectShow video path is used there.
+#
+# Changes:
+#   qtmultimedia/src/plugins/directshow/common/directshowobject.h
+#       MinGW refcount type fix
+#   qtmultimedia/src/plugins/directshow/common/directshowsamplegrabber.cpp
+#       MinGW refcount type fix
+#   qtmultimedia/src/plugins/directshow/player/player.pri
+#       do not build the EVR renderer for XP
+#   qtmultimedia/src/plugins/directshow/player/directshowplayerservice.cpp
+#       use the non-EVR renderer path
+#   qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.cpp
+#       use the non-EVR renderer path
+#   qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.h
+#       use the non-EVR renderer path
+#   qtmultimedia/src/plugins/common/evr/evrd3dpresentengine.cpp
+#       guard the Direct3D9Ex (Vista+) entry point
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtmultimedia/src/plugins/common/evr/evrd3dpresentengine.cpp b/qtmultimedia/src/plugins/common/evr/evrd3dpresentengine.cpp
+index 0bf8a0506..ac6faef0a 100644
+--- a/qtmultimedia/src/plugins/common/evr/evrd3dpresentengine.cpp
++++ b/qtmultimedia/src/plugins/common/evr/evrd3dpresentengine.cpp
+@@ -355,7 +355,18 @@ D3DPresentEngine::~D3DPresentEngine()
+ 
+ HRESULT D3DPresentEngine::initializeD3D()
+ {
+-    HRESULT hr = Direct3DCreate9Ex(D3D_SDK_VERSION, &m_D3D9);
++    typedef HRESULT (WINAPI *Direct3DCreate9ExProc)(UINT SDKVersion, IDirect3D9Ex **);
++
++    static HMODULE d3d9Library = LoadLibraryW(L"d3d9.dll");
++    if (!d3d9Library)
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    Direct3DCreate9ExProc direct3DCreate9Ex =
++        reinterpret_cast<Direct3DCreate9ExProc>(GetProcAddress(d3d9Library, "Direct3DCreate9Ex"));
++    if (!direct3DCreate9Ex)
++        return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
++
++    HRESULT hr = direct3DCreate9Ex(D3D_SDK_VERSION, &m_D3D9);
+ 
+     if (SUCCEEDED(hr))
+         hr = DXVA2CreateDirect3DDeviceManager9(&m_deviceResetToken, &m_deviceManager);
+diff --git a/qtmultimedia/src/plugins/directshow/common/directshowobject.h b/qtmultimedia/src/plugins/directshow/common/directshowobject.h
+index 5a8c05a3e..c25b69032 100644
+--- a/qtmultimedia/src/plugins/directshow/common/directshowobject.h
++++ b/qtmultimedia/src/plugins/directshow/common/directshowobject.h
+@@ -45,7 +45,7 @@
+ QT_BEGIN_NAMESPACE
+ 
+ #define COM_REF_MIXIN \
+-    volatile ULONG m_ref = 1;                              \
++    volatile LONG m_ref = 1;                               \
+ public:                                                    \
+     STDMETHODIMP_(ULONG) AddRef() override                 \
+     {                                                      \
+diff --git a/qtmultimedia/src/plugins/directshow/common/directshowsamplegrabber.cpp b/qtmultimedia/src/plugins/directshow/common/directshowsamplegrabber.cpp
+index a9e74f9db..7c9a51019 100644
+--- a/qtmultimedia/src/plugins/directshow/common/directshowsamplegrabber.cpp
++++ b/qtmultimedia/src/plugins/directshow/common/directshowsamplegrabber.cpp
+@@ -110,7 +110,7 @@ public:
+     }
+ 
+ private:
+-    ULONG m_ref;
++    volatile LONG m_ref;
+     DirectShowSampleGrabber *m_grabber;
+ };
+ 
+diff --git a/qtmultimedia/src/plugins/directshow/player/directshowplayerservice.cpp b/qtmultimedia/src/plugins/directshow/player/directshowplayerservice.cpp
+index 3cc42dc21..07e9c9fc6 100644
+--- a/qtmultimedia/src/plugins/directshow/player/directshowplayerservice.cpp
++++ b/qtmultimedia/src/plugins/directshow/player/directshowplayerservice.cpp
+@@ -59,7 +59,7 @@
+ #include "directshowvideoprobecontrol.h"
+ #include "directshowsamplegrabber.h"
+ 
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+ #include "directshowevrvideowindowcontrol.h"
+ #else
+ #include <mmreg.h>
+@@ -192,7 +192,7 @@ QMediaControl *DirectShowPlayerService::requestControl(const char *name)
+         if (!m_videoRendererControl && !m_videoWindowControl) {
+             IBaseFilter *filter{};
+ 
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+             if (!qgetenv("QT_DIRECTSHOW_NO_EVR").toInt()) {
+                 DirectShowEvrVideoWindowControl *evrControl = new DirectShowEvrVideoWindowControl;
+                 if ((filter = evrControl->filter()))
+diff --git a/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.cpp b/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.cpp
+index 0b1f0de2f..b684accd6 100644
+--- a/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.cpp
++++ b/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.cpp
+@@ -42,7 +42,7 @@
+ 
+ #include "videosurfacefilter.h"
+ 
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+ #include "evrcustompresenter.h"
+ #endif
+ 
+@@ -56,7 +56,7 @@ DirectShowVideoRendererControl::DirectShowVideoRendererControl(DirectShowEventLo
+ 
+ DirectShowVideoRendererControl::~DirectShowVideoRendererControl()
+ {
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+     if (m_evrPresenter) {
+         m_evrPresenter->setSurface(nullptr);
+         m_evrPresenter->Release();
+@@ -76,7 +76,7 @@ void DirectShowVideoRendererControl::setSurface(QAbstractVideoSurface *surface)
+     if (m_surface == surface)
+         return;
+ 
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+     if (m_evrPresenter) {
+         m_evrPresenter->setSurface(nullptr);
+         m_evrPresenter->Release();
+@@ -92,7 +92,7 @@ void DirectShowVideoRendererControl::setSurface(QAbstractVideoSurface *surface)
+     m_surface = surface;
+ 
+     if (m_surface) {
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+         if (!qgetenv("QT_DIRECTSHOW_NO_EVR").toInt()) {
+             m_filter = com_new<IBaseFilter>(clsid_EnhancedVideoRenderer);
+             m_evrPresenter = new EVRCustomPresenter(m_surface);
+diff --git a/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.h b/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.h
+index 9326a2748..a3cbb8f61 100644
+--- a/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.h
++++ b/qtmultimedia/src/plugins/directshow/player/directshowvideorenderercontrol.h
+@@ -50,7 +50,7 @@
+ QT_BEGIN_NAMESPACE
+ 
+ class DirectShowEventLoop;
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+ class EVRCustomPresenter;
+ #endif
+ 
+@@ -74,7 +74,7 @@ private:
+     DirectShowEventLoop *m_loop;
+     QAbstractVideoSurface *m_surface = nullptr;
+     IBaseFilter *m_filter = nullptr;
+-#if QT_CONFIG(evr)
++#if QT_CONFIG(evr) && !defined(QT_DIRECTSHOW_NO_EVR)
+     EVRCustomPresenter *m_evrPresenter = nullptr;
+ #endif
+ };
+diff --git a/qtmultimedia/src/plugins/directshow/player/player.pri b/qtmultimedia/src/plugins/directshow/player/player.pri
+index ec1066db7..f06a73a09 100644
+--- a/qtmultimedia/src/plugins/directshow/player/player.pri
++++ b/qtmultimedia/src/plugins/directshow/player/player.pri
+@@ -7,6 +7,8 @@ mingw: LIBS_PRIVATE += -lksuser
+ 
+ qtHaveModule(widgets): QT += widgets
+ 
++mingw: DEFINES += QT_DIRECTSHOW_NO_EVR
++
+ HEADERS += \
+         $$PWD/directshowioreader.h \
+         $$PWD/directshowiosource.h \
+@@ -29,7 +31,7 @@ SOURCES += \
+         $$PWD/directshowmetadatacontrol.cpp \
+         $$PWD/vmr9videowindowcontrol.cpp
+ 
+-qtConfig(evr) {
++qtConfig(evr):!contains(DEFINES, QT_DIRECTSHOW_NO_EVR) {
+     include($$PWD/../../common/evr.pri)
+ 
+     HEADERS += \

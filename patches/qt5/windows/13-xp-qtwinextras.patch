@@ -1,0 +1,359 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: qtwinextras builds and loads without the Win7 shell imports.
+#
+# QtWinExtras wraps Win7 taskbar/shell features. They are resolved dynamically so the
+# module builds and loads on XP; the features are simply unavailable there.
+#
+# Changes:
+#   qtwinextras/src/winextras/qwinfunctions_p.h
+#       declare the dynamically resolved shell/DWM entry points
+#   qtwinextras/src/winextras/qwinfunctions.cpp
+#       resolve DWM dynamically; avoid the secure-CRT HRESULT formatting
+#   qtwinextras/src/winextras/qwinjumplist.cpp
+#       resolve the shell item API dynamically
+#   qtwinextras/src/winextras/qwinthumbnailtoolbar.cpp
+#       resolve the AppUserModelID API dynamically
+#   qtwinextras/examples/winextras/musicplayer/main.cpp
+#       example follows the same dynamic resolution
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtwinextras/examples/winextras/iconextractor/main.cpp b/qtwinextras/examples/winextras/iconextractor/main.cpp
+index 3fafada52..66666d669 100644
+--- a/qtwinextras/examples/winextras/iconextractor/main.cpp
++++ b/qtwinextras/examples/winextras/iconextractor/main.cpp
+@@ -64,7 +64,6 @@
+ #include <iostream>
+ 
+ #include <shellapi.h>
+-#include <comdef.h>
+ #include <commctrl.h>
+ #include <objbase.h>
+ #include <commoncontrols.h>
+@@ -202,10 +201,9 @@ static PixmapEntryList extractShellIcons(const QString &sourceFile, bool addOver
+             ZeroMemory(&info, sizeof(SHFILEINFO));
+             const HRESULT hr = SHGetFileInfo(sourceFileC, 0, &info, sizeof(SHFILEINFO), flags);
+             if (FAILED(hr)) {
+-                _com_error error(hr);
+                 std::wcerr << "SHGetFileInfo() failed for \"" << nativeName << "\", "
+                     << std::hex << std::showbase << flags << std::dec << std::noshowbase
+-                    << " (" << prefix << "): " << error.ErrorMessage() << '\n';
++                    << " (" << prefix << "): " << QtWin::stringFromHresult(hr) << '\n';
+                 continue;
+             }
+ 
+diff --git a/qtwinextras/src/winextras/qwinfunctions.cpp b/qtwinextras/src/winextras/qwinfunctions.cpp
+index 5da05c3c6..1dc6e19ba 100644
+--- a/qtwinextras/src/winextras/qwinfunctions.cpp
++++ b/qtwinextras/src/winextras/qwinfunctions.cpp
+@@ -284,8 +284,27 @@ QRegion QtWin::fromHRGN(HRGN hrgn)
+  */
+ QString QtWin::stringFromHresult(HRESULT hresult)
+ {
++#ifdef Q_CC_MINGW
++    wchar_t *message = nullptr;
++    const DWORD length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER
++                                        | FORMAT_MESSAGE_FROM_SYSTEM
++                                        | FORMAT_MESSAGE_IGNORE_INSERTS,
++                                        nullptr,
++                                        DWORD(hresult),
++                                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
++                                        reinterpret_cast<LPWSTR>(&message),
++                                        0,
++                                        nullptr);
++    if (!length || !message)
++        return QString();
++
++    const QString result = QString::fromWCharArray(message, int(length)).trimmed();
++    LocalFree(message);
++    return result;
++#else
+     _com_error error(hresult);
+     return QString::fromWCharArray(error.ErrorMessage());
++#endif
+ }
+ 
+ /*!
+@@ -1496,7 +1515,7 @@ QColor QtWin::colorizationColor(bool *opaqueBlend)
+ 
+     DWORD colorization = 0;
+     BOOL dummy = false;
+-    DwmGetColorizationColor(&colorization, &dummy);
++    QtDwmApiDll::getColorizationColor(&colorization, &dummy);
+     if (opaqueBlend)
+         *opaqueBlend = dummy;
+     return QColor::fromRgba(colorization);
+@@ -1696,7 +1715,7 @@ void qt_ExtendFrameIntoClientArea(QWindow *window, int left, int top, int right,
+ {
+     QWinEventFilter::setup();
+     MARGINS margins = {left, right, top, bottom};
+-    DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(window->winId()), &margins);
++    QtDwmApiDll::extendFrameIntoClientArea(reinterpret_cast<HWND>(window->winId()), &margins);
+ }
+ 
+ /*! \fn void QtWin::extendFrameIntoClientArea(QWidget *window, int left, int top, int right, int bottom)
+@@ -1816,7 +1835,7 @@ void QtWin::enableBlurBehindWindow(QWindow *window, const QRegion &region)
+             dwmbb.dwFlags |= DWM_BB_BLURREGION;
+         }
+     }
+-    DwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
++    QtDwmApiDll::enableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
+     if (rgn)
+         DeleteObject(rgn);
+ }
+@@ -1865,7 +1884,7 @@ void QtWin::disableBlurBehindWindow(QWindow *window)
+     Q_ASSERT_X(window, Q_FUNC_INFO, "window is null");
+     DWM_BLURBEHIND dwmbb = {0, 0, nullptr, 0};
+     dwmbb.dwFlags = DWM_BB_ENABLE;
+-    DwmEnableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
++    QtDwmApiDll::enableBlurBehindWindow(reinterpret_cast<HWND>(window->winId()), &dwmbb);
+ }
+ 
+ /*!
+@@ -1880,7 +1899,7 @@ bool QtWin::isCompositionEnabled()
+     QWinEventFilter::setup();
+ 
+     BOOL enabled = FALSE;
+-    DwmIsCompositionEnabled(&enabled);
++    QtDwmApiDll::isCompositionEnabled(&enabled);
+     return enabled;
+ }
+ 
+@@ -1902,7 +1921,7 @@ void QtWin::setCompositionEnabled(bool enabled)
+     QWinEventFilter::setup();
+ 
+     UINT compositionEnabled = enabled;
+-    DwmEnableComposition(compositionEnabled);
++    QtDwmApiDll::enableComposition(compositionEnabled);
+ }
+ QT_WARNING_POP
+ 
+@@ -1933,8 +1952,21 @@ bool QtWin::isCompositionOpaque()
+  */
+ void QtWin::setCurrentProcessExplicitAppUserModelID(const QString &id)
+ {
++    typedef HRESULT (WINAPI *SetCurrentProcessExplicitAppUserModelIDType)(PCWSTR);
++    static const SetCurrentProcessExplicitAppUserModelIDType setCurrentProcessExplicitAppUserModelID =
++        []() -> SetCurrentProcessExplicitAppUserModelIDType {
++            HMODULE shell32 = GetModuleHandleW(L"shell32.dll");
++            if (!shell32)
++                shell32 = LoadLibraryW(L"shell32.dll");
++            return shell32 ? reinterpret_cast<SetCurrentProcessExplicitAppUserModelIDType>(
++                                 GetProcAddress(shell32, "SetCurrentProcessExplicitAppUserModelID"))
++                           : nullptr;
++        }();
++    if (!setCurrentProcessExplicitAppUserModelID)
++        return;
++
+     QScopedArrayPointer<wchar_t> wid(qt_qstringToNullTerminated(id));
+-    SetCurrentProcessExplicitAppUserModelID(wid.data());
++    setCurrentProcessExplicitAppUserModelID(wid.data());
+ }
+ 
+ /*!
+diff --git a/qtwinextras/src/winextras/qwinfunctions_p.h b/qtwinextras/src/winextras/qwinfunctions_p.h
+index 0ee73cbb1..cdd9f069f 100644
+--- a/qtwinextras/src/winextras/qwinfunctions_p.h
++++ b/qtwinextras/src/winextras/qwinfunctions_p.h
+@@ -66,9 +66,21 @@ enum qt_DWMWINDOWATTRIBUTE // Not present in MinGW 4.9
+ 
+ namespace QtDwmApiDll
+ {
++    inline HMODULE module();
++    template <class Function> static Function resolve(const char *name);
++
+     template <class T> static T windowAttribute(HWND hwnd, DWORD attribute, T defaultValue);
+     template <class T> static void setWindowAttribute(HWND hwnd, DWORD attribute, T value);
+ 
++    inline HRESULT getColorizationColor(DWORD *colorization, BOOL *opaqueBlend);
++    inline HRESULT extendFrameIntoClientArea(HWND hwnd, const MARGINS *margins);
++    inline HRESULT enableBlurBehindWindow(HWND hwnd, const DWM_BLURBEHIND *blurBehind);
++    inline HRESULT isCompositionEnabled(BOOL *enabled);
++    inline HRESULT enableComposition(UINT enabled);
++    inline HRESULT invalidateIconicBitmaps(HWND hwnd);
++    inline HRESULT setIconicThumbnail(HWND hwnd, HBITMAP bitmap, DWORD flags);
++    inline HRESULT setIconicLivePreviewBitmap(HWND hwnd, HBITMAP bitmap, POINT *offset, DWORD flags);
++
+     inline bool booleanWindowAttribute(HWND hwnd, DWORD attribute)
+         { return QtDwmApiDll::windowAttribute<BOOL>(hwnd, attribute, FALSE) != FALSE; }
+ 
+@@ -81,6 +93,19 @@ inline void qt_qstringToNullTerminated(const QString &src, wchar_t *dst)
+     dst[src.toWCharArray(dst)] = 0;
+ }
+ 
++inline HMODULE QtDwmApiDll::module()
++{
++    static HMODULE module = LoadLibraryW(L"dwmapi.dll");
++    return module;
++}
++
++template <class Function>
++Function QtDwmApiDll::resolve(const char *name)
++{
++    HMODULE dwmapi = module();
++    return dwmapi ? reinterpret_cast<Function>(GetProcAddress(dwmapi, name)) : nullptr;
++}
++
+ inline wchar_t *qt_qstringToNullTerminated(const QString &src)
+ {
+     auto *buffer = new wchar_t[src.length() + 1];
+@@ -91,8 +116,14 @@ inline wchar_t *qt_qstringToNullTerminated(const QString &src)
+ template <class T>
+ T QtDwmApiDll::windowAttribute(HWND hwnd, DWORD attribute, T defaultValue)
+ {
++    typedef HRESULT (WINAPI *DwmGetWindowAttributeFunction)(HWND, DWORD, PVOID, DWORD);
++    const auto dwmGetWindowAttribute =
++        resolve<DwmGetWindowAttributeFunction>("DwmGetWindowAttribute");
++    if (!dwmGetWindowAttribute)
++        return defaultValue;
++
+     T value;
+-    if (FAILED(DwmGetWindowAttribute(hwnd, attribute, &value, sizeof(value))))
++    if (FAILED(dwmGetWindowAttribute(hwnd, attribute, &value, sizeof(value))))
+         value = defaultValue;
+     return value;
+ }
+@@ -100,7 +131,76 @@ T QtDwmApiDll::windowAttribute(HWND hwnd, DWORD attribute, T defaultValue)
+ template <class T>
+ void QtDwmApiDll::setWindowAttribute(HWND hwnd, DWORD attribute, T value)
+ {
+-    DwmSetWindowAttribute(hwnd, attribute, &value, sizeof(value));
++    typedef HRESULT (WINAPI *DwmSetWindowAttributeFunction)(HWND, DWORD, LPCVOID, DWORD);
++    const auto dwmSetWindowAttribute =
++        resolve<DwmSetWindowAttributeFunction>("DwmSetWindowAttribute");
++    if (dwmSetWindowAttribute)
++        dwmSetWindowAttribute(hwnd, attribute, &value, sizeof(value));
++}
++
++inline HRESULT QtDwmApiDll::getColorizationColor(DWORD *colorization, BOOL *opaqueBlend)
++{
++    typedef HRESULT (WINAPI *DwmGetColorizationColorFunction)(DWORD *, BOOL *);
++    const auto dwmGetColorizationColor =
++        resolve<DwmGetColorizationColorFunction>("DwmGetColorizationColor");
++    return dwmGetColorizationColor ? dwmGetColorizationColor(colorization, opaqueBlend) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::extendFrameIntoClientArea(HWND hwnd, const MARGINS *margins)
++{
++    typedef HRESULT (WINAPI *DwmExtendFrameIntoClientAreaFunction)(HWND, const MARGINS *);
++    const auto dwmExtendFrameIntoClientArea =
++        resolve<DwmExtendFrameIntoClientAreaFunction>("DwmExtendFrameIntoClientArea");
++    return dwmExtendFrameIntoClientArea ? dwmExtendFrameIntoClientArea(hwnd, margins) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::enableBlurBehindWindow(HWND hwnd, const DWM_BLURBEHIND *blurBehind)
++{
++    typedef HRESULT (WINAPI *DwmEnableBlurBehindWindowFunction)(HWND, const DWM_BLURBEHIND *);
++    const auto dwmEnableBlurBehindWindow =
++        resolve<DwmEnableBlurBehindWindowFunction>("DwmEnableBlurBehindWindow");
++    return dwmEnableBlurBehindWindow ? dwmEnableBlurBehindWindow(hwnd, blurBehind) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::isCompositionEnabled(BOOL *enabled)
++{
++    typedef HRESULT (WINAPI *DwmIsCompositionEnabledFunction)(BOOL *);
++    const auto dwmIsCompositionEnabled =
++        resolve<DwmIsCompositionEnabledFunction>("DwmIsCompositionEnabled");
++    return dwmIsCompositionEnabled ? dwmIsCompositionEnabled(enabled) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::enableComposition(UINT enabled)
++{
++    typedef HRESULT (WINAPI *DwmEnableCompositionFunction)(UINT);
++    const auto dwmEnableComposition =
++        resolve<DwmEnableCompositionFunction>("DwmEnableComposition");
++    return dwmEnableComposition ? dwmEnableComposition(enabled) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::invalidateIconicBitmaps(HWND hwnd)
++{
++    typedef HRESULT (WINAPI *DwmInvalidateIconicBitmapsFunction)(HWND);
++    const auto dwmInvalidateIconicBitmaps =
++        resolve<DwmInvalidateIconicBitmapsFunction>("DwmInvalidateIconicBitmaps");
++    return dwmInvalidateIconicBitmaps ? dwmInvalidateIconicBitmaps(hwnd) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::setIconicThumbnail(HWND hwnd, HBITMAP bitmap, DWORD flags)
++{
++    typedef HRESULT (WINAPI *DwmSetIconicThumbnailFunction)(HWND, HBITMAP, DWORD);
++    const auto dwmSetIconicThumbnail =
++        resolve<DwmSetIconicThumbnailFunction>("DwmSetIconicThumbnail");
++    return dwmSetIconicThumbnail ? dwmSetIconicThumbnail(hwnd, bitmap, flags) : E_NOTIMPL;
++}
++
++inline HRESULT QtDwmApiDll::setIconicLivePreviewBitmap(HWND hwnd, HBITMAP bitmap, POINT *offset, DWORD flags)
++{
++    typedef HRESULT (WINAPI *DwmSetIconicLivePreviewBitmapFunction)(HWND, HBITMAP, POINT *, DWORD);
++    const auto dwmSetIconicLivePreviewBitmap =
++        resolve<DwmSetIconicLivePreviewBitmapFunction>("DwmSetIconicLivePreviewBitmap");
++    return dwmSetIconicLivePreviewBitmap
++        ? dwmSetIconicLivePreviewBitmap(hwnd, bitmap, offset, flags) : E_NOTIMPL;
+ }
+ 
+ QT_END_NAMESPACE
+diff --git a/qtwinextras/src/winextras/qwinjumplist.cpp b/qtwinextras/src/winextras/qwinjumplist.cpp
+index ea17c9eaf..32a75a665 100644
+--- a/qtwinextras/src/winextras/qwinjumplist.cpp
++++ b/qtwinextras/src/winextras/qwinjumplist.cpp
+@@ -397,9 +397,22 @@ IShellLinkW *QWinJumpListPrivate::toIShellLink(const QWinJumpListItem *item)
+ 
+ IShellItem2 *QWinJumpListPrivate::toIShellItem(const QWinJumpListItem *item)
+ {
++    typedef HRESULT (WINAPI *SHCreateItemFromParsingNameType)(PCWSTR, IBindCtx *, REFIID, void **);
++    static const SHCreateItemFromParsingNameType shCreateItemFromParsingName =
++        []() -> SHCreateItemFromParsingNameType {
++            HMODULE shell32 = GetModuleHandleW(L"shell32.dll");
++            if (!shell32)
++                shell32 = LoadLibraryW(L"shell32.dll");
++            return shell32 ? reinterpret_cast<SHCreateItemFromParsingNameType>(
++                                 GetProcAddress(shell32, "SHCreateItemFromParsingName"))
++                           : nullptr;
++        }();
++    if (!shCreateItemFromParsingName)
++        return nullptr;
++
+     IShellItem2 *shellitem = nullptr;
+     QScopedArrayPointer<wchar_t> buffer(qt_qstringToNullTerminated(item->filePath()));
+-    SHCreateItemFromParsingName(buffer.data(), nullptr, qIID_IShellItem2, reinterpret_cast<void **>(&shellitem));
++    shCreateItemFromParsingName(buffer.data(), nullptr, qIID_IShellItem2, reinterpret_cast<void **>(&shellitem));
+     return shellitem;
+ }
+ 
+diff --git a/qtwinextras/src/winextras/qwinthumbnailtoolbar.cpp b/qtwinextras/src/winextras/qwinthumbnailtoolbar.cpp
+index e3bcc484f..7df8b36f6 100644
+--- a/qtwinextras/src/winextras/qwinthumbnailtoolbar.cpp
++++ b/qtwinextras/src/winextras/qwinthumbnailtoolbar.cpp
+@@ -241,8 +241,8 @@ void QWinThumbnailToolBarPrivate::updateIconicPixmapsEnabled(bool invalidate)
+     const bool enabled = iconicThumbnail || iconicLivePreview;
+     q->setIconicPixmapNotificationsEnabled(enabled);
+     if (enabled && invalidate) {
+-        const HRESULT hr = DwmInvalidateIconicBitmaps(hwnd);
+-        if (FAILED(hr))
++        const HRESULT hr = QtDwmApiDll::invalidateIconicBitmaps(hwnd);
++        if (FAILED(hr) && hr != E_NOTIMPL)
+             qWarning() << QWinThumbnailToolBarPrivate::msgComFailed("DwmInvalidateIconicBitmaps", hr);
+     }
+ }
+@@ -391,8 +391,8 @@ inline void QWinThumbnailToolBarPrivate::updateIconicThumbnail(const MSG *messag
+         return;
+     const QSize maxSize(HIWORD(message->lParam), LOWORD(message->lParam));
+     if (const HBITMAP bitmap = iconicThumbnail.bitmap(maxSize)) {
+-        const HRESULT hr = DwmSetIconicThumbnail(message->hwnd, bitmap, dWM_SIT_DISPLAYFRAME);
+-        if (FAILED(hr))
++        const HRESULT hr = QtDwmApiDll::setIconicThumbnail(message->hwnd, bitmap, dWM_SIT_DISPLAYFRAME);
++        if (FAILED(hr) && hr != E_NOTIMPL)
+             qWarning() << QWinThumbnailToolBarPrivate::msgComFailed("DwmSetIconicThumbnail", hr);
+     }
+ }
+@@ -406,8 +406,8 @@ inline void QWinThumbnailToolBarPrivate::updateIconicLivePreview(const MSG *mess
+     const QSize maxSize(rect.right, rect.bottom);
+     POINT offset = {0, 0};
+     if (const HBITMAP bitmap = iconicLivePreview.bitmap(maxSize)) {
+-        const HRESULT hr = DwmSetIconicLivePreviewBitmap(message->hwnd, bitmap, &offset, dWM_SIT_DISPLAYFRAME);
+-        if (FAILED(hr))
++        const HRESULT hr = QtDwmApiDll::setIconicLivePreviewBitmap(message->hwnd, bitmap, &offset, dWM_SIT_DISPLAYFRAME);
++        if (FAILED(hr) && hr != E_NOTIMPL)
+             qWarning() << QWinThumbnailToolBarPrivate::msgComFailed("DwmSetIconicLivePreviewBitmap", hr);
+     }
+ }

@@ -1,0 +1,12 @@
+# The applications every Qt 4, 5 and 6 target builds from tests/, one per
+# directory of the same name. The build scripts fail when the set they produce
+# differs from this list.
+qt-selftest
+widgets-gallery
+graphics-gallery
+painting-lab
+multimedia-lab
+gl-heavy-gallery
+quick-qml-gallery
+network-gui
+smoke-runner

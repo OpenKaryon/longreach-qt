@@ -1,0 +1,139 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: QtNetwork interface enumeration without the Vista+ LUID APIs.
+#
+# The bearer plugin fix matters for loading, not just compiling: qgenericengine is
+# linked into every QtNetwork application, so its ConvertInterfaceNameToLuidW import
+# alone prevented any networking app from starting on XP.
+#
+# Changes:
+#   qtbase/src/network/kernel/qnetworkinterface_win.cpp
+#       ConvertInterface*/NET_LUID and OnLinkPrefixLength are Vista+: use the numeric
+#       interface index as the name and skip the prefix length
+#   qtbase/src/plugins/bearer/generic/qgenericengine.cpp
+#       resolve ConvertInterfaceNameToLuidW dynamically; report BearerUnknown on XP
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/network/kernel/qnetworkinterface_win.cpp b/qtbase/src/network/kernel/qnetworkinterface_win.cpp
+index a8d56a9b1..88894d7f8 100644
+--- a/qtbase/src/network/kernel/qnetworkinterface_win.cpp
++++ b/qtbase/src/network/kernel/qnetworkinterface_win.cpp
+@@ -90,16 +90,29 @@ static QHostAddress addressFromSockaddr(sockaddr *sa)
+ 
+ uint QNetworkInterfaceManager::interfaceIndexFromName(const QString &name)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: the ConvertInterface*/NET_LUID APIs are Vista+. On XP the
++    // interface "name" is its numeric index (see interfaceNameFromIndex), so
++    // parse it back to an index.
++    bool ok = false;
++    const uint id = name.toUInt(&ok);
++    return ok ? id : 0u;
++#else
+     NET_IFINDEX id;
+     NET_LUID luid;
+     if (ConvertInterfaceNameToLuidW(reinterpret_cast<const wchar_t *>(name.constData()), &luid) == NO_ERROR
+             && ConvertInterfaceLuidToIndex(&luid, &id) == NO_ERROR)
+         return uint(id);
+     return 0;
++#endif
+ }
+ 
+ QString QNetworkInterfaceManager::interfaceNameFromIndex(uint index)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: no LUID-to-name API on XP; use the numeric index as the name.
++    return QString::number(index);
++#else
+     NET_LUID luid;
+     if (ConvertInterfaceIndexToLuid(index, &luid) == NO_ERROR) {
+         WCHAR buf[IF_MAX_STRING_SIZE + 1];
+@@ -107,6 +120,7 @@ QString QNetworkInterfaceManager::interfaceNameFromIndex(uint index)
+             return QString::fromWCharArray(buf);
+     }
+     return QString::number(index);
++#endif
+ }
+ 
+ static QList<QNetworkInterfacePrivate *> interfaceListing()
+@@ -140,8 +154,10 @@ static QList<QNetworkInterfacePrivate *> interfaceListing()
+         // the structure grows over time, so let's make sure the fields
+         // introduced in Windows Vista are present (Luid is the furthest
+         // field we access from IP_ADAPTER_ADDRESSES_LH)
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+         Q_ASSERT(ptr->Length >= offsetof(IP_ADAPTER_ADDRESSES, Luid));
+         Q_ASSERT(ptr->Length >= offsetof(IP_ADAPTER_ADDRESSES, Ipv6IfIndex));
++#endif
+ 
+         QNetworkInterfacePrivate *iface = new QNetworkInterfacePrivate;
+         interfaces << iface;
+@@ -202,9 +218,13 @@ static QList<QNetworkInterfacePrivate *> interfaceListing()
+ 
+         // use ConvertInterfaceLuidToNameW because that returns a friendlier name, though not
+         // as "friendly" as FriendlyName below
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
++        // XP backport: ConvertInterfaceLuidToNameW and IP_ADAPTER_ADDRESSES::Luid
++        // are Vista+. On XP the name falls back to AdapterName (set below).
+         WCHAR buf[IF_MAX_STRING_SIZE + 1];
+         if (ConvertInterfaceLuidToNameW(&ptr->Luid, buf, sizeof(buf)/sizeof(buf[0])) == NO_ERROR)
+             iface->name = QString::fromWCharArray(buf);
++#endif
+         if (iface->name.isEmpty())
+             iface->name = QString::fromLocal8Bit(ptr->AdapterName);
+ 
+@@ -215,7 +235,9 @@ static QList<QNetworkInterfacePrivate *> interfaceListing()
+ 
+         // parse the IP (unicast) addresses
+         for (PIP_ADAPTER_UNICAST_ADDRESS addr = ptr->FirstUnicastAddress; addr; addr = addr->Next) {
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+             Q_ASSERT(addr->Length >= offsetof(IP_ADAPTER_UNICAST_ADDRESS, OnLinkPrefixLength));
++#endif
+ 
+             // skip addresses in invalid state
+             if (addr->DadState == IpDadStateInvalid)
+@@ -223,7 +245,12 @@ static QList<QNetworkInterfacePrivate *> interfaceListing()
+ 
+             QNetworkAddressEntry entry;
+             entry.setIp(addressFromSockaddr(addr->Address.lpSockaddr));
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++            // XP backport: IP_ADAPTER_UNICAST_ADDRESS has no OnLinkPrefixLength field
++            // on XP. Leave the prefix length unset; the IP address itself is still set.
++#else
+             entry.setPrefixLength(addr->OnLinkPrefixLength);
++#endif
+ 
+             auto toDeadline = [](ULONG lifetime) -> QDeadlineTimer {
+                 if (lifetime == 0xffffffffUL)
+diff --git a/qtbase/src/plugins/bearer/generic/qgenericengine.cpp b/qtbase/src/plugins/bearer/generic/qgenericengine.cpp
+index b1f28849a..f8578b976 100644
+--- a/qtbase/src/plugins/bearer/generic/qgenericengine.cpp
++++ b/qtbase/src/plugins/bearer/generic/qgenericengine.cpp
+@@ -54,6 +54,12 @@
+ #include <QtCore/private/qcoreapplication_p.h>
+ 
+ #if defined(Q_OS_WIN32)
++// XP backport: capture the real target API level BEFORE the force-raise below
++// (which would otherwise defeat a _WIN32_WINNT-based guard). Use __MINGW32__
++// (always predefined by the compiler).
++#if defined(__MINGW32__) && (_WIN32_WINNT < 0x0600)
++#  define QT_BEARER_XP_BACKPORT
++#endif
+ // PMIB_TCPTABLE2 is only available since Vista
+ #if _WIN32_WINNT < 0x0601
+ #  undef _WIN32_WINNT
+@@ -95,7 +101,13 @@ QT_BEGIN_NAMESPACE
+ #ifndef QT_NO_NETWORKINTERFACE
+ static QNetworkConfiguration::BearerType qGetInterfaceType(const QString &interface)
+ {
+-#if defined(Q_OS_WIN32)
++#if defined(QT_BEARER_XP_BACKPORT)
++    // XP backport: ConvertInterfaceNameToLuidW() (and NET_LUID) are Vista+ and
++    // absent from XP's iphlpapi.dll, which would prevent any networking app from
++    // loading. The bearer type cannot be determined on XP; report it as unknown.
++    Q_UNUSED(interface);
++    return QNetworkConfiguration::BearerUnknown;
++#elif defined(Q_OS_WIN32)
+     // QNetworkInterface::name returns a more friendly name on Windows. That name is not
+     // accepted as an identifier for CreateFile so we have to obtain the Luid.
+     std::wstring buf = interface.toStdWString();

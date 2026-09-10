@@ -1,0 +1,283 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: QtCore fallbacks for post-XP APIs.
+#
+# Each call is guarded (Q_CC_MINGW && _WIN32_WINNT < 0x0600) so Win7+/MSVC keep the
+# original modern path; only XP takes the fallback. Nothing is removed.
+#
+# Changes:
+#   qtbase/src/corelib/kernel/qelapsedtimer_win.cpp
+#       GetTickCount64 -> runtime-resolve, else GetTickCount
+#   qtbase/src/corelib/io/qwindowspipereader.cpp
+#       CancelIoEx -> runtime-resolve, else CancelIo
+#   qtbase/src/corelib/io/qwindowspipewriter.cpp
+#       CancelIoEx -> runtime-resolve, else CancelIo
+#   qtbase/src/corelib/io/qfilesystemengine_win.cpp
+#       GetFileInformationByHandleEx(FileIdInfo) -> pre-Vista fileId()
+#   qtbase/src/corelib/text/qstring.cpp
+#       CompareStringEx -> CompareStringW (LCID)
+#   qtbase/src/corelib/text/qlocale_win.cpp
+#       GetUserPreferredUILanguages/LOCALE_SSORTLOCALE -> LCID helper
+#   qtbase/src/corelib/global/qlogging.cpp
+#       RaiseFailFastException (Win7+) -> fall through to TerminateProcess
+#   qtbase/src/corelib/global/qglobal.cpp
+#       _wgetenv_s (secure CRT, absent on XP) -> _wgetenv
+#   qtbase/src/corelib/io/qsettings.cpp
+#       SHGetKnownFolderPath -> SHGetFolderPath + CSIDL
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/corelib/global/qglobal.cpp b/qtbase/src/corelib/global/qglobal.cpp
+index 70d7c7239..55c9b6837 100644
+--- a/qtbase/src/corelib/global/qglobal.cpp
++++ b/qtbase/src/corelib/global/qglobal.cpp
+@@ -3545,6 +3545,16 @@ QString qEnvironmentVariable(const char *varName, const QString &defaultValue)
+     QVarLengthArray<wchar_t, 32> wname(int(strlen(varName)) + 1);
+     for (int i = 0; i < wname.size(); ++i) // wname.size() is correct: will copy terminating null
+         wname[i] = uchar(varName[i]);
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: the secure _wgetenv_s() is not present in Windows XP's
++    // msvcrt.dll (it becomes a static import that fails to resolve at load
++    // time). Fall back to the older _wgetenv(), which exists on XP. Access is
++    // already serialized by environmentMutex above, so the static buffer
++    // _wgetenv() returns is safe to read here.
++    if (const wchar_t *value = _wgetenv(wname.data()))
++        return QString::fromWCharArray(value);
++    return defaultValue;
++#else
+     size_t requiredSize = 0;
+     QString buffer;
+     _wgetenv_s(&requiredSize, 0, 0, wname.data());
+@@ -3557,6 +3567,7 @@ QString qEnvironmentVariable(const char *varName, const QString &defaultValue)
+     Q_ASSERT(buffer.endsWith(QLatin1Char('\0')));
+     buffer.chop(1);
+     return buffer;
++#endif
+ #else
+     QByteArray value = qgetenv(varName);
+     if (value.isNull())
+diff --git a/qtbase/src/corelib/global/qlogging.cpp b/qtbase/src/corelib/global/qlogging.cpp
+index 93c4731cc..476dc37cc 100644
+--- a/qtbase/src/corelib/global/qlogging.cpp
++++ b/qtbase/src/corelib/global/qlogging.cpp
+@@ -1914,9 +1914,12 @@ static void qt_message_fatal(QtMsgType, const QMessageLogContext &context, const
+ #  if defined(Q_CC_MSVC) && !defined(Q_CC_INTEL)
+     if (IsProcessorFeaturePresent(PF_FASTFAIL_AVAILABLE))
+         __fastfail(FAST_FAIL_FATAL_APP_EXIT);
+-#  else
++#  elif !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+     RaiseFailFastException(nullptr, nullptr, 0);
+ #  endif
++    // XP backport: RaiseFailFastException() is Win7+ (absent from XP's kernel32,
++    // which would prevent the binary from loading). On XP fall straight through
++    // to the TerminateProcess() fallback below, which is the intended behaviour.
+ 
+     // Fallback
+     TerminateProcess(GetCurrentProcess(), STATUS_FATAL_APP_EXIT);
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_win.cpp b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+index fcbf543fc..ca92e0f84 100644
+--- a/qtbase/src/corelib/io/qfilesystemengine_win.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+@@ -696,7 +696,12 @@ static inline QByteArray fileId(HANDLE handle)
+ // File ID for Windows starting from version 8.
+ QByteArray fileIdWin8(HANDLE handle)
+ {
+-#if !defined(QT_BOOTSTRAPPED) && !defined(QT_BUILD_QMAKE)
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: FileIdInfo / GetFileInformationByHandleEx() are Win8+/Vista+.
++    // Fall back to the pre-Vista file id (GetFileInformationByHandle based), which
++    // is exactly what the Win8 path itself uses as its own fallback below.
++    return fileId(handle);
++#elif !defined(QT_BOOTSTRAPPED) && !defined(QT_BUILD_QMAKE)
+     QByteArray result;
+     FILE_ID_INFO infoEx;
+     if (GetFileInformationByHandleEx(handle,
+diff --git a/qtbase/src/corelib/io/qsettings.cpp b/qtbase/src/corelib/io/qsettings.cpp
+index 5e7e80ee7..babaad511 100644
+--- a/qtbase/src/corelib/io/qsettings.cpp
++++ b/qtbase/src/corelib/io/qsettings.cpp
+@@ -965,11 +965,27 @@ static QString windowsConfigPath(const KNOWNFOLDERID &type)
+ {
+     QString result;
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: SHGetKnownFolderPath()/KNOWNFOLDERID are Vista+. Map the two
++    // folders used here to their pre-Vista CSIDL equivalents and resolve them
++    // with SHGetFolderPath(), which exists on XP.
++    int csidl = -1;
++    if (type == FOLDERID_ProgramData)
++        csidl = CSIDL_COMMON_APPDATA;
++    else if (type == FOLDERID_RoamingAppData)
++        csidl = CSIDL_APPDATA;
++    if (csidl != -1) {
++        wchar_t path[MAX_PATH];
++        if (SHGetFolderPath(nullptr, csidl, nullptr, 0 /* SHGFP_TYPE_CURRENT */, path) == S_OK)
++            result = QString::fromWCharArray(path);
++    }
++#else
+     PWSTR path = nullptr;
+     if (SHGetKnownFolderPath(type, KF_FLAG_DONT_VERIFY, NULL, &path) == S_OK) {
+         result = QString::fromWCharArray(path);
+         CoTaskMemFree(path);
+     }
++#endif
+ 
+     if (result.isEmpty()) {
+         if (type == FOLDERID_ProgramData) {
+diff --git a/qtbase/src/corelib/io/qwindowspipereader.cpp b/qtbase/src/corelib/io/qwindowspipereader.cpp
+index 39e129971..f67a24fd1 100644
+--- a/qtbase/src/corelib/io/qwindowspipereader.cpp
++++ b/qtbase/src/corelib/io/qwindowspipereader.cpp
+@@ -44,6 +44,25 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++// XP backport: CancelIoEx() is Vista+. Resolve it at runtime so Vista+ keeps the
++// original behaviour; on XP fall back to CancelIo(), which cancels the single
++// outstanding overlapped operation on this handle for the current thread.
++static BOOL qt_cancelIoEx(HANDLE handle, LPOVERLAPPED overlapped)
++{
++    typedef BOOL(WINAPI * PtrCancelIoEx)(HANDLE, LPOVERLAPPED);
++    static PtrCancelIoEx ptrCancelIoEx = reinterpret_cast<PtrCancelIoEx>(
++        reinterpret_cast<QFunctionPointer>(
++            GetProcAddress(GetModuleHandleW(L"kernel32"), "CancelIoEx")));
++    if (ptrCancelIoEx)
++        return ptrCancelIoEx(handle, overlapped);
++    return CancelIo(handle);
++}
++#else
++static inline BOOL qt_cancelIoEx(HANDLE handle, LPOVERLAPPED overlapped)
++{ return CancelIoEx(handle, overlapped); }
++#endif
++
+ QWindowsPipeReader::Overlapped::Overlapped(QWindowsPipeReader *reader)
+     : pipeReader(reader)
+ {
+@@ -96,7 +115,7 @@ void QWindowsPipeReader::stop()
+ {
+     stopped = true;
+     if (readSequenceStarted) {
+-        if (!CancelIoEx(handle, &overlapped)) {
++        if (!qt_cancelIoEx(handle, &overlapped)) {
+             const DWORD dwError = GetLastError();
+             if (dwError != ERROR_NOT_FOUND) {
+                 qErrnoWarning(dwError, "QWindowsPipeReader: CancelIoEx on handle %p failed.",
+diff --git a/qtbase/src/corelib/io/qwindowspipewriter.cpp b/qtbase/src/corelib/io/qwindowspipewriter.cpp
+index e374034a0..9c09c1d01 100644
+--- a/qtbase/src/corelib/io/qwindowspipewriter.cpp
++++ b/qtbase/src/corelib/io/qwindowspipewriter.cpp
+@@ -43,6 +43,24 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++// XP backport: CancelIoEx() is Vista+. Resolve at runtime; fall back to CancelIo()
++// on XP (cancels the single outstanding overlapped op on this handle/thread).
++static BOOL qt_cancelIoEx(HANDLE handle, LPOVERLAPPED overlapped)
++{
++    typedef BOOL(WINAPI * PtrCancelIoEx)(HANDLE, LPOVERLAPPED);
++    static PtrCancelIoEx ptrCancelIoEx = reinterpret_cast<PtrCancelIoEx>(
++        reinterpret_cast<QFunctionPointer>(
++            GetProcAddress(GetModuleHandleW(L"kernel32"), "CancelIoEx")));
++    if (ptrCancelIoEx)
++        return ptrCancelIoEx(handle, overlapped);
++    return CancelIo(handle);
++}
++#else
++static inline BOOL qt_cancelIoEx(HANDLE handle, LPOVERLAPPED overlapped)
++{ return CancelIoEx(handle, overlapped); }
++#endif
++
+ QWindowsPipeWriter::Overlapped::Overlapped(QWindowsPipeWriter *pipeWriter)
+     : pipeWriter(pipeWriter)
+ {
+@@ -212,7 +230,7 @@ void QWindowsPipeWriter::stop()
+     bytesWrittenPending = false;
+     pendingBytesWrittenValue = 0;
+     if (writeSequenceStarted) {
+-        if (!CancelIoEx(handle, &overlapped)) {
++        if (!qt_cancelIoEx(handle, &overlapped)) {
+             const DWORD dwError = GetLastError();
+             if (dwError != ERROR_NOT_FOUND) {
+                 qErrnoWarning(dwError, "QWindowsPipeWriter: CancelIoEx on handle %p failed.",
+diff --git a/qtbase/src/corelib/kernel/qelapsedtimer_win.cpp b/qtbase/src/corelib/kernel/qelapsedtimer_win.cpp
+index 8becb1746..aea79c94e 100644
+--- a/qtbase/src/corelib/kernel/qelapsedtimer_win.cpp
++++ b/qtbase/src/corelib/kernel/qelapsedtimer_win.cpp
+@@ -93,7 +93,20 @@ static quint64 getTickCount()
+         return counter.QuadPart;
+     }
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: GetTickCount64() is Vista+. Resolve it at runtime so the fast
++    // path is used on Vista+, and fall back to the 32-bit GetTickCount() on XP.
++    // (This branch only runs when there is no high-resolution QPC, which is rare.)
++    typedef ULONGLONG(WINAPI * PtrGetTickCount64)(void);
++    static PtrGetTickCount64 ptrGetTickCount64 = reinterpret_cast<PtrGetTickCount64>(
++        reinterpret_cast<QFunctionPointer>(
++            GetProcAddress(GetModuleHandleW(L"kernel32"), "GetTickCount64")));
++    if (ptrGetTickCount64)
++        return ptrGetTickCount64();
++    return GetTickCount();
++#else
+     return GetTickCount64();
++#endif
+ }
+ 
+ quint64 qt_msectime()
+diff --git a/qtbase/src/corelib/text/qlocale_win.cpp b/qtbase/src/corelib/text/qlocale_win.cpp
+index 83d96507d..eae1399c1 100644
+--- a/qtbase/src/corelib/text/qlocale_win.cpp
++++ b/qtbase/src/corelib/text/qlocale_win.cpp
+@@ -62,6 +62,15 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++// XP backport: LOCALE_SSORTLOCALE is a Vista+ LCTYPE. Define it so the tree
++// compiles at the XP API level; on XP GetLocaleInfoW() simply fails for this
++// type and collation() degrades to an empty value.
++#  ifndef LOCALE_SSORTLOCALE
++#    define LOCALE_SSORTLOCALE 0x0000007b
++#  endif
++#endif
++
+ #ifndef Q_OS_WINRT
+ static QByteArray getWinLocaleName(LCID id = LOCALE_USER_DEFAULT);
+ static QString winIso639LangName(LCID id = LOCALE_USER_DEFAULT);
+@@ -674,7 +683,15 @@ QVariant QSystemLocalePrivate::uiLanguages()
+ #ifndef Q_OS_WINRT
+     unsigned long cnt = 0;
+     QVarLengthArray<wchar_t, 64> buf(64);
+-#  if !defined(QT_BOOTSTRAPPED) && !defined(QT_BUILD_QMAKE) // Not present in MinGW 4.9/bootstrap builds.
++#  if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: GetUserPreferredUILanguages() is Vista+. Fall back to the
++    // single user-default UI language, resolved via the LCID-based helper.
++    Q_UNUSED(cnt);
++    const QByteArray name = getWinLocaleName(MAKELCID(GetUserDefaultUILanguage(), SORT_DEFAULT));
++    if (!name.isEmpty())
++        return QStringList(QString::fromLatin1(name));
++    return QStringList();
++#  elif !defined(QT_BOOTSTRAPPED) && !defined(QT_BUILD_QMAKE) // Not present in MinGW 4.9/bootstrap builds.
+     unsigned long size = buf.size();
+     if (!GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &cnt, buf.data(), &size)) {
+         size = 0;
+diff --git a/qtbase/src/corelib/text/qstring.cpp b/qtbase/src/corelib/text/qstring.cpp
+index b046e73a6..9610aa2ce 100644
+--- a/qtbase/src/corelib/text/qstring.cpp
++++ b/qtbase/src/corelib/text/qstring.cpp
+@@ -6551,7 +6551,13 @@ int QString::localeAwareCompare_helper(const QChar *data1, int length1,
+     const QString lhs = QString::fromRawData(data1, length1).normalized(QString::NormalizationForm_C);
+     const QString rhs = QString::fromRawData(data2, length2).normalized(QString::NormalizationForm_C);
+ #  if defined(Q_OS_WIN)
++#    if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: CompareStringEx()/LOCALE_NAME_USER_DEFAULT are Vista+. Use the
++    // LCID-based CompareStringW() on XP; it returns the same CSTR_* result codes.
++    int res = CompareStringW(LOCALE_USER_DEFAULT, 0, (LPWSTR)lhs.constData(), lhs.length(), (LPWSTR)rhs.constData(), rhs.length());
++#    else
+     int res = CompareStringEx(LOCALE_NAME_USER_DEFAULT, 0, (LPWSTR)lhs.constData(), lhs.length(), (LPWSTR)rhs.constData(), rhs.length(), NULL, NULL, 0);
++#    endif
+ 
+     switch (res) {
+     case CSTR_LESS_THAN:

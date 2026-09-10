@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: font database fixes for the old toolchain and missing DirectWrite.
+#
+# DirectWrite (dwrite.dll) is Vista+ and is already resolved dynamically by Qt; on XP
+# it is simply absent and the GDI font engine takes over, so the warning about it is
+# expected noise there and is silenced.
+#
+# Changes:
+#   qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontdatabase.cpp
+#       InterlockedIncrement(ULONG*) cast for MinGW; no dwrite.dll warning on XP
+#   qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp
+#       InterlockedIncrement(ULONG*) cast for MinGW
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontdatabase.cpp b/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontdatabase.cpp
+index 9883a72a1..7822a3c67 100644
+--- a/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontdatabase.cpp
++++ b/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontdatabase.cpp
+@@ -80,7 +80,12 @@ static inline DWriteCreateFactoryType resolveDWriteCreateFactory()
+     QSystemLibrary library(QStringLiteral("dwrite"));
+     QFunctionPointer result = library.resolve("DWriteCreateFactory");
+     if (Q_UNLIKELY(!result)) {
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+         qWarning("Unable to load dwrite.dll");
++#endif
++        // XP backport: DirectWrite (dwrite.dll) is Vista+. Its absence on XP is
++        // expected and handled by falling back to the GDI font engine, so don't
++        // emit a scary warning about it there.
+         return nullptr;
+     }
+     return reinterpret_cast<DWriteCreateFactoryType>(result);
+@@ -409,12 +414,12 @@ namespace {
+ 
+     ULONG STDMETHODCALLTYPE DirectWriteFontFileStream::AddRef()
+     {
+-        return InterlockedIncrement(&m_referenceCount);
++        return InterlockedIncrement(reinterpret_cast<volatile LONG *>(&m_referenceCount));
+     }
+ 
+     ULONG STDMETHODCALLTYPE DirectWriteFontFileStream::Release()
+     {
+-        ULONG newCount = InterlockedDecrement(&m_referenceCount);
++        ULONG newCount = InterlockedDecrement(reinterpret_cast<volatile LONG *>(&m_referenceCount));
+         if (newCount == 0)
+             delete this;
+         return newCount;
+@@ -499,12 +504,12 @@ namespace {
+ 
+     ULONG STDMETHODCALLTYPE DirectWriteFontFileLoader::AddRef()
+     {
+-        return InterlockedIncrement(&m_referenceCount);
++        return InterlockedIncrement(reinterpret_cast<volatile LONG *>(&m_referenceCount));
+     }
+ 
+     ULONG STDMETHODCALLTYPE DirectWriteFontFileLoader::Release()
+     {
+-        ULONG newCount = InterlockedDecrement(&m_referenceCount);
++        ULONG newCount = InterlockedDecrement(reinterpret_cast<volatile LONG *>(&m_referenceCount));
+         if (newCount == 0)
+             delete this;
+         return newCount;
+diff --git a/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp b/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp
+index c2cba0140..ce77f1266 100644
+--- a/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp
++++ b/qtbase/src/platformsupport/fontdatabases/windows/qwindowsfontenginedirectwrite.cpp
+@@ -156,12 +156,14 @@ namespace {
+ 
+     IFACEMETHODIMP_(unsigned long) GeometrySink::AddRef()
+     {
+-        return InterlockedIncrement(&m_refCount);
++        // XP backport: MinGW's InterlockedIncrement takes volatile LONG* at the
++        // XP API level; m_refCount is unsigned long. Cast (value semantics identical).
++        return InterlockedIncrement(reinterpret_cast<volatile LONG *>(&m_refCount));
+     }
+ 
+     IFACEMETHODIMP_(unsigned long) GeometrySink::Release()
+     {
+-        unsigned long newCount = InterlockedDecrement(&m_refCount);
++        unsigned long newCount = InterlockedDecrement(reinterpret_cast<volatile LONG *>(&m_refCount));
+         if (newCount == 0)
+         {
+             delete this;

@@ -1,0 +1,159 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: QtWidgets fallbacks for the Vista shell and DWM.
+#
+# QWizard's Aero styling depends on DWM (dwmapi.dll), which does not exist on XP:
+# the DWM calls would also be static imports that stop the binary from loading, so
+# they are compiled out and the wizard uses its classic look there.
+#
+# Changes:
+#   qtbase/src/widgets/dialogs/qfilesystemmodel.cpp
+#       SHCreateItemFromParsingName/IShellItem -> SHGetFileInfo(SHGFI_DISPLAYNAME)
+#   qtbase/src/widgets/dialogs/qwizard_win.cpp
+#       no Aero glow (SetWindowThemeAttribute/DrawThemeTextEx) and no DWM
+#       (DwmIsCompositionEnabled/DwmExtendFrameIntoClientArea/DwmDefWindowProc) on XP
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/widgets/dialogs/qfilesystemmodel.cpp b/qtbase/src/widgets/dialogs/qfilesystemmodel.cpp
+index 8cac500c2..1300f87e5 100644
+--- a/qtbase/src/widgets/dialogs/qfilesystemmodel.cpp
++++ b/qtbase/src/widgets/dialogs/qfilesystemmodel.cpp
+@@ -1787,8 +1787,19 @@ void QFileSystemModelPrivate::_q_directoryChanged(const QString &directory, cons
+ #if defined(Q_OS_WIN) && !defined(Q_OS_WINRT)
+ static QString volumeName(const QString &path)
+ {
+-    IShellItem *item = nullptr;
+     const QString native = QDir::toNativeSeparators(path);
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: SHCreateItemFromParsingName / IShellItem are Vista+. Use the
++    // pre-Vista SHGetFileInfo(SHGFI_DISPLAYNAME) to get the volume display name.
++    SHFILEINFO fi;
++    memset(&fi, 0, sizeof(fi));
++    if (SHGetFileInfo(reinterpret_cast<const wchar_t *>(native.utf16()), 0,
++                      &fi, sizeof(fi), SHGFI_DISPLAYNAME)) {
++        return QString::fromWCharArray(fi.szDisplayName);
++    }
++    return QString();
++#else
++    IShellItem *item = nullptr;
+     HRESULT hr = SHCreateItemFromParsingName(reinterpret_cast<const wchar_t *>(native.utf16()),
+                                              nullptr, IID_IShellItem,
+                                              reinterpret_cast<void **>(&item));
+@@ -1802,6 +1813,7 @@ static QString volumeName(const QString &path)
+     CoTaskMemFree(name);
+     item->Release();
+     return result;
++#endif
+ }
+ #endif // Q_OS_WIN && !Q_OS_WINRT
+ 
+diff --git a/qtbase/src/widgets/dialogs/qwizard_win.cpp b/qtbase/src/widgets/dialogs/qwizard_win.cpp
+index 47ac41a79..933b8490b 100644
+--- a/qtbase/src/widgets/dialogs/qwizard_win.cpp
++++ b/qtbase/src/widgets/dialogs/qwizard_win.cpp
+@@ -186,8 +186,15 @@ void QVistaHelper::updateCustomMargins(bool vistaMargins)
+ 
+ bool QVistaHelper::isCompositionEnabled()
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: the Desktop Window Manager (dwmapi.dll) does not exist on XP,
++    // so there is never Aero composition. Report it disabled; the wizard then
++    // uses the Classic/Basic style (see vistaState()).
++    return false;
++#else
+     BOOL bEnabled;
+     return SUCCEEDED(DwmIsCompositionEnabled(&bEnabled)) && bEnabled;
++#endif
+ }
+ 
+ bool QVistaHelper::isThemeActive()
+@@ -224,6 +231,7 @@ QColor QVistaHelper::basicWindowFrameColor()
+ bool QVistaHelper::setDWMTitleBar(TitleBarChangeType type)
+ {
+     bool value = false;
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+     if (vistaState() == VistaAero) {
+         MARGINS mar = {0, 0, 0, 0};
+         if (type == NormalTitleBar)
+@@ -234,6 +242,11 @@ bool QVistaHelper::setDWMTitleBar(TitleBarChangeType type)
+             if (SUCCEEDED(DwmExtendFrameIntoClientArea(wizardHandle, &mar)))
+                 value = true;
+     }
++#else
++    // XP backport: DwmExtendFrameIntoClientArea() (dwmapi.dll) is Vista+; on XP
++    // there is no Aero frame to extend (vistaState() is never VistaAero).
++    Q_UNUSED(type);
++#endif
+     return value;
+ }
+ 
+@@ -329,6 +342,11 @@ void QVistaHelper::drawTitleBar(QPainter *painter)
+ 
+ void QVistaHelper::setTitleBarIconAndCaptionVisible(bool visible)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: WTA_OPTIONS / SetWindowThemeAttribute are Vista+ (Aero
++    // non-client customization). There is no Aero on XP, so this is a no-op.
++    Q_UNUSED(visible);
++#else
+     WTA_OPTIONS opt;
+     opt.dwFlags = WTNCA_NODRAWICON | WTNCA_NODRAWCAPTION;
+     if (visible)
+@@ -337,6 +355,7 @@ void QVistaHelper::setTitleBarIconAndCaptionVisible(bool visible)
+         opt.dwMask = WTNCA_NODRAWICON | WTNCA_NODRAWCAPTION;
+     if (const HWND handle = wizardHWND())
+         SetWindowThemeAttribute(handle, WTA_NONCLIENT, &opt, sizeof(WTA_OPTIONS));
++#endif
+ }
+ 
+ #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+@@ -345,6 +364,14 @@ bool QVistaHelper::winEvent(MSG* msg, qintptr *result)
+ bool QVistaHelper::winEvent(MSG* msg, long* result)
+ #endif
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: DwmDefWindowProc() (dwmapi.dll) is Vista+. There is no DWM
++    // hit-testing on XP (the wizard never enters the Aero state), so let the
++    // default window procedure handle the message.
++    Q_UNUSED(msg);
++    Q_UNUSED(result);
++    return false;
++#else
+     switch (msg->message) {
+     case WM_NCHITTEST: {
+         LRESULT lResult;
+@@ -376,6 +403,7 @@ bool QVistaHelper::winEvent(MSG* msg, long* result)
+     }
+ 
+     return true;
++#endif // XP backport
+ }
+ 
+ void QVistaHelper::setMouseCursor(QPoint pos)
+@@ -630,16 +658,23 @@ bool QVistaHelper::drawTitleText(QPainter *painter, const QString &text, const Q
+         auto hOldFont = reinterpret_cast<HFONT>(SelectObject(dcMem, (HGDIOBJ) hCaptionFont));
+ 
+         // Draw the text!
++        const UINT uFormat = DT_SINGLELINE|DT_CENTER|DT_VCENTER|DT_NOPREFIX;
++        RECT rctext ={0,0, rectDp.width(), rectDp.height()};
++
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        // XP backport: DrawThemeTextEx / DTTOPTS (composited Aero glow) are Vista+.
++        // Draw the caption text with the plain themed DrawThemeText (no glow) on XP.
++        DrawThemeText(hTheme, dcMem, 0, 0, reinterpret_cast<LPCWSTR>(text.utf16()), -1, uFormat, 0, &rctext);
++#else
+         DTTOPTS dto;
+         memset(&dto, 0, sizeof(dto));
+         dto.dwSize = sizeof(dto);
+-        const UINT uFormat = DT_SINGLELINE|DT_CENTER|DT_VCENTER|DT_NOPREFIX;
+-        RECT rctext ={0,0, rectDp.width(), rectDp.height()};
+ 
+         dto.dwFlags = DTT_COMPOSITED|DTT_GLOWSIZE;
+         dto.iGlowSize = glowSize(wizard);
+ 
+         DrawThemeTextEx(hTheme, dcMem, 0, 0, reinterpret_cast<LPCWSTR>(text.utf16()), -1, uFormat, &rctext, &dto );
++#endif
+         BitBlt(hdc, rectDp.left(), rectDp.top(), rectDp.width(), rectDp.height(), dcMem, 0, 0, SRCCOPY);
+         SelectObject(dcMem, (HGDIOBJ) hOldBmp);
+         SelectObject(dcMem, (HGDIOBJ) hOldFont);

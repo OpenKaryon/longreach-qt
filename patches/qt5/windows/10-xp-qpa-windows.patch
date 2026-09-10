@@ -1,0 +1,813 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP + universal binary: the Windows platform plugin (libqwindows).
+#
+# This is the core of the backport. Where a feature exists on both, the modern path
+# is selected at RUNTIME (by OS version or by resolving the symbol), so one binary
+# runs from Windows XP through Windows 11 without losing anything on modern Windows.
+# Where a feature cannot exist on XP, it is guarded and degrades gracefully.
+#
+# Runtime-selected: file dialog (IFileDialog on Vista+, legacy dialog on XP), touch
+# (Win7 WM_TOUCH resolved dynamically), tray icon (NOTIFYICON v4 on Vista+, legacy v3
+# callbacks on XP), system fonts/DPI (modern path kept on Win11).
+#
+# Changes:
+#   qtbase/src/plugins/platforms/windows/qwindowsdialoghelpers.cpp
+#       compile both dialogs; pick IFileDialog vs legacy at runtime; resolve the Vista
+#       shell functions dynamically
+#   qtbase/src/plugins/platforms/windows/qwindowscontext.h
+#       declare the dynamically resolved Win7 touch functions
+#   qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
+#       resolve the touch functions; skip Vista+ power notifications; keep modern font
+#       metrics on Win11
+#   qtbase/src/plugins/platforms/windows/qwindowsmousehandler.cpp
+#       WM_TOUCH path via the resolved functions; no touch device on XP
+#   qtbase/src/plugins/platforms/windows/qwindowswindow.cpp
+#       touch window registration via the resolved functions; DWM blur/composition/dark
+#       border compiled out on XP
+#   qtbase/src/plugins/platforms/windows/qwindowssystemtrayicon.cpp
+#       legacy v3 tray callbacks on XP (modern v4 kept on Vista+); no
+#       Shell_NotifyIconGetRect/ChangeWindowMessageFilterEx on XP
+#   qtbase/src/plugins/platforms/windows/qwindowstheme.cpp
+#       SHGetStockIconInfo (Vista+) -> shell32 resource / LoadIcon fallback
+#   qtbase/src/plugins/platforms/windows/qwindowsbackingstore.cpp
+#       UpdateLayeredWindowIndirect is unreliable on XP -> classic UpdateLayeredWindow
+#       (fixes shaped/translucent windows)
+#   qtbase/src/plugins/platforms/direct2d/qwindowsdirect2dwindow.cpp
+#       the same for the Direct2D plugin, which only the arm64 toolchain builds
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowsbackingstore.cpp b/qtbase/src/plugins/platforms/windows/qwindowsbackingstore.cpp
+index 4a391eaa5..7e1105cf5 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowsbackingstore.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowsbackingstore.cpp
+@@ -98,11 +98,21 @@ void QWindowsBackingStore::flush(QWindow *window, const QRegion &region,
+         POINT ptDst = {r.x(), r.y()};
+         POINT ptSrc = {0, 0};
+         BLENDFUNCTION blend = {AC_SRC_OVER, 0, BYTE(qRound(255.0 * rw->opacity())), AC_SRC_ALPHA};
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        // XP backport: UpdateLayeredWindowIndirect() is unreliable on Windows XP
++        // (it fails here — notably with a dirty rect — so a shaped/translucent
++        // window never appears). Use the classic UpdateLayeredWindow() (Win2000+),
++        // which reliably updates the whole layered window on XP. (No dirty-rect
++        // optimization, but correctness first.)
++        const BOOL result = UpdateLayeredWindow(rw->handle(), nullptr, &ptDst, &size,
++                                                m_image->hdc(), &ptSrc, 0, &blend, ULW_ALPHA);
++#else
+         RECT dirty = {dirtyRect.x(), dirtyRect.y(),
+                       dirtyRect.x() + dirtyRect.width(), dirtyRect.y() + dirtyRect.height()};
+         UPDATELAYEREDWINDOWINFO info = {sizeof(info), nullptr, &ptDst, &size,
+                                         m_image->hdc(), &ptSrc, 0, &blend, ULW_ALPHA, &dirty};
+         const BOOL result = UpdateLayeredWindowIndirect(rw->handle(), &info);
++#endif
+         if (!result)
+             qErrnoWarning("UpdateLayeredWindowIndirect failed for ptDst=(%d, %d),"
+                           " size=(%dx%d), dirty=(%dx%d %d, %d)", r.x(), r.y(),
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp b/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
+index 3e0059ca9..535e9f1e4 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
+@@ -94,6 +94,14 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++// XP backport: this DWM message constant is Vista+ and absent from XP-level
++// headers. The message is never delivered on XP, but the case label must compile.
++#  ifndef WM_DWMNCRENDERINGCHANGED
++#    define WM_DWMNCRENDERINGCHANGED 0x031F
++#  endif
++#endif
++
+ Q_LOGGING_CATEGORY(lcQpaWindows, "qt.qpa.windows")
+ Q_LOGGING_CATEGORY(lcQpaEvents, "qt.qpa.events")
+ Q_LOGGING_CATEGORY(lcQpaGl, "qt.qpa.gl")
+@@ -198,6 +206,14 @@ void QWindowsUser32DLL::init()
+     getDisplayAutoRotationPreferences = (GetDisplayAutoRotationPreferences)library.resolve("GetDisplayAutoRotationPreferences");
+     setDisplayAutoRotationPreferences = (SetDisplayAutoRotationPreferences)library.resolve("SetDisplayAutoRotationPreferences");
+ 
++    // Windows 7 touch API — resolved dynamically (absent on XP). Enables the
++    // legacy WM_TOUCH path at runtime on Win7 while keeping the binary XP-safe.
++    registerTouchWindow = (RegisterTouchWindow)library.resolve("RegisterTouchWindow");
++    unregisterTouchWindow = (UnregisterTouchWindow)library.resolve("UnregisterTouchWindow");
++    isTouchWindow = (IsTouchWindow)library.resolve("IsTouchWindow");
++    getTouchInputInfo = (GetTouchInputInfo)library.resolve("GetTouchInputInfo");
++    closeTouchInputHandle = (CloseTouchInputHandle)library.resolve("CloseTouchInputHandle");
++
+     if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::Windows8) {
+         enableMouseInPointer = (EnableMouseInPointer)library.resolve("EnableMouseInPointer");
+         getPointerType = (GetPointerType)library.resolve("GetPointerType");
+@@ -272,7 +288,11 @@ struct QWindowsContextPrivate {
+     const HRESULT m_oleInitializeResult;
+     QWindow *m_lastActiveWindow = nullptr;
+     bool m_asyncExpose = false;
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    HANDLE m_powerNotification = nullptr; // XP backport: HPOWERNOTIFY is Vista+
++#else
+     HPOWERNOTIFY m_powerNotification = nullptr;
++#endif
+     HWND m_powerDummyWindow = nullptr;
+     static bool m_darkMode;
+ };
+@@ -319,8 +339,12 @@ QWindowsContext::~QWindowsContext()
+     d->m_tabletSupport.reset(); // Destroy internal window before unregistering classes.
+ #endif
+ 
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
++    // XP backport: UnregisterPowerSettingNotification is Vista+ (m_powerNotification
++    // is always null on XP since it is never registered).
+     if (d->m_powerNotification)
+         UnregisterPowerSettingNotification(d->m_powerNotification);
++#endif
+ 
+     if (d->m_powerDummyWindow)
+         DestroyWindow(d->m_powerDummyWindow);
+@@ -394,6 +418,11 @@ bool QWindowsContext::initPointer(unsigned integrationOptions)
+ 
+ extern "C" LRESULT QT_WIN_CALLBACK qWindowsPowerWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: power-setting notifications (PBT_POWERSETTINGCHANGE /
++    // POWERBROADCAST_SETTING) are Vista+ and never delivered on XP.
++    return DefWindowProc(hwnd, message, wParam, lParam);
++#else
+     if (message != WM_POWERBROADCAST || wParam != PBT_POWERSETTINGCHANGE)
+         return DefWindowProc(hwnd, message, wParam, lParam);
+ 
+@@ -421,10 +450,16 @@ extern "C" LRESULT QT_WIN_CALLBACK qWindowsPowerWindowProc(HWND hwnd, UINT messa
+         }
+     }
+     return DefWindowProc(hwnd, message, wParam, lParam);
++#endif
+ }
+ 
+ bool QWindowsContext::initPowerNotificationHandler()
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: RegisterPowerSettingNotification / GUID_MONITOR_POWER_ON are
++    // Vista+. There is no monitor-power notification to hook on XP.
++    return false;
++#else
+     if (d->m_powerNotification)
+         return false;
+ 
+@@ -439,6 +474,7 @@ bool QWindowsContext::initPowerNotificationHandler()
+         return false;
+     }
+     return true;
++#endif
+ }
+ 
+ void QWindowsContext::setTabletAbsoluteRange(int a)
+@@ -1020,10 +1056,23 @@ void QWindowsContext::forceNcCalcSize(HWND hwnd)
+ bool QWindowsContext::systemParametersInfo(unsigned action, unsigned param, void *out,
+                                            unsigned dpi)
+ {
+-    const BOOL result = QWindowsContext::user32dll.systemParametersInfoForDpi != nullptr && dpi != 0
+-        ? QWindowsContext::user32dll.systemParametersInfoForDpi(action, param, out, 0, dpi)
+-        : SystemParametersInfo(action, param, out, 0);
+-    return result == TRUE;
++    if (QWindowsContext::user32dll.systemParametersInfoForDpi != nullptr && dpi != 0) {
++        const BOOL result = QWindowsContext::user32dll.systemParametersInfoForDpi(action, param, out, 0, dpi);
++        if (result == TRUE)
++            return true;
++
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        // XP backport: when an XP-targeted binary runs on Win10/11, MinGW uses
++        // the pre-Vista NONCLIENTMETRICS size. SystemParametersInfoForDpi()
++        // rejects that structure size, which leaves menu/message fonts empty.
++        // Fall back to the classic API, which accepts the XP-sized structure
++        // and works on both XP and modern Windows.
++        if (action != SPI_GETNONCLIENTMETRICS)
++#endif
++            return false;
++    }
++
++    return SystemParametersInfo(action, param, out, 0) == TRUE;
+ }
+ 
+ bool QWindowsContext::systemParametersInfoForScreen(unsigned action, unsigned param, void *out,
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowscontext.h b/qtbase/src/plugins/platforms/windows/qwindowscontext.h
+index 8eca31e8b..aa2b2a937 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowscontext.h
++++ b/qtbase/src/plugins/platforms/windows/qwindowscontext.h
+@@ -137,6 +137,25 @@ struct QWindowsUser32DLL
+     GetWindowDpiAwarenessContext getWindowDpiAwarenessContext = nullptr;
+     GetAwarenessFromDpiAwarenessContext getAwarenessFromDpiAwarenessContext = nullptr;
+     SystemParametersInfoForDpi systemParametersInfoForDpi = nullptr;
++
++    // Windows 7 touch functions. Resolved dynamically so the touch code can be
++    // compiled into every build (universal binary) yet still load on Windows XP,
++    // where these are absent. HANDLE/void* are used instead of HTOUCHINPUT/
++    // PTOUCHINPUT so the declarations don't need the Win7 touch headers here.
++    typedef BOOL (WINAPI *RegisterTouchWindow)(HWND, ULONG);
++    typedef BOOL (WINAPI *UnregisterTouchWindow)(HWND);
++    typedef BOOL (WINAPI *IsTouchWindow)(HWND, PULONG);
++    typedef BOOL (WINAPI *GetTouchInputInfo)(HANDLE, UINT, void *, int);
++    typedef BOOL (WINAPI *CloseTouchInputHandle)(HANDLE);
++
++    RegisterTouchWindow registerTouchWindow = nullptr;
++    UnregisterTouchWindow unregisterTouchWindow = nullptr;
++    IsTouchWindow isTouchWindow = nullptr;
++    GetTouchInputInfo getTouchInputInfo = nullptr;
++    CloseTouchInputHandle closeTouchInputHandle = nullptr;
++
++    inline bool supportsTouch() const
++    { return registerTouchWindow && getTouchInputInfo && closeTouchInputHandle; }
+ };
+ 
+ // Shell scaling library (Windows 8.1 onwards)
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowsdialoghelpers.cpp b/qtbase/src/plugins/platforms/windows/qwindowsdialoghelpers.cpp
+index 0ebe5bd41..69e7598dc 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowsdialoghelpers.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowsdialoghelpers.cpp
+@@ -39,8 +39,25 @@
+ 
+ #define QT_NO_URL_CAST_FROM_STRING 1
+ 
+-#ifndef _WIN32_WINNT
+-#define _WIN32_WINNT 0x0601
++// XP backport / universal binary: the Vista+ common item dialog (IFileDialog
++// family, IShellItem, SHCreateItemFromParsingName, ...) is only *declared* by
++// the MinGW headers at _WIN32_WINNT >= 0x0600. Force that level here — before any
++// Windows header — so BOTH the modern IFileDialog path and the legacy XP dialog
++// compile into every build. The actual dialog is then chosen at runtime by the
++// OS version (see the QWindowsDialogs::createHelper() factory), and the three
++// Vista+ shell functions the modern path needs are resolved dynamically (see
++// QWindowsNativeFileDialogBase::shellItem()) so the binary still loads on XP.
++#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
++#  undef _WIN32_WINNT
++#  define _WIN32_WINNT 0x0600
++#endif
++#if !defined(WINVER) || (WINVER < 0x0600)
++#  undef WINVER
++#  define WINVER 0x0600
++#endif
++#if !defined(NTDDI_VERSION) || (NTDDI_VERSION < 0x06000000)
++#  undef NTDDI_VERSION
++#  define NTDDI_VERSION 0x06000000
+ #endif
+ 
+ #include "qwindowscombase.h"
+@@ -63,6 +80,7 @@
+ #include <QtCore/qobject.h>
+ #include <QtCore/qthread.h>
+ #include <QtCore/qsysinfo.h>
++#include <QtCore/qoperatingsystemversion.h>
+ #include <QtCore/qshareddata.h>
+ #include <QtCore/qshareddata.h>
+ #include <QtCore/qmutex.h>
+@@ -75,6 +93,10 @@
+ 
+ #include <QtCore/qt_windows.h>
+ 
++// Both the modern IFileDialog path and the legacy XP dialog are always compiled
++// (the API level was forced to >= 0x0600 above); the choice is made at runtime.
++#define QT_WINDOWS_HAS_IFILEDIALOG
++
+ // #define USE_NATIVE_COLOR_DIALOG /* Testing purposes only */
+ 
+ QT_BEGIN_NAMESPACE
+@@ -486,6 +508,8 @@ inline void QWindowsFileDialogSharedData::fromOptions(const QSharedPointer<QFile
+     m_data->selectedNameFilter = o->initiallySelectedNameFilter();
+ }
+ 
++#ifdef QT_WINDOWS_HAS_IFILEDIALOG // XP backport: IFileDialog path (Vista+)
++
+ /*!
+     \class QWindowsNativeFileDialogEventHandler
+     \brief Listens to IFileDialog events and forwards them to QWindowsNativeFileDialogBase
+@@ -893,13 +917,46 @@ void QWindowsNativeFileDialogBase::setWindowTitle(const QString &title)
+     m_fileDialog->SetTitle(reinterpret_cast<const wchar_t *>(title.utf16()));
+ }
+ 
++// XP backport / universal binary: these three shell32 functions are Vista+.
++// Resolve them dynamically so the modern file-dialog path can be compiled into
++// every build without turning them into static imports that would prevent the
++// binary from loading on Windows XP (there they are simply unavailable and the
++// legacy XP dialog is used instead — see createHelper()).
++namespace {
++typedef HRESULT (WINAPI *SHCreateItemFromParsingNamePtr)(PCWSTR, IBindCtx *, REFIID, void **);
++typedef HRESULT (WINAPI *SHGetKnownFolderIDListPtr)(REFKNOWNFOLDERID, DWORD, HANDLE, PIDLIST_ABSOLUTE *);
++typedef HRESULT (WINAPI *SHCreateItemFromIDListPtr)(PCIDLIST_ABSOLUTE, REFIID, void **);
++
++static SHCreateItemFromParsingNamePtr resolveSHCreateItemFromParsingName()
++{
++    static auto f = reinterpret_cast<SHCreateItemFromParsingNamePtr>(
++        QSystemLibrary::resolve(QStringLiteral("shell32"), "SHCreateItemFromParsingName"));
++    return f;
++}
++static SHGetKnownFolderIDListPtr resolveSHGetKnownFolderIDList()
++{
++    static auto f = reinterpret_cast<SHGetKnownFolderIDListPtr>(
++        QSystemLibrary::resolve(QStringLiteral("shell32"), "SHGetKnownFolderIDList"));
++    return f;
++}
++static SHCreateItemFromIDListPtr resolveSHCreateItemFromIDList()
++{
++    static auto f = reinterpret_cast<SHCreateItemFromIDListPtr>(
++        QSystemLibrary::resolve(QStringLiteral("shell32"), "SHCreateItemFromIDList"));
++    return f;
++}
++} // namespace
++
+ IShellItem *QWindowsNativeFileDialogBase::shellItem(const QUrl &url)
+ {
+     if (url.isLocalFile()) {
++        const auto shCreateItemFromParsingName = resolveSHCreateItemFromParsingName();
++        if (!shCreateItemFromParsingName)
++            return nullptr; // XP: no Vista shell item API (modern dialog is not used there)
+         IShellItem *result = nullptr;
+         const QString native = QDir::toNativeSeparators(url.toLocalFile());
+         const HRESULT hr =
+-                SHCreateItemFromParsingName(reinterpret_cast<const wchar_t *>(native.utf16()),
++                shCreateItemFromParsingName(reinterpret_cast<const wchar_t *>(native.utf16()),
+                                             nullptr, IID_IShellItem,
+                                             reinterpret_cast<void **>(&result));
+         if (FAILED(hr)) {
+@@ -911,6 +968,10 @@ IShellItem *QWindowsNativeFileDialogBase::shellItem(const QUrl &url)
+         // Support for virtual folders via GUID
+         // (see https://msdn.microsoft.com/en-us/library/windows/desktop/dd378457(v=vs.85).aspx)
+         // specified as "clsid:<GUID>" (without '{', '}').
++        const auto shGetKnownFolderIDList = resolveSHGetKnownFolderIDList();
++        const auto shCreateItemFromIDList = resolveSHCreateItemFromIDList();
++        if (!shGetKnownFolderIDList || !shCreateItemFromIDList)
++            return nullptr;
+         IShellItem *result = nullptr;
+         const auto uuid = QUuid::fromString(url.path());
+         if (uuid.isNull()) {
+@@ -918,12 +979,12 @@ IShellItem *QWindowsNativeFileDialogBase::shellItem(const QUrl &url)
+             return nullptr;
+         }
+         PIDLIST_ABSOLUTE idList;
+-        HRESULT hr = SHGetKnownFolderIDList(uuid, 0, nullptr, &idList);
++        HRESULT hr = shGetKnownFolderIDList(uuid, 0, nullptr, &idList);
+         if (FAILED(hr)) {
+             qErrnoWarning("%s: SHGetKnownFolderIDList(%s)) failed", __FUNCTION__, qPrintable(url.toString()));
+             return nullptr;
+         }
+-        hr = SHCreateItemFromIDList(idList, IID_IShellItem, reinterpret_cast<void **>(&result));
++        hr = shCreateItemFromIDList(idList, IID_IShellItem, reinterpret_cast<void **>(&result));
+         CoTaskMemFree(idList);
+         if (FAILED(hr)) {
+             qErrnoWarning("%s: SHCreateItemFromIDList(%s)) failed", __FUNCTION__, qPrintable(url.toString()));
+@@ -1011,7 +1072,10 @@ void QWindowsNativeFileDialogBase::setMode(QFileDialogOptions::FileMode mode,
+         qErrnoWarning("%s: SetOptions() failed", __FUNCTION__);
+ }
+ 
++#endif // QT_WINDOWS_HAS_IFILEDIALOG
++
+ // Split a list of name filters into description and actual filters
++// (shared by the Vista+ IFileDialog path and the legacy XP dialog).
+ struct FilterSpec
+ {
+     QString description;
+@@ -1054,6 +1118,8 @@ static QList<FilterSpec> filterSpecs(const QStringList &filters,
+     return result;
+ }
+ 
++#ifdef QT_WINDOWS_HAS_IFILEDIALOG // XP backport: IFileDialog path (Vista+)
++
+ void QWindowsNativeFileDialogBase::setNameFilters(const QStringList &filters)
+ {
+     /* Populates an array of COMDLG_FILTERSPEC from list of filters,
+@@ -1141,6 +1207,9 @@ void QWindowsNativeFileDialogBase::setLabelText(QFileDialogOptions::DialogLabel
+     }
+ }
+ 
++#endif // QT_WINDOWS_HAS_IFILEDIALOG
++
++// CLSID detection helpers (shared by the Vista+ path and the legacy XP dialog).
+ static bool isHexRange(const QString& s, int start, int end)
+ {
+     for (;start < end; ++start) {
+@@ -1169,6 +1238,8 @@ static inline bool isClsid(const QString &s)
+             && isHexRange(s, 24, 36);
+ }
+ 
++#ifdef QT_WINDOWS_HAS_IFILEDIALOG // XP backport: IFileDialog path (Vista+)
++
+ void QWindowsNativeFileDialogBase::selectFile(const QString &fileName) const
+ {
+     // Hack to prevent CLSIDs from being set as file name due to
+@@ -1177,6 +1248,8 @@ void QWindowsNativeFileDialogBase::selectFile(const QString &fileName) const
+         m_fileDialog->SetFileName((wchar_t*)fileName.utf16());
+ }
+ 
++#endif // QT_WINDOWS_HAS_IFILEDIALOG
++
+ // Return the index of the selected filter, accounting for QFileDialog
+ // sometimes stripping the filter specification depending on the
+ // hideFilterDetails setting.
+@@ -1191,6 +1264,8 @@ static int indexOfNameFilter(const QStringList &filters, const QString &needle)
+     return -1;
+ }
+ 
++#ifdef QT_WINDOWS_HAS_IFILEDIALOG // XP backport: IFileDialog path (Vista+)
++
+ void QWindowsNativeFileDialogBase::selectNameFilter(const QString &filter)
+ {
+     if (filter.isEmpty())
+@@ -1663,6 +1738,8 @@ QString QWindowsFileDialogHelper::selectedNameFilter() const
+     return m_data.selectedNameFilter();
+ }
+ 
++#endif // QT_WINDOWS_HAS_IFILEDIALOG
++
+ /*!
+     \class QWindowsXpNativeFileDialog
+     \brief Native Windows directory dialog for Windows XP using SHlib-functions.
+@@ -2137,8 +2214,13 @@ QPlatformDialogHelper *createHelper(QPlatformTheme::DialogType type)
+         return nullptr;
+     switch (type) {
+     case QPlatformTheme::FileDialog:
+-        if (QWindowsIntegration::instance()->options() & QWindowsIntegration::XpNativeDialogs)
++        // Universal binary: choose the dialog by OS at runtime. The Vista+ common
++        // item dialog (IFileDialog) is used on Vista and later; Windows XP/2003
++        // (or the explicit XpNativeDialogs option) fall back to the legacy dialog.
++        if ((QWindowsIntegration::instance()->options() & QWindowsIntegration::XpNativeDialogs)
++            || QOperatingSystemVersion::current() < QOperatingSystemVersion(QOperatingSystemVersion::Windows, 6, 0)) {
+             return new QWindowsXpFileDialogHelper();
++        }
+         return new QWindowsFileDialogHelper;
+     case QPlatformTheme::ColorDialog:
+ #ifdef USE_NATIVE_COLOR_DIALOG
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowsmousehandler.cpp b/qtbase/src/plugins/platforms/windows/qwindowsmousehandler.cpp
+index e82b2a515..22a2a9de4 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowsmousehandler.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowsmousehandler.cpp
+@@ -37,6 +37,21 @@
+ **
+ ****************************************************************************/
+ 
++// Universal binary: force the API level to Win7 (before any Windows header) so
++// the touch types/constants (TOUCHINPUT, SM_DIGITIZER, NID_*, SM_MAXIMUMTOUCHES,
++// TOUCHEVENTF_*) are declared and the WM_TOUCH path always compiles. The touch
++// *functions* are resolved dynamically (QWindowsContext::user32dll) so this
++// stays loadable on Windows XP, where GetSystemMetrics(SM_DIGITIZER) returns 0
++// (no touch device) and no touch window is ever registered.
++#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0601)
++#  undef _WIN32_WINNT
++#  define _WIN32_WINNT 0x0601
++#endif
++#if !defined(WINVER) || (WINVER < 0x0601)
++#  undef WINVER
++#  define WINVER 0x0601
++#endif
++
+ #include "qwindowsmousehandler.h"
+ #include "qwindowskeymapper.h"
+ #include "qwindowscontext.h"
+@@ -119,6 +134,11 @@ static inline void compressMouseMove(MSG *msg)
+ 
+ static inline QTouchDevice *createTouchDevice()
+ {
++    // GetSystemMetrics() is available everywhere; on Windows XP the Win7 touch
++    // indices (SM_DIGITIZER, SM_MAXIMUMTOUCHES) are unknown and return 0, so
++    // this naturally reports "no touch device" there. On Win7+ with a digitizer
++    // it returns a real device (the WM_TOUCH handler uses runtime-resolved
++    // functions — see translateTouchEvent()).
+     const int digitizers = GetSystemMetrics(SM_DIGITIZER);
+     if (!(digitizers & (NID_INTEGRATED_TOUCH | NID_EXTERNAL_TOUCH)))
+         return nullptr;
+@@ -616,6 +636,15 @@ bool QWindowsMouseHandler::translateTouchEvent(QWindow *window, HWND,
+     using QTouchPoint = QWindowSystemInterface::TouchPoint;
+     using QTouchPointList = QList<QWindowSystemInterface::TouchPoint>;
+ 
++    // The Win7 touch API is resolved dynamically; on XP it is absent, WM_TOUCH
++    // is never delivered, and this is unreachable — but guard anyway.
++    auto &u32 = QWindowsContext::user32dll;
++    if (!u32.getTouchInputInfo || !u32.closeTouchInputHandle) {
++        Q_UNUSED(window);
++        Q_UNUSED(msg);
++        return true;
++    }
++
+     if (!QWindowsContext::instance()->initTouch()) {
+         qWarning("Unable to initialize touch handling.");
+         return true;
+@@ -636,8 +665,8 @@ bool QWindowsMouseHandler::translateTouchEvent(QWindow *window, HWND,
+     touchPoints.reserve(winTouchPointCount);
+     Qt::TouchPointStates allStates;
+ 
+-    GetTouchInputInfo(reinterpret_cast<HTOUCHINPUT>(msg.lParam),
+-                      UINT(msg.wParam), winTouchInputs.data(), sizeof(TOUCHINPUT));
++    u32.getTouchInputInfo(reinterpret_cast<HANDLE>(msg.lParam),
++                          UINT(msg.wParam), winTouchInputs.data(), sizeof(TOUCHINPUT));
+     for (int i = 0; i < winTouchPointCount; ++i) {
+         const TOUCHINPUT &winTouchInput = winTouchInputs[i];
+         int id = m_touchInputIDToTouchPointID.value(winTouchInput.dwID, -1);
+@@ -678,7 +707,7 @@ bool QWindowsMouseHandler::translateTouchEvent(QWindow *window, HWND,
+         touchPoints.append(touchPoint);
+     }
+ 
+-    CloseTouchInputHandle(reinterpret_cast<HTOUCHINPUT>(msg.lParam));
++    u32.closeTouchInputHandle(reinterpret_cast<HANDLE>(msg.lParam));
+ 
+     // all touch points released, forget the ids we've seen, they may not be reused
+     if (allStates == Qt::TouchPointReleased)
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowssystemtrayicon.cpp b/qtbase/src/plugins/platforms/windows/qwindowssystemtrayicon.cpp
+index e6b6ad1ba..3a9587f13 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowssystemtrayicon.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowssystemtrayicon.cpp
+@@ -60,6 +60,7 @@
+ #include <QtGui/qguiapplication.h>
+ #include <QtGui/qpixmap.h>
+ #include <QtCore/qdebug.h>
++#include <QtCore/qoperatingsystemversion.h>
+ #include <QtCore/qrect.h>
+ #include <QtCore/qvector.h>
+ #include <QtCore/qsettings.h>
+@@ -78,6 +79,16 @@ static const UINT q_uNOTIFYICONID = 0;
+ static uint MYWM_TASKBARCREATED = 0;
+ #define MYWM_NOTIFYICON (WM_APP+101)
+ 
++static inline bool useLegacyNotifyIconCallbacks()
++{
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    return QOperatingSystemVersion::current()
++        < QOperatingSystemVersion(QOperatingSystemVersion::Windows, 6, 0);
++#else
++    return false;
++#endif
++}
++
+ Q_GUI_EXPORT HICON qt_pixmapToWinHICON(const QPixmap &);
+ 
+ // Copy QString data to a limited wchar_t array including \0.
+@@ -94,7 +105,14 @@ static inline void initNotifyIconData(NOTIFYICONDATA &tnd)
+ {
+     memset(&tnd, 0, sizeof(NOTIFYICONDATA));
+     tnd.cbSize = sizeof(NOTIFYICONDATA);
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: NOTIFYICON_VERSION_4 is Vista+. Request version 3 only on
++    // the actual XP shell; the same XP-target binary should still use the
++    // Vista+ callback format when run on modern Windows.
++    tnd.uVersion = useLegacyNotifyIconCallbacks() ? NOTIFYICON_VERSION : NOTIFYICON_VERSION_4;
++#else
+     tnd.uVersion = NOTIFYICON_VERSION_4;
++#endif
+ }
+ 
+ static void setIconContents(NOTIFYICONDATA &tnd, const QString &tip, HICON hIcon)
+@@ -241,9 +259,17 @@ QRect QWindowsSystemTrayIcon::geometry() const
+     nid.hWnd = m_hwnd;
+     nid.uID = q_uNOTIFYICONID;
+     RECT rect;
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: Shell_NotifyIconGetRect() is Win7+ (absent from XP's
++    // shell32). Report an unknown geometry, as the failure branch does.
++    Q_UNUSED(nid);
++    Q_UNUSED(rect);
++    const QRect result = QRect();
++#else
+     const QRect result = SUCCEEDED(Shell_NotifyIconGetRect(&nid, &rect))
+         ? QRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+         : QRect();
++#endif
+     qCDebug(lcQpaTrayIcon) << __FUNCTION__ << this << "returns" << result;
+     return result;
+ }
+@@ -328,7 +354,9 @@ bool QWindowsSystemTrayIcon::ensureInstalled()
+     if (!MYWM_TASKBARCREATED)
+         MYWM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
+     // Allow the WM_TASKBARCREATED message through the UIPI filter
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
+     ChangeWindowMessageFilterEx(m_hwnd, MYWM_TASKBARCREATED, MSGFLT_ALLOW, nullptr);
++#endif // XP backport: UIPI message filtering is Vista+; nothing to do on XP
+     qCDebug(lcQpaTrayIcon) << __FUNCTION__ << this << "MYWM_TASKBARCREATED=" << MYWM_TASKBARCREATED;
+ 
+     QWindowsHwndSystemTrayIconEntry entry{m_hwnd, this};
+@@ -405,6 +433,52 @@ bool QWindowsSystemTrayIcon::winEvent(const MSG &message, long *result)
+     *result = 0;
+     switch (message.message) {
+     case MYWM_NOTIFYICON: {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        if (useLegacyNotifyIconCallbacks()) {
++            // XP backport: legacy Shell_NotifyIcon (version 3) callback format.
++            // wParam = icon id, lParam = the mouse/keyboard message itself; the
++            // message does not carry coordinates, so query the cursor. Right-click
++            // arrives as WM_RBUTTONUP (not WM_CONTEXTMENU as in the Vista+ v4 format).
++            const int trayMessage = LOWORD(message.lParam);
++            POINT cursorPos = {0, 0};
++            GetCursorPos(&cursorPos);
++            const QPoint globalPos(cursorPos.x, cursorPos.y);
++            switch (trayMessage) {
++            case WM_LBUTTONUP:
++                if (m_ignoreNextMouseRelease)
++                    m_ignoreNextMouseRelease = false;
++                else
++                    emit activated(Trigger);
++                break;
++            case WM_LBUTTONDBLCLK:
++                m_ignoreNextMouseRelease = true;
++                emit activated(DoubleClick);
++                break;
++            case WM_MBUTTONUP:
++                emit activated(MiddleClick);
++                break;
++            case WM_RBUTTONUP:
++            case WM_CONTEXTMENU: {
++                const auto &screenManager = QWindowsContext::instance()->screenManager();
++                const QPlatformScreen *screen = screenManager.screenAtDp(globalPos);
++                if (!screen)
++                    screen = screenManager.screens().value(0);
++                if (screen) {
++                    emit contextMenuRequested(globalPos, screen);
++                    emit activated(Context);
++                    if (m_menu) {
++                        SetForegroundWindow(m_hwnd);
++                        m_menu->trackPopupMenu(message.hwnd, globalPos.x(), globalPos.y());
++                    }
++                }
++            }
++                break;
++            default:
++                break;
++            }
++            break;
++        }
++#endif
+         Q_ASSERT(q_uNOTIFYICONID == HIWORD(message.lParam));
+         const int trayMessage = LOWORD(message.lParam);
+         switch (trayMessage) {
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowstheme.cpp b/qtbase/src/plugins/platforms/windows/qwindowstheme.cpp
+index 25e083fd5..ad3eed5e6 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowstheme.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowstheme.cpp
+@@ -37,6 +37,16 @@
+ **
+ ****************************************************************************/
+ 
++// XP backport: capture the real target API level BEFORE it is force-raised
++// below. On MinGW/XP (_WIN32_WINNT==0x0501) the Vista+ stock-icon path is
++// compiled out; the force-raise still declares SHSTOCKICONINFO so the (unused)
++// Vista branch keeps compiling on every configuration.
++// Note: this runs before any Qt header, so Q_CC_MINGW is not defined yet — use
++// the compiler's own __MINGW32__ (always predefined by MinGW).
++#if defined(__MINGW32__) && (_WIN32_WINNT < 0x0600)
++#  define QT_WINDOWSTHEME_XP_BACKPORT
++#endif
++
+ // SHSTOCKICONINFO is only available since Vista
+ #if _WIN32_WINNT < 0x0601
+ #  undef _WIN32_WINNT
+@@ -773,6 +783,7 @@ QPixmap QWindowsTheme::standardPixmap(StandardPixmap sp, const QSizeF &pixmapSiz
+         break;
+     }
+ 
++#ifndef QT_WINDOWSTHEME_XP_BACKPORT
+     if (stockId != SIID_INVALID) {
+         QPixmap pixmap;
+         SHSTOCKICONINFO iconInfo;
+@@ -785,6 +796,12 @@ QPixmap QWindowsTheme::standardPixmap(StandardPixmap sp, const QSizeF &pixmapSiz
+             return pixmap;
+         }
+     }
++#else
++    // XP backport: SHGetStockIconInfo() is Vista+ (absent from XP's shell32).
++    // Fall through to the shell32 resource-id / LoadIcon() fallbacks below.
++    Q_UNUSED(stockId);
++    Q_UNUSED(stockFlags);
++#endif
+ 
+     if (resourceId != -1) {
+         QPixmap pixmap = loadIconFromShell32(resourceId, pixmapSize);
+diff --git a/qtbase/src/plugins/platforms/windows/qwindowswindow.cpp b/qtbase/src/plugins/platforms/windows/qwindowswindow.cpp
+index 9d9180e4f..a4cea728c 100644
+--- a/qtbase/src/plugins/platforms/windows/qwindowswindow.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowswindow.cpp
+@@ -358,6 +358,12 @@ static inline bool windowIsAccelerated(const QWindow *w)
+ 
+ static bool applyBlurBehindWindow(HWND hwnd)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: the Desktop Window Manager (dwmapi.dll) does not exist on
++    // Windows XP, so there is no blur-behind / composition. Skip.
++    Q_UNUSED(hwnd);
++    return false;
++#else
+     BOOL compositionEnabled;
+     if (DwmIsCompositionEnabled(&compositionEnabled) != S_OK)
+         return false;
+@@ -379,6 +385,7 @@ static bool applyBlurBehindWindow(HWND hwnd)
+         DeleteObject(blurBehind.hRgnBlur);
+ 
+     return result;
++#endif // XP backport
+ }
+ 
+ // from qwidget_win.cpp, pass flags separately in case they have been "autofixed".
+@@ -1361,8 +1368,9 @@ QWindowsWindow::QWindowsWindow(QWindow *aWindow, const QWindowsWindowData &data)
+ QWindowsWindow::~QWindowsWindow()
+ {
+     setFlag(WithinDestroy);
+-    if (testFlag(TouchRegistered))
+-        UnregisterTouchWindow(m_data.hwnd);
++    // Touch window registration is Win7+; resolved dynamically (null on XP).
++    if (testFlag(TouchRegistered) && QWindowsContext::user32dll.unregisterTouchWindow)
++        QWindowsContext::user32dll.unregisterTouchWindow(m_data.hwnd);
+     destroyWindow();
+     destroyIcon();
+ }
+@@ -2063,8 +2071,12 @@ void QWindowsWindow::releaseDC()
+ 
+ static inline bool dwmIsCompositionEnabled()
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    return false; // XP backport: no DWM composition on Windows XP.
++#else
+     BOOL dWmCompositionEnabled = FALSE;
+     return SUCCEEDED(DwmIsCompositionEnabled(&dWmCompositionEnabled)) && dWmCompositionEnabled == TRUE;
++#endif
+ }
+ 
+ static inline bool isSoftwareGl()
+@@ -2933,6 +2945,11 @@ enum : WORD {
+ 
+ static bool queryDarkBorder(HWND hwnd)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: immersive dark mode is a DWM (dwmapi.dll) feature absent on XP.
++    Q_UNUSED(hwnd);
++    return false;
++#else
+     BOOL result = FALSE;
+     const bool ok =
+         SUCCEEDED(DwmGetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, &result, sizeof(result)))
+@@ -2940,10 +2957,17 @@ static bool queryDarkBorder(HWND hwnd)
+     if (!ok)
+         qWarning("%s: Unable to retrieve dark window border setting.", __FUNCTION__);
+     return result == TRUE;
++#endif
+ }
+ 
+ bool QWindowsWindow::setDarkBorderToWindow(HWND hwnd, bool d)
+ {
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: immersive dark mode is a DWM (dwmapi.dll) feature absent on XP.
++    Q_UNUSED(hwnd);
++    Q_UNUSED(d);
++    return false;
++#else
+     const BOOL darkBorder = d ? TRUE : FALSE;
+     const bool ok =
+         SUCCEEDED(DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, &darkBorder, sizeof(darkBorder)))
+@@ -2951,6 +2975,7 @@ bool QWindowsWindow::setDarkBorderToWindow(HWND hwnd, bool d)
+     if (!ok)
+         qWarning("%s: Unable to set dark window border.", __FUNCTION__);
+     return ok;
++#endif
+ }
+ 
+ void QWindowsWindow::setDarkBorder(bool d)
+@@ -3055,15 +3080,19 @@ void QWindowsWindow::setTouchWindowTouchTypeStatic(QWindow *window, QWindowsWind
+ 
+ void QWindowsWindow::registerTouchWindow(QWindowsWindowFunctions::TouchWindowTouchTypes touchTypes)
+ {
++    // The touch window API (IsTouchWindow/RegisterTouchWindow) is Win7+ and
++    // resolved dynamically; on XP the pointers are null and there is nothing to
++    // register (SI_SupportsTouch is also never set there).
++    auto &u32 = QWindowsContext::user32dll;
+     if ((QWindowsContext::instance()->systemInfo() & QWindowsContext::SI_SupportsTouch)
+-        && !testFlag(TouchRegistered)) {
++        && !testFlag(TouchRegistered) && u32.isTouchWindow && u32.registerTouchWindow) {
+         ULONG touchFlags = 0;
+-        const bool ret = IsTouchWindow(m_data.hwnd, &touchFlags);
++        const bool ret = u32.isTouchWindow(m_data.hwnd, &touchFlags);
+         // Return if it is not a touch window or the flags are already set by a hook
+         // such as HCBT_CREATEWND
+         if (ret || touchFlags != 0)
+             return;
+-        if (RegisterTouchWindow(m_data.hwnd, ULONG(touchTypes)))
++        if (u32.registerTouchWindow(m_data.hwnd, ULONG(touchTypes)))
+             setFlag(TouchRegistered);
+         else
+             qErrnoWarning("RegisterTouchWindow() failed for window '%s'.", qPrintable(window()->objectName()));
+diff --git a/qtbase/src/plugins/platforms/direct2d/qwindowsdirect2dwindow.cpp b/qtbase/src/plugins/platforms/direct2d/qwindowsdirect2dwindow.cpp
+--- a/qtbase/src/plugins/platforms/direct2d/qwindowsdirect2dwindow.cpp
++++ b/qtbase/src/plugins/platforms/direct2d/qwindowsdirect2dwindow.cpp
+@@ -169,11 +169,22 @@
+     const POINT ptDst = { bounds.x(), bounds.y() };
+     const POINT ptSrc = { 0, 0 };
+     const BLENDFUNCTION blend = { AC_SRC_OVER, 0, BYTE(255.0 * opacity()), AC_SRC_ALPHA };
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++    // XP backport: as in qwindowsbackingstore.cpp, the classic
++    // UpdateLayeredWindow() (Windows 2000+) updates the whole window. At this
++    // API level current MinGW-w64 headers declare UpdateLayeredWindowIndirect
++    // only as a type.
++    Q_UNUSED(region);
++    if (!UpdateLayeredWindow(handle(), nullptr, const_cast<POINT *>(&ptDst), const_cast<SIZE *>(&size),
++                             hdc, const_cast<POINT *>(&ptSrc), 0,
++                             const_cast<BLENDFUNCTION *>(&blend), ULW_ALPHA))
++#else
+     const QRect r = region.boundingRect();
+     const RECT dirty = { r.left(), r.top(), r.left() + r.width(), r.top() + r.height() };
+     UPDATELAYEREDWINDOWINFO info = { sizeof(UPDATELAYEREDWINDOWINFO), nullptr,
+                                      &ptDst, &size, hdc, &ptSrc, 0, &blend, ULW_ALPHA, &dirty };
+     if (!UpdateLayeredWindowIndirect(handle(), &info))
++#endif
+         qErrnoWarning(int(GetLastError()), "Failed to update the layered window");
+ 
+     hr = dxgiSurface->ReleaseDC(nullptr);

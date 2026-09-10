@@ -1,0 +1,140 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: the windowsvista style without the Vista-only theme classes.
+#
+# The MENU and TASKDIALOG uxtheme classes do not exist on XP. Without caching the
+# failure, OpenThemeData() was retried on every paint, which flooded the console and
+# delayed menus by seconds; drawing the message-box panels with the invalid
+# TASKDIALOG theme left a black background.
+#
+# Changes:
+#   qtbase/src/plugins/styles/windowsvista/qwindowsxpstyle.cpp
+#       cache failed OpenThemeData() per theme (cleared on theme change)
+#   qtbase/src/plugins/styles/windowsvista/qwindowsvistastyle.cpp
+#       guard the QMessageBox TASKDIALOG panels with XPThemeData::isValid(); skip
+#       GetThemeTransitionDuration
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/plugins/styles/windowsvista/qwindowsvistastyle.cpp b/qtbase/src/plugins/styles/windowsvista/qwindowsvistastyle.cpp
+index 140daeaf6..c83de5d87 100644
+--- a/qtbase/src/plugins/styles/windowsvista/qwindowsvistastyle.cpp
++++ b/qtbase/src/plugins/styles/windowsvista/qwindowsvistastyle.cpp
+@@ -386,11 +386,15 @@ void QWindowsVistaStyle::drawPrimitive(PrimitiveElement element, const QStyleOpt
+                     }
+ 
+                     // Retrieve the transition time between the states from the system.
++#if !(defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600))
++                    // XP backport: GetThemeTransitionDuration is Vista+; on XP the
++                    // duration stays at its default (no themed transition animation).
+                     if (theme
+                         && SUCCEEDED(GetThemeTransitionDuration(theme, partId, fromState, toState,
+                                                                 TMT_TRANSITIONDURATIONS, &duration))) {
+                         t->setDuration(int(duration));
+                     }
++#endif
+                     t->setStartTime(QTime::currentTime());
+ 
+                     deleteClonedAnimationStyleOption(styleOption);
+@@ -779,21 +783,26 @@ void QWindowsVistaStyle::drawPrimitive(PrimitiveElement element, const QStyleOpt
+ #endif // QT_CONFIG(inputdialog)
+ 
+             if (buttonBox) {
+-                //draw white panel part
+                 XPThemeData theme(widget, painter,
+                                   QWindowsXPStylePrivate::TaskDialogTheme,
+                                   TDLG_PRIMARYPANEL, 0, option->rect);
+-                QRect toprect = option->rect;
+-                toprect.setBottom(buttonBox->geometry().top());
+-                theme.rect = toprect;
+-                d->drawBackground(theme);
++                // XP backport: the TASKDIALOG theme is Vista+. On XP it cannot be
++                // opened, and drawing its panels leaves a black background. Skip
++                // it there and let the widget's palette background show through.
++                if (theme.isValid()) {
++                    //draw white panel part
++                    QRect toprect = option->rect;
++                    toprect.setBottom(buttonBox->geometry().top());
++                    theme.rect = toprect;
++                    d->drawBackground(theme);
+ 
+-                //draw bottom panel part
+-                QRect buttonRect = option->rect;
+-                buttonRect.setTop(buttonBox->geometry().top());
+-                theme.rect = buttonRect;
+-                theme.partId = TDLG_SECONDARYPANEL;
+-                d->drawBackground(theme);
++                    //draw bottom panel part
++                    QRect buttonRect = option->rect;
++                    buttonRect.setTop(buttonBox->geometry().top());
++                    theme.rect = buttonRect;
++                    theme.partId = TDLG_SECONDARYPANEL;
++                    d->drawBackground(theme);
++                }
+             }
+ #endif
+         }
+@@ -895,10 +904,16 @@ void QWindowsVistaStyle::drawControl(ControlElement element, const QStyleOption
+ 
+                 int fromState = buttonStateId(oldState, BP_PUSHBUTTON);
+                 int toState = buttonStateId(option->state, BP_PUSHBUTTON);
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++                // XP backport: GetThemeTransitionDuration is Vista+; no themed
++                // push-button transition animation on XP.
++                t->setDuration(0);
++#else
+                 if (GetThemeTransitionDuration(theme, BP_PUSHBUTTON, fromState, toState, TMT_TRANSITIONDURATIONS, &duration) == S_OK)
+                     t->setDuration(int(duration));
+                 else
+                     t->setDuration(0);
++#endif
+                 t->setStartTime(QTime::currentTime());
+                 styleObject->setProperty("_q_no_animation", false);
+ 
+diff --git a/qtbase/src/plugins/styles/windowsvista/qwindowsxpstyle.cpp b/qtbase/src/plugins/styles/windowsvista/qwindowsxpstyle.cpp
+index 3148abf56..78b6e6a35 100644
+--- a/qtbase/src/plugins/styles/windowsvista/qwindowsxpstyle.cpp
++++ b/qtbase/src/plugins/styles/windowsvista/qwindowsxpstyle.cpp
+@@ -323,6 +323,14 @@ void QWindowsXPStylePrivate::cleanupVistaTreeViewTheming()
+     }
+ }
+ 
++// XP backport: some theme classes are Vista+ only (e.g. MENU, TASKDIALOG) and
++// OpenThemeData() for them always fails on Windows XP. Remember which themes
++// failed so we don't re-attempt (and re-warn) on every paint, which otherwise
++// floods the console and adds a visible delay (e.g. before menus appear). The
++// flags are cleared by cleanupHandleMap() on a theme change so a theme that
++// becomes available later is retried.
++static bool s_themeOpenFailed[QWindowsXPStylePrivate::NThemes] = {};
++
+ /* \internal
+     Closes all open theme data handles to ensure that we don't leak
+     resources, and that we don't refer to old handles when for
+@@ -336,6 +344,8 @@ void QWindowsXPStylePrivate::cleanupHandleMap()
+             theme = nullptr;
+         }
+     }
++    // XP backport: allow known-unavailable themes to be retried after a theme change.
++    memset(s_themeOpenFailed, 0, sizeof(s_themeOpenFailed));
+     QWindowsXPStylePrivate::cleanupVistaTreeViewTheming();
+ }
+ 
+@@ -346,13 +356,17 @@ HTHEME QWindowsXPStylePrivate::createTheme(int theme, HWND hwnd)
+         return nullptr;
+     }
+     if (!m_themes[theme]) {
++        if (s_themeOpenFailed[theme])
++            return nullptr; // already known-unavailable; don't retry/spam
+         const wchar_t *name = themeNames[theme];
+         if (theme == VistaTreeViewTheme && QWindowsXPStylePrivate::initVistaTreeViewTheming())
+             hwnd = QWindowsXPStylePrivate::m_vistaTreeViewHelper;
+         m_themes[theme] = OpenThemeData(hwnd, name);
+-        if (Q_UNLIKELY(!m_themes[theme]))
++        if (Q_UNLIKELY(!m_themes[theme])) {
++            s_themeOpenFailed[theme] = true;
+             qErrnoWarning("OpenThemeData() failed for theme %d (%s).",
+                           theme, qPrintable(themeName(theme)));
++        }
+     }
+     return m_themes[theme];
+ }

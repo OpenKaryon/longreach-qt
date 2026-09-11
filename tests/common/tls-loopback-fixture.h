@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 OpenKaryon
+//
+// Public test certificate and key, used only for isolated loopback tests.
+#ifndef TLS_LOOPBACK_FIXTURE_H
+#define TLS_LOOPBACK_FIXTURE_H
+static const char kTlsLoopbackCert[] =
+"-----BEGIN CERTIFICATE-----\n"
+"MIIC1zCCAb+gAwIBAgIUWRjoGEKM/FJO7rPxc4eYM8i/mFUwDQYJKoZIhvcNAQEL\n"
+"BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDgwMzA4NTYyNloXDTM2MDcz\n"
+"MTA4NTYyNlowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF\n"
+"AAOCAQ8AMIIBCgKCAQEAk1WhI6HW4xVToAUpnaVkjs5+m1OvZDFnWxFHtmfdCt+J\n"
+"9355YiCxwAwKA2dvOhQD2pkNYPvnzmqZvbS2q+OJ3iTgSncnA4A+nq7myrwMsUDE\n"
+"kM9FY8VfVOOMDKiz436JTrw7JsVHvmkmrRnwhZpRC/dPyKlIAkZHDTNs7UYXsxoP\n"
+"daCiu/3IytBV9P5hJrUu1NEov2so9tfMWIB8zfsEcfbEhg0tQGfDvabSOJiJH/hO\n"
+"d7tJmeXjypwVl9KP8sQV9rormQgro7Ry3G/LCM4JtxQw2Lkvz07OmZnXQkQhDqyn\n"
+"E4mVnp7sML2eshPdxdHiC0TJBHkBAxc4sJaxXQdI5QIDAQABoyEwHzAdBgNVHQ4E\n"
+"FgQUm7xMue+2Un4tL6BoRfluZKxE3mwwDQYJKoZIhvcNAQELBQADggEBAGhF0/L6\n"
+"AKhAzjf9xo3gaQyIZRIcaJtnLAPgYsdOW1ckw0ZUTetIgTKvhz+zt+k4dBXHxsQS\n"
+"sMOFROpalm01yZYNjXK+vD2npHVlmEAPjHk1G2bkFGsJrI/MjhW01o24Ng2NPps2\n"
+"ddJF1YepUAoXI+S3cYYv6JoJOsshz7Y8AZ34XO6cNR4lF2YLGD9wUSdHMCY/galR\n"
+"cHP6f78DZd8AaPFU9IojSnP8p7gB+i4Fx8umf+HBhvgsBFyxQgBoW6J53xAsyL+D\n"
+"U5la2q9dQ27DcQbI8tfpLBZvnWE+CBOH2A2VV9CCn/OrNBDGv8JohejaR/+fAu0k\n"
+"KMep5okmL1rkNQw=\n"
+"-----END CERTIFICATE-----\n";
+
+static const char kTlsLoopbackKey[] =
+"-----BEGIN PRIVATE KEY-----\n"
+"MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCTVaEjodbjFVOg\n"
+"BSmdpWSOzn6bU69kMWdbEUe2Z90K34n3fnliILHADAoDZ286FAPamQ1g++fOapm9\n"
+"tLar44neJOBKdycDgD6erubKvAyxQMSQz0VjxV9U44wMqLPjfolOvDsmxUe+aSat\n"
+"GfCFmlEL90/IqUgCRkcNM2ztRhezGg91oKK7/cjK0FX0/mEmtS7U0Si/ayj218xY\n"
+"gHzN+wRx9sSGDS1AZ8O9ptI4mIkf+E53u0mZ5ePKnBWX0o/yxBX2uiuZCCujtHLc\n"
+"b8sIzgm3FDDYuS/PTs6ZmddCRCEOrKcTiZWenuwwvZ6yE93F0eILRMkEeQEDFziw\n"
+"lrFdB0jlAgMBAAECggEAC/MDsutfDYNPCTkp9yRxG6jxOUFIBhEAsDDeV1OkqItZ\n"
+"OfaquxPqPqhrTnve2D/D0UCdBmrf0cyxA+MKdrXpWlg0za1Mv3qw+Xc3diVaxSx6\n"
+"1MDOwKkDEpQy6VrsXgzG75kSFhKlfzKxhZQHPxq1LIqGEMDz+2U+QXqUgMjwxqB8\n"
+"sjx+mqqHEdLkjrgeVwMf/cHK2k8EAKOE7unRqqhDDVR9Oxnu4smjB/2d+T3BVHOg\n"
+"HvKgM0XoFu2t2RAg2xrVh6v7L1LjEiNSsroC3ANR02ZuZf6e8vldaWq40rsNOfMH\n"
+"jJ0ZE1Wi7ouLm5TNC9Cq6GVYciDFw6VLbi7WIPVl+QKBgQDGsWG26qPBPIiAoFPK\n"
+"TPWS4+raR7g6gRegZcWmEH28Z12uSfnupA+oRhMarZbtfbLQlEj4P9B8m51ROCil\n"
+"d+pF9UMUr8lp1+Htdo64BS1Q4vdSqXRv7MHuuAVG/IANo02DVM1/J6iFMQQVWEyC\n"
+"uAwWy/1xxeQiJ3kqnck8jaNqHQKBgQC91Cqm77+YNZoKsLXCowM33QTDt115jFN/\n"
+"76jJKMbN/byFI2txubXtFGbRhZnZRd9PT58aPvNSdQw9T+dHpxFQcebiKFj/wc86\n"
+"06U0AT9FdG+fRl+8WjiR9qU0V9VL2s8nztaXsKn6em8Uq0NuJRwIGTSWvKyxRncA\n"
+"vs4RQSBfaQKBgDRz3VzhgotfxJVYPeZ4/JdjjbtEFbF0JN2WIGBfmCHlk8iQBOfn\n"
+"7a45mY+AZgiaF1uS2dSXXB2ZIyWu0qQkDPec8LGEWoKTmDQNCU4xJ65jzHDJBVEK\n"
+"yoOPlu0PeWqgQrU57On1eTp4HyDXZ5NWrPJTtbuUR05w5z7F2rselRZNAoGAJ1Nx\n"
+"9p2KerT4EajkLstomkUefJFbOxgYIFP9Cpd5ACnFyWs6EhhgGRp15oggBEQWbC7Z\n"
+"ji1maTm4bGdGSbDRxHGkXEvxjCKRlOVNv0VW30Os8Dk7EiE6wPpw5TQhCxLsgZm3\n"
+"GTvPKwX8RzLnyETF1uOp4mR5/kvT0YK13Bs64qkCgYEAn+L5bqMO57OuXgz9nY3p\n"
+"2jl+TnBbA84fcSod1bJloukgcwou5Q1YMGSgjfkymbJkzWVjyY9mp74tlZrEsxdq\n"
+"zXsS6naaOzPhN3cCTBmqkUzNZJRspln7NDFNUHShIecz114oDEmvZVzv9lQsv9AR\n"
+"5+MYK6qBW85NgsL3UyK6k/g=\n"
+"-----END PRIVATE KEY-----\n";
+
+#endif

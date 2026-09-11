@@ -11,12 +11,16 @@ smoke_add_app(qt-selftest
     SOURCES
         main.cpp
         checks_core.cpp
+        checks_time.cpp
         checks_io.cpp
         checks_images.cpp
         checks_gui.cpp
         checks_models.cpp
         checks_concurrency.cpp
+        checks_net.cpp
+        checks_sql.cpp
         checks_textdoc.cpp
+        checks_dbus.cpp
         ../common/smokecheck.h
         checks.h
 )

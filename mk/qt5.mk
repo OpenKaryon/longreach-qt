@@ -41,6 +41,25 @@ qt5-win-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
 qt5-win-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/amd64/Dockerfile -t $(QT5_WIN_AMD64_IMAGE) .
 
+# Copy an image's test suite to artifacts/tests-<image>/, with the same
+# LICENSE_PROFILE as its build:
+#   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64-gpl-enabled
+QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
+QT5_TESTS_OUT := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE)
+QT5_TESTS_PACKAGE := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE).tar.gz
+
+qt5-extract-tests:
+	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(QT5_TESTS_OUT)"
+	docker run --rm -v "$(CURDIR)/$(QT5_TESTS_OUT):/out" -v "$(CURDIR)/scripts:/scripts:ro" \
+		$(QT5_IMAGE) "bash /scripts/tests/extract.sh"
+	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT5_TESTS_OUT)" --image "$(QT5_IMAGE)" --qt-version "$(QT5_VERSION)" --openssl-version "$(OPENSSL_VERSION)" --license-profile "$(LICENSE_PROFILE)"
+	@echo "-> $(QT5_TESTS_OUT)"
+
+qt5-package-tests: qt5-extract-tests
+	docker run --rm -v "$(CURDIR)/$(ARTIFACTS_DIR):/artifacts" \
+		$(QT5_IMAGE) "tar -czf /artifacts/tests-$(QT5_IMAGE).tar.gz -C /artifacts/tests-$(QT5_IMAGE) . && sha256sum /artifacts/tests-$(QT5_IMAGE).tar.gz > /artifacts/tests-$(QT5_IMAGE).tar.gz.sha256"
+	@echo "-> $(QT5_TESTS_PACKAGE)"
+
 QT5_IMAGE_CONFIG = qt5=$(QT5_VERSION),$(QT5_ARCHIVE_URL);openssl=$(OPENSSL_VERSION),$(OPENSSL_URL);profile=$(LICENSE_PROFILE);opengl=$(QT5_OPENGL_CONFIG);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_ARCHIVE),$(LLVM_MINGW_SHA256),$(LLVM_MINGW_URL);osx=$(QT5_MACOS_SDK),$(QT5_MACOS_TARGET_AMD64),$(QT5_MACOS_TARGET_ARM64),$(OSXCROSS_REPO),$(OSXCROSS_REF),$(QT5_MACOS_SDK_PKG_URL),$(QT5_MACOS_SDK_PKG_SHA256),$(QT5_LLVM_SRC_VERSION),$(QT5_LLVM_SRC_SHA256),$(QT5_MACOS_I386_LINK_SDK_SHA256);download=$(DOWNLOAD_DIR)
 
 $(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_I386_IMAGE),QT5_IMAGE_CONFIG))

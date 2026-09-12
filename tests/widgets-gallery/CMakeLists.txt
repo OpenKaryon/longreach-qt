@@ -33,6 +33,7 @@
 # checks_accessibility_qt4.cpp).
 set(smoke_widgets_sources
     main.cpp
+    selftest.cpp
     ../common/smokecheck.h
     gallery.h
 )

@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/ControlsTab.qml</file>
+        <file>qml/Controls2CatalogTab.qml</file>
+        <file>qml/NavigationPopupTab.qml</file>
+        <file>qml/PlatformDialogTab.qml</file>
+        <file>qml/WindowLabTab.qml</file>
+        <file>qml/AccordionViewsTab.qml</file>
+        <file>qml/TableViewTab.qml</file>
+        <file>qml/InputTextTab.qml</file>
+        <file>qml/CanvasShaderTab.qml</file>
+        <file>qml/ParticlesTab.qml</file>
+        <file>qml/ShapesTab.qml</file>
+        <file>qml/AnimationTab.qml</file>
+        <file>qml/ListTab.qml</file>
+    </qresource>
+</RCC>

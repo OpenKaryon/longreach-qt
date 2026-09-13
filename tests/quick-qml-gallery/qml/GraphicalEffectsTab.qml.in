@@ -1,0 +1,179 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+// Qt 5 has QtGraphicalEffects; Qt 6 moved the same types to
+// Qt5Compat.GraphicalEffects. Filled in by CMakeLists.txt - QML has no
+// conditional import.
+@SMOKE_GRAPHICALEFFECTS_IMPORT@
+
+Item {
+    id: root
+
+    GridLayout {
+        anchors.fill: parent
+        anchors.margins: 12
+        columns: 2
+        columnSpacing: 12
+        rowSpacing: 12
+
+        GroupBox {
+            title: "DropShadow / Glow"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Item {
+                anchors.fill: parent
+
+                Rectangle {
+                    id: card
+                    width: 180
+                    height: 110
+                    anchors.centerIn: parent
+                    radius: 8
+                    color: "#ffffff"
+                    border.color: "#94a3b8"
+                    Text { anchors.centerIn: parent; text: "source item" }
+                }
+
+                DropShadow {
+                    anchors.fill: card
+                    source: card
+                    horizontalOffset: 10
+                    verticalOffset: 10
+                    radius: 18
+                    samples: 25
+                    color: "#80000000"
+                }
+
+                Glow {
+                    anchors.fill: card
+                    source: card
+                    radius: 8
+                    samples: 17
+                    color: "#60a5fa"
+                }
+            }
+        }
+
+        GroupBox {
+            title: "FastBlur / ColorOverlay"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Item {
+                anchors.fill: parent
+
+                Rectangle {
+                    id: blurSource
+                    width: 190
+                    height: 120
+                    anchors.centerIn: parent
+                    radius: 10
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#f97316" }
+                        GradientStop { position: 1.0; color: "#0ea5e9" }
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: "blur"
+                        color: "white"
+                        font.pixelSize: 26
+                    }
+                }
+
+                FastBlur {
+                    anchors.fill: blurSource
+                    source: blurSource
+                    radius: 22
+                }
+
+                ColorOverlay {
+                    anchors.fill: blurSource
+                    source: blurSource
+                    color: "#40ef4444"
+                }
+            }
+        }
+
+        GroupBox {
+            title: "OpacityMask"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Item {
+                anchors.fill: parent
+
+                Rectangle {
+                    id: maskSource
+                    width: 220
+                    height: 130
+                    anchors.centerIn: parent
+                    visible: false
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#22c55e" }
+                        GradientStop { position: 1.0; color: "#3b82f6" }
+                    }
+                }
+
+                Rectangle {
+                    id: maskItem
+                    width: maskSource.width
+                    height: maskSource.height
+                    anchors.centerIn: parent
+                    visible: false
+                    radius: 44
+                    color: "black"
+                }
+
+                OpacityMask {
+                    anchors.fill: maskSource
+                    source: maskSource
+                    maskSource: maskItem
+                }
+            }
+        }
+
+        GroupBox {
+            title: "Brightness / hue"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Item {
+                anchors.fill: parent
+
+                Rectangle {
+                    id: colorSource
+                    width: 220
+                    height: 130
+                    anchors.centerIn: parent
+                    radius: 6
+                    color: "#a855f7"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "effects"
+                        color: "white"
+                        font.pixelSize: 24
+                    }
+                }
+
+                HueSaturation {
+                    anchors.fill: colorSource
+                    source: colorSource
+                    hue: slider.value
+                    saturation: 0.25
+                    lightness: 0.05
+                }
+
+                Slider {
+                    id: slider
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    from: -0.5
+                    to: 0.5
+                    value: 0.18
+                }
+            }
+        }
+    }
+}

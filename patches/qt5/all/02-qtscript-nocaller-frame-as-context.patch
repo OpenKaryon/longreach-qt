@@ -1,0 +1,157 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: stop QtScript handing out CallFrame::noCaller() as if it were a
+# script context.
+#
+# QScriptEngine::currentContext() converts QScriptEnginePrivate::currentFrame
+# into a QScriptContext by a plain reinterpret_cast, through contextForFrame().
+# The chain of JavaScriptCore call frames does not end in a null pointer:
+#
+#   static CallFrame *noCaller() { return reinterpret_cast<CallFrame*>(HostCallFrameFlag); }
+#   static const intptr_t HostCallFrameFlag = 1;
+#
+# so what comes back is the pointer value 1. Every caller that walks contexts
+# tests `while (context)`, sails past it, and dereferences (char *)1. Two of
+# them are on the path that merely constructs a QScriptEngineDebugger:
+#
+#   QScriptEnginePrivate::mark()            reads the frame's ScopeChain
+#                                           register, index -7, at 1 - 56
+#   QScriptDebuggerAgent::QScriptDebuggerAgent()
+#                                           calls parentContext() on it
+#
+# Both were observed on macOS 10.11, as EXC_BAD_ACCESS at 0xffffffffffffffc9 -
+# which is 1 - 56 - with the sentinel visible in the register dump as
+# `rbx: 0x0000000000000001`. The first was reached through a garbage collection
+# triggered while the debugger's console parsed its ~30 scripted commands:
+#
+#   0  QScriptEnginePrivate::mark(QTJSC::MarkStack&) + 660
+#   1  QTJSC::Heap::markRoots() + 292
+#   3  QTJSC::Heap::allocate(unsigned long) + 110
+#   11 QScriptDebuggerScriptedConsoleCommand::parse(...) + 227
+#   16 QScriptEngineDebugger::attachTo(QScriptEngine*) + 34
+#
+# and once mark() was guarded, the same sentinel surfaced one frame later:
+#
+#   0  QScriptContext::parentContext() const + 14
+#   1  QScriptDebuggerAgent::QScriptDebuggerAgent(...) + 167
+#   3  QScriptEngineDebugger::attachTo(QScriptEngine*) + 77
+#
+# which is what moved the fix to contextForFrame(): guarding consumers one at a
+# time is endless, and that function is the single point where a JSC frame turns
+# into a QScriptContext. Qt already strips the flag where it walks the chain the
+# supported way - QScriptContext::parentContext() does
+# frame->callerFrame()->removeHostCallFrameFlag() - so this only extends the
+# same treatment to the entry point.
+#
+# THE OBVIOUS FIX DOES NOT SURVIVE THE OPTIMISER - do not "simplify" this back.
+# Written the tidy way, as frame->removeHostCallFrameFlag() or
+# frame->hasHostCallFrameFlag(), the guard compiles to nothing at all at -Os,
+# which is what -optimize-size gives every target in this kit. Inlining a member
+# call hands clang a `this` carrying nonnull and align 8; from an aligned pointer
+# it concludes bit 0 is already clear, folds the mask into the identity, and
+# drops the test that follows. An earlier version of this patch did exactly that:
+# it applied cleanly, Qt was rebuilt, and mark() came out byte-identical to
+# unpatched Qt - the crash offset had not even moved. Measured with the kit's own
+# x86_64-apple-darwin20.4-clang++ at -Os and disassembled:
+#
+#   frame->removeHostCallFrameFlag(), then test          -> nothing emitted
+#   frame->hasHostCallFrameFlag()                        -> nothing emitted
+#   (quintptr)ptr & ~1 before any member call            -> andq $-2 survives
+#   (quintptr)ptr & 1 tested                             -> testb $1 survives
+#   ptr == (QScriptContext *)noCaller()                  -> cmpq $1 survives
+#
+# Pointee alignment is not what decides it - repeating the test with an align-8
+# context class changes nothing. What matters is whether the pointer has been
+# passed as `this` yet. So the mask is integer arithmetic on the raw pointer, and
+# a rebuild has to be checked at the object level - `andq $-2` present - rather
+# than by the patch applying.
+#
+# Confirmed on the hardware it was diagnosed from. With this patch in, an OS X
+# 10.11.6 machine runs the whole tests/ suite, 8 apps out of 8, and qt-selftest
+# reports 258 passed, 0 failed, 3 skipped - script/engine-debugger among the
+# passes. Before it the same binary died there and took the run with it, so the
+# 100-odd checks that follow that one had never run on macOS at all.
+#
+# The same fold reaches the existing frame->callerFrame()->hasHostCallFrameFlag()
+# test inside contextForFrame(), the one that skips the "fake" context created in
+# Interpreter::execute - but only on clang. GCC keeps it: in the i686 mingw build
+# contextForFrame() comes out as `and $0xfffffffe` and its branch, then
+# `test $0x1,%esi` and the rest of that condition, all present. So that test is
+# dead on the macOS targets and live on the Windows and Linux ones. It is left
+# alone either way: it is not what crashes, and it is not this patch's business.
+#
+# The guard in mark() is kept as well, deliberately. A collection can be
+# triggered by any allocation, so a bad frame reaching the collector is a
+# segfault whose backtrace names neither the engine that owns it nor the code
+# that produced it - the first crash above took a 253-check test run down with
+# it and reported nothing. Two instructions is cheap for not having to diagnose
+# that twice.
+#
+# Not backport-specific and not macOS-specific: the code is the same everywhere
+# and this patch is in patches/qt5/all for the same reason as 01. What is
+# platform-dependent is only whether the sentinel is reached at all - for the
+# mark() path a GC has to fall inside the window, so heap layout and allocation
+# timing decide it. The x86 Windows and Linux targets run the same check
+# (qt-selftest's script/engine-debugger) and pass; macOS crashes there every
+# single time. The bug is in the shared code either way.
+#
+# Changes:
+#   qtscript/src/script/api/qscriptengine_p.h
+#       contextForFrame(): strip the host call frame flag and report no context
+#       when nothing is left, so the sentinel never becomes a QScriptContext
+#   qtscript/src/script/api/qscriptengine.cpp
+#       QScriptEnginePrivate::mark(): same guard on the context walk, so a bad
+#       frame cannot turn into a crash inside the collector
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtscript/src/script/api/qscriptengine.cpp b/qtscript/src/script/api/qscriptengine.cpp
+--- a/qtscript/src/script/api/qscriptengine.cpp
++++ b/qtscript/src/script/api/qscriptengine.cpp
+@@ -1318,6 +1318,17 @@ void QScriptEnginePrivate::mark(JSC::MarkStack& markStack)
+         QScriptContext *context = q->currentContext();
+ 
+         while (context) {
++            // contextForFrame() should have kept the noCaller() sentinel out of
++            // this walk, and this second guard is deliberate: a GC can run at
++            // any allocation, so a bad frame reaching here is a segfault deep
++            // inside the collector, with a backtrace that names neither the
++            // engine nor the caller that produced it. Cheap insurance, two
++            // instructions. Integer arithmetic before any member call, for the
++            // reason spelled out in contextForFrame().
++            context = reinterpret_cast<QScriptContext *>(
++                reinterpret_cast<quintptr>(context) & ~quintptr(1));
++            if (!context)
++                break;
+             JSC::ScopeChainNode *node = frameForContext(context)->scopeChain();
+             JSC::ScopeChainIterator it(node);
+             for (it = node->begin(); it != node->end(); ++it) {
+diff --git a/qtscript/src/script/api/qscriptengine_p.h b/qtscript/src/script/api/qscriptengine_p.h
+--- a/qtscript/src/script/api/qscriptengine_p.h
++++ b/qtscript/src/script/api/qscriptengine_p.h
+@@ -880,6 +880,25 @@ inline void QScriptEnginePrivate::unregisterScriptString(QScriptStringPrivate *v
+ 
+ inline QScriptContext *QScriptEnginePrivate::contextForFrame(JSC::ExecState *frame)
+ {
++    // This is the one place a JSC call frame becomes a QScriptContext, so it is
++    // the one place that has to reject what is not a frame. The chain of frames
++    // ends in CallFrame::noCaller(), which is HostCallFrameFlag - the value 1 -
++    // on a null pointer: non-null, so every caller that walks contexts sails
++    // past its `while (context)` and dereferences (char *)1. Strip the flag the
++    // way QScriptContext::parentContext() does, and report no context when
++    // nothing is left.
++    //
++    // The mask has to be integer arithmetic on the pointer, done before it is
++    // passed as `this` to anything. Written the tidier way, as
++    // frame->removeHostCallFrameFlag(), it disappears completely at -Os:
++    // inlining that member call gives clang a `this` carrying nonnull and
++    // align 8, so it concludes bit 0 is clear and folds the mask away. The same
++    // fold is why the frame->callerFrame()->hasHostCallFrameFlag() test just
++    // below cannot be relied on either.
++    frame = reinterpret_cast<JSC::ExecState *>(
++        reinterpret_cast<quintptr>(frame) & ~quintptr(1));
++    if (!frame)
++        return 0;
+     if (frame && frame->callerFrame()->hasHostCallFrameFlag() && !frame->callee()
+         && frame->callerFrame()->removeHostCallFrameFlag() == QScript::scriptEngineFromExec(frame)->globalExec()) {
+         //skip the "fake" context created in Interpreter::execute.

@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows (all GCC builds): stop GCC keeping values in call-clobbered registers
+# across calls to COMDAT functions.
+#
+# Interprocedural register allocation (-fipa-ra, on by default at -O2/-Os) lets
+# a caller hold a value in a call-clobbered register across a call whenever the
+# compiler can see that the copy of the callee it just compiled never writes
+# that register. The assumption only holds if that copy is the one that ends up
+# in the binary. For a COMDAT function - which every inline function and every
+# template instantiation is - it need not be: the linker keeps one arbitrary
+# copy out of however many translation units emitted it, and copies compiled in
+# different contexts do not have the same register footprint. The caller is then
+# left reading a register the surviving callee overwrote.
+#
+# Found on win-amd64, in Qt3D, with gcc 7.3 and -optimize-size. The generated
+# code for Qt3DRender::Render::Effect::syncFromFrontEnd() is
+#
+#     lea    0x18(%r12),%r10          ; %r10 = &this->m_techniques
+#     mov    %r10,%rcx
+#     call   QVector<QNodeId>::operator==   ; %r10 is volatile in the Win64 ABI
+#     test   %al,%al
+#     jne    ...
+#     mov    %r10,%rcx                ; <- reused anyway
+#     call   QVector<QNodeId>::operator=
+#
+# while the copy of operator== the linker kept opens with
+#
+#     mov    0x4(%rdx),%r10d          ; %r10d = other.d->size
+#
+# so the assignment ran with `this` equal to the number of techniques on the
+# effect. Qt3DExtras materials carry four, and gl-heavy-gallery died with
+#
+#     0xC0000005, tried to read address 0x00000004
+#
+# the moment the Qt3D tab was shown - deterministically, on any machine whose
+# driver reports Qt3D as fully supported, so it had never been seen on the
+# VM-class GPUs the suite was validated on, which take the compat path instead.
+# Nothing in Qt is wrong here; the code generated for it is.
+#
+# -fno-ipa-ra turns the optimisation off. It is a minor one - the flag costs
+# nothing measurable on this build - and it is the only reliable fix short of
+# changing compilers, which this target cannot do: gcc 7.3 on Ubuntu 18.04 is
+# what keeps the XP backport linkable.
+#
+# The flags go in the mkspec rather than in the configure line so the shipped
+# SDK carries them, and applications built against it get the same codegen -
+# the miscompile is not specific to Qt's own sources.
+#
+# win32-g++ is the GCC/MinGW mkspec only: win-i386 and win-amd64 use it,
+# win-arm64 builds with -xplatform win32-clang-g++ and is untouched (clang has
+# no -fipa-ra).
+#
+# Changes:
+#   qtbase/mkspecs/win32-g++/qmake.conf
+#       add -fno-ipa-ra to QMAKE_CFLAGS and QMAKE_CXXFLAGS
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/mkspecs/win32-g++/qmake.conf b/qtbase/mkspecs/win32-g++/qmake.conf
+--- a/qtbase/mkspecs/win32-g++/qmake.conf
++++ b/qtbase/mkspecs/win32-g++/qmake.conf
+@@ -13,9 +13,26 @@
+ # modifications to g++-win32.conf
+ 
++# -fno-ipa-ra works around a GCC miscompile that only appears in a static link.
++# Interprocedural register allocation lets a caller keep a value in a
++# call-clobbered register across a call, when it can see that the copy of the
++# callee it just compiled never touches that register. For a COMDAT function -
++# which every inline function and template instantiation is - the copy the
++# linker finally keeps may come from a different translation unit and have a
++# different register footprint, and then the assumption is simply false.
++#
++# Seen in Qt3D on win-amd64: Effect::syncFromFrontEnd() held &m_techniques in
++# %r10 across a call to QVector<QNodeId>::operator==(), whose surviving copy
++# loads the vector size into %r10d. The assignment that followed therefore ran
++# with `this` equal to the technique count, and gl-heavy-gallery died with an
++# access violation reading 0x00000004 as soon as the Qt3D tab was shown.
++#
++# It belongs in the mkspec rather than in the configure line so the shipped SDK
++# carries it and applications built against it get the same codegen.
++
+ QMAKE_CC                = $${CROSS_COMPILE}gcc
+-QMAKE_CFLAGS           += -fno-keep-inline-dllexport
++QMAKE_CFLAGS           += -fno-keep-inline-dllexport -fno-ipa-ra
+ QMAKE_CFLAGS_WARN_ON   += -Wextra
+ 
+ QMAKE_CXX               = $${CROSS_COMPILE}g++
+-QMAKE_CXXFLAGS         += -fno-keep-inline-dllexport
++QMAKE_CXXFLAGS         += -fno-keep-inline-dllexport -fno-ipa-ra
+ QMAKE_CXXFLAGS_WARN_ON  = $$QMAKE_CFLAGS_WARN_ON

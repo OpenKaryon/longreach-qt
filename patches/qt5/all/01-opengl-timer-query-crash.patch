@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: stop QOpenGLTimerQuery and QOpenGLTimeMonitor crashing when
+# they are destroyed without ever having been created.
+#
+# Two defects in qopengltimerquery.cpp, both reachable from correct application
+# code and both fatal:
+#
+#   1. QOpenGLTimerQueryPrivate leaves `core` out of its constructor's
+#      initialiser list while ~QOpenGLTimerQueryPrivate() does `delete core`, so
+#      constructing and destroying a QOpenGLTimerQuery frees a garbage pointer.
+#      Verified under gdb: SIGSEGV in ~QOpenGLTimerQueryPrivate() at
+#      free(mem=0x10). It corrupts the heap rather than failing on the spot,
+#      which is what makes it hard to attribute - it surfaced as a crash in an
+#      unrelated place further down the suite.
+#
+#   2. Both destructors dereference d->context without checking it:
+#
+#          if (d->context != ctx)
+#              d->context->makeCurrent(oldContext->surface())
+#
+#      d->context stays null until create() is called. So destroying either
+#      object without calling create() first, while any context is current,
+#      calls makeCurrent() on a null pointer. With no context current both
+#      sides are null, the branch is skipped, and nothing happens - which is
+#      why this hides so well: it needs a machine with a working GL driver.
+#      Found by running the suite on Windows 11 with a real 4.6 context, where
+#      it took out 142 of the 262 checks that had not run yet.
+#
+# The fixes are the obvious ones. `core` is initialised alongside `ext`, which
+# was already correct, and each destructor treats a null d->context as "nothing
+# was ever created, so there is nothing to destroy" and skips straight to the
+# end. QOpenGLTimeMonitor's own private class already initialises core properly
+# and needs only the destructor fix.
+#
+# Not backport-specific: this is an upstream defect in Qt 5.15.19, present on
+# every platform, and it is in patches/qt5/all because every target that builds
+# QtGui with OpenGL is exposed to it.
+#
+# Changes:
+#   qtbase/src/gui/opengl/qopengltimerquery.cpp
+#       initialise QOpenGLTimerQueryPrivate::core; null-check d->context in
+#       ~QOpenGLTimerQuery() and ~QOpenGLTimeMonitor()
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/gui/opengl/qopengltimerquery.cpp b/qtbase/src/gui/opengl/qopengltimerquery.cpp
+--- a/qtbase/src/gui/opengl/qopengltimerquery.cpp
++++ b/qtbase/src/gui/opengl/qopengltimerquery.cpp
+@@ -78,6 +78,7 @@
+     QOpenGLTimerQueryPrivate()
+         : QObjectPrivate(),
+           context(nullptr),
++          core(nullptr),
+           ext(nullptr),
+           timeInterval(0),
+           timer(0)
+@@ -311,6 +312,12 @@
+ 
+     Q_D(QOpenGLTimerQuery);
+     QOpenGLContext *oldContext = nullptr;
++    // d->context is only set by create(). Null means this object was never
++    // created, so there is nothing to destroy - and dereferencing it below
++    // would crash, which is what happens without this check whenever some
++    // other context happens to be current.
++    if (!d->context)
++        return;
+     if (d->context != ctx) {
+         oldContext = ctx;
+         if (d->context->makeCurrent(oldContext->surface())) {
+@@ -702,6 +709,12 @@
+ 
+     Q_D(QOpenGLTimeMonitor);
+     QOpenGLContext *oldContext = nullptr;
++    // d->context is only set by create(). Null means this object was never
++    // created, so there is nothing to destroy - and dereferencing it below
++    // would crash, which is what happens without this check whenever some
++    // other context happens to be current.
++    if (!d->context)
++        return;
+     if (d->context != ctx) {
+         oldContext = ctx;
+         if (d->context->makeCurrent(oldContext->surface())) {

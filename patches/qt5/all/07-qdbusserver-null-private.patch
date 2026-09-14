@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: do not destroy a QDBusServer that never got a private.
+#
+# Both QDBusServer constructors return early, leaving d as nullptr, when
+# libdbus cannot be loaded (-dbus-runtime resolves it at run time) or no
+# QDBusConnectionManager exists. The destructor then dereferences d anyway:
+#
+#   QWriteLocker writeLocker(&d->lock);
+#
+# Diagnosed on OS X 10.7.5, which has no libdbus: qt-selftest's
+# dbus/connection-and-interfaces check constructs `QDBusServer server;` and
+# crashed with EXC_BAD_ACCESS at 0x60 when it went out of scope. A minimal
+# program reproduced it at exit. Any system without libdbus is affected; the
+# fix is the early return Qt 6 has.
+#
+# Changes:
+#   src/dbus/qdbusserver.cpp
+#       return from the destructor when d is null
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/dbus/qdbusserver.cpp b/qtbase/src/dbus/qdbusserver.cpp
+--- a/qtbase/src/dbus/qdbusserver.cpp
++++ b/qtbase/src/dbus/qdbusserver.cpp
+@@ -111,6 +111,10 @@
+ */
+ QDBusServer::~QDBusServer()
+ {
++    // The constructors leave d null when libdbus cannot be loaded.
++    if (!d)
++        return;
++
+     QMutex *managerMutex = nullptr;
+     if (QDBusConnectionManager::instance())
+         managerMutex = &QDBusConnectionManager::instance()->mutex;

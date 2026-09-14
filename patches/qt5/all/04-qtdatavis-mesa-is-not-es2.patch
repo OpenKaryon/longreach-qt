@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: stop QtDataVisualization calling every Mesa driver "ES2".
+#
+# Utils::resolveStatics() asks the context whether it is ES - ctx->isOpenGLES(),
+# which is the real answer - and then throws that answer away:
+#
+#   if (versionStr.contains(QStringLiteral("mesa"), Qt::CaseInsensitive)
+#           || QCoreApplication::testAttribute(Qt::AA_UseSoftwareOpenGL)) {
+#       qWarning("Only OpenGL ES2 emulation is available for software rendering.");
+#       isES = true;
+#   }
+#
+# "mesa" appears in GL_VERSION for every Mesa driver, accelerated or not. The
+# intent was to catch software rendering; what it catches is a vendor name. A
+# desktop OpenGL 2.1 context from Mesa is then driven down the ES2 path for the
+# rest of the process - different shaders, GL_LINES instead of the grid mesh, no
+# shadows, and the label and background handling that goes with them.
+#
+# Found on Windows XP under VMware, whose SVGA3D driver reports
+#
+#   GL_VENDOR    VMware, Inc.
+#   GL_RENDERER  Gallium 0.4 on SVGA3D
+#   GL_VERSION   2.1 Mesa 10.0 (git-5da4fa2)
+#   GLSL         1.20
+#
+# so it is desktop GL 2.1 with GLSL 1.20 - exactly what the desktop path
+# requires, since QAbstract3DGraph checks for GLSL >= 1.2 and quits otherwise.
+# On that machine Q3DBars and Q3DScatter come up with no axis labels at all, and
+# the background box turns black after switching away from the tab and back.
+#
+# The obvious explanations were checked first and are not it. The theme is not
+# losing its colour: a printf on every expose reports background=#ffffff
+# throughout, while the box renders black. Textures are not failing either -
+# reproducing exactly what TextureHelper::create2DTexture() does for a label
+# (53x19 rounded to 64x32, RGBA upload, GL_LINEAR_MIPMAP_LINEAR, glGenerateMipmap)
+# succeeds at every step on that driver, with mipmap level 1 present. What is
+# left is the code path, and the code path was chosen by a substring match.
+#
+# The AA_UseSoftwareOpenGL half is kept: that is an application saying what it
+# wants, and worth honouring. Only the vendor-string half goes.
+#
+# The test exists twice, and the second copy matters more. utils.cpp decides
+# which code path the renderer takes; qutils.h - a public header, so it is
+# compiled into every translation unit that includes it - runs the same check to
+# decide the surface format the graph requests, which picks the context itself.
+# Patching only one leaves the other to make the same wrong call, and the string
+# staying behind in qabstract3dgraph.o is what gave the second copy away.
+#
+# Changes:
+#   qtdatavis3d/src/datavisualization/utils/utils.cpp
+#       resolveStatics(): drop the GL_VERSION "mesa" test, keep
+#       AA_UseSoftwareOpenGL and the context's own isOpenGLES()
+#   qtdatavis3d/src/datavisualization/utils/qutils.h
+#       qDefaultSurfaceFormat(): the same test, same treatment
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtdatavis3d/src/datavisualization/utils/qutils.h b/qtdatavis3d/src/datavisualization/utils/qutils.h
+--- a/qtdatavis3d/src/datavisualization/utils/qutils.h
++++ b/qtdatavis3d/src/datavisualization/utils/qutils.h
+@@ -79,10 +79,14 @@ static inline QSurfaceFormat qDefaultSurfaceFormat(bool antialias)
+ #ifdef Q_OS_WIN
+     const GLubyte *openGLVersion = ctx->functions()->glGetString(GL_VERSION);
+     versionStr = QString::fromLatin1(reinterpret_cast<const char *>(openGLVersion)).toLower();
+ #endif
+-    if (versionStr.contains(QStringLiteral("mesa"))
+-            || QCoreApplication::testAttribute(Qt::AA_UseSoftwareOpenGL)) {
++    // Same reasoning as Utils::resolveStatics(): a Mesa driver is not an ES
++    // driver, and ctx->isOpenGLES() above has already given the real answer.
++    // This copy matters even more than that one - it decides the surface format
++    // the graph asks for, so getting it wrong picks the context as well as the
++    // code path.
++    if (QCoreApplication::testAttribute(Qt::AA_UseSoftwareOpenGL)) {
+         qWarning("Only OpenGL ES2 emulation is available for software rendering.");
+         isES = true;
+     }
+ #endif
+diff --git a/qtdatavis3d/src/datavisualization/utils/utils.cpp b/qtdatavis3d/src/datavisualization/utils/utils.cpp
+--- a/qtdatavis3d/src/datavisualization/utils/utils.cpp
++++ b/qtdatavis3d/src/datavisualization/utils/utils.cpp
+@@ -366,10 +366,14 @@ void Utils::resolveStatics()
+ #ifdef Q_OS_WIN
+     const GLubyte *openGLVersion = ctx->functions()->glGetString(GL_VERSION);
+     versionStr = QString::fromLatin1(reinterpret_cast<const char *>(openGLVersion)).toLower();
+ #endif
+-    if (versionStr.contains(QStringLiteral("mesa"), Qt::CaseInsensitive)
+-            || QCoreApplication::testAttribute(Qt::AA_UseSoftwareOpenGL)) {
++    // AA_UseSoftwareOpenGL is a decision the application made, so honour it. The
++    // GL_VERSION test that used to sit beside it is not: "mesa" appears in the
++    // version string of every Mesa driver, hardware-accelerated or not, and says
++    // nothing about whether the context is ES. ctx->isOpenGLES() above already
++    // answers that question properly.
++    if (QCoreApplication::testAttribute(Qt::AA_UseSoftwareOpenGL)) {
+         qWarning("Only OpenGL ES2 emulation is available for software rendering.");
+         isES = true;
+     }
+ #endif

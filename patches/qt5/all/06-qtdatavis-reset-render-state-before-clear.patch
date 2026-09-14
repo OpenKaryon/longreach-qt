@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: reset basic GL state before every QtDataVisualization frame.
+#
+# QAbstract3DGraph windows can share an OpenGL context. On Windows XP under
+# VMware/Mesa 10.0 the Bars graph returns from the Scatter tab with the window
+# background still correct but the bars themselves black, which points at leaked
+# renderer state rather than theme colours or data. Abstract3DRenderer already
+# resets depth/cull/blend state, but only when defaultFboHandle is non-zero; the
+# plain QWindow path can render with a zero default FBO and skip that reset.
+#
+# Reset the cheap global state unconditionally before clearing the graph. The
+# individual renderers still bind their own shaders, textures, uniforms and
+# vertex attributes for actual drawing, so this is only returning the shared
+# context to the assumptions their frame code already makes.
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+index ab15605..76a7b45 100644
+--- a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
++++ b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+@@ -240,11 +240,26 @@ void Abstract3DRenderer::render(const GLuint defaultFboHandle)
+ {
+-    if (defaultFboHandle) {
+-        glDepthMask(true);
+-        glEnable(GL_DEPTH_TEST);
+-        glDepthFunc(GL_LESS);
+-        glEnable(GL_CULL_FACE);
+-        glCullFace(GL_BACK);
+-        glDisable(GL_BLEND); // For QtQuick2 blending is enabled by default, but we don't want it to be
+-    }
++    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++    glDepthMask(GL_TRUE);
++    glEnable(GL_DEPTH_TEST);
++    glDepthFunc(GL_LESS);
++    glEnable(GL_CULL_FACE);
++    glCullFace(GL_BACK);
++    glDisable(GL_BLEND); // For QtQuick2 blending is enabled by default, but we don't want it to be
++    glDisable(GL_SCISSOR_TEST);
++    glEnable(GL_DITHER);
++
++    // Graph windows can share a context. Selection, label and volume paths use
++    // extra framebuffers, textures and buffer bindings, and old desktop drivers
++    // do not reliably return to the next graph's expected state after a native
++    // child window is hidden and exposed again. Every renderer binds what it
++    // needs for drawing, so start each frame from the same cheap baseline.
++    glActiveTexture(GL_TEXTURE0);
++    glBindTexture(GL_TEXTURE_2D, 0);
++#if !defined(QT_OPENGL_ES_2)
++    if (!m_isOpenGLES)
++        glBindTexture(GL_TEXTURE_3D, 0);
++#endif
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+-
++
+     // Clear the graph background to the theme color

@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: do not stop a gamepad backend that never started.
+#
+# QXInputGamepadBackend::stop() dereferences m_thread unconditionally:
+#
+#   void QXInputGamepadBackend::stop()
+#   {
+#       qCDebug(lcXGB) << "stop";
+#       m_thread->signalQuit();
+#       m_thread->wait();
+#
+# but start() only creates that thread if the XInput library loaded *and*
+# XInputGetState resolved. When either fails it warns and returns, leaving
+# m_thread as the null its constructor set - and QGamepadManager still calls
+# stop() on the way down, because as far as it is concerned the backend exists.
+#
+# Diagnosed on Windows XP, where XInput is simply absent:
+#
+#   Failed to load XInput library xinput1_3.dll
+#   qt.gamepad: Failed to start gamepad backend
+#   ...
+#   code    0xC0000005 (access violation)
+#   tried to write address 0x0000000C
+#   RVA     0x00798051
+#
+# and the numbers name the line exactly. signalQuit() does
+# m_quit.fetchAndStoreAcquire(1), m_quit sits at offset 12 in QXInputThread,
+# and disassembling that RVA in the very binary that crashed gives
+#
+#   mov  0xc(%ebx),%edx      ; edx = m_thread, which is 0
+#   xchg %eax,0xc(%edx)      ; write to 0 + 12 = 0x0000000C
+#
+# It fires during teardown after main() has returned, so the process printed a
+# complete, all-passing test report and then died with nothing to connect the
+# two - which is what made it look like a defect in the suite rather than in a
+# plugin nobody had used.
+#
+# Not XP-specific in the code, only in the trigger. Any Windows machine without
+# a usable xinput1_3.dll takes the same path; XP just guarantees it. The x86_64
+# Windows target has XInput and never reaches this, and the check that exercises
+# the module (qt-selftest's gamepad/device-and-navigation) passes on both - it
+# constructs the classes, and the crash is in the shutdown that follows the whole
+# run.
+#
+# Confirmed on the machine it was diagnosed from. With this patch in, XP runs the
+# whole suite clean - 8 apps out of 8, qt-selftest at 256 passed, 0 failed,
+# 5 skipped, and no exception on the way out. The "Failed to load XInput library
+# xinput1_3.dll" warning is still there, as it should be: the library really is
+# absent, and now that is all that happens.
+#
+# Changes:
+#   qtgamepad/src/plugins/gamepads/xinput/qxinputgamepadbackend.cpp
+#       stop(): only signal and wait for the polling thread if it exists
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtgamepad/src/plugins/gamepads/xinput/qxinputgamepadbackend.cpp b/qtgamepad/src/plugins/gamepads/xinput/qxinputgamepadbackend.cpp
+--- a/qtgamepad/src/plugins/gamepads/xinput/qxinputgamepadbackend.cpp
++++ b/qtgamepad/src/plugins/gamepads/xinput/qxinputgamepadbackend.cpp
+@@ -283,8 +283,14 @@ bool QXInputGamepadBackend::start()
+ void QXInputGamepadBackend::stop()
+ {
+     qCDebug(lcXGB) << "stop";
+-    m_thread->signalQuit();
+-    m_thread->wait();
++    // start() only creates the thread once the XInput library has loaded and
++    // XInputGetState has resolved; on a machine with neither, m_thread is still
++    // the null the constructor set, and stopping a backend that never started
++    // wrote through it. Nothing else here guards against that, so guard here.
++    if (m_thread) {
++        m_thread->signalQuit();
++        m_thread->wait();
++    }
+     XInputGetState = 0;
+ }
+ 

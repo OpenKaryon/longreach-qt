@@ -1,0 +1,267 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# All platforms: do not build volume shaders a driver has no room for.
+#
+# QtDataVisualization compiles four volume-rendering programs for every graph on
+# the desktop path, in Abstract3DRenderer::initShaders(), whether or not that
+# graph will ever hold a QCustom3DVolume. Three of them declare
+#
+#   uniform highp vec4 colorIndex[256];      (texture3d.frag:7 and two others)
+#
+# which is 1024 fragment uniform components in that one array. A driver only has
+# to offer GL_MAX_FRAGMENT_UNIFORM_COMPONENTS of them, and Mesa 10.0 on VMware's
+# SVGA3D - the driver Windows XP gets under VMware - offers 896:
+#
+#   GL_VERSION                          2.1 Mesa 10.0 (git-5da4fa2)
+#   GL_MAX_FRAGMENT_UNIFORM_COMPONENTS  896
+#
+# 1024 > 896, so the link fails whatever else the program contains:
+#
+#   error: Too many fragment shader default uniform block components
+#
+# ShaderHelper::initialize() ignores the result of link() and goes on to look up
+# some thirty uniform and attribute locations, each of which prints "shader
+# program is not linked". Four programs per graph, three graphs in the gallery:
+# the window comes up behind a screenful of scrolling warnings, which is what
+# this looked like from the outside - a graph that would not start rather than a
+# feature that would not fit.
+#
+# This only became reachable once all/04 stopped calling every Mesa driver an ES2
+# driver. That patch is right - the driver is desktop GL 2.1 with GLSL 1.20 - and
+# this is the real limit hiding behind the vendor-string test it removed. The
+# fix is the same in kind: ask the driver, do not guess. If the advertised
+# fragment uniform limit is already too small for the shader, do not even try to
+# link it; otherwise link the program and believe the answer.
+#
+# Volume rendering is then simply absent on such a driver, which is honest - it
+# could not have worked - and everything else on the desktop path stays. Nothing
+# in this kit's tests uses QCustom3DVolume, and a graph that has no volume item
+# never touched these programs in the first place.
+#
+# Changes:
+#   qtdatavis3d/src/datavisualization/utils/shaderhelper.cpp
+#       initialize(): check link(), report the log once, and stop before the
+#       location lookups instead of printing one warning per lookup
+#   qtdatavis3d/src/datavisualization/utils/shaderhelper_p.h
+#       isInitialized(): let the caller see that a program did not link
+#   qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+#       initVolumeTextureShaders(): drop all four programs if the first will not
+#       link, and say so once
+#       renderCustomItems(): draw a volume item through the volume path only when
+#       that path exists, via a single drawAsVolume flag replacing the three
+#       separate isVolume() tests that decided it
+#
+#       initVolumeTextureShaders(): once the answer is known, skip the attempt
+#       entirely - a renderer is re-initialised on every shadow-quality change,
+#       and where the graph's surface is rebuilt on each tab switch that is what
+#       turned one unsupported feature into a scrolling wall of warnings
+#
+#       The answer is now remembered process-wide, not just per renderer
+#       instance. Windows XP / VMware can destroy and recreate graph windows
+#       while switching tabs, which creates new renderers; letting each one
+#       relink the same oversized volume shaders disturbed the neighbouring
+#       Bars and Scatter renderers even though no QCustom3DVolume was present.
+#   qtdatavis3d/src/datavisualization/engine/abstract3drenderer_p.h
+#       m_volumeShadersUnsupported, and clearVolumeTextureShaders() for the
+#       teardown both paths now need
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+index ab15605..257fe47 100644
+--- a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
++++ b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+@@ -50,6 +50,9 @@ const qreal polarGridAngle(doublePi / qreal(polarGridRoundness));
+ const float polarGridAngleDegrees(float(360.0 / qreal(polarGridRoundness)));
+ const qreal polarGridHalfAngle(polarGridAngle / 2.0);
+-
++
++const GLint minVolumeFragmentUniformComponents(1100);
++static bool volumeShadersUnsupportedForProcess = false;
++
+ Abstract3DRenderer::Abstract3DRenderer(Abstract3DController *controller)
+     : QObject(0),
+       m_hasNegativeValues(false),
+@@ -83,6 +83,7 @@ Abstract3DRenderer::Abstract3DRenderer(Abstract3DController *controller)
+       m_volumeTextureLowDefShader(0),
+       m_volumeTextureSliceShader(0),
+       m_volumeSliceFrameShader(0),
++      m_volumeShadersUnsupported(false),
+       m_labelShader(0),
+       m_cursorPositionShader(0),
+       m_cursorPositionFrameBuffer(0),
+@@ -305,6 +308,32 @@ void Abstract3DRenderer::initVolumeTextureShaders(const QString &vertexShader,
+                                                   const QString &sliceFrameVertexShader,
+                                                   const QString &sliceFrameShader)
+ {
++    // A renderer is re-initialised whenever the shadow quality changes, and on
++    // some drivers - Windows XP under VMware, where the graph window's surface
++    // is destroyed and rebuilt on every tab switch - that happens over and over
++    // for the life of the process. Compiling four programs that are already
++    // known not to link, and printing the reason again each time, is how one
++    // unsupported feature turned into a scrolling wall of warnings. The driver
++    // will not have changed its mind, so ask it once.
++    if (volumeShadersUnsupportedForProcess || m_volumeShadersUnsupported) {
++        clearVolumeTextureShaders();
++        return;
++    }
++
++    GLint maxFragmentUniformComponents = 0;
++    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &maxFragmentUniformComponents);
++    if (maxFragmentUniformComponents > 0
++            && maxFragmentUniformComponents < minVolumeFragmentUniformComponents) {
++        // The texture shaders need colorIndex[256] plus the other uniforms.
++        // Linking them on old Mesa/VMware XP drivers fails noisily and can
++        // disturb other graph renderers that do not use volume rendering.
++        qWarning("Volume rendering is not available on this driver; volume items "
++                 "will be drawn as plain custom items.");
++        m_volumeShadersUnsupported = true;
++        volumeShadersUnsupportedForProcess = true;
++        clearVolumeTextureShaders();
++        return;
++    }
+ 
+     delete m_volumeTextureShader;
+     m_volumeTextureShader = new ShaderHelper(this, vertexShader, fragmentShader);
+@@ -321,6 +349,38 @@ void Abstract3DRenderer::initVolumeTextureShaders(const QString &vertexShader,
+     delete m_volumeSliceFrameShader;
+     m_volumeSliceFrameShader = new ShaderHelper(this, sliceFrameVertexShader, sliceFrameShader);
+     m_volumeSliceFrameShader->initialize();
++
++    // Volume rendering asks for more than some drivers have. The three texture
++    // shaders declare "uniform highp vec4 colorIndex[256]", which is 1024
++    // fragment uniform components in that one array, and a driver only has to
++    // offer GL_MAX_FRAGMENT_UNIFORM_COMPONENTS of them - Mesa 10.0 on VMware's
++    // SVGA3D, for one, offers 896, so the link fails no matter what else the
++    // program contains.
++    //
++    // These four are built for every graph whether or not it will ever hold a
++    // QCustom3DVolume, so on such a driver a graph that renders bars perfectly
++    // well still drags four dead programs behind it. Drop them: a null shader
++    // is what the draw path checks for, and a volume item now renders as an
++    // ordinary custom item instead of through a program that cannot run.
++    if (!m_volumeTextureShader->isInitialized()) {
++        qWarning("Volume rendering is not available on this driver; volume items "
++                 "will be drawn as plain custom items.");
++        m_volumeShadersUnsupported = true;
++        volumeShadersUnsupportedForProcess = true;
++        clearVolumeTextureShaders();
++    }
++}
++
++void Abstract3DRenderer::clearVolumeTextureShaders()
++{
++    delete m_volumeTextureShader;
++    delete m_volumeTextureLowDefShader;
++    delete m_volumeTextureSliceShader;
++    delete m_volumeSliceFrameShader;
++    m_volumeTextureShader = 0;
++    m_volumeTextureLowDefShader = 0;
++    m_volumeTextureSliceShader = 0;
++    m_volumeSliceFrameShader = 0;
+ }
+ 
+ void Abstract3DRenderer::initLabelShaders(const QString &vertexShader, const QString &fragmentShader)
+@@ -1521,7 +1567,13 @@ void Abstract3DRenderer::drawCustomItems(RenderingState state,
+             if (RenderingNormal == state) {
+                 // Normal render
+                 ShaderHelper *prevShader = shader;
+-                if (item->isVolume() && !m_isOpenGLES) {
++                // A volume item can only be drawn as one where the volume
++                // shaders linked; see initVolumeTextureShaders(). Everywhere
++                // this block used to ask "is it a volume item" it really meant
++                // "is it going down the volume path", so ask that instead.
++                const bool drawAsVolume = item->isVolume() && !m_isOpenGLES
++                        && m_volumeTextureShader;
++                if (drawAsVolume) {
+                     if (item->drawSlices() &&
+                             (item->sliceIndexX() >= 0
+                              || item->sliceIndexY() >= 0
+@@ -1546,7 +1598,7 @@ void Abstract3DRenderer::drawCustomItems(RenderingState state,
+                 if (item->isBlendNeeded()) {
+                     glEnable(GL_BLEND);
+                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+-                    if (!item->isVolume() && !m_isOpenGLES)
++                    if (!drawAsVolume && !m_isOpenGLES)
+                         glDisable(GL_CULL_FACE);
+                 } else {
+                     glDisable(GL_BLEND);
+@@ -1554,7 +1606,7 @@ void Abstract3DRenderer::drawCustomItems(RenderingState state,
+                 }
+ 
+                 if (!m_isOpenGLES && m_cachedShadowQuality > QAbstract3DGraph::ShadowQualityNone
+-                        && !item->isVolume()) {
++                        && !drawAsVolume) {
+                     // Set shadow shader bindings
+                     shader->setUniformValue(shader->shadowQ(), shadowQuality);
+                     shader->setUniformValue(shader->depth(), depthProjectionViewMatrix * modelMatrix);
+@@ -1562,7 +1614,7 @@ void Abstract3DRenderer::drawCustomItems(RenderingState state,
+                     m_drawer->drawObject(shader, item->mesh(), item->texture(), depthTexture);
+                 } else {
+                     // Set shadowless shader bindings
+-                    if (item->isVolume() && !m_isOpenGLES) {
++                    if (drawAsVolume) {
+                         QVector3D cameraPos = m_cachedScene->activeCamera()->position();
+                         cameraPos = MVPMatrix.inverted().map(cameraPos);
+                         // Adjust camera position according to min/max bounds
+diff --git a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer_p.h b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer_p.h
+index d6ffb03..8c307ac 100644
+--- a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer_p.h
++++ b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer_p.h
+@@ -114,6 +114,7 @@ public:
+                                           const QString &sliceShader,
+                                           const QString &sliceFrameVertexShader,
+                                           const QString &sliceFrameShader);
++    void clearVolumeTextureShaders();
+     virtual void initLabelShaders(const QString &vertexShader, const QString &fragmentShader);
+     virtual void initCursorPositionShaders(const QString &vertexShader,
+                                            const QString &fragmentShader);
+@@ -289,6 +290,9 @@ protected:
+     ShaderHelper *m_volumeTextureLowDefShader;
+     ShaderHelper *m_volumeTextureSliceShader;
+     ShaderHelper *m_volumeSliceFrameShader;
++    // Set once the volume programs have been found not to link on this driver,
++    // so the next re-init does not compile them again to learn the same thing.
++    bool m_volumeShadersUnsupported;
+     ShaderHelper *m_labelShader;
+     ShaderHelper *m_cursorPositionShader;
+     GLuint m_cursorPositionFrameBuffer;
+diff --git a/qtdatavis3d/src/datavisualization/utils/shaderhelper.cpp b/qtdatavis3d/src/datavisualization/utils/shaderhelper.cpp
+index e83f7c5..aa58336 100644
+--- a/qtdatavis3d/src/datavisualization/utils/shaderhelper.cpp
++++ b/qtdatavis3d/src/datavisualization/utils/shaderhelper.cpp
+@@ -113,7 +113,20 @@ void ShaderHelper::initialize()
+         qFatal("Compiling Vertex shader failed");
+     if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, m_fragmentShaderFile))
+         qFatal("Compiling Fragment shader failed");
+-    m_program->link();
++
++    // Both shaders compiled, which does not mean the pair links: a program can
++    // still exceed what the driver has room for. When that happens every one of
++    // the ~30 location lookups below prints "shader program is not linked", so
++    // one real failure turns into a screenful of noise that says nothing about
++    // the cause. Report the link log once, leave m_initialized false, and let
++    // the caller decide - it knows which shader this is and whether the graph
++    // can go on without it.
++    if (!m_program->link()) {
++        qWarning("Linking shader program failed (%s + %s): %s",
++                 qPrintable(m_vertexShaderFile), qPrintable(m_fragmentShaderFile),
++                 qPrintable(m_program->log().trimmed()));
++        return;
++    }
+ 
+     m_positionAttr = m_program->attributeLocation("vertexPosition_mdl");
+     m_normalAttr = m_program->attributeLocation("vertexNormal_mdl");
+diff --git a/qtdatavis3d/src/datavisualization/utils/shaderhelper_p.h b/qtdatavis3d/src/datavisualization/utils/shaderhelper_p.h
+index c4e4a71..e54a992 100644
+--- a/qtdatavis3d/src/datavisualization/utils/shaderhelper_p.h
++++ b/qtdatavis3d/src/datavisualization/utils/shaderhelper_p.h
+@@ -60,6 +60,8 @@ class ShaderHelper
+     void setTextures(const QString &texture, const QString &depthTexture);
+ 
+     void initialize();
++    // False when initialize() gave up because the program would not link.
++    bool isInitialized() const { return m_initialized; }
+     bool testCompile();
+     void bind();
+     void release();

@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: keep QCollator comparing when numeric mode is asked for.
+#
+# QCollatorPrivate::init() sets SORT_DIGITSASNUMBERS when numericMode() is on.
+# That flag is Vista+, and pre-Vista CompareString() does not ignore it - it
+# fails the call with ERROR_INVALID_FLAGS. QCollator::compare() then lands in
+# its error switch, warns
+#
+#   Unsupported flags (8) used in QCollator
+#
+# and returns 0, "pretend they're equal", as the code says itself. So on XP a
+# QCollator with numeric mode does not merely lose digit ordering: it reports
+# every pair of strings as equal, and every sort through it silently does
+# nothing. That is far worse than the missing feature.
+#
+# Numeric collation genuinely is not available before Vista - there is no older
+# API that sorts digits by value - so the fix is to stop asking for it and
+# compare without. This is the trade Qt already makes on Unix without ICU, where
+# qcollator_posix.cpp warns "Numeric mode unsupported in the posix collation
+# implementation" and carries on. The warning here says the same thing, once per
+# collator, and the comparison then behaves like any other locale-aware sort.
+#
+# The flag is cleared on the QCollatorPrivate rather than at init() time, so the
+# cost is one failed CompareString per collator instead of a probe on every
+# construction, and Vista+ never reaches this branch at all.
+#
+# Found by running the suite on real XP: qt-selftest's collator/sort asserts
+# "item2" < "item10", which is the numeric ordering, and it is the one check
+# that failed there. The check now skips itself on the XP family - asserting
+# numeric collation on XP is asserting the OS, not the API - so this patch is
+# not what makes the suite green; it is what keeps QCollator usable for
+# everything else.
+#
+# Changes:
+#   qtbase/src/corelib/text/qcollator_win.cpp
+#       QCollator::compare(): on ERROR_INVALID_FLAGS drop SORT_DIGITSASNUMBERS
+#       and compare again, warning once, instead of returning "equal"
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/corelib/text/qcollator_win.cpp b/qtbase/src/corelib/text/qcollator_win.cpp
+--- a/qtbase/src/corelib/text/qcollator_win.cpp
++++ b/qtbase/src/corelib/text/qcollator_win.cpp
+@@ -123,6 +123,25 @@ int QCollator::compare(QStringView s1, QStringView s2) const
+ 
+     switch (DWORD error = GetLastError()) {
+     case ERROR_INVALID_FLAGS:
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        // XP backport: SORT_DIGITSASNUMBERS is Vista+, and pre-Vista
++        // CompareString() rejects the whole call rather than ignoring the bit.
++        // Without this the failure is total and silent: every comparison lands
++        // here and returns 0, so a QCollator with numericMode() reports every
++        // pair of strings as equal and any sort through it does nothing.
++        //
++        // Drop the flag and compare again. Numeric ordering is genuinely not
++        // available on XP - there is no pre-Vista API for it - so this is the
++        // same trade Qt already makes on Unix without ICU, where
++        // qcollator_posix.cpp warns "Numeric mode unsupported in the posix
++        // collation implementation" and carries on comparing.
++        if (d->collator & SORT_DIGITSASNUMBERS) {
++            d->collator &= ~SORT_DIGITSASNUMBERS;
++            qWarning("Numeric mode unsupported before Windows Vista; "
++                     "QCollator is comparing without it");
++            return compare(s1, s2);
++        }
++#endif
+         qWarning("Unsupported flags (%d) used in QCollator", int(d->collator));
+         break;
+     case ERROR_INVALID_PARAMETER:

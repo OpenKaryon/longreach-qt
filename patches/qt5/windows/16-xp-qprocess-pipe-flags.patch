@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows XP: let QProcess create its channel pipes.
+#
+# qt_create_pipe() asks CreateNamedPipe() for
+#
+#   PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS
+#
+# and PIPE_REJECT_REMOTE_CLIENTS is Vista+. XP does not ignore the unknown bit,
+# it fails the whole call with ERROR_INVALID_PARAMETER, so QProcess gets no
+# stdout, stderr or stdin channel at all. Every start() prints
+#
+#   QProcess: CreateNamedPipe failed. (<error text>)
+#
+# twice - once per output channel - and the child's output is never read. The
+# child itself still runs, which is what makes this easy to misread as the child
+# producing nothing.
+#
+# Nothing catches this at build time, and that is not an accident of our flags:
+# mingw-w64 defines the constant unconditionally, with no _WIN32_WINNT guard at
+# all - winbase.h has it at line 142, next to PIPE_ACCEPT_REMOTE_CLIENTS 0x0 -
+# so lowering the API level the way patches/qt5/windows/05 does cannot hide it.
+# The call compiles for an XP target and fails only when XP runs it.
+#
+# Found by running the tests/ suite on real XP: smoke-runner starts each app with
+# QProcess and reports what it printed, so every app came back with an empty
+# section while the same binaries were fine on Windows 11. Nothing in the suite
+# was wrong; the runner simply could not read anything.
+#
+# Fixed the way a flag allows, since there is no function here to resolve at
+# runtime the way patches/qt5/windows/06 does for CancelIoEx and friends: pass the
+# flag, and if that is what the call objected to, drop it for the rest of the
+# process and retry once. Vista and later take it on the first attempt and keep
+# it, so the modern path is unchanged and the cost on XP is one failed call per
+# process. The retry is deliberately not counted against the ERROR_PIPE_BUSY
+# attempt budget - it is a different failure with a different cure.
+#
+# What is given up on XP is what the flag buys: remote clients can connect to
+# these pipes. That is what Qt itself did until 5.6, when the flag was added for
+# hardening, and it is the only behaviour XP can offer. The pipe name still
+# carries the process id and a QRandomGenerator value, and the alternative is
+# QProcess not working at all.
+#
+# Changes:
+#   qtbase/src/corelib/io/qprocess_win.cpp
+#       qt_create_pipe(): drop PIPE_REJECT_REMOTE_CLIENTS once XP rejects it
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/corelib/io/qprocess_win.cpp b/qtbase/src/corelib/io/qprocess_win.cpp
+--- a/qtbase/src/corelib/io/qprocess_win.cpp
++++ b/qtbase/src/corelib/io/qprocess_win.cpp
+@@ -114,7 +114,22 @@ static void qt_create_pipe(Q_PIPE *pipe, bool isInputPipe)
+             dwOpenMode |= PIPE_ACCESS_INBOUND;
+             dwInputBufferSize = dwPipeBufferSize;
+         }
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        // XP backport: PIPE_REJECT_REMOTE_CLIENTS is Vista+. XP's
++        // CreateNamedPipe() does not merely ignore the unknown bit, it fails the
++        // whole call with ERROR_INVALID_PARAMETER, which leaves QProcess with no
++        // channels at all - every start() reports "CreateNamedPipe failed" and
++        // reads nothing. There is no function to resolve at runtime here, so ask
++        // the system the only way a flag allows: use it, and if that is what was
++        // rejected, drop it for the rest of the process and try again. Vista and
++        // later take the flag on the first attempt and keep it.
++        static bool rejectRemoteClients = true;
++        DWORD dwPipeFlags = PIPE_TYPE_BYTE | PIPE_WAIT;
++        if (rejectRemoteClients)
++            dwPipeFlags |= PIPE_REJECT_REMOTE_CLIENTS;
++#else
+         DWORD dwPipeFlags = PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
++#endif
+         hServer = CreateNamedPipe(pipeName,
+                                   dwOpenMode,
+                                   dwPipeFlags,
+@@ -126,6 +141,14 @@ static void qt_create_pipe(Q_PIPE *pipe, bool isInputPipe)
+         if (hServer != INVALID_HANDLE_VALUE)
+             break;
+         DWORD dwError = GetLastError();
++#if defined(Q_CC_MINGW) && (_WIN32_WINNT < 0x0600)
++        if (dwError == ERROR_INVALID_PARAMETER && rejectRemoteClients) {
++            // Pre-Vista: the flag above is what it objected to. Retry without
++            // it, and stop asking. This costs one failed call per process.
++            rejectRemoteClients = false;
++            continue;
++        }
++#endif
+         if (dwError != ERROR_PIPE_BUSY || !--attempts) {
+             qErrnoWarning(dwError, "QProcess: CreateNamedPipe failed.");
+             return;

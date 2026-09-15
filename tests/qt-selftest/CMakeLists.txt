@@ -19,8 +19,13 @@ smoke_add_app(qt-selftest
         checks_concurrency.cpp
         checks_net.cpp
         checks_sql.cpp
+        checks_multimedia.cpp
+        checks_scxml.cpp
+        checks_script2.cpp
+        checks_xmlpatterns2.cpp
         checks_textdoc.cpp
         checks_dbus.cpp
+        checks_declarative1.cpp
         ../common/smokecheck.h
         checks.h
 )

@@ -89,6 +89,12 @@ include $(PROJECT_DIR)mk/qt5.mk
 verify-downloads:
 	$(foreach f,QT5_ARCHIVE QT4_ARCHIVE OPENSSL QT4_OPENSSL LLVM_MINGW QT6_WIN7_LLVM_MINGW QT5_LLVM_SRC QT5_MACOS_I386_LINK_SDK TIGER_SDK GCC55 JAGUAR_SDK,$(if $(wildcard $($(f)_PATH)),$(PYTHON) scripts/fetch/fetch.py --check "$($(f)_PATH)" "$($(f)_SHA256)" &&) ) echo all present inputs verified
 
+# Regenerate the class database from an unpacked Qt source tree (when the Qt
+# version changes); the version is read from the directory name, or QT=.
+#   make regen-db QT_SRC=path/to/qt-everywhere-src-5.15.19
+regen-db:
+	$(PYTHON) scripts/audit/qt_api_audit.py "$(QT_SRC)" $(if $(QT),--qt $(QT),)
+
 image-sizes:
 	docker images --filter "reference=qt5-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 

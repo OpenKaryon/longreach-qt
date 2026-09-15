@@ -89,6 +89,23 @@ include $(PROJECT_DIR)mk/qt5.mk
 verify-downloads:
 	$(foreach f,QT5_ARCHIVE QT4_ARCHIVE OPENSSL QT4_OPENSSL LLVM_MINGW QT6_WIN7_LLVM_MINGW QT5_LLVM_SRC QT5_MACOS_I386_LINK_SDK TIGER_SDK GCC55 JAGUAR_SDK,$(if $(wildcard $($(f)_PATH)),$(PYTHON) scripts/fetch/fetch.py --check "$($(f)_PATH)" "$($(f)_SHA256)" &&) ) echo all present inputs verified
 
+# Public API coverage of tests/ against scripts/tests/qt-api-classes*.txt;
+# writes scripts/tests/coverage-gap.txt. No Docker needed.
+#   make check-coverage                       every generation, side by side
+#   make check-coverage QT=5 MODULES=qtbase   one generation, some modules
+#   make check-coverage GATE=1                the repository gate
+#   make check-coverage THRESHOLD=90          fail below 90%
+#   make check-coverage PLATFORM=all          what each target's SDK exercises
+#   make check-coverage COMPARE=1             what changed between Qt 5 and 6
+CHECK_ONLY_ARG := $(if $(MODULES),--only=$(MODULES),)
+CHECK_THR_ARG  := $(if $(THRESHOLD),--threshold=$(THRESHOLD),$(if $(GATE),--gate,))
+CHECK_PLAT_ARG := $(if $(PLATFORM),--platform=$(PLATFORM),)
+CHECK_QT_ARG   := $(if $(QT),--qt=$(QT),)
+CHECK_CMP_ARG  := $(if $(COMPARE),--compare,)
+
+check-coverage:
+	$(PYTHON) scripts/tests/check_coverage.py $(CHECK_ONLY_ARG) $(CHECK_THR_ARG) $(CHECK_PLAT_ARG) $(CHECK_QT_ARG) $(CHECK_CMP_ARG)
+
 # Regenerate the class database from an unpacked Qt source tree (when the Qt
 # version changes); the version is read from the directory name, or QT=.
 #   make regen-db QT_SRC=path/to/qt-everywhere-src-5.15.19

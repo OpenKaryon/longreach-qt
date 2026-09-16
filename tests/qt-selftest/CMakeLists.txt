@@ -25,11 +25,16 @@ smoke_add_app(qt-selftest
         checks_connectivity.cpp
         checks_serialbus.cpp
         checks_scxml.cpp
+        checks_remoteobjects.cpp
         checks_script2.cpp
         checks_xmlpatterns2.cpp
+        checks_misc_hw.cpp
         checks_textdoc.cpp
+        checks_purchasing.cpp
+        checks_opcua.cpp
         checks_iot.cpp
         checks_dbus.cpp
+        checks_platform_extras.cpp
         checks_location2.cpp
         checks_declarative1.cpp
         checks_multimedia2.cpp

@@ -34,6 +34,9 @@
 set(smoke_widgets_sources
     main.cpp
     selftest.cpp
+    checks_qtbase_extra.cpp
+    checks_events_models.cpp
+    checks_graphics_extras.cpp
     ../common/smokecheck.h
     gallery.h
 )

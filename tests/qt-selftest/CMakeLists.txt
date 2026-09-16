@@ -26,6 +26,7 @@ smoke_add_app(qt-selftest
         checks_textdoc.cpp
         checks_dbus.cpp
         checks_declarative1.cpp
+        checks_multimedia2.cpp
         ../common/smokecheck.h
         checks.h
 )

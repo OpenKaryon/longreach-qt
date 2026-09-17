@@ -57,6 +57,9 @@ set(smoke_quick_qml_extra_args
     SOURCES
         main.cpp
         selftest.cpp
+        checks_quickitems.cpp
+        checks_scenegraph.cpp
+        checks_native_textures.cpp
         qml.qrc
         ${CMAKE_CURRENT_BINARY_DIR}/effects.qrc
         ../common/smokecheck.h

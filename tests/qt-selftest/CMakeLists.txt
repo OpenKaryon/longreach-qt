@@ -20,6 +20,8 @@ smoke_add_app(qt-selftest
         checks_concurrency.cpp
         checks_net.cpp
         checks_sql.cpp
+        checks_extra.cpp
+        checks_extra2.cpp
         checks_multimedia.cpp
         checks_sensors.cpp
         checks_connectivity.cpp
@@ -30,6 +32,7 @@ smoke_add_app(qt-selftest
         checks_xmlpatterns2.cpp
         checks_misc_hw.cpp
         checks_textdoc.cpp
+        checks_qtbase_misc.cpp
         checks_purchasing.cpp
         checks_opcua.cpp
         checks_iot.cpp

@@ -17,6 +17,7 @@ smoke_add_app(gl-heavy-gallery
         glcaps.cpp
         qt3d_scene.cpp
         qt3d_selftest.cpp
+        qt3d_extra_selftest.cpp
         charts_gallery.cpp
         charts_selftest.cpp
         datavis_gallery.cpp

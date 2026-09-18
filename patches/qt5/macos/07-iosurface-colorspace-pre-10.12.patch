@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: leave IOSurfaces untagged below a 10.12 deployment target.
+#
+# The cocoa backing store tags its IOSurface with the window's colour space, so
+# the compositor knows how to interpret the pixels. Serialising a CGColorSpace
+# into the property list that IOSurfaceSetValue wants is done with
+# CGColorSpaceCopyPropertyList, and that function is macOS 10.12:
+#
+#   error: 'CGColorSpaceCopyPropertyList' is only available on macOS 10.12 or
+#          newer
+#
+# Unlike the other guards in this directory there is no older equivalent to fall
+# back to - the API simply did not exist - so below 10.12 the surface is left
+# untagged and the compositor treats it as device RGB. That is what every
+# surface got before 10.12 introduced this, and it is also exactly what the
+# colorSpace == nullptr branch of this same function already does. Wide-gamut
+# output is the only thing lost, and 10.11 has no wide-gamut display pipeline to
+# lose it to.
+#
+# The debug line is kept honest: it now says which of the two happened, so a
+# colour problem on an old system points at this guard rather than looking like
+# the tag was applied and ignored.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so the check is always true
+# there and one file serves both targets.
+#
+# Changes:
+#   qtbase/src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm
+#       guard CGColorSpaceCopyPropertyList behind a runtime availability check
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm b/qtbase/src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qiosurfacegraphicsbuffer.mm
+@@ -91,14 +91,24 @@
+ {
+     static const auto kIOSurfaceColorSpace = CFSTR("IOSurfaceColorSpace");
+ 
+-    qCDebug(lcQpaIOSurface) << "Tagging" << this << "with color space" << colorSpace;
+-
+     if (colorSpace) {
+-        IOSurfaceSetValue(m_surface, kIOSurfaceColorSpace,
+-            QCFType<CFPropertyListRef>(CGColorSpaceCopyPropertyList(colorSpace)));
++        // CGColorSpaceCopyPropertyList, the only way to turn a CGColorSpace
++        // into something IOSurfaceSetValue will accept, is 10.12. Below that
++        // the surface stays untagged - the same state as the nullptr case
++        // below, and the state every surface was in before 10.12 existed.
++        if (@available(macOS 10.12, *)) {
++            qCDebug(lcQpaIOSurface) << "Tagging" << this << "with color space" << colorSpace;
++            IOSurfaceSetValue(m_surface, kIOSurfaceColorSpace,
++                QCFType<CFPropertyListRef>(CGColorSpaceCopyPropertyList(colorSpace)));
++            return;
++        }
++        qCDebug(lcQpaIOSurface) << "Not tagging" << this << "with color space" << colorSpace
++                                << "- CGColorSpaceCopyPropertyList needs macOS 10.12";
+     } else {
+-        IOSurfaceRemoveValue(m_surface, kIOSurfaceColorSpace);
++        qCDebug(lcQpaIOSurface) << "Clearing color space of" << this;
+     }
++
++    IOSurfaceRemoveValue(m_surface, kIOSurfaceColorSpace);
+ }
+ 
+ const uchar *QIOSurfaceGraphicsBuffer::data() const

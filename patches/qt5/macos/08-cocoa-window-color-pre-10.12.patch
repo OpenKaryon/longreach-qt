@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: three more AppKit calls in the cocoa plugin newer than 10.11.
+#
+#   -[NSWindow setTabbingMode:] / NSWindowTabbingModeDisallowed   10.12
+#   -[NSView allowedTouchTypes] / NSTouchTypeMaskIndirect         10.12.2
+#   -[NSColor colorUsingType:] / NSColorTypeComponentBased        10.13
+#
+# Each is chosen at runtime with @available:
+#
+#   qcocoawindow.mm, window tabbing
+#       Tabbed windows are a 10.12 feature. Qt opts out of them; below 10.12
+#       there is nothing to opt out of, so the assignment is simply skipped.
+#
+#   qcocoawindow.mm, touch registration
+#       -setAcceptsTouchEvents: is the 10.6 spelling that allowedTouchTypes
+#       replaced in 10.12.2, and indirect - trackpad - touches are the only
+#       kind it ever delivered, which is exactly the one bit this code sets.
+#       So the fallback is equivalent, not a degradation.
+#
+#   qcocoacolordialoghelper.mm, reading the chosen colour
+#       -colorUsingType: normalises whatever the panel hands back into a
+#       component-based colour, because the switch below wants components.
+#       Before 10.13 the same question is asked through -colorSpaceName: a
+#       colour that is already component-based is used as it is, a catalog
+#       colour is converted with -colorUsingColorSpaceName:, and a pattern
+#       colour yields nil - which is what -colorUsingType: returns for it too,
+#       since a pattern has no components to give.
+#
+# The two fallbacks touch API that Apple deprecated in 10.12.2 and 10.14. That
+# is only a warning, and only on the arm64 build - at a 10.11 deployment target
+# these are not deprecated yet - but the QT_WARNING_* macros silence it either
+# way, so neither target's build log gains noise.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so every check is always
+# true there and one file serves both targets.
+#
+# Changes:
+#   qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+#       guard window tabbing; fall back to -setAcceptsTouchEvents:
+#   qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+#       fall back to -colorSpaceName/-colorUsingColorSpaceName:
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -1675,7 +1675,9 @@
+ 
+     nsWindow.restorable = NO;
+     nsWindow.level = windowLevel(flags);
+-    nsWindow.tabbingMode = NSWindowTabbingModeDisallowed;
++    // Tabbed windows are 10.12; below that there is nothing to opt out of.
++    if (@available(macOS 10.12, *))
++        nsWindow.tabbingMode = NSWindowTabbingModeDisallowed;
+ 
+     if (shouldBePanel) {
+         // Qt::Tool windows hide on app deactivation, unless Qt::WA_MacAlwaysShowToolWindow is set
+@@ -1765,10 +1767,23 @@
+ void QCocoaWindow::registerTouch(bool enable)
+ {
+     m_registerTouchCount += enable ? 1 : -1;
+-    if (enable && m_registerTouchCount == 1)
+-        m_view.allowedTouchTypes |= NSTouchTypeMaskIndirect;
+-    else if (m_registerTouchCount == 0)
+-        m_view.allowedTouchTypes &= ~NSTouchTypeMaskIndirect;
++    if (@available(macOS 10.12.2, *)) {
++        if (enable && m_registerTouchCount == 1)
++            m_view.allowedTouchTypes |= NSTouchTypeMaskIndirect;
++        else if (m_registerTouchCount == 0)
++            m_view.allowedTouchTypes &= ~NSTouchTypeMaskIndirect;
++    } else {
++        // allowedTouchTypes is 10.12.2. Before it, -setAcceptsTouchEvents: was
++        // the whole interface, and indirect (trackpad) touches were the only
++        // kind AppKit delivered through it - the same single bit set above.
++        QT_WARNING_PUSH
++        QT_WARNING_DISABLE_DEPRECATED
++        if (enable && m_registerTouchCount == 1)
++            m_view.acceptsTouchEvents = YES;
++        else if (m_registerTouchCount == 0)
++            m_view.acceptsTouchEvents = NO;
++        QT_WARNING_POP
++    }
+ }
+ 
+ void QCocoaWindow::setContentBorderThickness(int topThickness, int bottomThickness)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+@@ -185,7 +185,25 @@
+     // exact RGB value from the color picker, which is predictable. Further,
+     // painting with the color will reproduce the same color on-screen, as
+     // long as the the same screen is used for selecting the color.
+-    NSColor *componentColor = [[mColorPanel color] colorUsingType:NSColorTypeComponentBased];
++    NSColor *componentColor = nil;
++    if (@available(macOS 10.13, *)) {
++        componentColor = [[mColorPanel color] colorUsingType:NSColorTypeComponentBased];
++    } else {
++        // -colorUsingType: is 10.13. The same three cases can be told apart by
++        // the colour space name, which is how this was asked before it existed:
++        // a component-based colour already has what the switch below reads, a
++        // catalog colour converts, and a pattern has no components at all - for
++        // which -colorUsingType: likewise hands back nil.
++        QT_WARNING_PUSH
++        QT_WARNING_DISABLE_DEPRECATED
++        NSColor *panelColor = [mColorPanel color];
++        NSString *space = [panelColor colorSpaceName];
++        if ([space isEqualToString:NSNamedColorSpace])
++            componentColor = [panelColor colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
++        else if (![space isEqualToString:NSPatternColorSpace])
++            componentColor = panelColor;
++        QT_WARNING_POP
++    }
+     switch (componentColor.colorSpace.colorSpaceModel)
+     {
+     case NSColorSpaceModelGray: {

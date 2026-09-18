@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: spell the CoreLocation "always authorized" status the older way.
+#
+# kCLAuthorizationStatusAuthorizedAlways is macOS 10.12:
+#
+#   error: 'kCLAuthorizationStatusAuthorizedAlways' is only available on macOS
+#          10.12 or newer
+#
+# It is a rename, not a new capability. Before 10.12 the same state was
+# kCLAuthorizationStatusAuthorized, and the two are the same enumerator value -
+# Apple deprecated the old name in 10.12 and told callers to use the new one.
+# So this is a compile-time choice, like the drag pasteboard in patch 06: there
+# is nothing to decide at runtime, and keeping the new name where the target
+# allows it avoids a deprecation warning on the arm64 build.
+#
+# This is the first patch here outside qtbase, which is why all of them are now
+# applied from the Qt source root rather than from qtbase/ - see the Apply line.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so it takes the new name and
+# one file serves both targets.
+#
+# Changes:
+#   qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+#       use kCLAuthorizationStatusAuthorized below a 10.12 deployment target
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+--- a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
++++ b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+@@ -271,9 +271,22 @@
+     }
+ }
+ 
++// kCLAuthorizationStatusAuthorizedAlways is 10.12. It renamed - same value -
++// kCLAuthorizationStatusAuthorized, which is still declared, just deprecated.
++#if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
++static const CLAuthorizationStatus qt_kCLAuthorizationStatusAuthorizedAlways =
++        kCLAuthorizationStatusAuthorizedAlways;
++#else
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++static const CLAuthorizationStatus qt_kCLAuthorizationStatusAuthorizedAlways =
++        kCLAuthorizationStatusAuthorized;
++QT_WARNING_POP
++#endif
++
+ void QGeoPositionInfoSourceCL::changeAuthorizationStatus(CLAuthorizationStatus status)
+ {
+-    if (status == kCLAuthorizationStatusAuthorizedAlways
++    if (status == qt_kCLAuthorizationStatusAuthorizedAlways
+ #ifndef Q_OS_MACOS
+         || status == kCLAuthorizationStatusAuthorizedWhenInUse
+ #endif

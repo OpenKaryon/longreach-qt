@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: runtime-select the Metal features that need 10.12 or 10.13.
+#
+# Metal itself is macOS 10.11, so the RHI backend can stay, but qrhimetal.mm
+# names four things the 10.11 SDK does not have, and clang refuses them under
+# -Wunguarded-availability:
+#
+#   MTLPixelFormatDepth16Unorm          10.12   QRhiTexture::D16
+#   MTLBlendFactor{,OneMinus}Source1{Color,Alpha}
+#                                       10.12   dual-source blending
+#   MTLLanguageVersion1_2               10.12   MSL 1.2 shader source
+#   MTLLanguageVersion2_0               10.13   MSL 2.0 shader source
+#
+# Disabling the whole backend the way patches/qt5/windows/02-disable-d3d11-rhi.patch
+# does for D3D11 would be the bigger hammer, and a worse trade: D3D11 was
+# unbuildable on MinGW at all, whereas Metal works here and Quick3D - which
+# always renders through QRhi, unlike Qt Quick in 5.15 - would be pushed onto
+# the OpenGL backend on every macOS machine, not just old ones. Each site is
+# small and has a sensible older equivalent, so each is chosen at runtime with
+# @available instead:
+#
+#   D16 depth textures      fall back to D32F, which is what the iOS build of
+#                           this same function already returns
+#   dual-source blending    falls back to the plain source factor. Nothing in
+#                           qtbase or qtdeclarative requests Src1*; it is
+#                           reachable only by an application driving QRhi
+#                           directly, and the alternative is Q_UNREACHABLE
+#   shader language         leave MTLCompileOptions.languageVersion alone below
+#                           10.12, which selects MSL 1.1 - the newest the OS
+#                           has. A baked MSL 2.0 shader then fails to compile
+#                           and reports the NSError Qt already prints
+#
+# Behaviour on 10.12 and newer is unchanged.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so every check is always
+# true there and one file serves both targets.
+#
+# Changes:
+#   qtbase/src/gui/rhi/qrhimetal.mm
+#       guard Depth16Unorm, the Source1 blend factors and MTLLanguageVersion
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/gui/rhi/qrhimetal.mm b/qtbase/src/gui/rhi/qrhimetal.mm
+--- a/qtbase/src/gui/rhi/qrhimetal.mm
++++ b/qtbase/src/gui/rhi/qrhimetal.mm
+@@ -2406,7 +2406,11 @@
+ 
+     case QRhiTexture::D16:
+ #ifdef Q_OS_MACOS
+-        return MTLPixelFormatDepth16Unorm;
++        // Depth16Unorm is 10.12+. Below that, hand back the 32-bit float depth
++        // format - which is exactly what the non-macOS branch below does.
++        if (@available(macOS 10.12, *))
++            return MTLPixelFormatDepth16Unorm;
++        return MTLPixelFormatDepth32Float;
+ #else
+         return MTLPixelFormatDepth32Float;
+ #endif
+@@ -3124,14 +3128,26 @@
+         return MTLBlendFactorOneMinusBlendAlpha;
+     case QRhiGraphicsPipeline::SrcAlphaSaturate:
+         return MTLBlendFactorSourceAlphaSaturated;
++    // The dual-source factors are 10.12+. Below that there is no second source
++    // to blend against, so the closest thing is the ordinary source factor;
++    // nothing Qt ships asks for these, so the fallback is unreachable in
++    // practice and only exists to keep the function total.
+     case QRhiGraphicsPipeline::Src1Color:
+-        return MTLBlendFactorSource1Color;
++        if (@available(macOS 10.12, *))
++            return MTLBlendFactorSource1Color;
++        return MTLBlendFactorSourceColor;
+     case QRhiGraphicsPipeline::OneMinusSrc1Color:
+-        return MTLBlendFactorOneMinusSource1Color;
++        if (@available(macOS 10.12, *))
++            return MTLBlendFactorOneMinusSource1Color;
++        return MTLBlendFactorOneMinusSourceColor;
+     case QRhiGraphicsPipeline::Src1Alpha:
+-        return MTLBlendFactorSource1Alpha;
++        if (@available(macOS 10.12, *))
++            return MTLBlendFactorSource1Alpha;
++        return MTLBlendFactorSourceAlpha;
+     case QRhiGraphicsPipeline::OneMinusSrc1Alpha:
+-        return MTLBlendFactorOneMinusSource1Alpha;
++        if (@available(macOS 10.12, *))
++            return MTLBlendFactorOneMinusSource1Alpha;
++        return MTLBlendFactorOneMinusSourceAlpha;
+     default:
+         Q_UNREACHABLE();
+         return MTLBlendFactorZero;
+@@ -3295,7 +3311,14 @@
+ 
+     NSString *src = [NSString stringWithUTF8String: mslSource.shader().constData()];
+     MTLCompileOptions *opts = [[MTLCompileOptions alloc] init];
+-    opts.languageVersion = key.sourceVersion() == 20 ? MTLLanguageVersion2_0 : MTLLanguageVersion1_2;
++    // MSL 2.0 is 10.13, MSL 1.2 is 10.12. Below 10.12 leave languageVersion at
++    // its default, which is the newest the running OS supports - MSL 1.1. A
++    // baked shader that really needs 2.0 then fails to compile and lands in the
++    // NSError reported just below, rather than failing to build here.
++    if (@available(macOS 10.13, *))
++        opts.languageVersion = key.sourceVersion() == 20 ? MTLLanguageVersion2_0 : MTLLanguageVersion1_2;
++    else if (@available(macOS 10.12, *))
++        opts.languageVersion = MTLLanguageVersion1_2;
+     NSError *err = nil;
+     id<MTLLibrary> lib = [dev newLibraryWithSource: src options: opts error: &err];
+     [opts release];
+@@ -3467,7 +3490,12 @@
+         MTLPixelFormat fmt = MTLPixelFormat(rpD->dsFormat);
+         rpDesc.depthAttachmentPixelFormat = fmt;
+ #ifdef Q_OS_MACOS
+-        if (fmt != MTLPixelFormatDepth16Unorm && fmt != MTLPixelFormatDepth32Float)
++        // Depth16Unorm is 10.12+, and below that toMetalTextureFormat() never
++        // returns it, so the depth-only set is just Depth32Float.
++        bool depthOnly = fmt == MTLPixelFormatDepth32Float;
++        if (@available(macOS 10.12, *))
++            depthOnly = depthOnly || fmt == MTLPixelFormatDepth16Unorm;
++        if (!depthOnly)
+ #else
+         if (fmt != MTLPixelFormatDepth32Float)
+ #endif

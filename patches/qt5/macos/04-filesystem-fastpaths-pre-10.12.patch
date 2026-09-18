@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: runtime-select two 10.12 filesystem fast paths.
+#
+# qfilesystemengine_unix.cpp reaches for two Darwin syscalls that are macOS
+# 10.12, and clang refuses them under -Wunguarded-availability:
+#
+#   clonefile      copyFile()              copy-on-write file clone
+#   renameatx_np   renameOverwriteFile()   atomic rename that will not clobber
+#
+# Both are optimisations with the slower path sitting right beside them, so each
+# is chosen at runtime with __builtin_available - the C/C++ spelling of
+# @available, since this is a .cpp rather than a .mm - and older systems take
+# the route the code already has for everyone else:
+#
+#   copyFile()              reports ENOSYS exactly as the non-Darwin build does,
+#                           so QFile falls back to an ordinary read/write copy
+#   renameOverwriteFile()   falls through to the link()/unlink() sequence used
+#                           wherever an atomic no-replace rename is unavailable
+#
+# Nothing is removed, and behaviour on 10.12 and newer is unchanged.
+#
+# __builtin_available lowers to a call to __isPlatformVersionAtLeast, which
+# lives in compiler-rt. osxcross' build.sh does not build compiler-rt, so
+# Dockerfile.macos-* runs its build_compiler_rt.sh afterwards; without that
+# step this patch, and every other availability guard here, fails to link.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so the runtime check is
+# always true there and one file serves both targets.
+#
+# Changes:
+#   qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+#       guard clonefile and renameatx_np behind a runtime availability check
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+--- a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+@@ -1434,10 +1434,17 @@
+ bool QFileSystemEngine::copyFile(const QFileSystemEntry &source, const QFileSystemEntry &target, QSystemError &error)
+ {
+ #if defined(Q_OS_DARWIN)
+-    if (::clonefile(source.nativeFilePath().constData(),
+-                    target.nativeFilePath().constData(), 0) == 0)
+-        return true;
+-    error = QSystemError(errno, QSystemError::StandardLibraryError);
++    // clonefile is macOS 10.12+. Older systems fall through to the same
++    // "not implemented" answer the non-Darwin build gives, which makes QFile
++    // use its own read/write copy - slower, same result.
++    if (__builtin_available(macOS 10.12, *)) {
++        if (::clonefile(source.nativeFilePath().constData(),
++                        target.nativeFilePath().constData(), 0) == 0)
++            return true;
++        error = QSystemError(errno, QSystemError::StandardLibraryError);
++        return false;
++    }
++    error = QSystemError(ENOSYS, QSystemError::StandardLibraryError);
+     return false;
+ #else
+     Q_UNUSED(source);
+@@ -1467,11 +1474,16 @@
+     }
+ #endif
+ #if defined(Q_OS_DARWIN) && defined(RENAME_EXCL)
+-    if (renameatx_np(AT_FDCWD, srcPath, AT_FDCWD, tgtPath, RENAME_EXCL) == 0)
+-        return true;
+-    if (errno != ENOTSUP) {
+-        error = QSystemError(errno, QSystemError::StandardLibraryError);
+-        return false;
++    // renameatx_np is macOS 10.12+. Without it we drop to the link()/unlink()
++    // path below, which is what this function already does on any system whose
++    // kernel lacks an atomic no-replace rename.
++    if (__builtin_available(macOS 10.12, *)) {
++        if (renameatx_np(AT_FDCWD, srcPath, AT_FDCWD, tgtPath, RENAME_EXCL) == 0)
++            return true;
++        if (errno != ENOTSUP) {
++            error = QSystemError(errno, QSystemError::StandardLibraryError);
++            return false;
++        }
+     }
+ #endif
+ 

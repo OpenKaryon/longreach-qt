@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: two AppKit calls in the cocoa plugin that are newer than 10.11.
+#
+#   -[NSApplication enumerateWindowsWithOptions:usingBlock:]   10.12
+#   NSWindowListOrderedFrontToBack                             10.12
+#   NSPasteboardNameDrag                                       10.13
+#
+# Both have exact older equivalents, so neither costs anything:
+#
+#   qnswindow.mm      -orderedWindows has returned the on-screen windows in
+#                     front-to-back order since 10.0 - the very order this code
+#                     asks for and then reverses. Only the block form of the
+#                     enumeration is new. Chosen at runtime with @available, so
+#                     10.12 and newer keep the original call, including its one
+#                     extra window (the block form also visits off-screen
+#                     windows, which the loop below discards anyway - it keeps
+#                     only normal and floating levels).
+#
+#   qcocoadrag.mm     NSPasteboardNameDrag is a pure rename of NSDragPboard,
+#                     which still exists and is merely deprecated. This is a
+#                     compile-time choice rather than a runtime one: the two
+#                     names denote the same pasteboard, so there is nothing to
+#                     decide while running, and keeping the new spelling when
+#                     the target allows it avoids a deprecation warning on the
+#                     arm64 build.
+#
+# Not Intel-specific: Apple Silicon starts at 11.0, so it takes the modern name
+# and the runtime check there is always true - one file serves both targets.
+#
+# Changes:
+#   qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+#       fall back to -orderedWindows below 10.12
+#   qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
+#       spell the drag pasteboard NSDragPboard below 10.13
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+@@ -105,15 +105,30 @@
+     // Unfortunately there's no NSWindowListOrderedBackToFront,
+     // so we have to manually reverse the order using an array.
+     NSMutableArray<NSWindow *> *windows = [[NSMutableArray<NSWindow *> new] autorelease];
+-    [application enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
+-        usingBlock:^(NSWindow *window, BOOL *) {
+-            // For some reason AppKit will give us nil-windows, skip those
++    if (@available(macOS 10.12, *)) {
++        [application enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
++            usingBlock:^(NSWindow *window, BOOL *) {
++                // For some reason AppKit will give us nil-windows, skip those
++                if (!window)
++                    return;
++
++                [windows addObject:window];
++            }
++        ];
++    } else {
++        // The block form of the enumeration, and the option naming the order it
++        // should use, are both 10.12. -orderedWindows has handed back the
++        // on-screen windows front-to-back since 10.0, which is the same order
++        // this asks for; it just leaves out the off-screen ones, and the loop
++        // below drops everything that is not a normal or floating window in any
++        // case.
++        for (NSWindow *window in application.orderedWindows) {
+             if (!window)
+-                return;
++                continue;
+ 
+             [windows addObject:window];
+         }
+-    ];
++    }
+ 
+     windowEnumerator = windows.reverseObjectEnumerator;
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
+@@ -50,6 +50,15 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// NSPasteboardNameDrag is 10.13 and is nothing but a rename of NSDragPboard,
++// which is still declared (deprecated) in current SDKs. Pick the spelling the
++// deployment target has; both name the same pasteboard.
++#if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
++static NSString *const qt_pasteboardNameDrag = NSPasteboardNameDrag;
++#else
++static NSString *const qt_pasteboardNameDrag = NSDragPboard;
++#endif
++
+ static const int dragImageMaxChars = 26;
+ 
+ QCocoaDrag::QCocoaDrag() :
+@@ -131,7 +140,7 @@
+     m_drag = o;
+     m_executed_drop_action = Qt::IgnoreAction;
+ 
+-    QMacPasteboard dragBoard(CFStringRef(NSPasteboardNameDrag), QMacInternalPasteboardMime::MIME_DND);
++    QMacPasteboard dragBoard(CFStringRef(qt_pasteboardNameDrag), QMacInternalPasteboardMime::MIME_DND);
+     m_drag->mimeData()->setData(QLatin1String("application/x-qt-mime-type-name"), QByteArray("dummy"));
+     dragBoard.setMimeData(m_drag->mimeData(), QMacPasteboard::LazyRequest);
+ 
+@@ -150,7 +159,7 @@
+     CGFloat flippedY = dragImage.size.height - hotSpot.y();
+     event_location.y -= flippedY;
+     NSSize mouseOffset_unused = NSMakeSize(0.0, 0.0);
+-    NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSPasteboardNameDrag];
++    NSPasteboard *pboard = [NSPasteboard pasteboardWithName:qt_pasteboardNameDrag];
+ 
+     [theWindow dragImage:dragImage
+         at:event_location
+@@ -185,7 +194,7 @@
+     auto *sourceView = static_cast<NSView<NSDraggingSource>*>(theWindow.contentView);
+ 
+     const auto &qtUrls = m_drag->mimeData()->urls();
+-    NSPasteboard *dragBoard = [NSPasteboard pasteboardWithName:NSPasteboardNameDrag];
++    NSPasteboard *dragBoard = [NSPasteboard pasteboardWithName:qt_pasteboardNameDrag];
+ 
+     if (qtUrls.size() <= 1) {
+         // Good old -dragImage: works perfectly for this ...

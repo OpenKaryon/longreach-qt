@@ -1,0 +1,190 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS (osxcross cross-build): point mkspecs at the osxcross SDK and skip the Xcode checks.
+#
+# A headless container has no Xcode installation, so the SDK path must be set
+# explicitly and the 'xcodebuild -license' check has to be skipped, otherwise
+# configure aborts.
+#
+# Changes:
+#   qtbase/mkspecs/features/mac/default_pre.prf
+#       set QMAKE_XCODE_DEVELOPER_PATH to the osxcross SDK; disable the Xcode
+#       license/setup checks
+#
+# Apply: git apply, from the Qt source root (qt-everywhere-src-5.15.19/)
+diff --git a/qtbase/mkspecs/features/mac/default_pre.prf b/qtbase/mkspecs/features/mac/default_pre.prf
+index 2c91ba6679..5d9f07e239 100644
+--- a/qtbase/mkspecs/features/mac/default_pre.prf
++++ b/qtbase/mkspecs/features/mac/default_pre.prf
+@@ -22,6 +22,8 @@ macos {
+
+ load(default_pre)
+
++QMAKE_XCODE_DEVELOPER_PATH = /usr/local/osxcross/SDK/MacOSX10.14.sdk
++
+ isEmpty(QMAKE_XCODE_DEVELOPER_PATH) {
+     # Get path of Xcode's Developer directory
+     QMAKE_XCODE_DEVELOPER_PATH = $$system("/usr/bin/xcode-select --print-path 2>/dev/null")
+@@ -38,8 +40,8 @@ isEmpty(QMAKE_XCODEBUILD_PATH): \
+
+ !isEmpty(QMAKE_XCODEBUILD_PATH) {
+     # Make sure Xcode is set up properly
+-    !system("/usr/bin/xcrun xcodebuild -license check 2>/dev/null"): \
+-        error("Xcode not set up properly. You need to confirm the license agreement by running 'sudo xcrun xcodebuild -license accept'.")
++    # !system("/usr/bin/xcrun xcodebuild -license check 2>/dev/null"): \
++    #     error("Xcode not set up properly. You need to confirm the license agreement by running 'sudo xcrun xcodebuild -license accept'.")
+
+     isEmpty(QMAKE_XCODE_VERSION) {
+         # Extract Xcode version using xcodebuild
+diff --git a/qtbase/mkspecs/features/mac/sdk.mk b/qtbase/mkspecs/features/mac/sdk.mk
+index a32ceacb6c..f8b2cc6a4f 100644
+--- a/qtbase/mkspecs/features/mac/sdk.mk
++++ b/qtbase/mkspecs/features/mac/sdk.mk
+@@ -1,3 +1,4 @@
++QT_MAC_SDK_NO_VERSION_CHECK = 1
+
+ ifeq ($(QT_MAC_SDK_NO_VERSION_CHECK),)
+     CHECK_SDK_COMMAND = /usr/bin/xcrun --sdk $(EXPORT_QMAKE_MAC_SDK) -show-sdk-version 2>/dev/null
+diff --git a/qtbase/src/corelib/kernel/qcore_mac.mm b/qtbase/src/corelib/kernel/qcore_mac.mm
+index 99ad4ce666..7185afbcc3 100644
+--- a/qtbase/src/corelib/kernel/qcore_mac.mm
++++ b/qtbase/src/corelib/kernel/qcore_mac.mm
+@@ -320,13 +320,13 @@ QDebug operator<<(QDebug debug, const QCFString &string)
+ #ifdef Q_OS_MACOS
+ bool qt_mac_applicationIsInDarkMode()
+ {
+-#if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+-    if (__builtin_available(macOS 10.14, *)) {
+-        auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
+-                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+-        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
+-    }
+-#endif
++//#if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
++//    if (__builtin_available(macOS 10.14, *)) {
++//        auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
++//                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
++//        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
++//    }
++//#endif
+     return false;
+ }
+
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+index b6ab9c0bbc..832423981b 100644
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+@@ -120,14 +120,14 @@ static QPalette *qt_mac_createSystemPalette()
+     // System palette initialization:
+     QBrush br = qt_mac_toQBrush([NSColor selectedControlColor]);
+     palette->setBrush(QPalette::Active, QPalette::Highlight, br);
+-    if (__builtin_available(macOS 10.14, *)) {
+-        const auto inactiveHighlight = qt_mac_toQBrush([NSColor unemphasizedSelectedContentBackgroundColor]);
+-        palette->setBrush(QPalette::Inactive, QPalette::Highlight, inactiveHighlight);
+-        palette->setBrush(QPalette::Disabled, QPalette::Highlight, inactiveHighlight);
+-    } else {
+-        palette->setBrush(QPalette::Inactive, QPalette::Highlight, br);
+-        palette->setBrush(QPalette::Disabled, QPalette::Highlight, br);
+-    }
++//    if (__builtin_available(macOS 10.14, *)) {
++//        const auto inactiveHighlight = qt_mac_toQBrush([NSColor unemphasizedSelectedContentBackgroundColor]);
++//        palette->setBrush(QPalette::Inactive, QPalette::Highlight, inactiveHighlight);
++//        palette->setBrush(QPalette::Disabled, QPalette::Highlight, inactiveHighlight);
++//    } else {
++    palette->setBrush(QPalette::Inactive, QPalette::Highlight, br);
++    palette->setBrush(QPalette::Disabled, QPalette::Highlight, br);
++//    }
+
+     palette->setBrush(QPalette::Shadow, qt_mac_toQColor([NSColor shadowColor]));
+
+@@ -206,16 +206,16 @@ static QHash<QPlatformTheme::Palette, QPalette*> qt_mac_createRolePalettes()
+         if (mac_widget_colors[i].paletteRole == QPlatformTheme::MenuPalette
+                 || mac_widget_colors[i].paletteRole == QPlatformTheme::MenuBarPalette) {
+             NSColor *selectedMenuItemColor = nil;
+-            if (__builtin_available(macOS 10.14, *)) {
+-                // Cheap approximation for NSVisualEffectView (see deprecation note for selectedMenuItemTextColor)
+-                selectedMenuItemColor = [[NSColor selectedContentBackgroundColor] highlightWithLevel:0.4];
+-            } else {
++//            if (__builtin_available(macOS 10.14, *)) {
++//                // Cheap approximation for NSVisualEffectView (see deprecation note for selectedMenuItemTextColor)
++//                selectedMenuItemColor = [[NSColor selectedContentBackgroundColor] highlightWithLevel:0.4];
++//            } else {
+                 // selectedMenuItemColor would presumably be the correct color to use as the background
+                 // for selected menu items. But that color is always blue, and doesn't follow the
+                 // appearance color in system preferences. So we therefore deliberatly choose to use
+                 // keyboardFocusIndicatorColor instead, which appears to have the same color value.
+-                selectedMenuItemColor = [NSColor keyboardFocusIndicatorColor];
+-            }
++            selectedMenuItemColor = [NSColor keyboardFocusIndicatorColor];
++//            }
+             pal.setBrush(QPalette::Highlight, qt_mac_toQColor(selectedMenuItemColor));
+             qc = qt_mac_toQColor([NSColor labelColor]);
+             pal.setBrush(QPalette::ButtonText, qc);
+@@ -236,17 +236,17 @@ static QHash<QPlatformTheme::Palette, QPalette*> qt_mac_createRolePalettes()
+         } else if (mac_widget_colors[i].paletteRole == QPlatformTheme::ItemViewPalette) {
+             NSArray<NSColor *> *baseColors = nil;
+             NSColor *activeHighlightColor = nil;
+-            if (__builtin_available(macOS 10.14, *)) {
+-                baseColors = [NSColor alternatingContentBackgroundColors];
+-                activeHighlightColor = [NSColor selectedContentBackgroundColor];
+-                pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+-                             qt_mac_toQBrush([NSColor unemphasizedSelectedTextColor]));
+-            } else {
+-                baseColors = [NSColor controlAlternatingRowBackgroundColors];
+-                activeHighlightColor = [NSColor alternateSelectedControlColor];
+-                pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+-                             pal.brush(QPalette::Active, QPalette::Text));
+-            }
++//            if (__builtin_available(macOS 10.14, *)) {
++//                baseColors = [NSColor alternatingContentBackgroundColors];
++//                activeHighlightColor = [NSColor selectedContentBackgroundColor];
++//                pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
++//                             qt_mac_toQBrush([NSColor unemphasizedSelectedTextColor]));
++//            } else {
++            baseColors = [NSColor controlAlternatingRowBackgroundColors];
++            activeHighlightColor = [NSColor alternateSelectedControlColor];
++            pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
++                         pal.brush(QPalette::Active, QPalette::Text));
++//            }
+             pal.setBrush(QPalette::Base, qt_mac_toQBrush(baseColors[0]));
+             pal.setBrush(QPalette::AlternateBase, qt_mac_toQBrush(baseColors[1]));
+             pal.setBrush(QPalette::Active, QPalette::Highlight,
+@@ -283,8 +283,8 @@ QCocoaTheme::QCocoaTheme()
+ #if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+     if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::MacOSMojave) {
+         m_appearanceObserver = QMacKeyValueObserver(NSApp, @"effectiveAppearance", [this] {
+-            if (__builtin_available(macOS 10.14, *))
+-                NSAppearance.currentAppearance = NSApp.effectiveAppearance;
++//            if (__builtin_available(macOS 10.14, *))
++//                NSAppearance.currentAppearance = NSApp.effectiveAppearance;
+
+             handleSystemThemeChange();
+         });
+diff --git a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+index 948dd55304..ca73b30533 100644
+--- a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
++++ b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+@@ -1840,14 +1840,14 @@ NSView *QMacStylePrivate::cocoaControl(CocoaControl widget) const
+         || widget.size == QStyleHelper::SizeDefault)
+         return nil;
+
+-    if (widget.type == Box) {
+-        if (__builtin_available(macOS 10.14, *)) {
+-            if (qt_mac_applicationIsInDarkMode()) {
+-                // See render code in drawPrimitive(PE_FrameTabWidget)
+-                widget.type = Box_Dark;
+-            }
+-        }
+-    }
++//    if (widget.type == Box) {
++//        if (__builtin_available(macOS 10.14, *)) {
++//            if (qt_mac_applicationIsInDarkMode()) {
++//                // See render code in drawPrimitive(PE_FrameTabWidget)
++//                widget.type = Box_Dark;
++//            }
++//        }
++//    }
+
+     NSView *bv = cocoaControls.value(widget, nil);
+     if (!bv) {

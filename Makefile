@@ -34,6 +34,12 @@ OPENSSL_PATH := $(DOWNLOAD_DIR)/$(OPENSSL_ARCHIVE)
 OPENSSL_URL ?= https://www.openssl.org/source/$(OPENSSL_ARCHIVE)
 OPENSSL_SHA256 ?= a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8
 
+# osxcross has no tags, so a verified commit of our fork; the build log
+# records what the ref resolved to.
+#   make qt5-macos-amd64 OSXCROSS_REF=master
+OSXCROSS_REPO ?= https://github.com/OpenKaryon/osxcross.git
+OSXCROSS_REF ?= 27d21e4977c9751d01199c7a226a6faf494c3dd9
+
 ifeq ($(NO_CACHE),1)
 DOCKER_CACHE_FLAG := --no-cache
 else

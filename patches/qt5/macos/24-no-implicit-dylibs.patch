@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: link applications without implicit dylibs below 10.11 (the OS X 10.7
+# port).
+#
+# CFNetwork became a top-level framework in 10.8; on 10.7 it only exists inside
+# CoreServices. The 11.3 SDK's CoreServices re-exports
+# /System/Library/Frameworks/CFNetwork.framework, and ld64 adds a direct
+# LC_LOAD_DYLIB for every public framework that a linked umbrella re-exports.
+# Any application linking QtNetwork (which uses CoreServices) therefore failed
+# to launch on 10.7 with a missing CFNetwork.framework. scripts/audit/
+# macos-symbol-audit.sh reported it against the Lion 10.7.5 system libraries.
+#
+# -no_implicit_dylibs keeps those symbols bound through CoreServices, which
+# re-exports CFNetwork on 10.7 and on every later version, so nothing changes
+# at run time on newer systems. The flag is in macx.conf so qmake applications
+# get it too; the CMake toolchain in cmake/qt5/ sets the same flag.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/mkspecs/common/macx.conf b/qtbase/mkspecs/common/macx.conf
+--- a/qtbase/mkspecs/common/macx.conf
++++ b/qtbase/mkspecs/common/macx.conf
+@@ -23,4 +23,12 @@
+ 
+ QMAKE_LIBS_VULKAN =
+ 
++# Below 10.8 CFNetwork is not a top-level framework: it lives inside
++# CoreServices (CoreServices.framework/Frameworks/CFNetwork.framework). Current
++# SDKs make CoreServices re-export /System/Library/Frameworks/CFNetwork.framework,
++# and ld64 then adds a direct load of it, which stops the application at launch
++# on 10.7. Without implicit dylibs the CFNetwork symbols bind through
++# CoreServices, which re-exports CFNetwork on every version.
++QMAKE_LFLAGS += -Wl,-no_implicit_dylibs
++
+ include(mac.conf)

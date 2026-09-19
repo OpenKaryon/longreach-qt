@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 5.15.19: Windows from XP SP3, macOS from 10.11.
+# Qt 5.15.19: Windows from XP SP3, macOS from 10.7.
 # Images are qt5-<os>-<arch>-<licence profile>.
 
 QT5_VERSION ?= 5.15.19
@@ -34,7 +34,7 @@ QT5_MACOS_SDK_PKG_URL ?= https://swcdn.apple.com/content/downloads/52/17/002-417
 QT5_MACOS_SDK_PKG_SHA256 ?= b075d3d2f3b066607209a5bbf7cf727a40b98fe65629c5b6abc17f156897af4a
 
 # Oldest macOS the binaries load on.
-QT5_MACOS_TARGET_AMD64 ?= 10.11
+QT5_MACOS_TARGET_AMD64 ?= 10.7
 
 QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg OSXCROSS_REPO="$(OSXCROSS_REPO)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
 

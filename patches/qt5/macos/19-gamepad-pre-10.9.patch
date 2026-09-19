@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the QtGamepad Darwin backend below 10.9 (the OS X 10.7 port).
+#
+# The backend is built on the GameController framework, which arrived in
+# OS X 10.9 as a whole; 10.7 and 10.8 do not have it at all. So:
+#
+#   - the framework is weak-linked (-weak_framework), or dyld would refuse
+#     to load any application that links the plugin on 10.7 and 10.8;
+#   - the manager object, the only code that touches GameController, is
+#     created only when @available(macOS 10.9) holds, which also covers
+#     its uses for clang's availability analysis;
+#   - below 10.9 the backend starts and reports no gamepads;
+#   - GameController's headers only parse with Objective-C dispatch objects,
+#     which the SDK enables from a 10.8 target on; the plugin presets
+#     OS_OBJECT_HAVE_OBJC_SUPPORT, harmless because it uses no dispatch
+#     objects (see darwin.pro).
+#
+# Nothing changes on 10.9 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtgamepad/src/plugins/gamepads/darwin/darwin.pro b/qtgamepad/src/plugins/gamepads/darwin/darwin.pro
+--- a/qtgamepad/src/plugins/gamepads/darwin/darwin.pro
++++ b/qtgamepad/src/plugins/gamepads/darwin/darwin.pro
+@@ -6,7 +6,16 @@
+ PLUGIN_CLASS_NAME = QDarwinGamepadBackendPlugin
+ load(qt_plugin)
+ 
+-LIBS += -framework GameController -framework Foundation
++# GameController is 10.9; weak-linked so the plugin loads on older systems,
++# where the backend stays empty.
++LIBS += -weak_framework GameController -framework Foundation
++
++# GameController's headers declare dispatch queues as Objective-C properties,
++# which needs OS_OBJECT_USE_OBJC, and the SDK enables that only for a 10.8 or
++# newer target. This plugin uses no dispatch objects, and its GameController
++# code only runs on 10.9 and newer, so the setting changes nothing but how
++# the headers parse.
++macos: DEFINES += OS_OBJECT_HAVE_OBJC_SUPPORT=1
+ 
+ HEADERS += qdarwingamepadbackend_p.h
+ OBJECTIVE_SOURCES += \
+diff --git a/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm b/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
+--- a/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
++++ b/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
+@@ -46,6 +46,10 @@
+ 
+ @end
+ 
++// GameController is 10.9. This class is only instantiated there (see the
++// QDarwinGamepadBackend constructor), so its uses are not guarded one by one.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ @implementation QT_MANGLE_NAMESPACE(DarwinGamepadManager)
+ {
+     QDarwinGamepadBackend *backend;
+@@ -493,6 +497,7 @@
+ }
+ 
+ @end
++QT_WARNING_POP
+ 
+ QT_BEGIN_NAMESPACE
+ 
+@@ -501,7 +506,8 @@
+     , m_darwinGamepadManager(nullptr)
+     , m_isMonitoringActive(false)
+ {
+-    m_darwinGamepadManager = [[QT_MANGLE_NAMESPACE(DarwinGamepadManager) alloc] initWithBackend:this];
++    if (@available(macOS 10.9, *)) // no GameController before 10.9: no gamepads
++        m_darwinGamepadManager = [[QT_MANGLE_NAMESPACE(DarwinGamepadManager) alloc] initWithBackend:this];
+ }
+ 
+ QDarwinGamepadBackend::~QDarwinGamepadBackend()

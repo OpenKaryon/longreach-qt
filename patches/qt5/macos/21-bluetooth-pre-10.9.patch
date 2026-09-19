@@ -1,0 +1,216 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtBluetooth below 10.9 (the OS X 10.7 port).
+#
+# Classic Bluetooth goes through IOBluetooth and is unchanged. Qt's Bluetooth
+# LE code is written against the CoreBluetooth API of 10.9 (NSUUID
+# identifiers, CBPeripheralManager, -retrievePeripheralsWithIdentifiers:);
+# 10.7 and 10.8 had an earlier CFUUID-based API that this code does not use.
+# So below 10.9 LE is reported as unsupported:
+#
+#   - device discovery: startLE() goes straight to LEnotSupported(), the
+#     existing path for hosts without LE (with Classic requested too, the
+#     scan simply finishes); supportedDiscoveryMethods() drops
+#     LowEnergyMethod;
+#   - QLowEnergyController: init() warns and creates no manager, the same
+#     state as a manager that failed to initialise.
+#
+# The LE classes are then only created on 10.9 and newer, so their files and
+# declarations carry one -Wunguarded-availability suppression each instead
+# of per-call guards.
+#
+# Linking: in the 11.3 SDK IOBluetooth re-exports
+# /System/Library/Frameworks/CoreBluetooth.framework, and ld64 then loads that
+# framework directly. On 10.7 CoreBluetooth only exists inside IOBluetooth
+# (IOBluetooth.framework/Frameworks/CoreBluetooth.framework), so a strong
+# load would stop every application using QtBluetooth at launch. The
+# framework is weak-linked instead.
+#
+# Also: one ObjC subscript (10.8) is spelled out as objectForKey:.
+#
+# Nothing changes on 10.9 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtconnectivity/src/bluetooth/bluetooth.pro b/qtconnectivity/src/bluetooth/bluetooth.pro
+--- a/qtconnectivity/src/bluetooth/bluetooth.pro
++++ b/qtconnectivity/src/bluetooth/bluetooth.pro
+@@ -165,6 +165,11 @@
+     QT_PRIVATE = concurrent
+     DEFINES += QT_OSX_BLUETOOTH
+     LIBS_PRIVATE += -framework Foundation -framework IOBluetooth
++    # IOBluetooth re-exports CoreBluetooth, and the linker then loads
++    # /System/Library/Frameworks/CoreBluetooth.framework directly. Before
++    # 10.8 that framework only exists inside IOBluetooth, so it is
++    # weak-linked; Bluetooth LE needs 10.9 anyway.
++    LIBS_PRIVATE += -weak_framework CoreBluetooth
+ 
+     include(osx/osxbt.pri)
+     OBJECTIVE_SOURCES += \
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtcentralmanager.mm b/qtconnectivity/src/bluetooth/osx/osxbtcentralmanager.mm
+--- a/qtconnectivity/src/bluetooth/osx/osxbtcentralmanager.mm
++++ b/qtconnectivity/src/bluetooth/osx/osxbtcentralmanager.mm
+@@ -52,6 +52,12 @@
+ 
+ Q_DECLARE_METATYPE(QLowEnergyHandle)
+ 
++// Bluetooth LE below macOS 10.9 is not supported (see the LE entry points in
++// qbluetoothdevicediscoveryagent_darwin.mm and qlowenergycontroller_darwin.mm),
++// so this code only runs where its CoreBluetooth API exists.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
++
+ QT_BEGIN_NAMESPACE
+ 
+ namespace OSXBluetooth {
+@@ -1857,3 +1863,5 @@
+ }
+ 
+ @end
++
++QT_WARNING_POP
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtledeviceinquiry.mm b/qtconnectivity/src/bluetooth/osx/osxbtledeviceinquiry.mm
+--- a/qtconnectivity/src/bluetooth/osx/osxbtledeviceinquiry.mm
++++ b/qtconnectivity/src/bluetooth/osx/osxbtledeviceinquiry.mm
+@@ -49,6 +49,12 @@
+ 
+ #include <algorithm>
+ 
++// Bluetooth LE below macOS 10.9 is not supported (see the LE entry points in
++// qbluetoothdevicediscoveryagent_darwin.mm and qlowenergycontroller_darwin.mm),
++// so this code only runs where its CoreBluetooth API exists.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
++
+ QT_BEGIN_NAMESPACE
+ 
+ namespace OSXBluetooth {
+@@ -384,3 +390,5 @@
+ }
+ 
+ @end
++
++QT_WARNING_POP
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager.mm b/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager.mm
+--- a/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager.mm
++++ b/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager.mm
+@@ -52,6 +52,12 @@
+ #include <algorithm>
+ #include <limits>
+ 
++// Bluetooth LE below macOS 10.9 is not supported (see the LE entry points in
++// qbluetoothdevicediscoveryagent_darwin.mm and qlowenergycontroller_darwin.mm),
++// so this code only runs where its CoreBluetooth API exists.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
++
+ namespace
+ {
+ 
+@@ -894,3 +900,5 @@
+ }
+ 
+ @end
++
++QT_WARNING_POP
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager_p.h b/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager_p.h
+--- a/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager_p.h
++++ b/qtconnectivity/src/bluetooth/osx/osxbtperipheralmanager_p.h
+@@ -121,6 +121,9 @@
+ 
+ using ValueRange = QPair<NSUInteger, NSUInteger>;
+ 
++// CBPeripheralManager is 10.9; this class is only created there.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ @interface QT_MANGLE_NAMESPACE(OSXBTPeripheralManager) : NSObject<CBPeripheralManagerDelegate>
+ 
+ - (id)initWith:(LECBManagerNotifier *)notifier;
+@@ -159,5 +162,6 @@
+ - (void)peripheralManagerIsReadyToUpdateSubscribers:(CBPeripheralManager *)peripheral;
+ 
+ @end
++QT_WARNING_POP
+ 
+ #endif
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtutility.mm b/qtconnectivity/src/bluetooth/osx/osxbtutility.mm
+--- a/qtconnectivity/src/bluetooth/osx/osxbtutility.mm
++++ b/qtconnectivity/src/bluetooth/osx/osxbtutility.mm
+@@ -367,7 +367,7 @@
+     Q_ASSERT(key);
+ 
+     NSDictionary<NSString *, id> *infoDict = NSBundle.mainBundle.infoDictionary;
+-    return !!infoDict[key];
++    return !![infoDict objectForKey:key];
+ }
+ 
+ // A small RAII class for a dispatch queue.
+diff --git a/qtconnectivity/src/bluetooth/osx/osxbtutility_p.h b/qtconnectivity/src/bluetooth/osx/osxbtutility_p.h
+--- a/qtconnectivity/src/bluetooth/osx/osxbtutility_p.h
++++ b/qtconnectivity/src/bluetooth/osx/osxbtutility_p.h
+@@ -329,6 +329,8 @@
+  // we'll explicitly mark its availability here. This will not adversely affect
+  // using the identifier through the CBPeer base class, which will still require macOS 10.13.
+ 
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability") // NSUUID is 10.8
+ @interface CBPeripheral (UnguardedWorkaround)
+ @property (readonly, nonatomic) NSUUID *identifier NS_AVAILABLE(10_7, 5_0);
+ @end
+@@ -336,6 +338,7 @@
+ @interface CBCentral (UnguardedWorkaround)
+ @property (readonly, nonatomic) NSUUID *identifier NS_AVAILABLE(10_7, 5_0);
+ @end
++QT_WARNING_POP
+ 
+ #endif
+ 
+diff --git a/qtconnectivity/src/bluetooth/qbluetoothdevicediscoveryagent_darwin.mm b/qtconnectivity/src/bluetooth/qbluetoothdevicediscoveryagent_darwin.mm
+--- a/qtconnectivity/src/bluetooth/qbluetoothdevicediscoveryagent_darwin.mm
++++ b/qtconnectivity/src/bluetooth/qbluetoothdevicediscoveryagent_darwin.mm
+@@ -243,6 +243,15 @@
+ 
+     using namespace OSXBluetooth;
+ 
++#ifdef Q_OS_MACOS
++    // Qt's Bluetooth LE code needs the CoreBluetooth API of macOS 10.9.
++    if (__builtin_available(macOS 10.9, *)) {
++    } else {
++        LEnotSupported();
++        return;
++    }
++#endif
++
+     QScopedPointer<LECBManagerNotifier> notifier(new LECBManagerNotifier);
+     // Connections:
+     using ErrMemFunPtr = void (LECBManagerNotifier::*)(QBluetoothDeviceDiscoveryAgent::Error);
+@@ -564,7 +573,9 @@
+ QBluetoothDeviceDiscoveryAgent::DiscoveryMethods QBluetoothDeviceDiscoveryAgent::supportedDiscoveryMethods()
+ {
+ #ifdef Q_OS_MACOS
+-    return ClassicMethod | LowEnergyMethod;
++    if (__builtin_available(macOS 10.9, *)) // see startLE()
++        return ClassicMethod | LowEnergyMethod;
++    return ClassicMethod;
+ #else
+     return LowEnergyMethod;
+ #endif // Q_OS_MACOS
+diff --git a/qtconnectivity/src/bluetooth/qlowenergycontroller_darwin.mm b/qtconnectivity/src/bluetooth/qlowenergycontroller_darwin.mm
+--- a/qtconnectivity/src/bluetooth/qlowenergycontroller_darwin.mm
++++ b/qtconnectivity/src/bluetooth/qlowenergycontroller_darwin.mm
+@@ -174,6 +174,15 @@
+         return;
+     }
+ 
++#ifdef Q_OS_MACOS
++    // Qt's Bluetooth LE code needs the CoreBluetooth API of macOS 10.9.
++    if (__builtin_available(macOS 10.9, *)) {
++    } else {
++        qCWarning(QT_BT_OSX) << "Bluetooth LE needs macOS 10.9 or newer";
++        return;
++    }
++#endif
++
+     QScopedPointer<LECBManagerNotifier> notifier(new LECBManagerNotifier);
+     if (role == QLowEnergyController::PeripheralRole) {
+ #ifndef Q_OS_TVOS

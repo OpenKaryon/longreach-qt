@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the QtWebView Darwin plugin below 10.10 (the OS X 10.7 port).
+#
+# The plugin wraps WKWebView, which is macOS 10.10 (WebKit itself is on 10.7,
+# so nothing needs weak-linking: the WK classes are weak-imported because of
+# their availability). Before 10.10 the constructor creates no web view: the
+# WebView item is empty and its calls are messages to nil. Since only that
+# path can reach the WK API, the file's uses are covered by one
+# -Wunguarded-availability suppression rather than guarded one by one.
+#
+# A WebKit 1 (WebView) backend for 10.7 to 10.9 is not provided.
+#
+# Nothing changes on 10.10 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtwebview/src/plugins/darwin/qdarwinwebview.mm b/qtwebview/src/plugins/darwin/qdarwinwebview.mm
+--- a/qtwebview/src/plugins/darwin/qdarwinwebview.mm
++++ b/qtwebview/src/plugins/darwin/qdarwinwebview.mm
+@@ -112,6 +112,12 @@
+ 
+ // -------------------------------------------------------------------------
+ 
++// WKWebView is macOS 10.10. Everything below only runs where it exists:
++// the constructor creates no web view before 10.10, so the uses are not
++// guarded one by one.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
++
+ @interface QtWKWebViewDelegate : NSObject<WKNavigationDelegate> {
+     QDarwinWebViewPrivate *qDarwinWebViewPrivate;
+ }
+@@ -277,12 +283,16 @@
+     , m_recognizer(0)
+ #endif
+ {
+-    CGRect frame = CGRectMake(0.0, 0.0, 400, 400);
+-    wkWebView = [[WKWebView alloc] initWithFrame:frame];
+-    wkWebView.navigationDelegate = [[QtWKWebViewDelegate alloc] initWithQAbstractWebView:this];
+-    [wkWebView addObserver:wkWebView.navigationDelegate forKeyPath:@"estimatedProgress"
+-                   options:NSKeyValueObservingOptions(NSKeyValueObservingOptionNew)
+-                   context:nil];
++    // Before macOS 10.10 there is no WKWebView: the view stays nil and shows
++    // nothing, and every message to it is a no-op.
++    if (@available(macOS 10.10, *)) {
++        CGRect frame = CGRectMake(0.0, 0.0, 400, 400);
++        wkWebView = [[WKWebView alloc] initWithFrame:frame];
++        wkWebView.navigationDelegate = [[QtWKWebViewDelegate alloc] initWithQAbstractWebView:this];
++        [wkWebView addObserver:wkWebView.navigationDelegate forKeyPath:@"estimatedProgress"
++                       options:NSKeyValueObservingOptions(NSKeyValueObservingOptionNew)
++                       context:nil];
++    }
+ 
+ #ifdef Q_OS_IOS
+     m_recognizer = [[QIOSNativeViewSelectedRecognizer alloc] initWithQWindowControllerItem:this];
+@@ -481,3 +491,5 @@
+ }
+ 
+ QT_END_NAMESPACE
++
++QT_WARNING_POP

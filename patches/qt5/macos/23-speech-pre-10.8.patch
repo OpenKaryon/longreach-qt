@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the QtTextToSpeech NSSpeechSynthesizer plugin below 10.8 (the OS X
+# 10.7 port).
+#
+# Objective-C subscripting (dict[key]) is a 10.8 API; Xcode supplies it on
+# 10.7 through libarclite, which osxcross does not have. The voice attribute
+# lookups are spelled out as objectForKey:. Nothing else changes.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm b/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
+--- a/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
++++ b/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
+@@ -189,26 +189,26 @@
+ QLocale localeForVoice(NSString *voice)
+ {
+     NSDictionary *attrs = [NSSpeechSynthesizer attributesForVoice:voice];
+-    return QString::fromNSString(attrs[NSVoiceLocaleIdentifier]);
++    return QString::fromNSString([attrs objectForKey:NSVoiceLocaleIdentifier]);
+ }
+ 
+ QVoice QTextToSpeechEngineOsx::voiceForNSVoice(NSString *voiceString) const
+ {
+     NSDictionary *attrs = [NSSpeechSynthesizer attributesForVoice:voiceString];
+-    QString voiceName = QString::fromNSString(attrs[NSVoiceName]);
++    QString voiceName = QString::fromNSString([attrs objectForKey:NSVoiceName]);
+ 
+-    NSString *genderString = attrs[NSVoiceGender];
++    NSString *genderString = [attrs objectForKey:NSVoiceGender];
+     QVoice::Gender gender = [genderString isEqualToString:NSVoiceGenderMale] ? QVoice::Male :
+                             [genderString isEqualToString:NSVoiceGenderFemale] ? QVoice::Female :
+                             QVoice::Unknown;
+ 
+-    NSNumber *ageNSNumber = attrs[NSVoiceAge];
++    NSNumber *ageNSNumber = [attrs objectForKey:NSVoiceAge];
+     int ageInt = ageNSNumber.intValue;
+     QVoice::Age age = (ageInt < 13 ? QVoice::Child :
+                        ageInt < 20 ? QVoice::Teenager :
+                        ageInt < 45 ? QVoice::Adult :
+                        ageInt < 90 ? QVoice::Senior : QVoice::Other);
+-    QVariant data = QString::fromNSString(attrs[NSVoiceIdentifier]);
++    QVariant data = QString::fromNSString([attrs objectForKey:NSVoiceIdentifier]);
+     QVoice voice = createVoice(voiceName, gender, age, data);
+     return voice;
+ }

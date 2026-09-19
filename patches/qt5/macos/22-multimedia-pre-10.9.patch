@@ -1,0 +1,255 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the QtMultimedia AVFoundation plugin below 10.9 (the OS X 10.7 port).
+#
+#   AVPlayerItemVideoOutput, item outputs   10.8    no video frames for
+#                                                   QAbstractVideoSurface; audio
+#                                                   and playback control work
+#   AVAssetResourceLoader                   10.9    no playback from a
+#                                                   QIODevice stream; URLs work
+#   maximum frame duration (camera)         10.9    no minimum frame rate;
+#                                                   the maximum still applies
+#   NSOpenGLContext.pixelFormat             10.10   CGLGetPixelFormat on the
+#                                                   context, the same object
+#
+# Qt 5.6 rendered frames on 10.7 through an AVPlayerLayer and CARenderer;
+# that path is not brought back here, so video output below 10.8 is empty.
+# The resource-loader delegate methods are only called where the loader
+# exists and carry a -Wunguarded-availability suppression.
+#
+# Nothing changes on 10.9 and newer (on 10.10 and newer for the texture cache,
+# where the call returns the same pixel format).
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerautility.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerautility.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerautility.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerautility.mm
+@@ -67,11 +67,13 @@
+         }
+     }
+ 
+-    if (videoConnection.supportsVideoMaxFrameDuration) {
+-        const CMTime cmMax = videoConnection.videoMaxFrameDuration;
+-        if (CMTimeCompare(cmMax, kCMTimeInvalid)) {
+-            if (const Float64 maxSeconds = CMTimeGetSeconds(cmMax))
+-                newRange.first = 1. / maxSeconds;
++    if (@available(macOS 10.9, *)) { // the maximum frame duration is 10.9
++        if (videoConnection.supportsVideoMaxFrameDuration) {
++            const CMTime cmMax = videoConnection.videoMaxFrameDuration;
++            if (CMTimeCompare(cmMax, kCMTimeInvalid)) {
++                if (const Float64 maxSeconds = CMTimeGetSeconds(cmMax))
++                    newRange.first = 1. / maxSeconds;
++            }
+         }
+     }
+ 
+@@ -451,15 +453,21 @@
+     if (videoConnection.supportsVideoMinFrameDuration)
+         videoConnection.videoMinFrameDuration = minDuration;
+ 
++    // The maximum frame duration (minimum frame rate) is 10.9.
++    bool maxDurationSupported = false;
++    if (@available(macOS 10.9, *))
++        maxDurationSupported = videoConnection.supportsVideoMaxFrameDuration;
+     CMTime maxDuration = kCMTimeInvalid;
+     if (minFPS > 0.) {
+-        if (!videoConnection.supportsVideoMaxFrameDuration)
++        if (!maxDurationSupported)
+             qDebugCamera() << Q_FUNC_INFO << "minimum framerate is not supported";
+         else
+             maxDuration = CMTimeMake(1, minFPS);
+     }
+-    if (videoConnection.supportsVideoMaxFrameDuration)
+-        videoConnection.videoMaxFrameDuration = maxDuration;
++    if (maxDurationSupported) {
++        if (@available(macOS 10.9, *))
++            videoConnection.videoMaxFrameDuration = maxDuration;
++    }
+ }
+ 
+ CMTime qt_adjusted_frame_duration(AVFrameRateRange *range, qreal fps)
+@@ -538,8 +546,10 @@
+     if (CMTimeCompare(minFrameDuration, kCMTimeInvalid))
+         [captureDevice setActiveVideoMinFrameDuration:minFrameDuration];
+ 
+-    if (CMTimeCompare(maxFrameDuration, kCMTimeInvalid))
+-        [captureDevice setActiveVideoMaxFrameDuration:maxFrameDuration];
++    if (@available(macOS 10.9, *)) { // no maximum frame duration before 10.9
++        if (CMTimeCompare(maxFrameDuration, kCMTimeInvalid))
++            [captureDevice setActiveVideoMaxFrameDuration:maxFrameDuration];
++    }
+ #endif // Q_OS_MACOS
+ }
+ 
+@@ -563,10 +573,12 @@
+             fps.second = 1. / minSeconds; // Max FPS = 1 / MinDuration.
+     }
+ 
+-    const CMTime maxDuration = captureDevice.activeVideoMaxFrameDuration;
+-    if (CMTimeCompare(maxDuration, kCMTimeInvalid)) {
+-        if (const Float64 maxSeconds = CMTimeGetSeconds(maxDuration))
+-            fps.first = 1. / maxSeconds; // Min FPS = 1 / MaxDuration.
++    if (@available(macOS 10.9, *)) { // no maximum frame duration before 10.9
++        const CMTime maxDuration = captureDevice.activeVideoMaxFrameDuration;
++        if (CMTimeCompare(maxDuration, kCMTimeInvalid)) {
++            if (const Float64 maxSeconds = CMTimeGetSeconds(maxDuration))
++                fps.first = 1. / maxSeconds; // Min FPS = 1 / MaxDuration.
++        }
+     }
+ 
+     return fps;
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
+@@ -85,7 +85,11 @@
+                          change:(NSDictionary *)change context:(void *)context;
+ - (void) detatchSession;
+ - (void) dealloc;
++// AVAssetResourceLoader is 10.9; the loader only calls this where it exists.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ - (BOOL) resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest;
++QT_WARNING_POP
+ @end
+ 
+ @implementation AVFMediaPlayerSessionObserver
+@@ -135,7 +139,10 @@
+         // use __block to avoid maintaining strong references on variables captured by the
+         // following block callback
+         __block AVURLAsset *asset = [[AVURLAsset URLAssetWithURL:m_URL options:nil] retain];
+-        [asset.resourceLoader setDelegate:self queue:dispatch_get_main_queue()];
++        // The resource loader, which serves QIODevice streams, is 10.9:
++        // before that only URLs can be played.
++        if (@available(macOS 10.9, *))
++            [asset.resourceLoader setDelegate:self queue:dispatch_get_main_queue()];
+ 
+         __block NSArray *requestedKeys = [[NSArray arrayWithObjects:AVF_TRACKS_KEY, AVF_PLAYABLE_KEY, nil] retain];
+ 
+@@ -168,9 +175,11 @@
+         [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                     name:AVPlayerItemTimeJumpedNotification
+                                                     object:m_playerItem];
+-        for (AVPlayerItemOutput *output in m_playerItem.outputs) {
+-            if ([output isKindOfClass:[AVPlayerItemVideoOutput class]])
+-                [m_playerItem removeOutput:output];
++        if (@available(macOS 10.8, *)) { // item outputs are 10.8
++            for (AVPlayerItemOutput *output in m_playerItem.outputs) {
++                if ([output isKindOfClass:[AVPlayerItemVideoOutput class]])
++                    [m_playerItem removeOutput:output];
++            }
+         }
+         m_playerItem = 0;
+     }
+@@ -417,6 +426,8 @@
+     [super dealloc];
+ }
+ 
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ - (BOOL) resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest
+ {
+     Q_UNUSED(resourceLoader);
+@@ -455,6 +466,7 @@
+ 
+     return YES;
+ }
++QT_WARNING_POP
+ @end
+ 
+ AVFMediaPlayerSession::AVFMediaPlayerSession(AVFMediaPlayerService *service, QObject *parent)
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfvideoframerenderer.mm b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfvideoframerenderer.mm
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfvideoframerenderer.mm
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfvideoframerenderer.mm
+@@ -69,11 +69,15 @@
+     , m_videoOutput(nullptr)
+     , m_isContextShared(true)
+ {
+-    m_videoOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:@{
+-        (NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
+-        (NSString *)kCVPixelBufferOpenGLCompatibilityKey: @YES
+-    }];
+-    [m_videoOutput setDelegate:nil queue:nil];
++    // AVPlayerItemVideoOutput is 10.8. Before that the renderer has no video
++    // output and produces no frames; audio playback is unaffected.
++    if (@available(macOS 10.8, *)) {
++        m_videoOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:@{
++            (NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
++            (NSString *)kCVPixelBufferOpenGLCompatibilityKey: @YES
++        }];
++        [m_videoOutput setDelegate:nil queue:nil];
++    }
+ 
+ #ifdef Q_OS_MACOS
+     m_fbo[0] = nullptr;
+@@ -168,33 +172,37 @@
+         return nullptr;
+     }
+ 
+-    AVPlayerItem *item = layer.player.currentItem;
+-    if (![item.outputs containsObject:m_videoOutput])
+-        [item addOutput:m_videoOutput];
+-
+-    CFTimeInterval currentCAFrameTime = CACurrentMediaTime();
+-    CMTime currentCMFrameTime = [m_videoOutput itemTimeForHostTime:currentCAFrameTime];
+-
+-    // Happens when buffering / loading
+-    if (CMTimeCompare(currentCMFrameTime, kCMTimeZero) < 0)
+-        return nullptr;
+-
+-    if (![m_videoOutput hasNewPixelBufferForItemTime:currentCMFrameTime])
+-        return nullptr;
+-
+-    CVPixelBufferRef pixelBuffer = [m_videoOutput copyPixelBufferForItemTime:currentCMFrameTime
+-                                                   itemTimeForDisplay:nil];
+-    if (!pixelBuffer) {
++    // AVPlayerItemVideoOutput is 10.8: no frames before that (see the constructor).
++    if (@available(macOS 10.8, *)) {
++        AVPlayerItem *item = layer.player.currentItem;
++        if (![item.outputs containsObject:m_videoOutput])
++            [item addOutput:m_videoOutput];
++
++        CFTimeInterval currentCAFrameTime = CACurrentMediaTime();
++        CMTime currentCMFrameTime = [m_videoOutput itemTimeForHostTime:currentCAFrameTime];
++
++        // Happens when buffering / loading
++        if (CMTimeCompare(currentCMFrameTime, kCMTimeZero) < 0)
++            return nullptr;
++
++        if (![m_videoOutput hasNewPixelBufferForItemTime:currentCMFrameTime])
++            return nullptr;
++
++        CVPixelBufferRef pixelBuffer = [m_videoOutput copyPixelBufferForItemTime:currentCMFrameTime
++                                                       itemTimeForDisplay:nil];
++        if (!pixelBuffer) {
+ #ifdef QT_DEBUG_AVF
+-        qWarning("copyPixelBufferForItemTime returned nil");
+-        CMTimeShow(currentCMFrameTime);
++            qWarning("copyPixelBufferForItemTime returned nil");
++            CMTimeShow(currentCMFrameTime);
+ #endif
+-        return nullptr;
+-    }
++            return nullptr;
++        }
+ 
+-    width = CVPixelBufferGetWidth(pixelBuffer);
+-    height = CVPixelBufferGetHeight(pixelBuffer);
+-    return pixelBuffer;
++        width = CVPixelBufferGetWidth(pixelBuffer);
++        height = CVPixelBufferGetHeight(pixelBuffer);
++        return pixelBuffer;
++    }
++    return nullptr;
+ }
+ 
+ CVOGLTextureRef AVFVideoFrameRenderer::createCacheTextureFromLayer(AVPlayerLayer *layer,
+@@ -315,7 +323,7 @@
+                         kCFAllocatorDefault,
+                         nullptr,
+                         currentContext.CGLContextObj,
+-                        currentContext.pixelFormat.CGLPixelFormatObj,
++                        CGLGetPixelFormat(currentContext.CGLContextObj), // .pixelFormat is 10.10
+                         nil,
+                         &m_textureCache);
+ #else

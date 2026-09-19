@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtGui and its font support below a 10.8 deployment target (the OS X
+# 10.7 port).
+#
+#   NSColor.CGColor                             10.8    qt_mac_toQBrush()
+#   CTFontCopyDefaultCascadeListForLanguages    10.8    font fallbacks
+#
+# qt_mac_toQBrush() reads two gradient-pattern system colors through CGColor.
+# Qt's own comment there names the solid color they wrap,
+# [NSColor colorWithCalibratedWhite:0.909804 alpha:1.0], so below 10.8 that
+# color is converted instead.
+#
+# Font fallbacks: 10.7 keeps CoreText's cascade lists in
+# DefaultFontFallbacks.plist inside the CoreText bundle, which is where Qt 5.5
+# and earlier read them. The Lion 10.7.5 copy has one list per generic family
+# (default, sans-serif, serif, monospace, cursive, fantasy); an entry is a
+# PostScript name, or for the CJK fonts a list of [language, PostScript name]
+# pairs. Below 10.8 the monospace list serves monospaced fonts, the default
+# list everything else, and each name becomes a CTFontDescriptor just as the
+# 10.8 call returns them. Nothing changes on 10.8 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/gui/painting/qcoregraphics.mm b/qtbase/src/gui/painting/qcoregraphics.mm
+--- a/qtbase/src/gui/painting/qcoregraphics.mm
++++ b/qtbase/src/gui/painting/qcoregraphics.mm
+@@ -346,7 +346,10 @@
+     if (qt_mac_isSystemColorOrInstance(color, @"controlColor", @"NSGradientPatternColor") ||
+         qt_mac_isSystemColorOrInstance(color, @"windowBackgroundColor", @"NSGradientPatternColor")) {
+         qtBrush.setStyle(Qt::SolidPattern);
+-        qtBrush.setColor(qt_mac_toQColor(color.CGColor));
++        if (@available(macOS 10.8, *))
++            qtBrush.setColor(qt_mac_toQColor(color.CGColor));
++        else // NSColor.CGColor is 10.8; use the internal color named above
++            qtBrush.setColor(qt_mac_toQColor([NSColor colorWithCalibratedWhite:0.909804 alpha:1.0]));
+         return qtBrush;
+     }
+ 
+diff --git a/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm b/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
+--- a/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
++++ b/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
+@@ -544,6 +544,43 @@
+     return descriptorForFamily(QString::fromLatin1(familyName));
+ }
+ 
++#ifdef Q_OS_MACOS
++// OS X 10.7 has no CTFontCopyDefaultCascadeListForLanguages. CoreText keeps
++// its cascade lists in DefaultFontFallbacks.plist instead: one list per
++// generic family, each entry a PostScript name or a list of
++// [language, PostScript name] pairs for the CJK fonts.
++static CFArrayRef fallbacksFromCoreTextPlist(CTFontRef font)
++{
++    NSString *path = [[NSBundle bundleWithIdentifier:@"com.apple.CoreText"]
++                      pathForResource:@"DefaultFontFallbacks" ofType:@"plist"];
++    NSDictionary *lists = path ? [NSDictionary dictionaryWithContentsOfFile:path] : nil;
++    const bool monospace = CTFontGetSymbolicTraits(font) & kCTFontMonoSpaceTrait;
++    NSArray *list = [lists objectForKey:monospace ? @"monospace" : @"default"];
++    if (![list isKindOfClass:[NSArray class]])
++        return nullptr;
++
++    CFMutableArrayRef cascadeList = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
++    auto append = [cascadeList](id name) {
++        if (![name isKindOfClass:[NSString class]])
++            return;
++        QCFType<CTFontDescriptorRef> fallback = CTFontDescriptorCreateWithNameAndSize(CFStringRef(name), 0.0);
++        if (fallback)
++            CFArrayAppendValue(cascadeList, fallback);
++    };
++    for (id entry in list) {
++        if ([entry isKindOfClass:[NSArray class]]) {
++            for (id pair in (NSArray *)entry) {
++                if ([pair isKindOfClass:[NSArray class]] && [(NSArray *)pair count] > 1)
++                    append([(NSArray *)pair objectAtIndex:1]);
++            }
++        } else {
++            append(entry);
++        }
++    }
++    return cascadeList;
++}
++#endif
++
+ CFArrayRef fallbacksForDescriptor(CTFontDescriptorRef descriptor)
+ {
+     QCFType<CTFontRef> font = CTFontCreateWithFontDescriptor(descriptor, 0.0, nullptr);
+@@ -552,8 +589,17 @@
+         return nullptr;
+     }
+ 
+-    CFArrayRef cascadeList = CFArrayRef(CTFontCopyDefaultCascadeListForLanguages(font,
+-        (CFArrayRef)[NSUserDefaults.standardUserDefaults stringArrayForKey:@"AppleLanguages"]));
++    CFArrayRef cascadeList = nullptr;
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.8, *)) {
++#endif
++        cascadeList = CFArrayRef(CTFontCopyDefaultCascadeListForLanguages(font,
++            (CFArrayRef)[NSUserDefaults.standardUserDefaults stringArrayForKey:@"AppleLanguages"]));
++#ifdef Q_OS_MACOS
++    } else {
++        cascadeList = fallbacksFromCoreTextPlist(font);
++    }
++#endif
+ 
+     if (!cascadeList) {
+         qCWarning(lcQpaFonts) << "Failed to create fallback cascade list for" << descriptor;

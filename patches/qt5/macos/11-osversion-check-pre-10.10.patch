@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: skip the startup OS version check below a 10.10 target.
+#
+# qt_apple_check_os_version() compares the running system against the
+# deployment target and refuses to start if it is too old. It does that through
+# NSProcessInfo.operatingSystemVersion and isOperatingSystemAtLeastVersion:,
+# both macOS 10.10, so the check cannot itself run on the systems it is meant
+# to catch.
+#
+# It is skipped there instead. The check only exists to print a friendlier
+# message than the system does: dyld already refuses to load a binary whose
+# LC_VERSION_MIN_MACOSX is above the running OS, so the protection is
+# unaffected - only the wording is.
+#
+# Note the shape of the guard: the code sits *inside* the `if (@available(...))`
+# branch. Writing it the other way round - `if (@available(...)) { } else
+# { return; }` with the body after the statement - reads the same to a human but
+# not to clang, whose availability analysis only considers the then-branch
+# guarded. That version still failed to compile, with the diagnostics merely
+# shifted down by the lines the patch had added.
+#
+# The unified-logging code that used to be patched here as well is gone: it is
+# compiled out below 10.12 by 03-unified-logging-pre-10.12.patch.
+#
+# Changes:
+#   src/corelib/kernel/qcore_mac.mm
+#       runtime-select the startup OS version check
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/corelib/kernel/qcore_mac.mm b/qtbase/src/corelib/kernel/qcore_mac.mm
+--- a/qtbase/src/corelib/kernel/qcore_mac.mm
++++ b/qtbase/src/corelib/kernel/qcore_mac.mm
+@@ -618,32 +618,40 @@
+     const char *os = "macOS";
+     const int version = __MAC_OS_X_VERSION_MIN_REQUIRED;
+ #endif
+-    const NSOperatingSystemVersion required = (NSOperatingSystemVersion){
+-        version / 10000, version / 100 % 100, version % 100};
+-    const NSOperatingSystemVersion current = NSProcessInfo.processInfo.operatingSystemVersion;
++    // NSProcessInfo cannot report the running version before 10.10. The
++    // check only exists to print a friendlier message than the system
++    // does - dyld already refuses to load a binary whose
++    // LC_VERSION_MIN_MACOSX is above the running OS - so on older systems
++    // it is simply skipped. The body must be inside the check, not after
++    // it, for clang to consider it guarded.
++    if (@available(macOS 10.10, *)) {
++        const NSOperatingSystemVersion required = (NSOperatingSystemVersion){
++            version / 10000, version / 100 % 100, version % 100};
++        const NSOperatingSystemVersion current = NSProcessInfo.processInfo.operatingSystemVersion;
+ 
+ #if defined(Q_OS_MACOS)
+-    // Check for compatibility version, in which case we can't do a
+-    // comparison to the deployment target, which might be e.g. 11.0
+-    if (current.majorVersion == 10 && current.minorVersion >= 16)
+-        return; // FIXME: Find a way to detect the real OS version
++        // Check for compatibility version, in which case we can't do a
++        // comparison to the deployment target, which might be e.g. 11.0
++        if (current.majorVersion == 10 && current.minorVersion >= 16)
++            return; // FIXME: Find a way to detect the real OS version
+ #endif
+ 
+-    if (![NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:required]) {
+-        NSDictionary *plist = NSBundle.mainBundle.infoDictionary;
+-        NSString *applicationName = plist[@"CFBundleDisplayName"];
+-        if (!applicationName)
+-            applicationName = plist[@"CFBundleName"];
+-        if (!applicationName)
+-            applicationName = NSProcessInfo.processInfo.processName;
++        if (![NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:required]) {
++            NSDictionary *plist = NSBundle.mainBundle.infoDictionary;
++            NSString *applicationName = plist[@"CFBundleDisplayName"];
++            if (!applicationName)
++                applicationName = plist[@"CFBundleName"];
++            if (!applicationName)
++                applicationName = NSProcessInfo.processInfo.processName;
+ 
+-        fprintf(stderr, "Sorry, \"%s\" cannot be run on this version of %s. "
+-            "Qt requires %s %ld.%ld.%ld or later, you have %s %ld.%ld.%ld.\n",
+-            applicationName.UTF8String, os,
+-            os, long(required.majorVersion), long(required.minorVersion), long(required.patchVersion),
+-            os, long(current.majorVersion), long(current.minorVersion), long(current.patchVersion));
++            fprintf(stderr, "Sorry, \"%s\" cannot be run on this version of %s. "
++                "Qt requires %s %ld.%ld.%ld or later, you have %s %ld.%ld.%ld.\n",
++                applicationName.UTF8String, os,
++                os, long(required.majorVersion), long(required.minorVersion), long(required.patchVersion),
++                os, long(current.majorVersion), long(current.minorVersion), long(current.patchVersion));
+ 
+-        exit(1);
++            exit(1);
++        }
+     }
+ }
+ Q_CONSTRUCTOR_FUNCTION(qt_apple_check_os_version);

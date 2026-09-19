@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: read the OS version without NSProcessInfo.operatingSystemVersion.
+#
+# QOperatingSystemVersion::current() uses
+# NSProcessInfo.processInfo.operatingSystemVersion, which is macOS 10.10+, so a
+# build targeting anything older stops with
+#
+#   qoperatingsystemversion_darwin.mm:47: error: 'operatingSystemVersion' is
+#   only available on macOS 10.10 or newer [-Werror,-Wunguarded-availability-new]
+#
+# This is the same shape as the Windows XP patches: keep the modern path for
+# systems that have it, pick it at *runtime* rather than at compile time, and
+# supply an equivalent for the old ones. Here the runtime test is @available,
+# clang's own mechanism, so both paths are compiled and the right one is taken
+# on the machine that actually runs the binary.
+#
+# The fallback reads /System/Library/CoreServices/SystemVersion.plist, which has
+# reported ProductVersion since long before 10.8 and needs no API newer than the
+# target. Gestalt() would be the period-accurate alternative but it is
+# deprecated and warns under -Werror. The fallback spells objectForKey: and
+# objectAtIndex: out, because subscripting (dict[key], array[i]) is a 10.8 API
+# and this path exists for systems down to 10.7.
+#
+# @available lowers to a compiler-rt call, which is why osxcross is built with
+# ENABLE_COMPILER_RT_INSTALL=1 in docker/qt5/macos/amd64/Dockerfile.
+#
+# Changes:
+#   src/corelib/global/qoperatingsystemversion_darwin.mm
+#       take the 10.10 API only when the running system has it
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/corelib/global/qoperatingsystemversion_darwin.mm b/qtbase/src/corelib/global/qoperatingsystemversion_darwin.mm
+--- a/qtbase/src/corelib/global/qoperatingsystemversion_darwin.mm
++++ b/qtbase/src/corelib/global/qoperatingsystemversion_darwin.mm
+@@ -44,12 +44,33 @@
+ 
+ QOperatingSystemVersion QOperatingSystemVersion::current()
+ {
+-    NSOperatingSystemVersion osv = NSProcessInfo.processInfo.operatingSystemVersion;
+     QOperatingSystemVersion v;
+     v.m_os = currentType();
+-    v.m_major = osv.majorVersion;
+-    v.m_minor = osv.minorVersion;
+-    v.m_micro = osv.patchVersion;
++
++    if (@available(macOS 10.10, *)) {
++        NSOperatingSystemVersion osv = NSProcessInfo.processInfo.operatingSystemVersion;
++        v.m_major = int(osv.majorVersion);
++        v.m_minor = int(osv.minorVersion);
++        v.m_micro = int(osv.patchVersion);
++        return v;
++    }
++
++    // Older than 10.10: NSProcessInfo cannot tell us. SystemVersion.plist has
++    // carried ProductVersion ("10.8.5") since well before that.
++    v.m_major = v.m_minor = v.m_micro = -1;
++    NSDictionary *systemVersion = [NSDictionary dictionaryWithContentsOfFile:
++            @"/System/Library/CoreServices/SystemVersion.plist"];
++    NSString *productVersion = [systemVersion objectForKey:@"ProductVersion"];
++    if (productVersion) {
++        NSArray<NSString *> *parts = [productVersion componentsSeparatedByString:@"."];
++        if (parts.count > 0)
++            v.m_major = [[parts objectAtIndex:0] intValue];
++        if (parts.count > 1)
++            v.m_minor = [[parts objectAtIndex:1] intValue];
++        // ProductVersion omits the patch component on a .0 release.
++        v.m_micro = parts.count > 2 ? [[parts objectAtIndex:2] intValue] : 0;
++    }
++
+     return v;
+ }
+ 

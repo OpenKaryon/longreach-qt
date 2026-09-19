@@ -1,0 +1,163 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtCore below a 10.10 deployment target (the OS X 10.7 port).
+#
+# Four QtCore sites use APIs newer than 10.7, and Qt builds itself with
+# -Werror=unguarded-availability, so each is an error:
+#
+#   ObjC subscripting, dict[key]        10.8    qeventdispatcher_cf.mm
+#   NSUUID                              10.8    QUuid::fromNSUUID/toNSUUID
+#   -[NSFileManager trashItemAtURL:...] 10.8    QFile::moveToTrash
+#   LSCopyDefaultApplicationURLForURL   10.10   isPackage()
+#
+#   subscripting    spelled out as objectForKey:. Xcode supplies the 10.7
+#                   implementation through libarclite, which osxcross lacks.
+#   NSUUID          the conversion functions stay; only the warning is
+#                   silenced, at the definitions and at the declarations in
+#                   quuid.h (Objective-C++ files that import Foundation
+#                   before quuid.h see the availability there). The class is
+#                   weak-linked, so on 10.7 nobody can hold an NSUUID to pass
+#                   in and toNSUUID() returns nil.
+#   moveToTrash     FSPathMoveObjectToTrashSync below 10.8: the File Manager
+#                   call that trashItemAtURL: replaced, same move, and it
+#                   returns the new path.
+#   isPackage()     LSGetApplicationForURL below 10.10, the call that
+#                   LSCopyDefaultApplicationURLForURL replaced. The old 10.8
+#                   patch skipped this step instead; this keeps the answer
+#                   the same on every system.
+#
+# Both fallbacks are deprecated APIs, so their calls are wrapped in
+# QT_WARNING_DISABLE_DEPRECATED. Nothing changes on 10.10 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_mac.mm b/qtbase/src/corelib/io/qfilesystemengine_mac.mm
+--- a/qtbase/src/corelib/io/qfilesystemengine_mac.mm
++++ b/qtbase/src/corelib/io/qfilesystemengine_mac.mm
+@@ -44,6 +44,9 @@
+ 
+ #include <QtCore/private/qcore_mac_p.h>
+ #include <CoreFoundation/CoreFoundation.h>
++#ifdef Q_OS_MACOS
++#include <CoreServices/CoreServices.h>
++#endif
+ 
+ QT_BEGIN_NAMESPACE
+ 
+@@ -66,14 +69,32 @@
+     QFileInfo info(source.filePath());
+     NSString *filepath = info.filePath().toNSString();
+     NSURL *fileurl = [NSURL fileURLWithPath:filepath isDirectory:info.isDir()];
+-    NSURL *resultingUrl = nil;
+-    NSError *nserror = nil;
+-    NSFileManager *fm = [NSFileManager defaultManager];
+-    if ([fm trashItemAtURL:fileurl resultingItemURL:&resultingUrl error:&nserror] != YES) {
+-        error = QSystemError(nserror.code, QSystemError::NativeError);
++    if (@available(macOS 10.8, *)) {
++        NSURL *resultingUrl = nil;
++        NSError *nserror = nil;
++        NSFileManager *fm = [NSFileManager defaultManager];
++        if ([fm trashItemAtURL:fileurl resultingItemURL:&resultingUrl error:&nserror] != YES) {
++            error = QSystemError(nserror.code, QSystemError::NativeError);
++            return false;
++        }
++        newLocation = QFileSystemEntry(QUrl::fromNSURL(resultingUrl).path());
++        return true;
++    }
++
++    // OS X 10.7: NSFileManager has no trash method yet. The File Manager call
++    // it replaced does the same move and reports the new path.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++    char *trashedPath = nullptr;
++    const OSStatus status = FSPathMoveObjectToTrashSync(filepath.fileSystemRepresentation,
++                                                        &trashedPath, kFSFileOperationDefaultOptions);
++QT_WARNING_POP
++    if (status != noErr) {
++        error = QSystemError(status, QSystemError::NativeError);
+         return false;
+     }
+-    newLocation = QFileSystemEntry(QUrl::fromNSURL(resultingUrl).path());
++    newLocation = QFileSystemEntry(QFile::decodeName(trashedPath));
++    free(trashedPath);
+     return true;
+ #else // watch, tv, iOS don't have a trash can
+     Q_UNUSED(source);
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+--- a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+@@ -174,8 +174,21 @@
+ 
+ #ifdef Q_OS_MACOS
+         // Find if an application other than Finder claims to know how to handle the package
+-        QCFType<CFURLRef> application = LSCopyDefaultApplicationURLForURL(url,
+-            kLSRolesEditor | kLSRolesViewer, nullptr);
++        QCFType<CFURLRef> application;
++        if (__builtin_available(macOS 10.10, *)) {
++            application = LSCopyDefaultApplicationURLForURL(url,
++                kLSRolesEditor | kLSRolesViewer, nullptr);
++        } else {
++            // OS X 10.7 to 10.9: the call it replaced, which returns the
++            // application URL retained in the same way.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++            CFURLRef appUrl = nullptr;
++            if (LSGetApplicationForURL(url, kLSRolesEditor | kLSRolesViewer,
++                                       nullptr, &appUrl) == noErr)
++                application = appUrl;
++QT_WARNING_POP
++        }
+ 
+         if (application) {
+             QCFType<CFBundleRef> bundle = CFBundleCreate(kCFAllocatorDefault, application);
+diff --git a/qtbase/src/corelib/kernel/qcore_foundation.mm b/qtbase/src/corelib/kernel/qcore_foundation.mm
+--- a/qtbase/src/corelib/kernel/qcore_foundation.mm
++++ b/qtbase/src/corelib/kernel/qcore_foundation.mm
+@@ -296,6 +296,11 @@
+ 
+     \note this function is only available on Apple platforms.
+ */
++// NSUUID is OS X 10.8. On 10.7 the class is weak-linked: no caller can have an
++// NSUUID to pass in, and toNSUUID() returns nil because messaging the missing
++// class does nothing.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ QUuid QUuid::fromNSUUID(const NSUUID *uuid)
+ {
+     if (!uuid)
+@@ -317,6 +322,7 @@
+     const QByteArray bytes = toRfc4122();
+     return [[[NSUUID alloc] initWithUUIDBytes:*reinterpret_cast<const uuid_t *>(bytes.constData())] autorelease];
+ }
++QT_WARNING_POP
+ 
+ // ----------------------------------------------------------------------------
+ 
+diff --git a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+--- a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
++++ b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+@@ -121,7 +121,7 @@
+ {
+     for (NSString *key in dictionary) {
+         if (CFStringHasSuffix((CFStringRef)key, CFSTR("RunLoopMode")))
+-            return (CFStringRef)dictionary[key];
++            return (CFStringRef)[dictionary objectForKey:key];
+     }
+ 
+     return nil;
+diff --git a/qtbase/src/corelib/plugin/quuid.h b/qtbase/src/corelib/plugin/quuid.h
+--- a/qtbase/src/corelib/plugin/quuid.h
++++ b/qtbase/src/corelib/plugin/quuid.h
+@@ -222,8 +222,12 @@
+ #if defined(Q_OS_DARWIN) || defined(Q_CLANG_QDOC)
+     static QUuid fromCFUUID(CFUUIDRef uuid);
+     CFUUIDRef toCFUUID() const Q_DECL_CF_RETURNS_RETAINED;
++    // NSUUID is OS X 10.8; see qcore_foundation.mm for the 10.7 behavior.
++    QT_WARNING_PUSH
++    QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+     static QUuid fromNSUUID(const NSUUID *uuid);
+     NSUUID *toNSUUID() const Q_DECL_NS_RETURNS_AUTORELEASED;
++    QT_WARNING_POP
+ #endif
+ 
+     uint    data1;

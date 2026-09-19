@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: no App Nap to disable before 10.9.
+#
+# QTestPrivate::AppNapDisabler keeps App Nap from suspending a running test, by
+# holding an NSActivityBackground activity. beginActivityWithOptions:reason:,
+# endActivity: and NSActivityBackground are all macOS 10.9.
+#
+# App Nap itself arrived in 10.9, so on anything older there is nothing to
+# disable and the class has nothing to do - the empty implementation is not a
+# degradation, it is the correct behaviour for those systems.
+#
+# Changes:
+#   src/testlib/qtestutil_macos.mm
+#       hold the activity only where App Nap exists
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/testlib/qtestutil_macos.mm b/qtbase/src/testlib/qtestutil_macos.mm
+--- a/qtbase/src/testlib/qtestutil_macos.mm
++++ b/qtbase/src/testlib/qtestutil_macos.mm
+@@ -99,9 +99,13 @@
+     */
+     AppNapDisabler::AppNapDisabler()
+     {
+-        m_activity = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityBackground
+-                                                                    reason:@"Qt Auto Test"];
+-        [m_activity retain];
++        // App Nap arrived in macOS 10.9 along with the API that holds it off.
++        // Older systems have nothing to disable.
++        if (@available(macOS 10.9, *)) {
++            m_activity = [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityBackground
++                                                                        reason:@"Qt Auto Test"];
++            [m_activity retain];
++        }
+     }
+ 
+     /*! \internal
+@@ -109,8 +113,10 @@
+     */
+     AppNapDisabler::~AppNapDisabler()
+     {
+-        [[NSProcessInfo processInfo] endActivity:m_activity];
+-        [m_activity release];
++        if (@available(macOS 10.9, *)) {
++            [[NSProcessInfo processInfo] endActivity:m_activity];
++            [m_activity release];
++        }
+     }
+ }
+ 

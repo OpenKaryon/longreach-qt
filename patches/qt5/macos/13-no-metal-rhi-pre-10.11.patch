@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: do not build the Metal RHI backend for a pre-10.11 deployment target.
+#
+# Metal arrived in macOS 10.11. Every type qrhimetal.mm names - MTLDevice,
+# MTLCommandQueue, MTLBuffer, MTLTexture, MTLPixelFormat and so on - carries
+# that availability, so targeting anything older produces a wall of
+# -Wunguarded-availability-new errors, nineteen of them at the first attempt.
+#
+# This one is unlike the other patches in this directory. Those guard
+# individual calls that have an older equivalent sitting next to them. Here
+# there is no equivalent and no subset that works: without Metal the backend
+# simply cannot exist, so it is compiled out rather than guarded.
+#
+# Nothing is lost on the targets this kit builds. Qt 5.15 still renders Qt Quick
+# through OpenGL by default; the RHI Metal backend is only reached when asked
+# for explicitly with QSG_RHI_BACKEND=metal, and these images are configured
+# -opengl desktop. A build whose deployment target is 10.11 or newer keeps the
+# backend exactly as before.
+#
+# The shape follows patches/qt5/windows/02-disable-d3d11-rhi.patch, which solves the
+# same problem for D3D11 on MinGW - including its lesson that dropping the
+# sources is not enough, because qrhi.cpp is always built and instantiates the
+# backend itself.
+#
+# Changes:
+#   src/gui/rhi/rhi.pri
+#       build the backend only when the deployment target has Metal, and
+#       define QT_RHI_METAL_BACKPORT when it does
+#   src/gui/rhi/qrhi.cpp
+#       gate the include and the QRhi::Metal case on that define
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/gui/rhi/rhi.pri b/qtbase/src/gui/rhi/rhi.pri
+--- a/qtbase/src/gui/rhi/rhi.pri
++++ b/qtbase/src/gui/rhi/rhi.pri
+@@ -43,7 +43,20 @@
+     LIBS += -ld3d11 -ldxgi -ldxguid
+ }
+ 
+-macos|ios {
++# Metal is macOS 10.11 / iOS 8 and later. Every type in qrhimetal.mm - MTLDevice,
++# MTLBuffer, MTLTexture and the rest - is annotated with that availability, so a
++# build aimed at an older macOS cannot compile the backend at all; there is no
++# subset of it that works and nothing to fall back to, unlike the individual
++# APIs guarded by the other patches here.
++#
++# Leaving it out costs nothing on this kit's targets: Qt 5.15 renders Qt Quick
++# through OpenGL by default and only reaches for the RHI Metal backend when
++# asked explicitly (QSG_RHI_BACKEND=metal), and these images configure
++# -opengl desktop.
++QT_RHI_METAL_AVAILABLE = 1
++macos:!versionAtLeast(QMAKE_MACOSX_DEPLOYMENT_TARGET, 10.11): QT_RHI_METAL_AVAILABLE = 0
++
++macos|ios:equals(QT_RHI_METAL_AVAILABLE, 1) {
+     HEADERS += \
+         rhi/qrhimetal_p.h \
+         rhi/qrhimetal_p_p.h
+@@ -52,6 +65,17 @@
+ 
+     macos: LIBS += -framework AppKit
+     LIBS += -framework Metal
++
++    # qrhi.cpp is always built and both includes and instantiates the Metal
++    # backend under Q_OS_MACOS/Q_OS_IOS. This define lets it match the decision
++    # made here, so the backend compiles out completely. Removing it from
++    # SOURCES alone is not enough - the same lesson as the D3D11 backend in
++    # patches/qt5/windows/02-disable-d3d11-rhi.patch.
++    DEFINES += QT_RHI_METAL_BACKPORT
++}
++
++macos|ios:equals(QT_RHI_METAL_AVAILABLE, 0) {
++    macos: LIBS += -framework AppKit
+ }
+ 
+ include($$PWD/../../3rdparty/VulkanMemoryAllocator.pri)
+diff --git a/qtbase/src/gui/rhi/qrhi.cpp b/qtbase/src/gui/rhi/qrhi.cpp
+--- a/qtbase/src/gui/rhi/qrhi.cpp
++++ b/qtbase/src/gui/rhi/qrhi.cpp
+@@ -48,7 +48,7 @@
+ #ifdef Q_OS_WIN
+ #include "qrhid3d11_p_p.h"
+ #endif
+-#if defined(Q_OS_MACOS) || defined(Q_OS_IOS)
++#if (defined(Q_OS_MACOS) || defined(Q_OS_IOS)) && defined(QT_RHI_METAL_BACKPORT)
+ #include "qrhimetal_p_p.h"
+ #endif
+ 
+@@ -4251,7 +4251,7 @@
+         break;
+ #endif
+     case Metal:
+-#if defined(Q_OS_MACOS) || defined(Q_OS_IOS)
++#if (defined(Q_OS_MACOS) || defined(Q_OS_IOS)) && defined(QT_RHI_METAL_BACKPORT)
+         r->d = new QRhiMetal(static_cast<QRhiMetalInitParams *>(params),
+                              static_cast<QRhiMetalNativeHandles *>(importDevice));
+         break;

@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: keep qcoregraphics.mm compiling below a 10.10 target.
+#
+# qt_mac_toQPixmap() wraps a CGContext in an NSGraphicsContext using
+#
+#   +[NSGraphicsContext graphicsContextWithCGContext:flipped:]
+#
+# which is macOS 10.10+, so clang refuses it under
+# -Wunguarded-availability-new when targeting anything older.
+#
+# This one is a rename rather than a redesign: the same method existed as
+# graphicsContextWithGraphicsPort:flipped: from 10.0 and was deprecated when
+# the CGContext spelling arrived. So pick between them at runtime with
+# @available and silence the deprecation warning on the old branch only.
+#
+# The guarded call sits inside the @available branch. Anything else - an early
+# return, an else that falls through - is invisible to clang's availability
+# analysis, which only treats the then-branch as guarded; see the header of
+# 02-osversion-check-pre-10.10.patch for what that mistake looks like.
+#
+# Changes:
+#   src/gui/painting/qcoregraphics.mm
+#       choose the NSGraphicsContext factory method at runtime
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/gui/painting/qcoregraphics.mm b/qtbase/src/gui/painting/qcoregraphics.mm
+--- a/qtbase/src/gui/painting/qcoregraphics.mm
++++ b/qtbase/src/gui/painting/qcoregraphics.mm
+@@ -206,7 +206,19 @@
+     QMacCGContext ctx(&pixmap);
+     if (!ctx)
+         return QPixmap();
+-    NSGraphicsContext *gc = [NSGraphicsContext graphicsContextWithCGContext:ctx flipped:YES];
++    NSGraphicsContext *gc = nil;
++    if (@available(macOS 10.10, *)) {
++        gc = [NSGraphicsContext graphicsContextWithCGContext:ctx flipped:YES];
++    } else {
++        // Same call under its pre-10.10 name: graphicsContextWithGraphicsPort:
++        // has existed since 10.0 and was deprecated when the CGContext spelling
++        // replaced it, so this is a rename rather than a different code path.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        gc = [NSGraphicsContext graphicsContextWithGraphicsPort:static_cast<CGContextRef>(ctx)
++                                                        flipped:YES];
++QT_WARNING_POP
++    }
+     if (!gc)
+         return QPixmap();
+     [NSGraphicsContext saveGraphicsState];

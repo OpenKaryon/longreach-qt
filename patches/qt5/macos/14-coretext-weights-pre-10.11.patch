@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: name the CoreText font weights numerically below a 10.11 target.
+#
+# qtWeightFromCFWeight() maps a CoreText weight onto a QFont::Weight by finding
+# the nearest of nine reference values. Qt reaches those through its own
+# kCTFontWeightXXX macros, which alias AppKit's NSFontWeightXXX - and all nine
+# of those arrived in macOS 10.11:
+#
+#   error: 'NSFontWeightBlack' is only available on macOS 10.11 or newer
+#
+# @available does not help here: these are extern constants read inside a
+# comparison macro, not calls that can be moved into a guarded branch. But the
+# scale they name is much older than the symbols - normalised -1..1, with
+# reference points Apple documents and has never changed - so below 10.11 the
+# alias block resolves to the numbers instead. Above it, nothing changes.
+#
+# Patching Qt's own alias block rather than the call site keeps the change to
+# one place: the aliases already exist precisely to paper over the AppKit and
+# UIKit spellings, and this is one more case of the same thing.
+#
+# The mapping picks the nearest reference rather than an exact match, so what
+# matters is that the values stay correct relative to one another.
+#
+# Values, as Apple documents them:
+#   UltraLight -0.80   Thin -0.60   Light -0.40   Regular 0.00   Medium 0.23
+#   Semibold    0.30   Bold  0.40   Heavy  0.56   Black   0.62
+#
+# Changes:
+#   src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
+#       resolve the kCTFontWeightXXX aliases numerically before 10.11
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm b/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
+--- a/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
++++ b/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
+@@ -62,7 +62,26 @@
+ // These are available cross platform, exported as kCTFontWeightXXX from CoreText.framework,
+ // but they are not documented and are not in public headers so are private API and exposed
+ // only through the NSFontWeightXXX and UIFontWeightXXX aliases in AppKit and UIKit (rdar://26109857)
+-#if defined(Q_OS_MACOS)
++#if defined(Q_OS_MACOS) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
++    && __MAC_OS_X_VERSION_MIN_REQUIRED < 101100
++// The NSFontWeightXXX aliases themselves are only available from macOS 10.11.
++// They cannot be reached through @available either, being extern constants read
++// inside a comparison macro rather than calls. What they name is older than the
++// symbols, though: the normalised -1..1 weight scale, whose reference points
++// Apple documents and has never changed. Below 10.11, use the numbers.
++//
++// qtWeightFromCFWeight() picks the nearest reference rather than an exact one,
++// so what matters is that these stay correct relative to each other.
++#define kCTFontWeightUltraLight (-0.80f)
++#define kCTFontWeightThin       (-0.60f)
++#define kCTFontWeightLight      (-0.40f)
++#define kCTFontWeightRegular    ( 0.00f)
++#define kCTFontWeightMedium     ( 0.23f)
++#define kCTFontWeightSemibold   ( 0.30f)
++#define kCTFontWeightBold       ( 0.40f)
++#define kCTFontWeightHeavy      ( 0.56f)
++#define kCTFontWeightBlack      ( 0.62f)
++#elif defined(Q_OS_MACOS)
+ #define kCTFontWeightUltraLight NSFontWeightUltraLight
+ #define kCTFontWeightThin NSFontWeightThin
+ #define kCTFontWeightLight NSFontWeightLight

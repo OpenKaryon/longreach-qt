@@ -1,0 +1,916 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the Cocoa platform plugin and QMacStyle below 10.11 (the OS X 10.7
+# port).
+#
+# Each API newer than 10.7 is chosen at runtime with @available. Where the
+# older system has the same thing under its earlier name, that is used
+# (deprecated APIs wrapped in QT_WARNING_DISABLE_DEPRECATED); where it has
+# nothing, the feature is skipped.
+#
+#   ObjC subscripting                       10.8    objectForKey:/objectAtIndex:
+#   NSStatusItem.button                     10.10   the status item's own
+#                                                   target/action/image/toolTip
+#   NSUserNotification(Center)              10.8    supportsMessages() is false,
+#                                                   QSystemTrayIcon uses its
+#                                                   own balloon
+#   NSUserNotification.contentImage         10.9    no image
+#   status item window (geometry())         10.10   empty rectangle
+#   NSModalResponseContinue                 10.9    its value, -1002
+#   NSOpenPanel.accessoryViewDisclosed      10.11   panels show it anyway
+#   NSOpenGLContext.pixelFormat             10.10   CGLGetPixelFormat, wrapped
+#   NSOpenGLProfileVersion4_1Core           10.10   3.2 Core (10.9 gives 4.1
+#                                                   for it; 10.7/10.8 stop at 3.2)
+#   LSCopyApplicationURLsForBundleIdentifier 10.10  LSFindApplicationForInfo
+#   CGEventTapCreateForPid                  10.11   no live-resize event tap
+#   performWindowDragWithEvent:             10.11   startSystemMove() is false
+#   -[NSWindow beginSheet:...], endSheet:   10.9    -[NSApplication beginSheet:...]
+#                                                   and endSheet:; no critical
+#                                                   sheets
+#   NSWindowStyleMaskFullSizeContentView    10.10   not carried over
+#   NSWindow.occlusionState                 10.9    AppKit sends the
+#                                                   notification only from 10.9
+#   titlebarAppearsTransparent              10.10   textured background only,
+#                                                   border counted as in Qt 5.6
+#   labelColor, linkColor                   10.10   controlTextColor, blueColor
+#   NSColor.CGColor                         10.8    the NSColor conversion
+#   Metal layer                             10.11   the warning Qt prints when
+#                                                   Metal is missing
+#   NSAppearance (QMacStyle)                10.9    @available(10.14) replaces
+#                                                   the QOperatingSystemVersion
+#                                                   check it already had
+#   NSControl.controlSize                   10.10   the cell's controlSize
+#   NSGraphicsContext.CGContext             10.10   graphicsPort
+#   graphicsContextWithCGContext:flipped:   10.10   graphicsContextWithGraphicsPort:
+#   quaternaryLabelColor                    10.10   black at 10% opacity
+#   CGPathCreateWithRoundedRect             10.9    the same outline from arcs
+#   -[NSSliderCell barRectFlipped:]         10.9    the cell frame for drawing
+#                                                   (what older AppKit passed
+#                                                   to drawBarInside:); a 4 pt
+#                                                   bar for geometry
+#   -[NSSliderCell drawTickMarks]           10.9    called as is: the 10.7.5
+#                                                   AppKit has it, only not
+#                                                   public
+#
+# Accessibility: QMacAccessibilityElement implements the 10.10 NSAccessibility
+# protocol, which AppKit does not call before 10.10. The two calls that
+# blocked compiling are fixed, but VoiceOver support below 10.10 would need
+# the older attribute-based API and is not provided.
+#
+# Nothing changes on 10.11 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
+@@ -182,7 +182,15 @@
+         return false;
+     }
+     // Just check if the app thinks we're focused.
+-    id focusedElement = NSApp.accessibilityApplicationFocusedUIElement;
++    id focusedElement = nil;
++    if (@available(macOS 10.10, *)) {
++        focusedElement = NSApp.accessibilityApplicationFocusedUIElement;
++    } else {
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        focusedElement = [NSApp accessibilityAttributeValue:NSAccessibilityFocusedUIElementAttribute];
++QT_WARNING_POP
++    }
+     return [focusedElement isEqual:self];
+ }
+ 
+@@ -227,10 +235,15 @@
+     return QCocoaAccessible::unignoredChildren(iface);
+ }
+ 
++// Part of the 10.10 NSAccessibility protocol, which AppKit only calls on
++// 10.10 and newer; older systems use the attribute-based API.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ - (id) accessibilityWindow {
+     // We're in the same window as our parent.
+     return [self.accessibilityParent accessibilityWindow];
+ }
++QT_WARNING_POP
+ 
+ - (id) accessibilityTopLevelUIElementAttribute {
+     // We're in the same top level element as our parent.
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoacursor.mm b/qtbase/src/plugins/platforms/cocoa/qcocoacursor.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoacursor.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoacursor.mm
+@@ -110,7 +110,7 @@
+     if (accessSettings == nil)
+         return size.toSize();
+ 
+-    float sizeScale = [accessSettings[@"mouseDriverCursorSize"] floatValue];
++    float sizeScale = [[accessSettings objectForKey:@"mouseDriverCursorSize"] floatValue];
+     if (sizeScale > 0) {
+         size.rwidth() *= sizeScale;
+         size.rheight() *= sizeScale;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaeventdispatcher.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaeventdispatcher.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaeventdispatcher.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaeventdispatcher.mm
+@@ -93,6 +93,10 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// NSModalResponseContinue is a 10.9 name for the value that was
++// NSRunContinuesResponse before; the value itself has not changed.
++static const NSModalResponse qt_modalResponseContinue = -1002;
++
+ static inline CFRunLoopRef mainRunLoop()
+ {
+     return CFRunLoopGetMain();
+@@ -407,7 +411,7 @@
+             // [NSApp run], which is the normal code path for cocoa applications.
+             if (NSModalSession session = d->currentModalSession()) {
+                 QBoolBlocker execGuard(d->currentExecIsNSAppRun, false);
+-                while ([NSApp runModalSession:session] == NSModalResponseContinue && !d->interrupt) {
++                while ([NSApp runModalSession:session] == qt_modalResponseContinue && !d->interrupt) {
+                     qt_mac_waitForMoreEvents(NSModalPanelRunLoopMode);
+                     if (session != d->currentModalSessionCached) {
+                         // It's possible to release the current modal session
+@@ -451,7 +455,7 @@
+                     if (flags & QEventLoop::WaitForMoreEvents)
+                         qt_mac_waitForMoreEvents(NSModalPanelRunLoopMode);
+                     NSInteger status = [NSApp runModalSession:session];
+-                    if (status != NSModalResponseContinue && session == d->currentModalSessionCached) {
++                    if (status != qt_modalResponseContinue && session == d->currentModalSessionCached) {
+                         // INVARIANT: Someone called [NSApp stopModal:] from outside the event
+                         // dispatcher (e.g to stop a native dialog). But that call wrongly stopped
+                         // 'session' as well. As a result, we need to restart all internal sessions:
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+@@ -135,7 +135,8 @@
+     // resetting our mCurrentDir, set the delegate
+     // here to make sure it gets the correct value.
+     [mSavePanel setDelegate:self];
+-    mOpenPanel.accessoryViewDisclosed = YES;
++    if (@available(macOS 10.11, *)) // older panels always show the accessory view
++        mOpenPanel.accessoryViewDisclosed = YES;
+ 
+     if (mOptions->isLabelExplicitlySet(QFileDialogOptions::Accept))
+         [mSavePanel setPrompt:[self strip:options->labelText(QFileDialogOptions::Accept)]];
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
+@@ -57,6 +57,17 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// NSOpenGLContext.pixelFormat is 10.10. Before that the context's pixel
++// format is reachable only through CGL, wrapped back into an
++// NSOpenGLPixelFormat, which -initWithCGLPixelFormatObj: does since 10.6.
++static NSOpenGLPixelFormat *qt_pixelFormatOf(NSOpenGLContext *context)
++{
++    if (@available(macOS 10.10, *))
++        return context.pixelFormat;
++    return [[[NSOpenGLPixelFormat alloc] initWithCGLPixelFormatObj:
++        CGLGetPixelFormat(context.CGLContextObj)] autorelease];
++}
++
+ Q_LOGGING_CATEGORY(lcQpaOpenGLContext, "qt.qpa.openglcontext", QtWarningMsg);
+ 
+ QCocoaGLContext::QCocoaGLContext(QOpenGLContext *context)
+@@ -108,7 +119,7 @@
+         // this 4.1 version can find its way onto the format for the new
+         // context, even though it was at no point requested by the user.
+         GLint shareContextRequestedProfile;
+-        [m_shareContext.pixelFormat getValues:&shareContextRequestedProfile
++        [qt_pixelFormatOf(m_shareContext) getValues:&shareContextRequestedProfile
+             forAttribute:NSOpenGLPFAOpenGLProfile forVirtualScreen:0];
+         auto shareContextActualProfile = shareContext->format().version();
+ 
+@@ -168,9 +179,14 @@
+ 
+     attrs << NSOpenGLPFAOpenGLProfile;
+     if (format.profile() == QSurfaceFormat::CoreProfile) {
+-        if (format.version() >= qMakePair(4, 1))
+-            attrs << NSOpenGLProfileVersion4_1Core;
+-        else if (format.version() >= qMakePair(3, 2))
++        if (format.version() >= qMakePair(4, 1)) {
++            // Before 10.10 the 4.1 profile has no name of its own: 10.9
++            // gives 4.1 for the 3.2 Core request, 10.7 and 10.8 stop at 3.2.
++            if (@available(macOS 10.10, *))
++                attrs << NSOpenGLProfileVersion4_1Core;
++            else
++                attrs << NSOpenGLProfileVersion3_2Core;
++        } else if (format.version() >= qMakePair(3, 2))
+             attrs << NSOpenGLProfileVersion3_2Core;
+         else
+             attrs << NSOpenGLProfileVersionLegacy;
+@@ -282,7 +298,7 @@
+ 
+     // ------------------ Query the pixel format ------------------
+ 
+-    NSOpenGLPixelFormat *pixelFormat = m_context.pixelFormat;
++    NSOpenGLPixelFormat *pixelFormat = qt_pixelFormatOf(m_context);
+ 
+     GLint virtualScreen = [&, this]() {
+         auto *platformScreen = static_cast<QCocoaScreen*>(context()->screen()->handle());
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
+@@ -335,7 +335,7 @@
+ {
+     // Don't include the quitItem here, since we want it always visible and enabled regardless
+     auto items = [NSArray arrayWithObjects:preferencesItem, aboutItem,  aboutQtItem,
+-                  appMenu.itemArray[[self indexOfLastAppSpecificMenuItem]], nil];
++                  [appMenu.itemArray objectAtIndex:[self indexOfLastAppSpecificMenuItem]], nil];
+     return items;
+ }
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoanativeinterface.mm b/qtbase/src/plugins/platforms/cocoa/qcocoanativeinterface.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoanativeinterface.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoanativeinterface.mm
+@@ -182,8 +182,23 @@
+     // null pixmap.
+     const int ExpectedImageWidth = 242;
+     const int ExpectedImageHeight = 414;
+-    QCFType<CFArrayRef> urls = LSCopyApplicationURLsForBundleIdentifier(
+-        CFSTR("com.apple.KeyboardSetupAssistant"), nullptr);
++    QCFType<CFArrayRef> urls;
++    if (@available(macOS 10.10, *)) {
++        urls = LSCopyApplicationURLsForBundleIdentifier(
++            CFSTR("com.apple.KeyboardSetupAssistant"), nullptr);
++    } else {
++        // OS X 10.7 to 10.9: the older lookup returns the one best match.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        CFURLRef appUrl = nullptr;
++        if (LSFindApplicationForInfo(kLSUnknownCreator, CFSTR("com.apple.KeyboardSetupAssistant"),
++                                     nullptr, nullptr, &appUrl) == noErr && appUrl) {
++            const void *values[] = { appUrl };
++            urls = CFArrayCreate(kCFAllocatorDefault, values, 1, &kCFTypeArrayCallBacks);
++            CFRelease(appUrl);
++        }
++QT_WARNING_POP
++    }
+     if (urls && CFArrayGetCount(urls) > 0) {
+         CFURLRef url = (CFURLRef)CFArrayGetValueAtIndex(urls, 0);
+         QCFType<CFBundleRef> bundle = CFBundleCreate(kCFAllocatorDefault, url);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+@@ -351,13 +351,20 @@
+         // to finish coalescing the events. This is incidental, but conveniently gives us the behavior
+         // we are looking for, interleaving display-link updates and resize events.
+         static CFMachPortRef eventTap = []() {
+-            CFMachPortRef eventTap = CGEventTapCreateForPid(getpid(), kCGTailAppendEventTap,
+-                kCGEventTapOptionListenOnly, NSEventMaskLeftMouseDragged,
+-                [](CGEventTapProxy, CGEventType type, CGEventRef event, void *) -> CGEventRef {
+-                    if (type == kCGEventTapDisabledByTimeout)
+-                        qCWarning(lcQpaScreenUpdates) << "Event tap disabled due to timeout!";
+-                    return event; // Listen only tap, so what we return doesn't really matter
+-                }, nullptr);
++            CFMachPortRef eventTap = nullptr;
++            if (@available(macOS 10.11, *)) {
++                eventTap = CGEventTapCreateForPid(getpid(), kCGTailAppendEventTap,
++                    kCGEventTapOptionListenOnly, NSEventMaskLeftMouseDragged,
++                    [](CGEventTapProxy, CGEventType type, CGEventRef event, void *) -> CGEventRef {
++                        if (type == kCGEventTapDisabledByTimeout)
++                            qCWarning(lcQpaScreenUpdates) << "Event tap disabled due to timeout!";
++                        return event; // Listen only tap, so what we return doesn't really matter
++                    }, nullptr);
++            }
++            // Before 10.11 there is no per-process event tap. Live resizing
++            // then works as it did before this workaround, only less smoothly.
++            if (!eventTap)
++                return eventTap;
+             CGEventTapEnable(eventTap, false); // Event taps are normally enabled when created
+             static CFRunLoopSourceRef runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0);
+             CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
+@@ -792,7 +799,7 @@
+ 
+ - (CGDirectDisplayID)qt_displayId
+ {
+-    return [self.deviceDescription[@"NSScreenNumber"] unsignedIntValue];
++    return [[self.deviceDescription objectForKey:@"NSScreenNumber"] unsignedIntValue];
+ }
+ 
+ @end
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
+@@ -99,16 +99,31 @@
+ 
+     m_delegate = [[QStatusItemDelegate alloc] initWithSysTray:this];
+ 
+-    m_statusItem.button.target = m_delegate;
+-    m_statusItem.button.action = @selector(statusItemClicked);
+-    [m_statusItem.button sendActionOn:NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown];
++    const NSEventMask clicks = NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown;
++    if (@available(macOS 10.10, *)) {
++        m_statusItem.button.target = m_delegate;
++        m_statusItem.button.action = @selector(statusItemClicked);
++        [m_statusItem.button sendActionOn:clicks];
++    } else {
++        // OS X 10.7 to 10.9: NSStatusItem has no button yet and takes the
++        // same settings itself (deprecated in 10.10).
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        m_statusItem.target = m_delegate;
++        m_statusItem.action = @selector(statusItemClicked);
++        m_statusItem.highlightMode = YES;
++        [m_statusItem sendActionOn:clicks];
++QT_WARNING_POP
++    }
+ }
+ 
+ void QCocoaSystemTrayIcon::cleanup()
+ {
+-    NSUserNotificationCenter *center = NSUserNotificationCenter.defaultUserNotificationCenter;
+-    if (center.delegate == m_delegate)
+-        center.delegate = nil;
++    if (@available(macOS 10.8, *)) {
++        NSUserNotificationCenter *center = NSUserNotificationCenter.defaultUserNotificationCenter;
++        if (center.delegate == m_delegate)
++            center.delegate = nil;
++    }
+ 
+     [NSStatusBar.systemStatusBar removeStatusItem:m_statusItem];
+     [m_statusItem release];
+@@ -125,9 +140,12 @@
+     if (!m_statusItem)
+         return QRect();
+ 
+-    if (NSWindow *window = m_statusItem.button.window) {
+-        if (QCocoaScreen *screen = QCocoaScreen::get(window.screen))
+-            return screen->mapFromNative(window.frame).toRect();
++    // Before 10.10 there is no public way to the status item's window.
++    if (@available(macOS 10.10, *)) {
++        if (NSWindow *window = m_statusItem.button.window) {
++            if (QCocoaScreen *screen = QCocoaScreen::get(window.screen))
++                return screen->mapFromNative(window.frame).toRect();
++        }
+     }
+ 
+     return QRect();
+@@ -207,8 +225,15 @@
+ 
+     auto *nsimage = [NSImage imageFromQImage:fullHeightPixmap.toImage()];
+     [nsimage setTemplate:icon.isMask()];
+-    m_statusItem.button.image = nsimage;
+-    m_statusItem.button.imageScaling = NSImageScaleProportionallyDown;
++    if (@available(macOS 10.10, *)) {
++        m_statusItem.button.image = nsimage;
++        m_statusItem.button.imageScaling = NSImageScaleProportionallyDown;
++    } else {
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        m_statusItem.image = nsimage;
++QT_WARNING_POP
++    }
+ }
+ 
+ void QCocoaSystemTrayIcon::updateMenu(QPlatformMenu *menu)
+@@ -226,7 +251,14 @@
+     if (!m_statusItem)
+         return;
+ 
+-    m_statusItem.button.toolTip = toolTip.toNSString();
++    if (@available(macOS 10.10, *)) {
++        m_statusItem.button.toolTip = toolTip.toNSString();
++    } else {
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        m_statusItem.toolTip = toolTip.toNSString();
++QT_WARNING_POP
++    }
+ }
+ 
+ bool QCocoaSystemTrayIcon::isSystemTrayAvailable() const
+@@ -236,7 +268,11 @@
+ 
+ bool QCocoaSystemTrayIcon::supportsMessages() const
+ {
+-    return true;
++    // NSUserNotificationCenter is 10.8. Without it QSystemTrayIcon shows
++    // its own balloon.
++    if (@available(macOS 10.8, *))
++        return true;
++    return false;
+ }
+ 
+ void QCocoaSystemTrayIcon::showMessage(const QString &title, const QString &message,
+@@ -245,19 +281,23 @@
+     if (!m_statusItem)
+         return;
+ 
+-    auto *notification = [[NSUserNotification alloc] init];
+-    notification.title = title.toNSString();
+-    notification.informativeText = message.toNSString();
+-    notification.contentImage = [NSImage imageFromQIcon:icon];
+-
+-    NSUserNotificationCenter *center = NSUserNotificationCenter.defaultUserNotificationCenter;
+-    center.delegate = m_delegate;
+-
+-    [center deliverNotification:[notification autorelease]];
+-
+-    if (msecs) {
+-        NSTimeInterval timeout = msecs / 1000.0;
+-        [center performSelector:@selector(removeDeliveredNotification:) withObject:notification afterDelay:timeout];
++    // Only reached when supportsMessages() is true, that is on 10.8 and newer.
++    if (@available(macOS 10.8, *)) {
++        auto *notification = [[NSUserNotification alloc] init];
++        notification.title = title.toNSString();
++        notification.informativeText = message.toNSString();
++        if (@available(macOS 10.9, *))
++            notification.contentImage = [NSImage imageFromQIcon:icon];
++
++        NSUserNotificationCenter *center = NSUserNotificationCenter.defaultUserNotificationCenter;
++        center.delegate = m_delegate;
++
++        [center deliverNotification:[notification autorelease]];
++
++        if (msecs) {
++            NSTimeInterval timeout = msecs / 1000.0;
++            [center performSelector:@selector(removeDeliveredNotification:) withObject:notification afterDelay:timeout];
++        }
+     }
+ }
+ 
+@@ -308,6 +348,9 @@
+     self.platformSystemTray->statusItemClicked();
+ }
+ 
++// The notification center calls these, and it exists only from 10.8 on.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ - (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center shouldPresentNotification:(NSUserNotification *)notification
+ {
+     Q_UNUSED(center);
+@@ -320,6 +363,7 @@
+     [center removeDeliveredNotification:notification];
+     emit self.platformSystemTray->messageClicked();
+ }
++QT_WARNING_POP
+ 
+ @end
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+@@ -92,6 +92,22 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// labelColor and linkColor are 10.10. Qt used controlTextColor for text
++// before labelColor existed; links were plain blue.
++static NSColor *qt_labelColor()
++{
++    if (@available(macOS 10.10, *))
++        return [NSColor labelColor];
++    return [NSColor controlTextColor];
++}
++
++static NSColor *qt_linkColor()
++{
++    if (@available(macOS 10.10, *))
++        return [NSColor linkColor];
++    return [NSColor blueColor];
++}
++
+ static QPalette *qt_mac_createSystemPalette()
+ {
+     QColor qc;
+@@ -146,7 +162,7 @@
+ 
+     palette->setBrush(QPalette::ToolTipBase, qt_mac_toQBrush([NSColor controlColor]));
+ 
+-    palette->setColor(QPalette::Normal, QPalette::Link, qt_mac_toQColor([NSColor linkColor]));
++    palette->setColor(QPalette::Normal, QPalette::Link, qt_mac_toQColor(qt_linkColor()));
+ 
+     return palette;
+ }
+@@ -217,7 +233,7 @@
+             selectedMenuItemColor = [NSColor keyboardFocusIndicatorColor];
+ //            }
+             pal.setBrush(QPalette::Highlight, qt_mac_toQColor(selectedMenuItemColor));
+-            qc = qt_mac_toQColor([NSColor labelColor]);
++            qc = qt_mac_toQColor(qt_labelColor());
+             pal.setBrush(QPalette::ButtonText, qc);
+             pal.setBrush(QPalette::Text, qc);
+             qc = qt_mac_toQColor([NSColor selectedMenuItemTextColor]);
+@@ -247,8 +263,8 @@
+             pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+                          pal.brush(QPalette::Active, QPalette::Text));
+ //            }
+-            pal.setBrush(QPalette::Base, qt_mac_toQBrush(baseColors[0]));
+-            pal.setBrush(QPalette::AlternateBase, qt_mac_toQBrush(baseColors[1]));
++            pal.setBrush(QPalette::Base, qt_mac_toQBrush([baseColors objectAtIndex:0]));
++            pal.setBrush(QPalette::AlternateBase, qt_mac_toQBrush([baseColors objectAtIndex:1]));
+             pal.setBrush(QPalette::Active, QPalette::Highlight,
+                          qt_mac_toQBrush(activeHighlightColor));
+             pal.setBrush(QPalette::Active, QPalette::HighlightedText,
+@@ -267,7 +283,7 @@
+             pal.setBrush(QPalette::Disabled, QPalette::Base,
+                          pal.brush(QPalette::Active, QPalette::Base));
+         } else if (mac_widget_colors[i].paletteRole == QPlatformTheme::LabelPalette) {
+-            qc = qt_mac_toQColor([NSColor labelColor]);
++            qc = qt_mac_toQColor(qt_labelColor());
+             pal.setBrush(QPalette::Inactive, QPalette::ToolTipText, qc);
+         }
+         palettes.insert(mac_widget_colors[i].paletteRole, &pal);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -303,8 +303,12 @@
+     case NSEventTypeOtherMouseDragged:
+         // The documentation only describes starting a system move
+         // based on mouse down events, but move events also work.
+-        [m_view.window performWindowDragWithEvent:NSApp.currentEvent];
+-        return true;
++        // The call is 10.11; older systems report no system move.
++        if (@available(macOS 10.11, *)) {
++            [m_view.window performWindowDragWithEvent:NSApp.currentEvent];
++            return true;
++        }
++        return false;
+     default:
+         return false;
+     }
+@@ -368,10 +372,20 @@
+                 if (parentCocoaWindow && (window()->modality() == Qt::WindowModal || window()->type() == Qt::Sheet)) {
+                     // Show the window as a sheet
+                     NSWindow *nativeParentWindow = parentCocoaWindow->nativeWindow();
+-                    if (!nativeParentWindow.attachedSheet)
+-                        [nativeParentWindow beginSheet:m_view.window completionHandler:nil];
+-                    else
+-                        [nativeParentWindow beginCriticalSheet:m_view.window completionHandler:nil];
++                    if (@available(macOS 10.9, *)) {
++                        if (!nativeParentWindow.attachedSheet)
++                            [nativeParentWindow beginSheet:m_view.window completionHandler:nil];
++                        else
++                            [nativeParentWindow beginCriticalSheet:m_view.window completionHandler:nil];
++                    } else {
++                        // OS X 10.7 and 10.8: sheets go through NSApplication
++                        // (deprecated in 10.10), and there are no critical sheets.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++                        [NSApp beginSheet:m_view.window modalForWindow:nativeParentWindow
++                            modalDelegate:nil didEndSelector:nil contextInfo:nullptr];
++QT_WARNING_POP
++                    }
+                 } else if (window()->modality() == Qt::ApplicationModal) {
+                     // Show the window as application modal
+                     eventDispatcher()->beginModalSession(window());
+@@ -424,7 +438,14 @@
+             } else {
+                 if ([m_view.window isSheet]) {
+                     Q_ASSERT_X(parentCocoaWindow, "QCocoaWindow", "Window modal dialog has no transient parent.");
+-                    [parentCocoaWindow->nativeWindow() endSheet:m_view.window];
++                    if (@available(macOS 10.9, *)) {
++                        [parentCocoaWindow->nativeWindow() endSheet:m_view.window];
++                    } else {
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++                        [NSApp endSheet:m_view.window];
++QT_WARNING_POP
++                    }
+                 }
+             }
+ 
+@@ -557,8 +578,10 @@
+     // Don't wipe existing states
+     if (m_view.window.styleMask & NSWindowStyleMaskFullScreen)
+         styleMask |= NSWindowStyleMaskFullScreen;
+-    if (m_view.window.styleMask & NSWindowStyleMaskFullSizeContentView)
+-        styleMask |= NSWindowStyleMaskFullSizeContentView;
++    if (@available(macOS 10.10, *)) {
++        if (m_view.window.styleMask & NSWindowStyleMaskFullSizeContentView)
++            styleMask |= NSWindowStyleMaskFullSizeContentView;
++    }
+ 
+     return styleMask;
+ }
+@@ -1271,12 +1294,15 @@
+ 
+ void QCocoaWindow::windowDidChangeOcclusionState()
+ {
+-    bool visible = m_view.window.occlusionState & NSWindowOcclusionStateVisible;
+-    qCDebug(lcQpaWindow) << "QCocoaWindow::windowDidChangeOcclusionState" << window() << "is now" << (visible ? "visible" : "occluded");
+-    if (visible)
+-        [m_view setNeedsDisplay:YES];
+-    else
+-        handleExposeEvent(QRegion());
++    // AppKit sends this from 10.9 on, when occlusionState exists.
++    if (@available(macOS 10.9, *)) {
++        bool visible = m_view.window.occlusionState & NSWindowOcclusionStateVisible;
++        qCDebug(lcQpaWindow) << "QCocoaWindow::windowDidChangeOcclusionState" << window() << "is now" << (visible ? "visible" : "occluded");
++        if (visible)
++            [m_view setNeedsDisplay:YES];
++        else
++            handleExposeEvent(QRegion());
++    }
+ }
+ 
+ void QCocoaWindow::windowDidChangeScreen()
+@@ -1825,7 +1851,8 @@
+     if (!m_drawContentBorderGradient) {
+         window.styleMask = window.styleMask & ~NSWindowStyleMaskTexturedBackground;
+         [window.contentView.superview setNeedsDisplay:YES];
+-        window.titlebarAppearsTransparent = NO;
++        if (@available(macOS 10.10, *))
++            window.titlebarAppearsTransparent = NO;
+         return;
+     }
+ 
+@@ -1850,15 +1877,20 @@
+     int effectiveBottomContentBorderThickness = m_bottomContentBorderThickness;
+ 
+     [window setStyleMask:[window styleMask] | NSWindowStyleMaskTexturedBackground];
+-    window.titlebarAppearsTransparent = YES;
+-
+-    // Setting titlebarAppearsTransparent to YES means that the border thickness has to account
+-    // for the title bar height as well, otherwise sheets will not be presented at the correct
+-    // position, which should be (title bar height + top content border size).
+-    const NSRect frameRect = window.frame;
+-    const NSRect contentRect = [window contentRectForFrameRect:frameRect];
+-    const CGFloat titlebarHeight = frameRect.size.height - contentRect.size.height;
+-    effectiveTopContentBorderThickness += titlebarHeight;
++    // Before 10.10 the title bar cannot be transparent; the textured
++    // background then spans title bar and content border by itself, and the
++    // border thickness counts the content border only, as in Qt 5.6.
++    if (@available(macOS 10.10, *)) {
++        window.titlebarAppearsTransparent = YES;
++
++        // Setting titlebarAppearsTransparent to YES means that the border thickness has to account
++        // for the title bar height as well, otherwise sheets will not be presented at the correct
++        // position, which should be (title bar height + top content border size).
++        const NSRect frameRect = window.frame;
++        const NSRect contentRect = [window contentRectForFrameRect:frameRect];
++        const CGFloat titlebarHeight = frameRect.size.height - contentRect.size.height;
++        effectiveTopContentBorderThickness += titlebarHeight;
++    }
+ 
+     [window setContentBorderThickness:effectiveTopContentBorderThickness forEdge:NSMaxYEdge];
+     [window setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+@@ -130,10 +130,12 @@
+     if ([self shouldUseMetalLayer]) {
+         // Check if Metal is supported. If it isn't then it's most likely
+         // too late at this point and the QWindow will be non-functional,
+-        // but we can at least print a warning.
+-        if ([MTLCreateSystemDefaultDevice() autorelease]) {
+-            return [CAMetalLayer layer];
+-        } else {
++        // but we can at least print a warning. Metal itself is 10.11.
++        if (@available(macOS 10.11, *)) {
++            if ([MTLCreateSystemDefaultDevice() autorelease])
++                return [CAMetalLayer layer];
++        }
++        {
+             qCWarning(lcQpaDrawing) << "Failed to create QWindow::MetalSurface."
+                 << "Metal is not supported by any of the GPUs in this system.";
+         }
+@@ -172,6 +174,7 @@
+     if (self.superview)
+         [self updateLayerContentsScale];
+ 
++    if (@available(macOS 10.8, *)) // NSColor.CGColor
+     if (self.opaque && lcQpaDrawing().isDebugEnabled()) {
+         // If the view claims to be opaque we expect it to fill the entire
+         // layer with content, in which case we want to detect any areas
+diff --git a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+--- a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
++++ b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+@@ -418,17 +418,58 @@
+ // the current appearance back after we finished with drawing. This is what
+ // AppearanceSync is for.
+ 
++// CGPathCreateWithRoundedRect is 10.9; before that the same outline is built
++// from four arcs.
++static CGPathRef qt_createRoundedRectPath(CGRect rect, CGFloat radius)
++{
++    if (@available(macOS 10.9, *))
++        return CGPathCreateWithRoundedRect(rect, radius, radius, nullptr);
++    const CGFloat minX = CGRectGetMinX(rect), midX = CGRectGetMidX(rect), maxX = CGRectGetMaxX(rect);
++    const CGFloat minY = CGRectGetMinY(rect), midY = CGRectGetMidY(rect), maxY = CGRectGetMaxY(rect);
++    CGMutablePathRef path = CGPathCreateMutable();
++    CGPathMoveToPoint(path, nullptr, minX, midY);
++    CGPathAddArcToPoint(path, nullptr, minX, minY, midX, minY, radius);
++    CGPathAddArcToPoint(path, nullptr, maxX, minY, maxX, midY, radius);
++    CGPathAddArcToPoint(path, nullptr, maxX, maxY, midX, maxY, radius);
++    CGPathAddArcToPoint(path, nullptr, minX, maxY, minX, midY, radius);
++    CGPathCloseSubpath(path);
++    return path;
++}
++
++// -[NSSliderCell barRectFlipped:] is 10.9 and absent before (checked against
++// the Lion 10.7.5 AppKit). Older AppKit drew the bar by passing the cell's
++// whole frame to -drawBarInside:flipped:, so drawing gets that rectangle;
++// geometry and hit testing get a bar 4 points thick, centred on the knob,
++// along the full length of the slider.
++static CGRect qt_sliderBarRect(NSSlider *slider, bool horizontal, bool forDrawing)
++{
++    NSSliderCell *cell = slider.cell;
++    if (@available(macOS 10.9, *))
++        return [cell barRectFlipped:slider.isFlipped];
++    const CGRect bounds = slider.bounds;
++    if (forDrawing)
++        return bounds;
++    const CGRect knob = [cell knobRectFlipped:slider.isFlipped];
++    const CGFloat thickness = 4;
++    if (horizontal)
++        return CGRectMake(bounds.origin.x, CGRectGetMidY(knob) - thickness / 2, bounds.size.width, thickness);
++    return CGRectMake(CGRectGetMidX(knob) - thickness / 2, bounds.origin.y, thickness, bounds.size.height);
++}
++
+ class AppearanceSync {
+ public:
+     AppearanceSync()
+     {
+ #if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+-        if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::MacOSMojave
+-            && !qt_mac_applicationIsInDarkMode()) {
+-            auto requiredAppearanceName = NSApplication.sharedApplication.effectiveAppearance.name;
+-            if (![NSAppearance.currentAppearance.name isEqualToString:requiredAppearanceName]) {
+-                previous = NSAppearance.currentAppearance;
+-                NSAppearance.currentAppearance = [NSAppearance appearanceNamed:requiredAppearanceName];
++        // @available rather than QOperatingSystemVersion, so that clang sees
++        // the NSAppearance (10.9) calls guarded on a 10.7 target.
++        if (@available(macOS 10.14, *)) {
++            if (!qt_mac_applicationIsInDarkMode()) {
++                auto requiredAppearanceName = NSApplication.sharedApplication.effectiveAppearance.name;
++                if (![NSAppearance.currentAppearance.name isEqualToString:requiredAppearanceName]) {
++                    previous = NSAppearance.currentAppearance;
++                    NSAppearance.currentAppearance = [NSAppearance appearanceNamed:requiredAppearanceName];
++                }
+             }
+         }
+ #endif // QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+@@ -436,12 +477,14 @@
+ 
+     ~AppearanceSync()
+     {
+-        if (previous)
+-            NSAppearance.currentAppearance = previous;
++        if (@available(macOS 10.14, *)) {
++            if (previous)
++                NSAppearance.currentAppearance = previous;
++        }
+     }
+ 
+ private:
+-    NSAppearance *previous = nil;
++    id previous = nil; // NSAppearance, which is 10.9
+ 
+     Q_DISABLE_COPY(AppearanceSync)
+ };
+@@ -1301,7 +1344,11 @@
+         Q_UNREACHABLE();
+     }
+ 
+-    auto focusRingColor = qt_mac_toQColor(NSColor.keyboardFocusIndicatorColor.CGColor);
++    QColor focusRingColor;
++    if (@available(macOS 10.8, *))
++        focusRingColor = qt_mac_toQColor(NSColor.keyboardFocusIndicatorColor.CGColor);
++    else // NSColor.CGColor is 10.8
++        focusRingColor = qt_mac_toQColor(NSColor.keyboardFocusIndicatorColor);
+     if (!qt_mac_applicationIsInDarkMode()) {
+         // This color already has alpha ~ 0.25, this value is too small - the ring is
+         // very pale and nothing like the native one. 0.39 makes it better (not ideal
+@@ -1946,12 +1993,19 @@
+ 
+         if ([bv isKindOfClass:[NSControl class]]) {
+             auto *ctrl = static_cast<NSControl *>(bv);
++            // NSControl.controlSize is 10.10; before that the cell has it.
++            auto setControlSize = [ctrl](NSControlSize size) {
++                if (@available(macOS 10.10, *))
++                    ctrl.controlSize = size;
++                else
++                    [ctrl.cell setControlSize:size];
++            };
+             switch (widget.size) {
+             case QStyleHelper::SizeSmall:
+-                ctrl.controlSize = NSControlSizeSmall;
++                setControlSize(NSControlSizeSmall);
+                 break;
+             case QStyleHelper::SizeMini:
+-                ctrl.controlSize = NSControlSizeMini;
++                setControlSize(NSControlSizeMini);
+                 break;
+             default:
+                 break;
+@@ -3353,7 +3407,15 @@
+                         // over-paint the (potentially custom) color in the background.
+                         // In 'Light' mode we have to care about the correct
+                         // background color. See the comments below for PE_PanelLineEdit.
+-                        CGContextRef cgContext = NSGraphicsContext.currentContext.CGContext;
++                        CGContextRef cgContext = nullptr;
++                        if (@available(macOS 10.10, *)) {
++                            cgContext = NSGraphicsContext.currentContext.CGContext;
++                        } else {
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++                            cgContext = CGContextRef(NSGraphicsContext.currentContext.graphicsPort);
++QT_WARNING_POP
++                        }
+                         // See QMacCGContext, here we expect bitmap context created with
+                         // color space 'kCGColorSpaceSRGB', if it's something else - we
+                         // give up.
+@@ -4264,9 +4326,13 @@
+             }
+ 
+             if (mi->menuItemType == QStyleOptionMenuItem::Separator) {
+-                CGColorRef separatorColor = [NSColor quaternaryLabelColor].CGColor;
++                QColor separatorColor;
++                if (@available(macOS 10.10, *))
++                    separatorColor = qt_mac_toQColor([NSColor quaternaryLabelColor].CGColor);
++                else // quaternaryLabelColor is 10.10: black at about 10% opacity
++                    separatorColor = QColor(0, 0, 0, 26);
+                 const QRect separatorRect = QRect(mi->rect.left(), mi->rect.center().y(), mi->rect.width(), 2);
+-                p->fillRect(separatorRect, qt_mac_toQColor(separatorColor));
++                p->fillRect(separatorRect, separatorColor);
+                 break;
+             }
+ 
+@@ -5169,8 +5235,17 @@
+     CGContextSaveGState(cg);
+     [NSGraphicsContext saveGraphicsState];
+ 
+-    [NSGraphicsContext setCurrentContext:
+-        [NSGraphicsContext graphicsContextWithCGContext:cg flipped:flipped]];
++    NSGraphicsContext *context = nil;
++    if (@available(macOS 10.10, *)) {
++        context = [NSGraphicsContext graphicsContextWithCGContext:cg flipped:flipped];
++    } else {
++        // The 10.10 method's name before then (deprecated in 10.10).
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_DEPRECATED
++        context = [NSGraphicsContext graphicsContextWithGraphicsPort:cg flipped:flipped];
++QT_WARNING_POP
++    }
++    [NSGraphicsContext setCurrentContext:context];
+ }
+ 
+ void QMacStylePrivate::restoreNSGraphicsContext(CGContextRef cg) const
+@@ -5347,10 +5422,14 @@
+                         knobRect = CGRectMake(knobPos, knobOffset, knobLength, knobWidth);
+                     else
+                         knobRect = CGRectMake(knobOffset, knobPos, knobWidth, knobLength);
+-                    QCFType<CGPathRef> knobPath = CGPathCreateWithRoundedRect(knobRect, knobRadius, knobRadius, nullptr);
++                    QCFType<CGPathRef> knobPath = qt_createRoundedRectPath(knobRect, knobRadius);
+                     CGContextAddPath(cg, knobPath);
+                     CGContextSetAlpha(cg, 0.5);
+-                    CGColorRef knobColor = hasDarkBg ? NSColor.whiteColor.CGColor : NSColor.blackColor.CGColor;
++                    CGColorRef knobColor = nullptr;
++                    if (@available(macOS 10.8, *)) // NSColor.CGColor
++                        knobColor = hasDarkBg ? NSColor.whiteColor.CGColor : NSColor.blackColor.CGColor;
++                    else
++                        knobColor = CGColorGetConstantColor(hasDarkBg ? kCGColorWhite : kCGColorBlack);
+                     CGContextSetFillColorWithColor(cg, knobColor);
+                     CGContextFillPath(cg);
+                 } else {
+@@ -5448,7 +5527,7 @@
+                     if (hasDoubleTicks)
+                         slider.numberOfTickMarks = 0;
+ 
+-                    const CGRect barRect = [cell barRectFlipped:slider.isFlipped];
++                    const CGRect barRect = qt_sliderBarRect(slider, isHorizontal, true);
+                     if (drawBar) {
+                         if (!isHorizontal && !sl->upsideDown && (hasDoubleTicks || !hasTicks)) {
+                             // The logic behind verticalFlip and upsideDown is the twisted one.
+@@ -5467,6 +5546,10 @@
+                             slider.numberOfTickMarks = numberOfTickMarks;
+                     }
+ 
++                    // -drawTickMarks is public from 10.9 and already present in
++                    // the 10.7 AppKit, so it is called unguarded.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+                     if (hasTicks && drawTicks) {
+                         if (!drawBar && hasDoubleTicks)
+                             slider.numberOfTickMarks = numberOfTickMarks;
+@@ -5489,6 +5572,7 @@
+                             CGContextConcatCTM(ctx, CGAffineTransformInvert(tickMarksFlip));
+                         }
+                     }
++QT_WARNING_POP
+ 
+                     if (drawKnob) {
+                         // This ain't HIG kosher: force round knob look.
+@@ -5835,7 +5919,7 @@
+                 break;
+ 
+             NSSliderCell *cell = slider.cell;
+-            const auto barRect = QRectF::fromCGRect([cell barRectFlipped:slider.isFlipped]);
++            const auto barRect = QRectF::fromCGRect(qt_sliderBarRect(slider, isHorizontal, false));
+             const auto knobRect = QRectF::fromCGRect([cell knobRectFlipped:slider.isFlipped]);
+             if (knobRect.contains(pt)) {
+                 sc = SC_SliderHandle;
+@@ -5949,7 +6033,7 @@
+                     ret.setRight(sl->rect.right());
+                 }
+             } else if (sc == SC_SliderGroove) {
+-                ret = QRectF::fromCGRect([cell barRectFlipped:slider.isFlipped]).toRect();
++                ret = QRectF::fromCGRect(qt_sliderBarRect(slider, isHorizontal, false)).toRect();
+             } else if (hasTicks && sc == SC_SliderTickmarks) {
+                 const auto tickMarkRect = QRectF::fromCGRect([cell rectOfTickMarkAtIndex:0]);
+                 if (isHorizontal)

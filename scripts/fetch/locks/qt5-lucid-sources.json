@@ -1,0 +1,59 @@
+{
+  "purpose": "X client libraries built statically for the Lucid target on top of Lucid's own libxcb 1.5 (xcb extension wrappers, xcb-util, xkbcommon); versions from the years Qt 5.15 targets",
+  "sources": [
+    {
+      "file": "xcb-proto-1.11.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.11.tar.bz2",
+      "bytes": 139213,
+      "sha256": "b4aceee6502a0ce45fc39b33c541a2df4715d00b72e660ebe8c5bb444771e32e"
+    },
+    {
+      "file": "libxcb-1.11.1.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/libxcb-1.11.1.tar.bz2",
+      "bytes": 519517,
+      "sha256": "b720fd6c7d200e5371affdb3f049cc8f88cff9aed942ff1b824d95eedbf69d30"
+    },
+    {
+      "file": "libpthread-stubs-0.3.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.3.tar.bz2",
+      "bytes": 203468,
+      "sha256": "35b6d54e3cc6f3ba28061da81af64b9a92b7b757319098172488a660e3d87299"
+    },
+    {
+      "file": "xcb-util-0.4.0.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-util-0.4.0.tar.bz2",
+      "bytes": 297412,
+      "sha256": "46e49469cb3b594af1d33176cd7565def2be3fa8be4371d62271fabb5eae50e9"
+    },
+    {
+      "file": "xcb-util-image-0.4.0.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-util-image-0.4.0.tar.bz2",
+      "bytes": 327891,
+      "sha256": "2db96a37d78831d643538dd1b595d7d712e04bdccf8896a5e18ce0f398ea2ffc"
+    },
+    {
+      "file": "xcb-util-keysyms-0.4.0.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-util-keysyms-0.4.0.tar.bz2",
+      "bytes": 289880,
+      "sha256": "0ef8490ff1dede52b7de533158547f8b454b241aa3e4dcca369507f66f216dd9"
+    },
+    {
+      "file": "xcb-util-renderutil-0.3.9.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-util-renderutil-0.3.9.tar.bz2",
+      "bytes": 292898,
+      "sha256": "c6e97e48fb1286d6394dddb1c1732f00227c70bd1bedb7d1acabefdd340bea5b"
+    },
+    {
+      "file": "xcb-util-wm-0.4.1.tar.bz2",
+      "url": "https://xcb.freedesktop.org/dist/xcb-util-wm-0.4.1.tar.bz2",
+      "bytes": 321855,
+      "sha256": "28bf8179640eaa89276d2b0f1ce4285103d136be6c98262b6151aaee1d3c2a3f"
+    },
+    {
+      "file": "libxkbcommon-0.7.2.tar.xz",
+      "url": "https://xkbcommon.org/download/libxkbcommon-0.7.2.tar.xz",
+      "bytes": 630276,
+      "sha256": "28a4dc2735863bec2dba238de07fcdff28c5dd2300ae9dfdb47282206cd9b9d8"
+    }
+  ]
+}

@@ -34,6 +34,14 @@ OPENSSL_PATH := $(DOWNLOAD_DIR)/$(OPENSSL_ARCHIVE)
 OPENSSL_URL ?= https://www.openssl.org/source/$(OPENSSL_ARCHIVE)
 OPENSSL_SHA256 ?= a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8
 
+# LLVM-MinGW for the Windows arm64 targets and Qt 6 Windows. Another release
+# needs LLVM_MINGW_VERSION, LLVM_MINGW_ARCHIVE and LLVM_MINGW_SHA256 together.
+LLVM_MINGW_VERSION ?= 20241217
+LLVM_MINGW_ARCHIVE ?= llvm-mingw-$(LLVM_MINGW_VERSION)-ucrt-ubuntu-20.04-x86_64.tar.xz
+LLVM_MINGW_SHA256 ?= cfe4aac3d245a77d8cd0c41bdcd7971b1002c771d3bba2ac39702733b0fb0c12
+LLVM_MINGW_PATH := $(DOWNLOAD_DIR)/$(LLVM_MINGW_ARCHIVE)
+LLVM_MINGW_URL ?= https://github.com/mstorsjo/llvm-mingw/releases/download/$(LLVM_MINGW_VERSION)/$(LLVM_MINGW_ARCHIVE)
+
 # osxcross has no tags, so a verified commit of our fork; the build log
 # records what the ref resolved to.
 #   make qt5-macos-amd64 OSXCROSS_REF=master
@@ -71,6 +79,11 @@ download-openssl: $(OPENSSL_PATH)
 
 $(OPENSSL_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(OPENSSL_URL)" "$@" "$(OPENSSL_SHA256)"
+
+download-llvm-mingw: $(LLVM_MINGW_PATH)
+
+$(LLVM_MINGW_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(LLVM_MINGW_URL)" "$@" "$(LLVM_MINGW_SHA256)"
 
 # build-<target> builds only when an input changed (the image carries a
 # fingerprint label); build-<target>-examples also builds its test suite.

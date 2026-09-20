@@ -9,6 +9,7 @@ QT5_SERIES := $(basename $(QT5_VERSION))
 
 QT5_WIN_I386_IMAGE := qt5-win-i386$(LICENSE_SUFFIX)
 QT5_WIN_AMD64_IMAGE := qt5-win-amd64$(LICENSE_SUFFIX)
+QT5_WIN_ARM64_IMAGE := qt5-win-arm64$(LICENSE_SUFFIX)
 QT5_MACOS_AMD64_IMAGE := qt5-macos-amd64$(LICENSE_SUFFIX)
 QT5_MACOS_ARM64_IMAGE := qt5-macos-arm64$(LICENSE_SUFFIX)
 
@@ -62,6 +63,10 @@ qt5-win-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
 qt5-win-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/amd64/Dockerfile -t $(QT5_WIN_AMD64_IMAGE) .
 
+# Windows on ARM starts at Windows 10; the same patches apply.
+qt5-win-arm64: $(QT5_INPUTS) $(LLVM_MINGW_PATH)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) --build-arg QT_OPENGL_CONFIG="$(QT5_OPENGL_CONFIG)" --build-arg LLVM_MINGW_ARCHIVE="$(LLVM_MINGW_ARCHIVE)" --build-arg LLVM_MINGW_SHA256="$(LLVM_MINGW_SHA256)" -f docker/qt5/windows/arm64/Dockerfile -t $(QT5_WIN_ARM64_IMAGE) .
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_AMD64)"
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
@@ -105,5 +110,6 @@ QT5_IMAGE_CONFIG = qt5=$(QT5_VERSION),$(QT5_ARCHIVE_URL);openssl=$(OPENSSL_VERSI
 
 $(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_I386_IMAGE),QT5_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt5-win-amd64,qt5-win-amd64,QT5_WIN_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_AMD64_IMAGE),QT5_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt5-win-arm64,qt5-win-arm64,QT5_WIN_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_ARM64_IMAGE),QT5_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_AMD64_IMAGE),QT5_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt5-macos-arm64,qt5-macos-arm64,QT5_MACOS_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_ARM64_IMAGE),QT5_IMAGE_CONFIG))

@@ -1,0 +1,167 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Lucid (Ubuntu 10.04, libxcb 1.5, libX11 1.3.2): run-time fallbacks in the
+# xcb plugin. Each newer facility is used when the system provides it.
+#
+# - xcb_poll_for_queued_event (libxcb 1.8) is looked up with dlsym; without
+#   it the event reader takes one event per xcb_wait_for_event instead of
+#   draining with xcb_poll_for_event, which on libxcb 1.5 can steal a reply
+#   the GUI thread waits for (intermittent hang, e.g. QSystemTrayIcon).
+# - libX11-xcb is not on a stock Lucid install. The target links a stub
+#   (scripts/build/qt5-lucid/x11-xcb-stub.c) that loads libX11-xcb.so.1 when
+#   present; otherwise XGetXCBConnection returns null and the plugin opens a
+#   plain xcb connection without Xlib. The few Xlib calls (XFlush, XSync,
+#   XSetWMName, Xcursor, font cursors) are then skipped, the GLX integration
+#   reports OpenGL as unavailable so Qt Quick picks its software renderer,
+#   and the connection is closed with xcb_disconnect. With libx11-xcb1
+#   installed, Xlib and GLX work as usual.
+#
+--- a/qtbase/src/plugins/platforms/xcb/gl_integrations/xcb_glx/qxcbglxintegration.cpp
++++ b/qtbase/src/plugins/platforms/xcb/gl_integrations/xcb_glx/qxcbglxintegration.cpp
+@@ -106,6 +106,10 @@
+ bool QXcbGlxIntegration::initialize(QXcbConnection *connection)
+ {
+     m_connection = connection;
++    // GLX goes through Xlib; without libX11-xcb (stock Ubuntu 10.04) there is
++    // no Xlib display and OpenGL is reported as unavailable.
++    if (!connection->xlib_display())
++        return false;
+ #if QT_CONFIG(xcb_glx)
+ 
+     const xcb_query_extension_reply_t *reply = xcb_get_extension_data(m_connection->xcb_connection(), &xcb_glx_id);
+--- a/qtbase/src/plugins/platforms/xcb/qxcbconnection.cpp
++++ b/qtbase/src/plugins/platforms/xcb/qxcbconnection.cpp
+@@ -1105,7 +1105,8 @@
+     }
+ 
+ #if QT_CONFIG(xcb_xlib)
+-    qt_XFlush(static_cast<Display *>(xlib_display()));
++    if (xlib_display())
++        qt_XFlush(static_cast<Display *>(xlib_display()));
+ #endif
+ 
+     xcb_flush(xcb_connection());
+--- a/qtbase/src/plugins/platforms/xcb/qxcbconnection_basic.cpp
++++ b/qtbase/src/plugins/platforms/xcb/qxcbconnection_basic.cpp
+@@ -112,13 +112,23 @@
+ {
+ #if QT_CONFIG(xcb_xlib)
+     Display *dpy = XOpenDisplay(m_displayName.constData());
+-    if (dpy) {
++    // The Lucid target links a libX11-xcb stub that loads libX11-xcb.so.1
++    // at run time; a stock Ubuntu 10.04 does not have it. Then
++    // XGetXCBConnection returns null and the plugin runs on a plain xcb
++    // connection, without Xlib: no GLX (Qt Quick uses its software
++    // renderer) and no Xcursor themes.
++    xcb_connection_t *xlibXcb = dpy ? XGetXCBConnection(dpy) : nullptr;
++    if (xlibXcb) {
+         m_primaryScreenNumber = DefaultScreen(dpy);
+-        m_xcbConnection = XGetXCBConnection(dpy);
++        m_xcbConnection = xlibXcb;
+         XSetEventQueueOwner(dpy, XCBOwnsEventQueue);
+         XSetErrorHandler(nullErrorHandler);
+         XSetIOErrorHandler(ioErrorHandler);
+         m_xlibDisplay = dpy;
++    } else {
++        if (dpy)
++            XCloseDisplay(dpy);
++        m_xcbConnection = xcb_connect(m_displayName.constData(), &m_primaryScreenNumber);
+     }
+ #else
+     m_xcbConnection = xcb_connect(m_displayName.constData(), &m_primaryScreenNumber);
+@@ -159,7 +169,10 @@
+ {
+     if (isConnected()) {
+ #if QT_CONFIG(xcb_xlib)
+-        XCloseDisplay(static_cast<Display *>(m_xlibDisplay));
++        if (m_xlibDisplay)
++            XCloseDisplay(static_cast<Display *>(m_xlibDisplay));
++        else // the plain xcb connection opened without libX11-xcb
++            xcb_disconnect(m_xcbConnection);
+ #else
+         xcb_disconnect(m_xcbConnection);
+ #endif
+--- a/qtbase/src/plugins/platforms/xcb/qxcbcursor.cpp
++++ b/qtbase/src/plugins/platforms/xcb/qxcbcursor.cpp
+@@ -519,7 +519,7 @@
+ #if QT_CONFIG(xcb_xlib) && QT_CONFIG(library)
+ bool updateCursorTheme(void *dpy, const QByteArray &theme) {
+     if (!ptrXcursorLibraryGetTheme
+-            || !ptrXcursorLibrarySetTheme)
++            || !ptrXcursorLibrarySetTheme || !dpy)
+         return false;
+     QByteArray oldTheme = ptrXcursorLibraryGetTheme(dpy);
+     if (oldTheme == theme)
+@@ -579,7 +579,7 @@
+     }
+     if (cursor)
+         return cursor;
+-    if (!cursor && cursorId) {
++    if (!cursor && cursorId && connection()->xlib_display()) {
+         cursor = XCreateFontCursor(static_cast<Display *>(connection()->xlib_display()), cursorId);
+         if (cursor)
+             return cursor;
+--- a/qtbase/src/plugins/platforms/xcb/qxcbeventqueue.cpp
++++ b/qtbase/src/plugins/platforms/xcb/qxcbeventqueue.cpp
+@@ -37,6 +37,8 @@
+ **
+ ****************************************************************************/
+ #include "qxcbeventqueue.h"
++
++#include <dlfcn.h>
+ #include "qxcbconnection.h"
+ 
+ #include <QtCore/QObject>
+@@ -47,6 +49,21 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// xcb_poll_for_queued_event appeared in libxcb 1.8; Ubuntu 10.04 has 1.5.
++// Use the system's function when it has one. Without it, drain nothing:
++// xcb_poll_for_event would read the socket, and on libxcb 1.5 that can
++// consume a reply the GUI thread is waiting for in xcb_wait_for_reply, which
++// then blocks for good (the race libxcb 1.8 added the function to avoid).
++// The loop below then takes one event per xcb_wait_for_event, which returns
++// already queued events at once.
++static xcb_generic_event_t *pollForQueuedEvent(xcb_connection_t *connection)
++{
++    typedef xcb_generic_event_t *(*PollForQueued)(xcb_connection_t *);
++    static const PollForQueued pollForQueued =
++            reinterpret_cast<PollForQueued>(dlsym(RTLD_DEFAULT, "xcb_poll_for_queued_event"));
++    return pollForQueued ? pollForQueued(connection) : nullptr;
++}
++
+ static QBasicMutex qAppExiting;
+ static bool dispatcherOwnerDestructing = false;
+ 
+@@ -230,7 +247,7 @@
+         // Currently only the clipboard implementation relies on it.
+         m_newEventsMutex.lock();
+         enqueueEvent(event);
+-        while (!m_closeConnectionDetected && (event = xcb_poll_for_queued_event(connection)))
++        while (!m_closeConnectionDetected && (event = pollForQueuedEvent(connection)))
+             enqueueEvent(event);
+ 
+         m_newEventsCondition.wakeOne();
+--- a/qtbase/src/plugins/platforms/xcb/qxcbwindow.cpp
++++ b/qtbase/src/plugins/platforms/xcb/qxcbwindow.cpp
+@@ -494,7 +494,8 @@
+ 
+ #if QT_CONFIG(xcb_xlib)
+     // force sync to read outstanding requests - see QTBUG-29106
+-    XSync(static_cast<Display*>(platformScreen->connection()->xlib_display()), false);
++    if (platformScreen->connection()->xlib_display())
++        XSync(static_cast<Display*>(platformScreen->connection()->xlib_display()), false);
+ #endif
+ 
+ #if QT_CONFIG(draganddrop)
+@@ -2686,7 +2687,7 @@
+ 
+ #if QT_CONFIG(xcb_xlib)
+     Display *dpy = static_cast<Display *>(conn->xlib_display());
+-    XTextProperty *text = qstringToXTP(dpy, title);
++    XTextProperty *text = dpy ? qstringToXTP(dpy, title) : nullptr;
+     if (text)
+         XSetWMName(dpy, window, text);
+ #endif

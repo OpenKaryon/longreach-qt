@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 7: file identities from BY_HANDLE_FILE_INFORMATION; FILE_ID_INFO
+# is Windows 8.
+#
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_win.cpp b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+--- a/qtbase/src/corelib/io/qfilesystemengine_win.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+@@ -1024,7 +1024,7 @@
+ // File ID for Windows starting from version 8.
+ QByteArray fileIdWin8(HANDLE handle)
+ {
+-#if !defined(QT_BOOTSTRAPPED)
++#if !defined(QT_BOOTSTRAPPED) && _WIN32_WINNT >= 0x0602
+     QByteArray result;
+     FILE_ID_INFO infoEx;
+     if (GetFileInformationByHandleEx(
+@@ -1043,6 +1043,6 @@
+     }
+     return result;
+-#else // !QT_BOOTSTRAPPED
++#else // Bootstrap or Windows 7: use the handle information available there.
+     return fileId(handle);
+ #endif
+ }

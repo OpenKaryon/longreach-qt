@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 7 headers: no precompiled header for qwindowsmultimediautils.cpp,
+# which raises WINVER before Media Foundation to reach newer format GUIDs.
+#
+diff --git a/qtmultimedia/src/multimedia/CMakeLists.txt b/qtmultimedia/src/multimedia/CMakeLists.txt
+--- a/qtmultimedia/src/multimedia/CMakeLists.txt
++++ b/qtmultimedia/src/multimedia/CMakeLists.txt
+@@ -333,7 +333,14 @@
+         windows/qwindowsaudiosource.cpp
+         windows/qwindowsaudioutils.cpp
+     )
+ 
++if(QT_FEATURE_wmf)
++    # This file raises WINVER before including Media Foundation to expose
++    # newer audio format GUIDs. A target PCH would include those headers first.
++    set_source_files_properties(windows/qwindowsmultimediautils.cpp
++        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
++endif()
++
+ # define INITGUID for unity builds to ensure guids are emitted in the translation units
+ target_compile_definitions(Multimedia
+     PRIVATE $<$<BOOL:$<TARGET_PROPERTY:Multimedia,UNITY_BUILD>>:INITGUID>)
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
+--- a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
++++ b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
+@@ -1,6 +1,8 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+ 
++#include <sdkddkver.h>
++
+ #if defined(WINVER) && WINVER < _WIN32_WINNT_WIN10
+ #  undef WINVER
+ #endif

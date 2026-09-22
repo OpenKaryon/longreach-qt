@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 7: compile Qt itself against the Windows 7 headers
+# (_WIN32_WINNT/WINVER 0x0601, NTDDI_WIN7) instead of only lowering the
+# exported definitions, so a newer API cannot slip in unnoticed.
+#
+diff --git a/qtbase/cmake/QtBaseConfigureTests.cmake b/qtbase/cmake/QtBaseConfigureTests.cmake
+--- a/qtbase/cmake/QtBaseConfigureTests.cmake
++++ b/qtbase/cmake/QtBaseConfigureTests.cmake
+@@ -158,24 +158,12 @@
+     if(NOT WIN32)
+         return()
+     endif()
+-    check_cxx_source_compiles([=[
+-        #include <windows.h>
+-        #if !defined(_WIN32_WINNT) && !defined(WINVER)
+-        #error "_WIN32_WINNT and WINVER are not defined"
+-        #endif
+-        #if defined(_WIN32_WINNT) && (_WIN32_WINNT < 0x0A00)
+-        #error "_WIN32_WINNT version too low"
+-        #endif
+-        #if defined(WINVER) && (WINVER < 0x0A00)
+-        #error "WINVER version too low"
+-        #endif
+-        int main() { return 0; }
+-    ]=] HAVE_WIN10_WIN32_WINNT)
+-    if(NOT HAVE_WIN10_WIN32_WINNT)
+-        list(APPEND QT_PLATFORM_DEFINITIONS _WIN32_WINNT=0x0A00 WINVER=0x0A00)
+-        set(QT_PLATFORM_DEFINITIONS ${QT_PLATFORM_DEFINITIONS}
+-            CACHE STRING "Qt platform specific pre-processor defines" FORCE)
+-    endif()
++    # The strict Windows 7 probe compiles Qt itself against the Windows 7
++    # header surface, instead of only lowering the exported SDK definitions.
++    list(APPEND QT_PLATFORM_DEFINITIONS
++        _WIN32_WINNT=0x0601 WINVER=0x0601 _WIN32_IE=0x0800 NTDDI_VERSION=0x06010000)
++    set(QT_PLATFORM_DEFINITIONS ${QT_PLATFORM_DEFINITIONS}
++        CACHE STRING "Qt platform specific pre-processor defines" FORCE)
+ endfunction()
+ 
+ function(qt_run_qtbase_config_tests)
+diff --git a/qtbase/src/corelib/global/qt_windows.h b/qtbase/src/corelib/global/qt_windows.h
+--- a/qtbase/src/corelib/global/qt_windows.h
++++ b/qtbase/src/corelib/global/qt_windows.h
+@@ -10,16 +10,16 @@
+ #endif
+ 
+ #ifndef WINVER
+-#  define WINVER 0x0A00 // _WIN32_WINNT_WIN10
++#  define WINVER 0x0601 // _WIN32_WINNT_WIN7
+ #endif
+ #ifndef _WIN32_WINNT
+-#  define _WIN32_WINNT 0x0A00
++#  define _WIN32_WINNT 0x0601
+ #endif
+ #ifndef _WIN32_IE
+-#  define _WIN32_IE 0x0A00
++#  define _WIN32_IE 0x0800
+ #endif
+ #ifndef NTDDI_VERSION
+-#  define NTDDI_VERSION 0x0A00000C // NTDDI_WIN10_NI
++#  define NTDDI_VERSION 0x06010000 // NTDDI_WIN7
+ #endif
+ 
+ #ifndef NOMINMAX

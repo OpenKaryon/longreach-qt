@@ -12,6 +12,7 @@ QT6_SOURCE ?=
 QT6_SERIES := $(basename $(QT6_VERSION))
 
 QT6_HOST_IMAGE := qt6-host$(LICENSE_SUFFIX)
+QT6_WIN_AMD64_IMAGE := qt6-win-amd64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
 # scripts/fetch/qt6-fetch-source.py finds the archive and stores it under this
@@ -20,6 +21,12 @@ QT6_ARCHIVE := qt-everywhere-src-$(QT6_VERSION).tar.xz
 QT6_ARCHIVE_SHA256 ?= $(if $(filter 6.8.4,$(QT6_VERSION)),1da37a32a583e7856d6fc13357c8ff6ad3ef7b877b8d276713b85026426d5246,)
 QT6_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT6_ARCHIVE)
 
+# The MSVCRT build of LLVM-MinGW for Windows 7 (the UCRT one needs Windows 10).
+QT6_WIN7_LLVM_MINGW_ARCHIVE := llvm-mingw-$(LLVM_MINGW_VERSION)-msvcrt-ubuntu-20.04-x86_64.tar.xz
+QT6_WIN7_LLVM_MINGW_PATH := $(DOWNLOAD_DIR)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
+QT6_WIN7_LLVM_MINGW_SHA256 := eb878636e95c358452e4f4c95f032d81360096d0f1cd8ab6d24d5d09ca481372
+QT6_WIN7_LLVM_MINGW_URL := https://github.com/mstorsjo/llvm-mingw/releases/download/$(LLVM_MINGW_VERSION)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
+
 .PHONY: download-qt6 qt6-host \
         qt6-win-amd64 qt6-win-arm64 qt6-linux-amd64 qt6-linux-arm64 \
         qt6-macos-amd64 qt6-macos-arm64 \
@@ -27,6 +34,9 @@ QT6_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT6_ARCHIVE)
         qt6-linux-amd64-smoke qt6-linux-arm64-smoke \
         qt6-macos-amd64-smoke qt6-macos-amd64-audit qt6-macos-arm64-smoke qt6-macos-arm64-audit \
         qt6-host-smoke
+
+$(QT6_WIN7_LLVM_MINGW_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_WIN7_LLVM_MINGW_URL)" "$@" "$(QT6_WIN7_LLVM_MINGW_SHA256)"
 
 download-qt6: $(QT6_ARCHIVE_PATH)
 
@@ -40,10 +50,43 @@ QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(
 qt6-host: $(QT6_ARCHIVE_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) -f docker/qt6/host/Dockerfile -t $(QT6_HOST_IMAGE) .
 
+# Windows x86_64 is the Windows 7 backport, built against MSVCRT.
+qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) qt6-host
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_CRT=msvcrt --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
+
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
 qt6-host-smoke:
 	docker run --rm --entrypoint sh 	    -v "$(CURDIR)/tests:/src:ro" 	    -v "$(CURDIR)/scripts/build/qt6-host-smoke.sh:/qt6-host-smoke.sh:ro" 	    $(QT6_HOST_IMAGE) -c "PARALLEL_JOBS=$(PARALLEL_JOBS) sh /qt6-host-smoke.sh"
 
+# qt6-<target>-smoke builds tests/ against the image into artifacts/qt6-<target>/
+# and, for Linux amd64, runs it there; the cross-built suites are run with
+# scripts/run/run.py.
+QT6_SMOKE_OUT = $(ARTIFACTS_DIR)/qt6-$(QT6_SMOKE_TARGET)
+
+define qt6-build-smoke
+	$(call MKDIR_P,$(QT6_SMOKE_OUT))
+	docker run --rm -v "$(CURDIR)/tests:/src:ro" -v "$(CURDIR)/$(QT6_SMOKE_OUT):/out" \
+		$(QT6_SMOKE_IMAGE) \
+		bash -c 'set -e; cp -r /src /tmp/qt-smoke-tests; mkdir -p /tmp/qt-smoke-build; cd /tmp/qt-smoke-build; $(QT6_SMOKE_QT_DIR)/bin/qt-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSMOKE_LICENSE_PROFILE=$(LICENSE_PROFILE) $(QT6_SMOKE_CMAKE_ARGS) /tmp/qt-smoke-tests; cmake --build . -j $(if $(PARALLEL_JOBS),$(PARALLEL_JOBS),$$(nproc)); $(QT6_SMOKE_COLLECT); ls -la /out/; $(QT6_SMOKE_RUN)'
+	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT6_SMOKE_OUT)" --image "$(QT6_SMOKE_IMAGE)" --qt-version "$(QT6_VERSION)" --openssl-version "not-pinned" --kind qt6-build-kit-tests --license-profile "$(LICENSE_PROFILE)"
+	@echo "-> $(QT6_SMOKE_OUT)"
+endef
+
+QT6_COLLECT_EXE := find . -name "*.exe" ! -name "a.exe" -exec cp {} /out/ \;
+QT6_COLLECT_ELF := find . -maxdepth 2 -type f -executable ! -name "*.so" -exec cp {} /out/ \;
+QT6_COLLECT_APP := find . -maxdepth 2 -type d -name "*.app" -exec cp -r {} /out/ \; ; find . -maxdepth 2 -type f -executable ! -name "*.dylib" ! -name "*.qml" -exec cp {} /out/ \;
+
+QT6_RUN_NONE := true
+
+qt6-win-amd64-smoke: QT6_SMOKE_TARGET := win-amd64
+qt6-win-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_WIN_AMD64_IMAGE)
+qt6-win-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-amd64
+qt6-win-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_EXE)
+qt6-win-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
+qt6-win-amd64-smoke:
+	$(qt6-build-smoke)
+
 QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 
+$(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,QT6_IMAGE_CONFIG))

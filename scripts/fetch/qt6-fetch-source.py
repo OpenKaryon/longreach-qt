@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+"""Resolve the Qt 6 source archive for a given version, downloading if it can.
+
+The kit targets Qt 6.8 LTS as its Qt 6 baseline, and an LTS series is where
+"just download it" stops being enough. Patch releases of an LTS go to commercial
+customers first and reach the public archive about a year later, so at any given
+moment some 6.8.x exist that this kit can build but cannot fetch. A customer with
+a Qt commercial licence has those sources; this repository does not, and has no
+business redistributing them.
+
+So the version and the source are two separate questions:
+
+    QT6_VERSION   what to build      6.8.4
+    QT6_SOURCE    where to get it    /path/to/qt-everywhere-src-6.8.8.tar.xz
+
+and the resolution order is
+
+    1. QT6_SOURCE, if given
+    2. an archive already in downloads/, under either upstream name
+    3. the public Qt archive
+    4. an error that says how to supply it
+
+Deliberately no table of which versions are commercial-only. Such a list is
+wrong the moment Qt publishes the next patch, and the check it would perform is
+one an HTTP request already answers.
+
+Two upstream naming schemes have to be tried, which is not a detail that can be
+derived from the version number:
+
+    qt-everywhere-src-6.8.3.tar.xz              6.8.0 - 6.8.3, 6.10.x, 6.11.x
+    qt-everywhere-opensource-src-6.8.4.tar.xz   6.8.4
+
+6.8.4 is the LTS patch that was commercial-only first and later released to
+everyone; it carries "opensource" in the name the way the Qt 5 archives do.
+Whether every future delayed LTS patch follows that pattern is not something to
+guess at, so both names are simply tried.
+
+Usage:
+    qt6-fetch-source.py <version> <download-dir> [--source PATH]
+
+On success the archive is at <download-dir>/qt-everywhere-src-<version>.tar.xz,
+under that canonical name whichever way it arrived, so nothing downstream has to
+care where it came from.
+"""
+
+import argparse
+import os
+import shutil
+import sys
+import urllib.error
+import urllib.request
+
+MIRROR = "https://qt.mirror.constant.com/archive/qt"
+OFFICIAL = "https://download.qt.io/archive/qt"
+
+
+def archive_names(version):
+    """Both upstream spellings, newest convention first."""
+    return [
+        "qt-everywhere-src-%s.tar.xz" % version,
+        "qt-everywhere-opensource-src-%s.tar.xz" % version,
+    ]
+
+
+def series(version):
+    return ".".join(version.split(".")[:2])
+
+
+def place(src, dest):
+    """Put src at dest without copying a gigabyte when it can be avoided."""
+    if os.path.abspath(src) == os.path.abspath(dest):
+        return
+    try:
+        if os.path.exists(dest):
+            os.remove(dest)
+        os.link(src, dest)
+        print("linked %s -> %s" % (src, dest))
+    except OSError:
+        print("copying %s -> %s" % (src, dest))
+        shutil.copyfile(src, dest)
+
+
+def try_download(url, dest):
+    """-> True if it downloaded. A 404 is an answer, not a failure to report."""
+    part = dest + ".part"
+    try:
+        print("trying %s" % url)
+        with urllib.request.urlopen(url, timeout=60) as response, \
+                open(part, "wb") as out:
+            total = int(response.headers.get("content-length") or 0)
+            done = 0
+            while True:
+                chunk = response.read(1 << 20)
+                if not chunk:
+                    break
+                out.write(chunk)
+                done += len(chunk)
+                if total:
+                    sys.stdout.write("\r  %.0f%% (%d/%d MB)"
+                                     % (100.0 * done / total,
+                                        done >> 20, total >> 20))
+                    sys.stdout.flush()
+        if total:
+            sys.stdout.write("\n")
+        os.replace(part, dest)
+        return True
+    except urllib.error.HTTPError as e:
+        if os.path.exists(part):
+            os.remove(part)
+        if e.code == 404:
+            print("  not published here (404)")
+            return False
+        raise
+    except Exception:
+        if os.path.exists(part):
+            os.remove(part)
+        raise
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("version")
+    parser.add_argument("download_dir")
+    parser.add_argument("--source", default=os.environ.get("QT6_SOURCE", ""),
+                        help="path to a source archive to use instead of downloading")
+    args = parser.parse_args()
+
+    os.makedirs(args.download_dir, exist_ok=True)
+    canonical = os.path.join(args.download_dir,
+                             "qt-everywhere-src-%s.tar.xz" % args.version)
+
+    # 1. an explicitly supplied archive
+    if args.source:
+        if not os.path.isfile(args.source):
+            sys.exit("QT6_SOURCE does not exist: %s" % args.source)
+        print("using QT6_SOURCE %s" % args.source)
+        place(args.source, canonical)
+        return
+
+    # 2. anything already downloaded, under either name
+    for name in archive_names(args.version):
+        local = os.path.join(args.download_dir, name)
+        if os.path.isfile(local):
+            print("using local %s" % local)
+            place(local, canonical)
+            return
+
+    # 3. the public archive: mirror first, then the canonical host, each under
+    #    both names. The mirror is preferred for bandwidth but does not always
+    #    carry a release as promptly as download.qt.io.
+    for host in (MIRROR, OFFICIAL):
+        for name in archive_names(args.version):
+            url = "%s/%s/%s/single/%s" % (host, series(args.version),
+                                          args.version, name)
+            if try_download(url, canonical):
+                print("saved %s" % canonical)
+                return
+
+    # 4. It is not public. Say what to do, without claiming to know why - the
+    #    same 404 covers a commercial-only LTS patch and a typo in the version.
+    sys.exit(
+        "\n"
+        "Qt %(v)s is not available from the public Qt source archive.\n"
+        "\n"
+        "This can mean the version does not exist, or that it is a Qt LTS patch\n"
+        "release that has not reached the public archive yet - those go to\n"
+        "commercial licence holders first. If you have the sources, supply them:\n"
+        "\n"
+        "    cp qt-everywhere-src-%(v)s.tar.xz %(d)s/\n"
+        "\n"
+        "or point at them directly:\n"
+        "\n"
+        "    make qt6-linux-amd64 QT6_VERSION=%(v)s QT6_SOURCE=/path/to/archive.tar.xz\n"
+        % {"v": args.version, "d": args.download_dir})
+
+
+if __name__ == "__main__":
+    main()

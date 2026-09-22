@@ -101,6 +101,7 @@ endef
 .DEFAULT_GOAL := download-qt5
 
 include $(PROJECT_DIR)mk/qt5.mk
+include $(PROJECT_DIR)mk/qt6.mk
 
 .PHONY: download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
 
@@ -133,6 +134,7 @@ regen-db:
 
 image-sizes:
 	docker images --filter "reference=qt5-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
+	docker images --filter "reference=qt6-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 
 clean:
 	$(call RM_RF,$(BUILD_DIR))

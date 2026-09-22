@@ -1,0 +1,392 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 6.8.4 Windows 7: Windows 7 CoreLib fallbacks for package APIs, timers, WinRT and mutexes.
+#
+# Derived from crystalidea/qt6windows7, commit
+# 3df3aac758177b28843c4d1511a2bd7751fe82b6.
+# Compared file by file with the pristine Qt 6.8.4 source archive.
+# Applies from the root of qt-everywhere-src-6.8.4 with patch -p1.
+diff --git a/qtbase/src/corelib/io/qstandardpaths_win.cpp b/qtbase/src/corelib/io/qstandardpaths_win.cpp
+index c6471bf..caab950 100644
+--- a/qtbase/src/corelib/io/qstandardpaths_win.cpp
++++ b/qtbase/src/corelib/io/qstandardpaths_win.cpp
+@@ -61,20 +61,47 @@ static inline void appendTestMode(QString &path)
+ 
+ static bool isProcessLowIntegrity()
+ {
++    // Windows 7 backport: the pseudo handle below is what GetCurrentProcessToken()
++    // returns, and token pseudo handles only work from Windows 8 on - on Windows 7
++    // GetTokenInformation() simply fails with it, so report a "normal" process.
++    //
++    // Asked through RtlGetVersion() and not IsWindows8OrGreater() on purpose: the
++    // latter goes through VerifyVersionInfo(), which reports 6.2 to any process
++    // whose manifest does not list the newer supportedOS GUIDs, so the answer
++    // would depend on the application's manifest rather than on the running
++    // Windows. QOperatingSystemVersion does exactly what is done by hand here,
++    // but it is not part of the bootstrap library on Windows - only on Apple -
++    // and this file is built into that library, so it cannot be used.
++    using RtlGetVersionType = LONG (WINAPI *)(OSVERSIONINFOEXW *);
++    const auto rtlGetVersion = reinterpret_cast<RtlGetVersionType>(
++        reinterpret_cast<void *>(
++            GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion")));
++    if (!rtlGetVersion)
++        return false;
++    OSVERSIONINFOEXW osv = {};
++    osv.dwOSVersionInfoSize = sizeof(osv);
++    if (rtlGetVersion(&osv) != 0)
++        return false;
++    if (osv.dwMajorVersion < 6 || (osv.dwMajorVersion == 6 && osv.dwMinorVersion < 2))
++        return false; // Windows 7 or older
++
+     // same as GetCurrentProcessToken()
+     const auto process_token = HANDLE(quintptr(-4));
+ 
+     QVarLengthArray<char,256> token_info_buf(256);
+     auto* token_info = reinterpret_cast<TOKEN_MANDATORY_LABEL*>(token_info_buf.data());
+     DWORD token_info_length = token_info_buf.size();
+-    if (!GetTokenInformation(process_token, TokenIntegrityLevel, token_info, token_info_length, &token_info_length)) {
++    if (!GetTokenInformation(process_token, TokenIntegrityLevel, token_info, token_info_length, &token_info_length)
++        && GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+         // grow buffer and retry GetTokenInformation
+         token_info_buf.resize(token_info_length);
+         token_info = reinterpret_cast<TOKEN_MANDATORY_LABEL*>(token_info_buf.data());
+         if (!GetTokenInformation(process_token, TokenIntegrityLevel, token_info, token_info_length, &token_info_length))
+             return false; // assume "normal" process
+     }
+-
++    else
++        return false;
++    
+     // The GetSidSubAuthorityCount return-code is undefined on failure, so
+     // there's no point in checking before dereferencing
+     DWORD integrity_level = *GetSidSubAuthority(token_info->Label.Sid, *GetSidSubAuthorityCount(token_info->Label.Sid) - 1);
+diff --git a/qtbase/src/corelib/kernel/qeventdispatcher_win.cpp b/qtbase/src/corelib/kernel/qeventdispatcher_win.cpp
+index a7663b2..8459cd5 100644
+--- a/qtbase/src/corelib/kernel/qeventdispatcher_win.cpp
++++ b/qtbase/src/corelib/kernel/qeventdispatcher_win.cpp
+@@ -360,10 +360,15 @@ void QEventDispatcherWin32Private::registerTimer(WinTimerInfo *t)
+         ok = t->fastTimerId;
+     }
+ 
+-    if (!ok) {
++    typedef BOOL (WINAPI *SetCoalescableTimerFunc) (HWND, UINT_PTR, UINT, TIMERPROC, ULONG);
++    static SetCoalescableTimerFunc mySetCoalescableTimerFunc = 
++        (SetCoalescableTimerFunc)::GetProcAddress(::GetModuleHandle(L"User32"), "SetCoalescableTimer");
++
++    if (!ok && mySetCoalescableTimerFunc) {
+         // user normal timers for (Very)CoarseTimers, or if no more multimedia timers available
+-        ok = SetCoalescableTimer(internalHwnd, t->timerId, interval, nullptr, tolerance);
++        ok = mySetCoalescableTimerFunc(internalHwnd, t->timerId, interval, nullptr, tolerance);
+     }
++    
+     if (!ok)
+         ok = SetTimer(internalHwnd, t->timerId, interval, nullptr);
+ 
+diff --git a/qtbase/src/corelib/kernel/qfunctions_win.cpp b/qtbase/src/corelib/kernel/qfunctions_win.cpp
+index 048fdbc..e715093 100644
+--- a/qtbase/src/corelib/kernel/qfunctions_win.cpp
++++ b/qtbase/src/corelib/kernel/qfunctions_win.cpp
+@@ -44,10 +44,17 @@ QComHelper::~QComHelper()
+ */
+ bool qt_win_hasPackageIdentity()
+ {
++    typedef BOOL (WINAPI *GetCurrentPackageFullNameFunc) (UINT32 *, PWSTR);
++    static GetCurrentPackageFullNameFunc myGetCurrentPackageFullName = 
++        (GetCurrentPackageFullNameFunc)::GetProcAddress(::GetModuleHandle(L"kernel32"), "GetCurrentPackageFullName");
++
++    if (myGetCurrentPackageFullName)
++    {
+ #if defined(HAS_APPMODEL)
++
+     static const bool hasPackageIdentity = []() {
+         UINT32 length = 0;
+-        switch (const auto result = GetCurrentPackageFullName(&length, nullptr)) {
++        switch (const auto result = myGetCurrentPackageFullName(&length, nullptr)) {
+         case ERROR_INSUFFICIENT_BUFFER:
+             return true;
+         case APPMODEL_ERROR_NO_PACKAGE:
+@@ -61,6 +68,9 @@ bool qt_win_hasPackageIdentity()
+ #else
+     return false;
+ #endif
++    }
++
++    return false;
+ }
+ 
+ QT_END_NAMESPACE
+diff --git a/qtbase/src/corelib/platform/windows/qt_winrtbase_p.h b/qtbase/src/corelib/platform/windows/qt_winrtbase_p.h
+index fb7366f..756396f 100644
+--- a/qtbase/src/corelib/platform/windows/qt_winrtbase_p.h
++++ b/qtbase/src/corelib/platform/windows/qt_winrtbase_p.h
+@@ -19,6 +19,89 @@
+ 
+ #if QT_CONFIG(cpp_winrt)
+ #  include <winrt/base.h>
++
++#  if defined(_MSC_VER)
++// Windows 7 backport: resolve the WinRT entry points at run time.
++//
++// RoGetActivationFactory() and RoOriginateLanguageException() live in
++// combase.dll, which only exists since Windows 8. C++/WinRT calls them through
++// its own WINRT_IMPL_* symbols and binds those to the real functions with an
++// /alternatename linker directive, so a build with QT_FEATURE_cpp_winrt enabled
++// ends up statically importing api-ms-win-core-winrt-l1-1-0.dll and
++// api-ms-win-core-winrt-error-l1-1-1.dll. Neither one is redistributable, and
++// on Windows 7 the image loader therefore fails before main() is reached - the
++// run-time version checks the rest of this backport relies on never get a
++// chance to run.
++//
++// /alternatename only applies to symbols that are not defined anywhere else, so
++// defining the WINRT_IMPL_* entry points here takes precedence over it and the
++// static imports disappear. On Windows 8 and later the real functions are found
++// through combase.dll and behaviour is unchanged; on Windows 7 the lookup fails
++// and the callers fall back to the plain Win32 API paths they already have.
++//
++// combase.dll is loaded through the Win32 API rather than through C++/WinRT's own
++// WINRT_IMPL_* loader helpers. Those are internal to the SDK's copy of C++/WinRT
++// and are renamed along with it: 2.0.220110, in Windows SDK 10.0.22621, declares
++// WINRT_IMPL_LoadLibraryW, while 2.0.250303, in 10.0.26100, replaced it with
++// WINRT_IMPL_LoadLibraryExW - so a header written against either one fails to
++// compile against the other.
++//
++// The older C++/WinRT needs none of this in the first place: it resolved
++// RoGetActivationFactory() through combase.dll at run time itself, with a fallback
++// of its own, and declared no WINRT_IMPL_Ro* symbol for the linker to import. Where
++// that is the case nothing refers to the definitions below and they cost nothing.
++
++#    include <QtCore/qt_windows.h>
++
++namespace QtWinRTBackport {
++
++// LOAD_LIBRARY_SEARCH_SYSTEM32 keeps a rogue combase.dll sitting next to the
++// executable from being loaded in place of the system one.
++inline FARPROC resolveCombaseSymbol(const char *symbol) noexcept
++{
++    static const HMODULE library = LoadLibraryExW(L"combase.dll", nullptr,
++                                                  LOAD_LIBRARY_SEARCH_SYSTEM32);
++    if (!library)
++        return nullptr;
++    return GetProcAddress(library, symbol);
++}
++
++} // namespace QtWinRTBackport
++
++extern "C" {
++
++inline int32_t __stdcall WINRT_IMPL_RoGetActivationFactory(void *classId, winrt::guid const &iid,
++                                                           void **factory) noexcept
++{
++    using FunctionPointer = int32_t(__stdcall *)(void *, winrt::guid const &, void **) noexcept;
++    static const auto resolved = reinterpret_cast<FunctionPointer>(
++            QtWinRTBackport::resolveCombaseSymbol("RoGetActivationFactory"));
++    if (!resolved) {
++        if (factory)
++            *factory = nullptr;
++        // Deliberately not error_not_initialized: that would send C++/WinRT
++        // down its CoIncrementMTAUsage retry path for nothing.
++        return static_cast<int32_t>(0x80040154); // REGDB_E_CLASSNOTREG
++    }
++    return resolved(classId, iid, factory);
++}
++
++inline int32_t __stdcall WINRT_IMPL_RoOriginateLanguageException(int32_t error, void *message,
++                                                                 void *exception) noexcept
++{
++    using FunctionPointer = int32_t(__stdcall *)(int32_t, void *, void *) noexcept;
++    static const auto resolved = reinterpret_cast<FunctionPointer>(
++            QtWinRTBackport::resolveCombaseSymbol("RoOriginateLanguageException"));
++    // Reporting the error is best effort, but WINRT_VERIFY() must not trip in a
++    // debug build, so report success when there is nowhere to report it to.
++    if (!resolved)
++        return 1;
++    return resolved(error, message, exception);
++}
++
++} // extern "C"
++#  endif // defined(_MSC_VER)
++
+ #  include <QtCore/private/qfactorycacheregistration_p.h>
+ // Workaround for Windows SDK bug.
+ // See https://github.com/microsoft/Windows.UI.Composition-Win32-Samples/issues/47
+diff --git a/qtbase/src/corelib/thread/qfutex_p.h b/qtbase/src/corelib/thread/qfutex_p.h
+index 8ba798f..f6a8dda 100644
+--- a/qtbase/src/corelib/thread/qfutex_p.h
++++ b/qtbase/src/corelib/thread/qfutex_p.h
+@@ -40,8 +40,8 @@ QT_END_NAMESPACE
+ #elif defined(Q_OS_LINUX) && !defined(QT_LINUXBASE)
+ // use Linux mutexes everywhere except for LSB builds
+ #  include "qfutex_linux_p.h"
+-#elif defined(Q_OS_WIN)
+-#  include "qfutex_win_p.h"
++//#elif defined(Q_OS_WIN)
++//#  include "qfutex_win_p.h"
+ #else
+ QT_BEGIN_NAMESPACE
+ namespace QtFutex = QtDummyFutex;
+diff --git a/qtbase/src/corelib/thread/qmutex.cpp b/qtbase/src/corelib/thread/qmutex.cpp
+index 1b8f76f..9e2fe83 100644
+--- a/qtbase/src/corelib/thread/qmutex.cpp
++++ b/qtbase/src/corelib/thread/qmutex.cpp
+@@ -915,6 +915,8 @@ QT_END_NAMESPACE
+ // nothing
+ #elif defined(Q_OS_DARWIN)
+ #  include "qmutex_mac.cpp"
++#elif defined(Q_OS_WIN)
++#  include "qmutex_win.cpp"
+ #else
+ #  include "qmutex_unix.cpp"
+ #endif
+diff --git a/qtbase/src/corelib/thread/qmutex_p.h b/qtbase/src/corelib/thread/qmutex_p.h
+index aabb66f..a16d508 100644
+--- a/qtbase/src/corelib/thread/qmutex_p.h
++++ b/qtbase/src/corelib/thread/qmutex_p.h
+@@ -86,6 +86,8 @@ public:
+     semaphore_t mach_semaphore;
+ #elif defined(Q_OS_UNIX)
+     sem_t semaphore;
++#elif defined(Q_OS_WIN)
++    Qt::HANDLE event;
+ #endif
+ };
+ 
+diff --git a/qtbase/src/corelib/thread/qmutex_win.cpp b/qtbase/src/corelib/thread/qmutex_win.cpp
+new file mode 100644
+index 0000000..9186f89
+--- /dev/null
++++ b/qtbase/src/corelib/thread/qmutex_win.cpp
+@@ -0,0 +1,30 @@
++// Copyright (C) 2016 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++
++#include "qmutex.h"
++#include <qatomic.h>
++#include "qmutex_p.h"
++#include <qt_windows.h>
++
++QT_BEGIN_NAMESPACE
++
++QMutexPrivate::QMutexPrivate()
++{
++    event = CreateEvent(0, FALSE, FALSE, 0);
++    
++    if (!event)
++        qWarning("QMutexPrivate::QMutexPrivate: Cannot create event");
++}
++
++QMutexPrivate::~QMutexPrivate()
++{ CloseHandle(event); }
++
++bool QMutexPrivate::wait(QDeadlineTimer timeout)
++{
++    return (WaitForSingleObjectEx(event, timeout.isForever() ? INFINITE : timeout.remainingTime(), FALSE) == WAIT_OBJECT_0);
++}
++
++void QMutexPrivate::wakeUp() noexcept
++{ SetEvent(event); }
++
++QT_END_NAMESPACE
+\ No newline at end of file
+diff --git a/qtbase/src/corelib/thread/qthread_win.cpp b/qtbase/src/corelib/thread/qthread_win.cpp
+index f861f07..57d9a15 100644
+--- a/qtbase/src/corelib/thread/qthread_win.cpp
++++ b/qtbase/src/corelib/thread/qthread_win.cpp
+@@ -227,6 +227,74 @@ DWORD WINAPI qt_adopted_thread_watcher_function(LPVOID)
+     return 0;
+ }
+ 
++#ifndef Q_OS_WIN64
++#  define ULONG_PTR DWORD
++#endif
++
++typedef struct tagTHREADNAME_INFO
++{
++    DWORD dwType;      // must be 0x1000
++    LPCSTR szName;     // pointer to name (in user addr space)
++    HANDLE dwThreadID; // thread ID (-1=caller thread)
++    DWORD dwFlags;     // reserved for future use, must be zero
++} THREADNAME_INFO;
++
++typedef HRESULT(WINAPI* SetThreadDescriptionFunc)(HANDLE, PCWSTR);
++
++#if defined(Q_CC_MSVC)
++
++// Helper function to set the thread name using RaiseException and __try
++static void setThreadNameUsingException(HANDLE threadId, LPCSTR threadName) {
++    THREADNAME_INFO info;
++    info.dwType = 0x1000;
++    info.szName = threadName;
++    // The debugger expects a thread *id* here, with -1 meaning "the calling thread".
++    // GetCurrentThread() returns the pseudo-handle (HANDLE)-2, which matches no thread,
++    // so the name would be silently discarded.
++    info.dwThreadID = (threadId == GetCurrentThread()) ? HANDLE(-1) : threadId;
++    info.dwFlags = 0;
++
++    __try {
++        // The exception arguments are ULONG_PTR-sized, so the count must be derived
++        // from sizeof(ULONG_PTR); using sizeof(DWORD) reads past the struct on 64-bit.
++        RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR),
++                       reinterpret_cast<const ULONG_PTR*>(&info));
++    }
++    __except (EXCEPTION_CONTINUE_EXECUTION) {
++    }
++}
++
++#endif // Q_CC_MSVC
++
++void qt_set_thread_name(HANDLE threadId, const QString &name)
++{
++    // SetThreadDescription() is implemented in kernelbase.dll; kernel32.dll only gained a
++    // forwarder for it in later Windows 10 releases, so try both before giving up.
++    static SetThreadDescriptionFunc pSetThreadDescription = []() -> SetThreadDescriptionFunc {
++        for (const wchar_t *dll : { L"Kernel32.dll", L"KernelBase.dll" }) {
++            if (HMODULE hDll = GetModuleHandleW(dll)) {
++                if (FARPROC proc = GetProcAddress(hDll, "SetThreadDescription"))
++                    return reinterpret_cast<SetThreadDescriptionFunc>(proc);
++            }
++        }
++        return nullptr;
++    }();
++
++    if (pSetThreadDescription) {
++        pSetThreadDescription(threadId, reinterpret_cast<const wchar_t *>(name.utf16()) );
++    }
++    else {
++
++        #if defined(Q_CC_MSVC)
++
++            std::string stdStr = name.toStdString();
++            LPCSTR threadName = stdStr.c_str();
++            setThreadNameUsingException(threadId, threadName);
++
++        #endif // Q_CC_MSVC
++    }
++}
++
+ /**************************************************************************
+  ** QThreadPrivate
+  *************************************************************************/
+@@ -264,21 +332,7 @@ unsigned int __stdcall QT_ENSURE_STACK_ALIGNED_FOR_SSE QThreadPrivate::start(voi
+     QString threadName = std::exchange(thr->d_func()->objectName, {});
+     if (Q_LIKELY(threadName.isEmpty()))
+         threadName = QString::fromUtf8(thr->metaObject()->className());
+-#ifndef QT_WIN_SERVER_2016_COMPAT
+-    SetThreadDescription(GetCurrentThread(), reinterpret_cast<const wchar_t *>(threadName.utf16()));
+-#else
+-    HMODULE kernelbase = GetModuleHandleW(L"kernelbase.dll");
+-    if (kernelbase != NULL) {
+-        typedef HRESULT (WINAPI *DESCFUNC)(HANDLE, PCWSTR);
+-
+-        DESCFUNC setThreadDescription =
+-            (DESCFUNC)GetProcAddress(kernelbase, "SetThreadDescription");
+-        if (setThreadDescription != NULL) {
+-            setThreadDescription(GetCurrentThread(),
+-                                 reinterpret_cast<const wchar_t *>(threadName.utf16()));
+-        }
+-    }
+-#endif
++    qt_set_thread_name(GetCurrentThread(), threadName);
+ 
+     emit thr->started(QThread::QPrivateSignal());
+     QThread::setTerminationEnabled(true);

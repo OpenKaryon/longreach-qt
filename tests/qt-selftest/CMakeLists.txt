@@ -35,12 +35,17 @@ smoke_add_app(qt-selftest
         checks_qtbase_misc.cpp
         checks_purchasing.cpp
         checks_opcua.cpp
+        checks_grpc.cpp
         checks_wayland.cpp
         checks_wayland2.cpp
         checks_wayland_live.cpp
         checks_iot.cpp
+        checks_qt6_core.cpp
         checks_dbus.cpp
         checks_platform_extras.cpp
+        checks_qt6_modules.cpp
+        checks_shadertools.cpp
+        checks_qt6_qtbase.cpp
         checks_location2.cpp
         checks_declarative1.cpp
         checks_multimedia2.cpp

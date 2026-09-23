@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 7: no Windows 8+ import libraries in the link interface.
+#
+# Qt's CMake files list two import libraries whose DLLs Windows 7 does not
+# have, and the exported targets (Qt6CoreTargets.cmake and the Windows QPA
+# plugin targets) hand them on to every application linked against this SDK:
+#
+#   synchronization  WaitOnAddress/WakeByAddress* (api-ms-win-core-synch-l1-2-0,
+#                    Windows 8). 01-corelib-win7.patch leaves the Windows futex
+#                    out, so nothing in QtCore needs it.
+#   shcore           GetDpiForMonitor and friends (SHCore.dll, Windows 8.1).
+#                    The plugin already resolves them at run time through
+#                    QWindowsContext::shcoredll, with a fallback for Windows 7.
+#
+# Linking either one is harmless only while no symbol of it is used; dropping
+# them keeps a stray reference from turning into a load failure on Windows 7.
+# scripts/audit/qt6-win7-audit.sh checks the resulting executables. This
+# replaces a post-install edit of the installed CMake files.
+#
+# Apply: patch -p1, from the Qt source root, after 01-14.
+--- a/qtbase/src/corelib/CMakeLists.txt
++++ b/qtbase/src/corelib/CMakeLists.txt
+@@ -547,8 +547,6 @@
+     SOURCES
+         thread/qfutex_win_p.h
+         thread/qwaitcondition_win.cpp
+-    LIBRARIES
+-        synchronization
+ )
+ 
+ qt_internal_extend_target(Core CONDITION WIN32
+--- a/qtbase/src/plugins/platforms/windows/CMakeLists.txt
++++ b/qtbase/src/plugins/platforms/windows/CMakeLists.txt
+@@ -62,7 +62,6 @@
+         winmm
+         winspool
+         wtsapi32
+-        shcore
+         comdlg32
+         d3d9
+         runtimeobject
+--- a/qtbase/src/plugins/platforms/direct2d/CMakeLists.txt
++++ b/qtbase/src/plugins/platforms/direct2d/CMakeLists.txt
+@@ -75,7 +75,6 @@
+         winmm
+         winspool
+         wtsapi32
+-        shcore
+         comdlg32
+         d3d9
+         runtimeobject

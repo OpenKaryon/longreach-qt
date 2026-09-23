@@ -1,0 +1,300 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 6.8.4 Windows 7: Windows audio and capture fallbacks for Qt Multimedia.
+#
+# Derived from crystalidea/qt6windows7, commit
+# 3df3aac758177b28843c4d1511a2bd7751fe82b6.
+# Compared file by file with the pristine Qt 6.8.4 source archive.
+# Applies from the root of qt-everywhere-src-6.8.4 with patch -p1.
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
+index aca5102..3b465b2 100644
+--- a/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
++++ b/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
+@@ -84,7 +84,8 @@ private:
+ 
+     void handleAudioClientError();
+ 
+-    ComPtr<IAudioClient3> m_audioClient;
++    // Windows 7 backport: base IAudioClient, see createAudioClient() in qwindowsaudioutils.cpp.
++    ComPtr<IAudioClient> m_audioClient;
+     ComPtr<IAudioRenderClient> m_renderClient;
+ 
+     QWindowsAudioUtils::reference_time m_periodSize;
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
+index 8f517a6..4755772 100644
+--- a/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
++++ b/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
+@@ -72,7 +72,8 @@ private:
+     bool process() noexcept QT_MM_NONBLOCKING;
+     void handleAudioClientError();
+ 
+-    ComPtr<IAudioClient3> m_audioClient;
++    // Windows 7 backport: base IAudioClient, see createAudioClient() in qwindowsaudioutils.cpp.
++    ComPtr<IAudioClient> m_audioClient;
+     ComPtr<IAudioCaptureClient> m_captureClient;
+ 
+     QWindowsAudioUtils::reference_time m_periodSize;
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
+index 6150a03..c556158 100644
+--- a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
++++ b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
+@@ -214,7 +214,7 @@ ComPtr<IMFMediaType> formatToMediaType(QWindowsMediaFoundation &wmf, const QAudi
+     return mediaType;
+ }
+ 
+-std::optional<quint32> getBufferSizeInFrames(const ComPtr<IAudioClient3> &client)
++std::optional<quint32> getBufferSizeInFrames(const ComPtr<IAudioClient> &client)
+ {
+     Q_ASSERT(client);
+ 
+@@ -228,7 +228,7 @@ std::optional<quint32> getBufferSizeInFrames(const ComPtr<IAudioClient3> &client
+     return std::nullopt;
+ }
+ 
+-std::optional<AudioClientDevicePeriod> getDevicePeriod(const ComPtr<IAudioClient3> &client)
++std::optional<AudioClientDevicePeriod> getDevicePeriod(const ComPtr<IAudioClient> &client)
+ {
+     Q_ASSERT(client);
+     REFERENCE_TIME defaultPeriodDuration, minimalPeriodDuration;
+@@ -368,13 +368,26 @@ createAudioClient(const ComPtr<IMMDevice> &device, const QAudioFormat &format,
+                   const QUniqueWin32NullHandle &wasapiEventHandle,
+                   std::optional<AudioEndpointRole> role)
+ {
+-    ComPtr<IAudioClient3> audioClient;
++    // Windows 7 backport: IAudioClient3 only exists from Windows 10 on, and activating it is
++    // what used to fail here, leaving Windows 7 without any audio device at all. Ask for it
++    // first so that nothing changes on Windows 10 and later - it is obtained exactly as before,
++    // and the code below runs on the very same object. Only when it is unavailable do we fall
++    // back to the base IAudioClient, which has been around since Vista and carries every method
++    // the playback and capture paths actually use.
++    ComPtr<IAudioClient> audioClient;
++    ComPtr<IAudioClient3> audioClient3;
+ 
+     HRESULT hr = device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, nullptr,
+-                                  reinterpret_cast<void **>(audioClient.GetAddressOf()));
+-    if (FAILED(hr)) {
+-        qWarning() << "Failed to activate audio device" << audioClientErrorString(hr);
+-        return std::nullopt;
++                                  reinterpret_cast<void **>(audioClient3.GetAddressOf()));
++    if (SUCCEEDED(hr)) {
++        audioClient = audioClient3;
++    } else {
++        hr = device->Activate(__uuidof(IAudioClient), CLSCTX_INPROC_SERVER, nullptr,
++                              reinterpret_cast<void **>(audioClient.GetAddressOf()));
++        if (FAILED(hr)) {
++            qWarning() << "Failed to activate audio device" << audioClientErrorString(hr);
++            return std::nullopt;
++        }
+     }
+ 
+     std::optional<AudioClientDevicePeriod> devicePeriods = getDevicePeriod(audioClient);
+@@ -397,8 +410,11 @@ createAudioClient(const ComPtr<IMMDevice> &device, const QAudioFormat &format,
+         return std::nullopt;
+     auto waveFormat = *fmt;
+ 
+-    if (role)
+-        audioClientSetRole(audioClient, *role);
++    // Setting the endpoint role goes through IAudioClient2::SetClientProperties, so it is only
++    // available together with IAudioClient3 here. On Windows 10 and later this is reached exactly
++    // as before; on Windows 7 the role simply stays at its default.
++    if (role && audioClient3)
++        audioClientSetRole(audioClient3, *role);
+ 
+     constexpr DWORD streamFlags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
+             | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY
+@@ -432,8 +448,21 @@ createAudioClient(const ComPtr<IMMDevice> &device, const QAudioFormat &format,
+     };
+ }
+ 
+-bool audioClientStart(const ComPtr<IAudioClient3> &client)
++// Windows 7 backport: the three helpers below are reached during tear-down even when the
++// audio client was never created, and they used to dereference the pointer unconditionally.
++//
++// createAudioClient() activates IAudioClient3, which only exists from Windows 10 on, so on
++// Windows 7 activation fails, openAudioClient() returns false and m_audioClient stays empty -
++// yet the stream object lives on, and QWASAPIAudioSinkStream::stop() still calls
++// audioClientStop()/audioClientReset() on it. That crashed the application with an access
++// violation as soon as playback was closed (the video itself plays, just without sound).
++//
++// Returning false matches what the callers already expect from a failed call.
++bool audioClientStart(const ComPtr<IAudioClient> &client)
+ {
++    if (!client)
++        return false;
++
+     HRESULT hr = client->Start();
+     if (FAILED(hr)) {
+         qWarning() << "IAudioClient3::Start failed" << audioClientErrorString(hr);
+@@ -442,8 +471,11 @@ bool audioClientStart(const ComPtr<IAudioClient3> &client)
+     return true;
+ }
+ 
+-bool audioClientStop(const ComPtr<IAudioClient3> &client)
++bool audioClientStop(const ComPtr<IAudioClient> &client)
+ {
++    if (!client)
++        return false;
++
+     HRESULT hr = client->Stop();
+     if (FAILED(hr)) {
+         qWarning() << "IAudioClient3::Stop failed" << audioClientErrorString(hr);
+@@ -452,8 +484,11 @@ bool audioClientStop(const ComPtr<IAudioClient3> &client)
+     return true;
+ }
+ 
+-bool audioClientReset(const ComPtr<IAudioClient3> &client)
++bool audioClientReset(const ComPtr<IAudioClient> &client)
+ {
++    if (!client)
++        return false;
++
+     HRESULT hr = client->Reset();
+     if (FAILED(hr)) {
+         qWarning() << "IAudioClient3::Reset failed" << audioClientErrorString(hr);
+@@ -462,7 +497,7 @@ bool audioClientReset(const ComPtr<IAudioClient3> &client)
+     return true;
+ }
+ 
+-bool audioClientSetRate(const ComPtr<IAudioClient3> &client, int rate)
++bool audioClientSetRate(const ComPtr<IAudioClient> &client, int rate)
+ {
+     ComPtr<IAudioClockAdjustment> clockAdjustment;
+ 
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
+index 6524307..4e2fa3f 100644
+--- a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
++++ b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
+@@ -26,6 +26,10 @@
+ #include <chrono>
+ #include <optional>
+ 
++struct IAudioClient;
++// Windows 7 backport: the audio client is held as the base IAudioClient (Vista and later)
++// instead of IAudioClient3 (Windows 10 and later). The playback and capture paths only ever
++// call base-interface methods; see createAudioClient() for how the interface is obtained.
+ struct IAudioClient;
+ struct IAudioClient3;
+ struct IMFMediaType;
+@@ -56,7 +60,7 @@ QAudioFormat::ChannelConfig maskToChannelConfig(UINT32 mask, int count);
+ // IAudioClient helpers
+ struct AudioClientCreationResult
+ {
+-    ComPtr<IAudioClient3> client;
++    ComPtr<IAudioClient> client;
+     reference_time periodSize;
+     qsizetype audioClientFrames;
+ };
+@@ -66,19 +70,21 @@ createAudioClient(const ComPtr<IMMDevice> &, const QAudioFormat &,
+                   const QUniqueWin32NullHandle &wasapiEventHandle,
+                   std::optional<AudioEndpointRole> = {});
+ 
+-bool audioClientStart(const ComPtr<IAudioClient3> &);
+-bool audioClientStop(const ComPtr<IAudioClient3> &);
+-bool audioClientReset(const ComPtr<IAudioClient3> &);
+-bool audioClientSetRate(const ComPtr<IAudioClient3> &, int rate);
++bool audioClientStart(const ComPtr<IAudioClient> &);
++bool audioClientStop(const ComPtr<IAudioClient> &);
++bool audioClientReset(const ComPtr<IAudioClient> &);
++bool audioClientSetRate(const ComPtr<IAudioClient> &, int rate);
++// Keeps taking IAudioClient3: SetClientProperties() belongs to IAudioClient2, and the warm-up
++// client passes its own IAudioClient3 here.
+ bool audioClientSetRole(const ComPtr<IAudioClient3> &client, AudioEndpointRole role);
+ 
+-std::optional<quint32> getBufferSizeInFrames(const ComPtr<IAudioClient3> &client);
++std::optional<quint32> getBufferSizeInFrames(const ComPtr<IAudioClient> &client);
+ struct AudioClientDevicePeriod
+ {
+     reference_time defaultDuration;
+     reference_time minimalDuration;
+ };
+-std::optional<AudioClientDevicePeriod> getDevicePeriod(const ComPtr<IAudioClient3> &client);
++std::optional<AudioClientDevicePeriod> getDevicePeriod(const ComPtr<IAudioClient> &client);
+ 
+ // wasapi thread helper
+ void setMCSSForPeriodSize(reference_time);
+diff --git a/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt b/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
+index dd9347d..f026c9a 100644
+--- a/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
++++ b/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
+@@ -164,6 +164,21 @@ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION WIN32
+         mfreadwrite
+ )
+ 
++# Windows 7 backport: windowsapp (WindowsApp.lib) removed from LIBRARIES.
++#
++# It is the UWP umbrella import library: linking it makes every plain kernel32 function
++# resolve through api-ms-win-core-* API sets instead of KERNEL32.dll, and several of those
++# sets only exist from Windows 8 onwards (libraryloader-l1-2-0 is Windows 8.1,
++# synch-l1-2-0 / localization-l1-2-0 / heap-l2-1-0 / processthreads-l1-1-1 are Windows 8).
++# The result is that ffmpegmediaplugin.dll cannot be loaded on Windows 7 at all, which
++# leaves Qt Multimedia without a backend - QMediaPlayer reports itself unavailable and
++# nothing plays. Every other Qt module here imports KERNEL32.dll directly.
++#
++# Nothing is lost by dropping it: the WinRT entry points this plugin needs
++# (RoGetActivationFactory and friends) are resolved at run time through the
++# qt_winrtbase_p.h replacement that comes with the qtbase part of this backport, which
++# qffmpegwindowcapture_uwp.cpp picks up via qfactorycacheregistration_p.h. The plugin has
++# no static WinRT imports left, so WindowsApp.lib was only acting as the kernel32 umbrella.
+ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_cpp_winrt
+     SOURCES
+         qffmpegwindowcapture_uwp.cpp qffmpegwindowcapture_uwp_p.h
+@@ -172,7 +187,6 @@ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_cpp_
+     LIBRARIES
+         Dwmapi
+         Dxva2
+-        windowsapp
+ )
+ 
+ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_xlib
+diff --git a/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp b/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
+index 24abc9c..98015da 100644
+--- a/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
++++ b/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
+@@ -59,6 +59,36 @@ namespace {
+ 
+ Q_LOGGING_CATEGORY(qLcWindowCaptureUwp, "qt.multimedia.ffmpeg.windowcapture.uwp");
+ 
++// Windows 7 backport: CreateDirect3D11DeviceFromDXGIDevice() was introduced in Windows 8.1.
++// d3d11.dll itself is available on Windows 7 SP1 with the Platform Update (KB2670838), so the
++// module is found and only this one export is missing - but a static import of it is enough to
++// make the whole ffmpeg media plugin unloadable on Windows 7 (ERROR_PROC_NOT_FOUND). Qt then
++// reports no multimedia backend at all, so playback stops working for a function that is only
++// ever needed for window capture. Resolve it at run time instead: behaviour is unchanged on
++// Windows 8.1 and later, and on Windows 7 only window capture fails, through the regular
++// hresult error path the callers already handle.
++HRESULT createDirect3D11DeviceFromDXGIDevice(IDXGIDevice *dxgiDevice, IInspectable **graphicsDevice)
++{
++    using CreateDeviceFn = HRESULT(WINAPI *)(IDXGIDevice *, IInspectable **);
++
++    static const CreateDeviceFn createDevice = []() -> CreateDeviceFn {
++        // LoadLibraryExW, not LoadLibraryW: this plugin already imports the former, so
++        // resolving the export here adds no import of its own. d3d11.dll is statically
++        // imported anyway (D3D11CreateDevice), so this only bumps its reference count.
++        const HMODULE d3d11 = ::LoadLibraryExW(L"d3d11.dll", nullptr, 0);
++        if (!d3d11)
++            return nullptr;
++
++        return reinterpret_cast<CreateDeviceFn>(
++                ::GetProcAddress(d3d11, "CreateDirect3D11DeviceFromDXGIDevice"));
++    }();
++
++    if (!createDevice)
++        return E_NOTIMPL;
++
++    return createDevice(dxgiDevice, graphicsDevice);
++}
++
+ winrt::Windows::Graphics::SizeInt32 getWindowSize(HWND hwnd)
+ {
+     RECT windowRect{};
+@@ -242,7 +272,8 @@ private:
+         const auto dxgiDevice = d3dDevice.as<IDXGIDevice>();
+ 
+         com_ptr<IInspectable> device;
+-        check_hresult(CreateDirect3D11DeviceFromDXGIDevice(dxgiDevice.get(), device.put()));
++        // Windows 7 backport: resolved at run time, see the helper above.
++        check_hresult(createDirect3D11DeviceFromDXGIDevice(dxgiDevice.get(), device.put()));
+ 
+         return device.as<IDirect3DDevice>();
+     }

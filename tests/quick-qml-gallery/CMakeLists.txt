@@ -59,6 +59,7 @@ set(smoke_quick_qml_extra_args
         selftest.cpp
         checks_quickitems.cpp
         checks_scenegraph.cpp
+        checks_scenegraph2.cpp
         checks_native_textures.cpp
         checks_wayland_quick.cpp
         qml.qrc

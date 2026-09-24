@@ -41,11 +41,14 @@ smoke_add_app(qt-selftest
         checks_wayland_live.cpp
         checks_iot.cpp
         checks_qt6_core.cpp
+        checks_core5compat.cpp
         checks_dbus.cpp
         checks_platform_extras.cpp
+        checks_rhi.cpp
         checks_qt6_modules.cpp
         checks_shadertools.cpp
         checks_qt6_qtbase.cpp
+        checks_qt6_qtbase2.cpp
         checks_location2.cpp
         checks_declarative1.cpp
         checks_multimedia2.cpp

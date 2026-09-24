@@ -22,6 +22,8 @@ smoke_add_app(gl-heavy-gallery
         charts_selftest.cpp
         datavis_gallery.cpp
         datavis_selftest.cpp
+        qt6_views_and_graphs.cpp
+        qt6_graphs_widgets.cpp
         ../common/smokecheck.h
         gl-heavy.h
         glcaps.h

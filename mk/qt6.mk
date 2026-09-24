@@ -14,6 +14,7 @@ QT6_SERIES := $(basename $(QT6_VERSION))
 QT6_HOST_IMAGE := qt6-host$(LICENSE_SUFFIX)
 QT6_WIN_AMD64_IMAGE := qt6-win-amd64$(LICENSE_SUFFIX)
 QT6_WIN_ARM64_IMAGE := qt6-win-arm64$(LICENSE_SUFFIX)
+QT6_LINUX_AMD64_IMAGE := qt6-linux-amd64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
 # scripts/fetch/qt6-fetch-source.py finds the archive and stores it under this
@@ -58,6 +59,11 @@ qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) qt6-host
 qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
+# glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
+# image.
+qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
+
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
 qt6-host-smoke:
@@ -81,6 +87,9 @@ QT6_COLLECT_EXE := find . -name "*.exe" ! -name "a.exe" -exec cp {} /out/ \;
 QT6_COLLECT_ELF := find . -maxdepth 2 -type f -executable ! -name "*.so" -exec cp {} /out/ \;
 QT6_COLLECT_APP := find . -maxdepth 2 -type d -name "*.app" -exec cp -r {} /out/ \; ; find . -maxdepth 2 -type f -executable ! -name "*.dylib" ! -name "*.qml" -exec cp {} /out/ \;
 
+# Xvfb gives Qt Quick 3D a real GLX context; 24-bit because CentOS 7's Mesa has
+# no GLX configuration for xvfb-run's default 8 bits.
+QT6_RUN_OFFSCREEN := cd /out && xvfb-run -a -s "-screen 0 1280x1024x24" env QT_QPA_PLATFORM=offscreen ./smoke-runner
 QT6_RUN_NONE := true
 
 qt6-win-amd64-smoke: QT6_SMOKE_TARGET := win-amd64
@@ -103,7 +112,17 @@ qt6-win-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-win-arm64-smoke:
 	$(qt6-build-smoke)
 
+qt6-linux-amd64-smoke: QT6_SMOKE_TARGET := linux-amd64
+qt6-linux-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_AMD64_IMAGE)
+qt6-linux-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-amd64
+qt6-linux-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON
+qt6-linux-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_ELF)
+qt6-linux-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_OFFSCREEN)
+qt6-linux-amd64-smoke:
+	$(qt6-build-smoke)
+
 QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 
 $(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,QT6_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,QT6_IMAGE_CONFIG))

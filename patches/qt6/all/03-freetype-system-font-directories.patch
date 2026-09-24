@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Without fontconfig, a static Qt application on Linux finds no fonts.
+#
+# QFreeTypeFontDatabase reads only QT_QPA_FONTDIR or <Qt libraries>/fonts,
+# and a statically linked application has no such directory. The Ubuntu 18.04
+# build uses Qt's bundled FreeType, which rules out fontconfig, so every text
+# rendered from it was missing on an ordinary desktop (forward check
+# 2026-10-04: font/metrics failed on every distribution without
+# QT_QPA_FONTDIR). When that variable is unset and the directory is absent,
+# scan the system and user font directories recursively. Builds with
+# fontconfig override this function and are unaffected. Applies to pristine
+# Qt 6.8.4.
+diff --git a/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp b/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp
+index 018e590..fcbbc72 100644
+--- a/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp
++++ b/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp
+@@ -9,6 +9,7 @@
+ #include <QtCore/QFile>
+ #include <QtCore/QLibraryInfo>
+ #include <QtCore/QDir>
++#include <QtCore/QDirIterator>
+ #include <QtCore/QtEndian>
+ #include <QtCore/QLoggingCategory>
+ #include <QtCore/QUuid>
+@@ -35,6 +36,36 @@ void QFreeTypeFontDatabase::populateFontDatabase()
+     QString fontpath = fontDir();
+     QDir dir(fontpath);
+ 
++#if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN) && !defined(Q_OS_ANDROID)
++    // A static application without fontconfig has no Qt library directory with
++    // fonts next to it. Unless QT_QPA_FONTDIR names a directory, read the
++    // system's font directories instead of leaving the database empty.
++    if (!dir.exists() && qEnvironmentVariableIsEmpty("QT_QPA_FONTDIR")) {
++        static const QString systemFilters[] = {
++            u"*.ttf"_s, u"*.ttc"_s, u"*.otf"_s, u"*.pfa"_s, u"*.pfb"_s,
++        };
++        const QString home = QDir::homePath();
++        QString dataHome = qEnvironmentVariable("XDG_DATA_HOME");
++        if (dataHome.isEmpty())
++            dataHome = home + "/.local/share"_L1;
++        const QString roots[] = {
++            u"/usr/share/fonts"_s, u"/usr/local/share/fonts"_s,
++            dataHome + "/fonts"_L1, home + "/.fonts"_L1,
++        };
++        bool found = false;
++        for (const QString &root : roots) {
++            QDirIterator it(root, QStringList::fromReadOnlyData(systemFilters), QDir::Files,
++                            QDirIterator::Subdirectories | QDirIterator::FollowSymlinks);
++            while (it.hasNext()) {
++                QFreeTypeFontDatabase::addTTFile(QByteArray(), QFile::encodeName(it.next()));
++                found = true;
++            }
++        }
++        if (found)
++            return;
++    }
++#endif
++
+     if (!dir.exists()) {
+         qWarning("QFontDatabase: Cannot find font directory %s.\n"
+                  "Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.",

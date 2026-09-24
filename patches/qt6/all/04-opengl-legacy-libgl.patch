@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Linux: link the legacy libGL.so.1 instead of GLVND's libOpenGL.so.0.
+#
+# CMake's FindOpenGL prefers GLVND, so Qt 6 applications needed
+# libOpenGL.so.0 and libGLX.so.0. libOpenGL.so.0 is a separate package that
+# a stock RHEL/CentOS 7.6 (libglvnd-opengl) and Ubuntu 18.04 (libopengl0) do
+# not install, so the applications failed to start there until it was
+# added. Qt 5 links libGL.so.1, which every Mesa desktop has.
+# FindWrapOpenGL.cmake now asks for the legacy library on Linux unless the
+# project chose otherwise; it is installed with Qt, so applications built
+# against the SDK follow it too. Applies to pristine Qt 6.8.4.
+diff --git a/qtbase/cmake/FindWrapOpenGL.cmake b/qtbase/cmake/FindWrapOpenGL.cmake
+--- a/qtbase/cmake/FindWrapOpenGL.cmake
++++ b/qtbase/cmake/FindWrapOpenGL.cmake
+@@ -10,6 +10,16 @@
+ 
+ set(WrapOpenGL_FOUND OFF)
+ 
++# Link the legacy libGL.so.1 on Linux, as Qt 5 does, rather than GLVND's
++# libOpenGL.so.0 + libGLX.so.0. libGL.so.1 is on every Mesa desktop;
++# libOpenGL.so.0 is a separate package that RHEL 7 (libglvnd-opengl) and
++# Ubuntu 18.04 (libopengl0) do not install by default. This file is
++# installed with Qt, so applications linked against it get the same choice;
++# a project can still set OpenGL_GL_PREFERENCE=GLVND itself.
++if(UNIX AND NOT APPLE AND NOT DEFINED OpenGL_GL_PREFERENCE)
++    set(OpenGL_GL_PREFERENCE LEGACY)
++endif()
++
+ find_package(OpenGL ${WrapOpenGL_FIND_VERSION})
+ 
+ if (OpenGL_FOUND)

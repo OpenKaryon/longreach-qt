@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QSystemTrayIcon crashes when no D-Bus session bus is reachable.
+#
+# On Linux the KDE and GTK platform themes create a QDBusMenuConnection for
+# the tray. Its constructor calls interface()->isServiceRegistered() on the
+# session bus, and interface() is null when that bus does not exist: X11
+# forwarded over SSH, minimal window managers without D-Bus, kiosks and test
+# containers. Every application that creates a tray icon then segfaults.
+# Found by the forward check on 2026-10-04 (widgets-gallery,
+# docs/results/linux-forward-20261004.json). With the check, no bus
+# means no StatusNotifierWatcher, so Qt falls back as for a desktop without a
+# tray. Applies to pristine Qt 6.8.4.
+diff --git a/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp b/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp
+index 1023b16..dba0887 100644
+--- a/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp
++++ b/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp
+@@ -44,7 +44,9 @@ QDBusMenuConnection::QDBusMenuConnection(QObject *parent, const QString &service
+ {
+ #ifndef QT_NO_SYSTEMTRAYICON
+     // Start monitoring if any known tray-related services are registered.
+-    if (m_connection.interface()->isServiceRegistered(StatusNotifierWatcherService))
++    // Without a session bus interface() is null; there is no tray then.
++    if (m_connection.interface()
++        && m_connection.interface()->isServiceRegistered(StatusNotifierWatcherService))
+         m_watcherRegistered = true;
+     else
+         qCDebug(qLcMenu) << "failed to find service" << StatusNotifierWatcherService;

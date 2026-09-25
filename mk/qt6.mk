@@ -15,6 +15,7 @@ QT6_HOST_IMAGE := qt6-host$(LICENSE_SUFFIX)
 QT6_WIN_AMD64_IMAGE := qt6-win-amd64$(LICENSE_SUFFIX)
 QT6_WIN_ARM64_IMAGE := qt6-win-arm64$(LICENSE_SUFFIX)
 QT6_LINUX_AMD64_IMAGE := qt6-linux-amd64$(LICENSE_SUFFIX)
+QT6_LINUX_ARM64_IMAGE := qt6-linux-arm64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
 # scripts/fetch/qt6-fetch-source.py finds the archive and stores it under this
@@ -63,6 +64,9 @@ qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) qt6-host
 # image.
 qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
+
+qt6-linux-arm64: $(QT6_ARCHIVE_PATH) qt6-host
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
@@ -121,8 +125,17 @@ qt6-linux-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_OFFSCREEN)
 qt6-linux-amd64-smoke:
 	$(qt6-build-smoke)
 
+qt6-linux-arm64-smoke: QT6_SMOKE_TARGET := linux-arm64
+qt6-linux-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_ARM64_IMAGE)
+qt6-linux-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-arm64
+qt6-linux-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_ELF)
+qt6-linux-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
+qt6-linux-arm64-smoke:
+	$(qt6-build-smoke)
+
 QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 
 $(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,QT6_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,QT6_IMAGE_CONFIG))

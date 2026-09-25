@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.15: the bundled OpenXR loader uses its POSIX file system
+# code; libc++'s std::filesystem needs 10.15.
+#
+diff --git a/qtquick3d/src/3rdparty/openxr/CMakeLists.txt b/qtquick3d/src/3rdparty/openxr/CMakeLists.txt
+--- a/qtquick3d/src/3rdparty/openxr/CMakeLists.txt
++++ b/qtquick3d/src/3rdparty/openxr/CMakeLists.txt
+@@ -99,5 +99,11 @@ qt_internal_extend_target(BundledOpenXR CONDITION APPLE
+         XR_OS_APPLE
+ )
+ 
++# libc++ std::filesystem is unavailable before macOS 10.15. The bundled
++# OpenXR loader already has a POSIX implementation for older targets.
++if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 10.15)
++    target_compile_definitions(BundledOpenXR PRIVATE DISABLE_STD_FILESYSTEM)
++endif()
++
+ qt_disable_warnings(BundledOpenXR)
+ qt_set_symbol_visibility_hidden(BundledOpenXR)

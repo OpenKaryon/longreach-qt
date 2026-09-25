@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 12: no safe-area insets (NSScreen safeAreaInsets is 12).
+#
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -316,2 +316,4 @@ QMargins QCocoaWindow::safeAreaMargins() const
+     auto screenRect = m_view.window.screen.frame;
+-    auto screenInsets = m_view.window.screen.safeAreaInsets;
++    NSEdgeInsets screenInsets = {};
++    if (@available(macOS 12.0, *))
++        screenInsets = m_view.window.screen.safeAreaInsets;

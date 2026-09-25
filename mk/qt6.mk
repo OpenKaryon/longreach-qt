@@ -16,6 +16,8 @@ QT6_WIN_AMD64_IMAGE := qt6-win-amd64$(LICENSE_SUFFIX)
 QT6_WIN_ARM64_IMAGE := qt6-win-arm64$(LICENSE_SUFFIX)
 QT6_LINUX_AMD64_IMAGE := qt6-linux-amd64$(LICENSE_SUFFIX)
 QT6_LINUX_ARM64_IMAGE := qt6-linux-arm64$(LICENSE_SUFFIX)
+QT6_MACOS_AMD64_IMAGE := qt6-macos-amd64$(LICENSE_SUFFIX)
+QT6_MACOS_ARM64_IMAGE := qt6-macos-arm64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
 # scripts/fetch/qt6-fetch-source.py finds the archive and stores it under this
@@ -29,6 +31,20 @@ QT6_WIN7_LLVM_MINGW_ARCHIVE := llvm-mingw-$(LLVM_MINGW_VERSION)-msvcrt-ubuntu-20
 QT6_WIN7_LLVM_MINGW_PATH := $(DOWNLOAD_DIR)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
 QT6_WIN7_LLVM_MINGW_SHA256 := eb878636e95c358452e4f4c95f032d81360096d0f1cd8ab6d24d5d09ca481372
 QT6_WIN7_LLVM_MINGW_URL := https://github.com/mstorsjo/llvm-mingw/releases/download/$(LLVM_MINGW_VERSION)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
+
+# macOS floors: 10.13 on Intel, 11.0 on Apple silicon (Qt 6.8 asks for 12;
+# patches/qt6/macos takes it down).
+QT6_MACOS_SDK_VERSION ?= 14.0
+QT6_MACOS_DEPLOYMENT_TARGET ?= 10.13
+QT6_MACOS_SDK := MacOSX$(QT6_MACOS_SDK_VERSION).sdk.tar.xz
+QT6_MACOS_SDK_URL ?= https://github.com/joseluisq/macosx-sdks/releases/download/$(QT6_MACOS_SDK_VERSION)/$(QT6_MACOS_SDK)
+QT6_MACOS_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
+QT6_MACOS_OSXCROSS_REF ?= $(OSXCROSS_REF)
+QT6_MACOS_ARM64_SDK_VERSION ?= 14.0
+QT6_MACOS_ARM64_DEPLOYMENT_TARGET ?= 11.0
+QT6_MACOS_ARM64_SDK := MacOSX$(QT6_MACOS_ARM64_SDK_VERSION).sdk.tar.xz
+QT6_MACOS_ARM64_SDK_URL ?= https://github.com/joseluisq/macosx-sdks/releases/download/$(QT6_MACOS_ARM64_SDK_VERSION)/$(QT6_MACOS_ARM64_SDK)
+QT6_MACOS_ARM64_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
 
 .PHONY: download-qt6 qt6-host \
         qt6-win-amd64 qt6-win-arm64 qt6-linux-amd64 qt6-linux-arm64 \
@@ -72,6 +88,13 @@ qt6-linux-arm64: $(QT6_ARCHIVE_PATH) qt6-host
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
 qt6-host-smoke:
 	docker run --rm --entrypoint sh 	    -v "$(CURDIR)/tests:/src:ro" 	    -v "$(CURDIR)/scripts/build/qt6-host-smoke.sh:/qt6-host-smoke.sh:ro" 	    $(QT6_HOST_IMAGE) -c "PARALLEL_JOBS=$(PARALLEL_JOBS) sh /qt6-host-smoke.sh"
+
+# A repacked macOS SDK from a GitHub release, pinned by SHA256.
+qt6-macos-amd64: $(QT6_ARCHIVE_PATH) qt6-host
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
+
+qt6-macos-arm64: $(QT6_ARCHIVE_PATH) qt6-host
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_ARM64_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
 
 # qt6-<target>-smoke builds tests/ against the image into artifacts/qt6-<target>/
 # and, for Linux amd64, runs it there; the cross-built suites are run with
@@ -133,9 +156,29 @@ qt6-linux-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-linux-arm64-smoke:
 	$(qt6-build-smoke)
 
+qt6-macos-amd64-smoke: QT6_SMOKE_TARGET := macos-amd64
+qt6-macos-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_AMD64_IMAGE)
+qt6-macos-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-amd64
+qt6-macos-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET)
+qt6-macos-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_APP)
+qt6-macos-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
+qt6-macos-amd64-smoke:
+	$(qt6-build-smoke)
+
+qt6-macos-arm64-smoke: QT6_SMOKE_TARGET := macos-arm64
+qt6-macos-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_ARM64_IMAGE)
+qt6-macos-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-arm64
+qt6-macos-arm64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET)
+qt6-macos-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_APP)
+qt6-macos-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
+qt6-macos-arm64-smoke:
+	$(qt6-build-smoke)
+
 QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 
 $(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,QT6_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,QT6_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,QT6_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt6-macos-arm64,qt6-macos-arm64,QT6_MACOS_ARM64_IMAGE,qt6-macos-arm64-smoke,,QT6_IMAGE_CONFIG))

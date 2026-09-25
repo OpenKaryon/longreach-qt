@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.14: QMetaType allocates over-aligned types with
+# qMallocAligned, since libc++ has no aligned operator new there.
+#
+diff --git a/qtbase/src/corelib/kernel/qmetatype.cpp b/qtbase/src/corelib/kernel/qmetatype.cpp
+index 7a5dbe0..008075b 100644
+--- a/qtbase/src/corelib/kernel/qmetatype.cpp
++++ b/qtbase/src/corelib/kernel/qmetatype.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include "qmetatype.h"
+ #include "qmetatype_p.h"
++#include "qmalloc.h"
+ #include "qobjectdefs.h"
+ #include "qdatetime.h"
+ #include "qbytearray.h"
+@@ -74,7 +75,11 @@ struct QMetaTypeDeleter
+     void operator()(void *data)
+     {
+         if (iface->alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
++#if defined(Q_OS_MACOS) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101400
++            qFreeAligned(data);
++#else
+             operator delete(data, std::align_val_t(iface->alignment));
++#endif
+         } else {
+             operator delete(data);
+         }
+@@ -653,10 +658,18 @@ void *QMetaType::create(const void *copy) const
+         return nullptr;
+ 
+     std::unique_ptr<void, QMetaTypeDeleter> where(nullptr, {d_ptr});
+-    if (d_ptr->alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
++    if (d_ptr->alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
++#if defined(Q_OS_MACOS) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101400
++        void *aligned = qMallocAligned(d_ptr->size, d_ptr->alignment);
++        if (!aligned)
++            throw std::bad_alloc();
++        where.reset(aligned);
++#else
+         where.reset(operator new(d_ptr->size, std::align_val_t(d_ptr->alignment)));
+-    else
++#endif
++    } else {
+         where.reset(operator new(d_ptr->size));
++    }
+ 
+     QtMetaTypePrivate::construct(d_ptr, where.get(), copy);
+     return where.release();

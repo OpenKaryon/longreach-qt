@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 12: kIOMainPortDefault is MACH_PORT_NULL there
+# (kIOMasterPortDefault before the rename).
+#
+diff --git a/qtbase/src/corelib/global/qsysinfo.cpp b/qtbase/src/corelib/global/qsysinfo.cpp
+--- a/qtbase/src/corelib/global/qsysinfo.cpp
++++ b/qtbase/src/corelib/global/qsysinfo.cpp
+@@ -1019 +1019 @@ QByteArray QSysInfo::machineUniqueId()
+-    io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
++    io_service_t service = IOServiceGetMatchingService(MACH_PORT_NULL, IOServiceMatching("IOPlatformExpertDevice"));
+diff --git a/qtbase/src/corelib/kernel/qcore_mac.mm b/qtbase/src/corelib/kernel/qcore_mac.mm
+--- a/qtbase/src/corelib/kernel/qcore_mac.mm
++++ b/qtbase/src/corelib/kernel/qcore_mac.mm
+@@ -349 +349 @@ std::optional<uint32_t> qt_mac_sipConfiguration()
+-        QIOType<io_registry_entry_t> nvram = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/options");
++        QIOType<io_registry_entry_t> nvram = IORegistryEntryFromPath(MACH_PORT_NULL, "IODeviceTree:/options");
+diff --git a/qtserialport/src/serialport/qserialportinfo_osx.cpp b/qtserialport/src/serialport/qserialportinfo_osx.cpp
+--- a/qtserialport/src/serialport/qserialportinfo_osx.cpp
++++ b/qtserialport/src/serialport/qserialportinfo_osx.cpp
+@@ -126 +126 @@ QList<QSerialPortInfo> QSerialPortInfo::availablePorts()
+-    if (::IOServiceGetMatchingServices(kIOMainPortDefault, serialPortDictionary,
++    if (::IOServiceGetMatchingServices(MACH_PORT_NULL, serialPortDictionary,

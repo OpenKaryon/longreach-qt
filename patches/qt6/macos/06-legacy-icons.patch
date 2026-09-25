@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 11: the generic application icon by file type
+# (iconForContentType: is 11), and no SF Symbols (imageWithSystemSymbolName:).
+#
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaintegration.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaintegration.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaintegration.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaintegration.mm
+@@ -449,8 +449,12 @@
+         return;
+ 
+     static bool hasDefaultApplicationIcon = [](){
+-        NSImage *genericApplicationIcon = [NSWorkspace.sharedWorkspace
+-            iconForContentType:UTTypeApplicationBundle];
++        NSImage *genericApplicationIcon = nil;
++        if (@available(macOS 11.0, *))
++            genericApplicationIcon = [NSWorkspace.sharedWorkspace
++                iconForContentType:UTTypeApplicationBundle];
++        else
++            genericApplicationIcon = [NSWorkspace.sharedWorkspace iconForFileType:@"app"];
+         NSImage *applicationIcon = [NSImage imageNamed:NSImageNameApplicationIcon];
+ 
+         NSRect rect = NSMakeRect(0, 0, 32, 32);
+diff --git a/qtbase/src/gui/platform/darwin/qappleiconengine.mm b/qtbase/src/gui/platform/darwin/qappleiconengine.mm
+--- a/qtbase/src/gui/platform/darwin/qappleiconengine.mm
++++ b/qtbase/src/gui/platform/darwin/qappleiconengine.mm
+@@ -279,7 +279,9 @@
+     });
+     NSString *systemIconName = it != std::end(iconMap) ? it->second : iconName.toNSString();
+ #if defined(Q_OS_MACOS)
+-    return [NSImage imageWithSystemSymbolName:systemIconName accessibilityDescription:nil];
++    if (@available(macOS 11.0, *))
++        return [NSImage imageWithSystemSymbolName:systemIconName accessibilityDescription:nil];
++    return nil; // SF Symbols do not exist on older macOS versions.
+ #elif defined(QT_PLATFORM_UIKIT)
+     return [UIImage systemImageNamed:systemIconName];
+ #endif

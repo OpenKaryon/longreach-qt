@@ -1,0 +1,211 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.15: camera discovery without AVCaptureDeviceDiscoverySession
+# (the default camera first, as the newer path does), and Metal frame capture
+# only where it exists.
+#
+diff --git a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
+--- a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
++++ b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
+@@ -31,6 +31,9 @@
+ // Thread-safe
+ [[nodiscard]] QList<AVCaptureDevice*> qEnumerateAVCaptureDevices()
+ {
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *)) {
++#endif
+     // List of all capture device types that we want to discover. Seems that this is the
+     // only way to discover all types. This filter is mandatory and has no "unspecified"
+     // option like AVCaptureDevicePosition(Unspecified) has. Order of the list is important
+@@ -78,6 +81,21 @@
+     for (AVCaptureDevice* device in discoverySession.devices)
+         avCaptureDevices.push_back(device);
+     return avCaptureDevices;
++#ifdef Q_OS_MACOS
++    } else {
++        // Discovery sessions were introduced on macOS after High Sierra.
++        // Keep the system's default camera first, as the newer path does.
++        QList<AVCaptureDevice *> devices;
++        AVCaptureDevice *defaultDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
++        if (defaultDevice)
++            devices.push_back(defaultDevice);
++        for (AVCaptureDevice *device in [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
++            if (!defaultDevice || ![device.uniqueID isEqualToString:defaultDevice.uniqueID])
++                devices.push_back(device);
++        }
++        return devices;
++    }
++#endif
+ }
+ 
+ // Given a list of AVCaptureDevices, returns a list of all the QCameraDevices
+diff --git a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm b/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
+--- a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
++++ b/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
+@@ -96,6 +96,28 @@
+ }
+ 
+ #endif // defined(Q_OS_IOS)
++
++bool qt_flash_available(AVCaptureDevice *captureDevice)
++{
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isFlashAvailable];
++    return captureDevice.hasFlash;
++#else
++    return [captureDevice isFlashAvailable];
++#endif
++}
++
++bool qt_torch_available(AVCaptureDevice *captureDevice)
++{
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isTorchAvailable];
++    return captureDevice.hasTorch;
++#else
++    return [captureDevice isTorchAvailable];
++#endif
++}
+ 
+ } // Unnamed namespace.
+ 
+@@ -631,7 +653,7 @@
+     // AVCaptureDevice's docs:
+     // "The flash may become unavailable if, for example,
+     //  the device overheats and needs to cool off."
+-    return [captureDevice isFlashAvailable];
++    return qt_flash_available(captureDevice);
+ }
+ 
+ void QAVFCameraBase::setTorchMode(QCamera::TorchMode mode)
+@@ -704,7 +726,15 @@
+         return false;
+ 
+     AVCaptureDevice *captureDevice = device();
+-    return captureDevice && [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++    if (!captureDevice)
++        return false;
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++    return false;
++#else
++    return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++#endif
+ }
+ 
+ void QAVFCameraBase::applyFlashSettings()
+@@ -732,7 +762,7 @@
+         if (mode == QCamera::FlashOff) {
+             setAvFlashModeSafe(AVCaptureFlashModeOff);
+         } else {
+-            if ([captureDevice isFlashAvailable]) {
++            if (qt_flash_available(captureDevice)) {
+                 if (mode == QCamera::FlashOn)
+                     setAvFlashModeSafe(AVCaptureFlashModeOn);
+                 else if (mode == QCamera::FlashAuto)
+@@ -756,7 +786,7 @@
+         if (mode == QCamera::TorchOff) {
+             setAvTorchModeSafe(AVCaptureTorchModeOff);
+         } else {
+-            if ([captureDevice isTorchAvailable]) {
++            if (qt_torch_available(captureDevice)) {
+                 if (mode == QCamera::TorchOn)
+                     setAvTorchModeSafe(AVCaptureTorchModeOn);
+                 else if (mode == QCamera::TorchAuto)
+diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
+--- a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
++++ b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
+@@ -22,7 +22,8 @@
+ {
+     qputenv("METAL_CAPTURE_ENABLED", QByteArrayLiteral("1"));
+ 
+-    m_captureDescriptor = [MTLCaptureDescriptor new];
++    if (@available(macOS 10.15, *))
++        m_captureDescriptor = [MTLCaptureDescriptor new];
+ }
+ 
+ QGraphicsFrameCaptureMetal::~QGraphicsFrameCaptureMetal()
+@@ -41,37 +42,39 @@
+     if (!rhi)
+         return;
+ 
+-    QRhi::Implementation backend = rhi->backend();
+-    const QRhiNativeHandles *nh = rhi->nativeHandles();
++    if (@available(macOS 10.15, *)) {
++        QRhi::Implementation backend = rhi->backend();
++        const QRhiNativeHandles *nh = rhi->nativeHandles();
+ 
+-    switch (backend) {
+-    case QRhi::Implementation::Metal: {
+-        const  QRhiMetalNativeHandles *mtlnh = static_cast<const QRhiMetalNativeHandles *>(nh);
+-        if (mtlnh->cmdQueue) {
+-            m_captureDescriptor.captureObject = mtlnh->cmdQueue;
+-        } else if (mtlnh->dev) {
+-            m_captureDescriptor.captureObject = mtlnh->dev;
+-        } else {
+-            qCWarning(lcGraphicsFrameCapture) << "No valid Metal Device or Metal Command Queue found";
++        switch (backend) {
++        case QRhi::Implementation::Metal: {
++            const QRhiMetalNativeHandles *mtlnh = static_cast<const QRhiMetalNativeHandles *>(nh);
++            if (mtlnh->cmdQueue) {
++                m_captureDescriptor.captureObject = mtlnh->cmdQueue;
++            } else if (mtlnh->dev) {
++                m_captureDescriptor.captureObject = mtlnh->dev;
++            } else {
++                qCWarning(lcGraphicsFrameCapture) << "No valid Metal Device or Metal Command Queue found";
++                m_initialized = false;
++                return;
++            }
++            break;
++        }
++        default: {
++            qCWarning(lcGraphicsFrameCapture) << "Invalid handles were provided. MTLCaptureManager works only with Metal API";
+             m_initialized = false;
+             return;
++            break;
+         }
+-        break;
+-    }
+-    default: {
+-        qCWarning(lcGraphicsFrameCapture) << "Invalid handles were provided. MTLCaptureManager works only with Metal API";
+-        m_initialized = false;
+-        return;
+-        break;
+-    }
+-    }
++        }
+ 
+-    if (!m_captureManager) {
+-        m_captureManager = MTLCaptureManager.sharedCaptureManager;
+-        bool supportDocs = [m_captureManager supportsDestination:MTLCaptureDestinationGPUTraceDocument];
+-        if (supportDocs) {
+-            m_captureDescriptor.destination = MTLCaptureDestinationGPUTraceDocument;
+-            m_initialized = true;
++        if (!m_captureManager) {
++            m_captureManager = MTLCaptureManager.sharedCaptureManager;
++            bool supportDocs = [m_captureManager supportsDestination:MTLCaptureDestinationGPUTraceDocument];
++            if (supportDocs) {
++                m_captureDescriptor.destination = MTLCaptureDestinationGPUTraceDocument;
++                m_initialized = true;
++            }
+         }
+     }
+ }
+@@ -91,8 +94,10 @@
+ 
+     updateCaptureFileName();
+     NSError *error;
+-    if (![m_captureManager startCaptureWithDescriptor:m_captureDescriptor error:&error]) {
+-        QString errorMsg = QString::fromNSString(error.localizedDescription);
+-        qCWarning(lcGraphicsFrameCapture, "Failed to start capture : %s", qPrintable(errorMsg));
++    if (@available(macOS 10.15, *)) {
++        if (![m_captureManager startCaptureWithDescriptor:m_captureDescriptor error:&error]) {
++            QString errorMsg = QString::fromNSString(error.localizedDescription);
++            qCWarning(lcGraphicsFrameCapture, "Failed to start capture : %s", qPrintable(errorMsg));
++        }
+     }
+ }

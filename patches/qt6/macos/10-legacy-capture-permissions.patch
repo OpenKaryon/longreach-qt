@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.14: camera and microphone permissions are granted, as
+# AVCaptureDevice has no authorization API there (none is asked for).
+#
+diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
+--- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
++++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
+@@ -11,8 +11,12 @@
+ @implementation QDarwinCameraPermissionHandler
+ - (Qt::PermissionStatus)checkPermission:(QPermission)permission
+ {
+-    const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+-    return nativeStatusToQtStatus(status);
++    if (@available(macOS 10.14, *)) {
++        const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
++        return nativeStatusToQtStatus(status);
++    }
++    Q_UNUSED(permission);
++    return Qt::PermissionStatus::Granted;
+ }
+ 
+ - (QStringList)usageDescriptionsFor:(QPermission)permission
+@@ -29,12 +33,17 @@
+ @implementation QDarwinCameraPermissionHandler (Request)
+ - (void)requestPermission:(QPermission)permission withCallback:(PermissionCallback)callback
+ {
+-    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted)
+-    {
+-        Q_UNUSED(granted); // We use status instead
+-        const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+-        callback(nativeStatusToQtStatus(status));
+-    }];
++    if (@available(macOS 10.14, *)) {
++        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted)
++        {
++            Q_UNUSED(granted); // We use status instead
++            const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
++            callback(nativeStatusToQtStatus(status));
++        }];
++    } else {
++        Q_UNUSED(permission);
++        callback(Qt::PermissionStatus::Granted);
++    }
+ }
+ @end
+ 
+diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
+--- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
++++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
+@@ -11,8 +11,12 @@
+ @implementation QDarwinMicrophonePermissionHandler
+ - (Qt::PermissionStatus)checkPermission:(QPermission)permission
+ {
+-    const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+-    return nativeStatusToQtStatus(status);
++    if (@available(macOS 10.14, *)) {
++        const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
++        return nativeStatusToQtStatus(status);
++    }
++    Q_UNUSED(permission);
++    return Qt::PermissionStatus::Granted;
+ }
+ 
+ - (QStringList)usageDescriptionsFor:(QPermission)permission
+@@ -29,11 +33,16 @@
+ @implementation QDarwinMicrophonePermissionHandler (Request)
+ - (void)requestPermission:(QPermission)permission withCallback:(PermissionCallback)callback
+ {
+-    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted)
+-    {
+-        Q_UNUSED(granted); // We use status instead
+-        const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+-        callback(nativeStatusToQtStatus(status));
+-    }];
++    if (@available(macOS 10.14, *)) {
++        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted)
++        {
++            Q_UNUSED(granted); // We use status instead
++            const auto status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
++            callback(nativeStatusToQtStatus(status));
++        }];
++    } else {
++        Q_UNUSED(permission);
++        callback(Qt::PermissionStatus::Granted);
++    }
+ }
+ @end

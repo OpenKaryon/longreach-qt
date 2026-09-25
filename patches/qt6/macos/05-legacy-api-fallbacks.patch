@@ -1,0 +1,257 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 11: file system, bundle-conformance, file dialog and screen
+# queries through the older APIs (CoreServices instead of
+# UniformTypeIdentifiers, among others), selected at run time.
+#
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+--- a/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_unix.cpp
+@@ -124,9 +124,23 @@
+ 
+     if (suffix.length() > 0) {
+         // First step: is it a bundle?
++#ifdef Q_OS_MACOS
++        if (__builtin_available(macOS 11.0, *)) {
++#endif
+         const auto *utType = [UTType typeWithFilenameExtension:suffix.toNSString()];
+         if ([utType conformsToType:UTTypeBundle])
+             return true;
++#ifdef Q_OS_MACOS
++        } else {
++            // UniformTypeIdentifiers is new in macOS 11. CoreServices has
++            // the same bundle-conformance query on older systems.
++            QCFType<CFStringRef> extension = suffix.toCFString();
++            QCFType<CFStringRef> legacyType = UTTypeCreatePreferredIdentifierForTag(
++                    kUTTagClassFilenameExtension, extension, nullptr);
++            if (legacyType && UTTypeConformsTo(legacyType, kUTTypeBundle))
++                return true;
++        }
++#endif
+ 
+         // Second step: check if an application knows the package type
+         QCFType<CFStringRef> path = entry.filePath().toCFString();
+diff --git a/qtbase/src/corelib/kernel/qcore_mac.mm b/qtbase/src/corelib/kernel/qcore_mac.mm
+--- a/qtbase/src/corelib/kernel/qcore_mac.mm
++++ b/qtbase/src/corelib/kernel/qcore_mac.mm
+@@ -323,9 +323,12 @@
+ #ifdef Q_OS_MACOS
+ bool qt_mac_applicationIsInDarkMode()
+ {
+-    auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
+-            @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+-    return [appearance isEqualToString:NSAppearanceNameDarkAqua];
++    if (__builtin_available(macOS 10.14, *)) {
++        auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
++                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
++        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
++    }
++    return false;
+ }
+ 
+ bool qt_mac_runningUnderRosetta()
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+@@ -37,6 +37,41 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++static NSColor *qt_mac_accentColor()
++{
++    if (__builtin_available(macOS 10.14, *))
++        return [NSColor controlAccentColor];
++    return [NSColor selectedControlColor];
++}
++
++static NSColor *qt_mac_inactiveSelectionColor()
++{
++    if (__builtin_available(macOS 10.14, *))
++        return [NSColor unemphasizedSelectedContentBackgroundColor];
++    return [NSColor secondarySelectedControlColor];
++}
++
++static NSColor *qt_mac_inactiveSelectionTextColor()
++{
++    if (__builtin_available(macOS 10.14, *))
++        return [NSColor unemphasizedSelectedTextColor];
++    return [NSColor alternateSelectedControlTextColor];
++}
++
++static NSArray<NSColor *> *qt_mac_alternatingBackgroundColors()
++{
++    if (__builtin_available(macOS 10.14, *))
++        return [NSColor alternatingContentBackgroundColors];
++    return [NSColor controlAlternatingRowBackgroundColors];
++}
++
++static NSColor *qt_mac_selectedContentBackgroundColor()
++{
++    if (__builtin_available(macOS 10.14, *))
++        return [NSColor selectedContentBackgroundColor];
++    return [NSColor alternateSelectedControlColor];
++}
++
+ static QPalette *qt_mac_createSystemPalette()
+ {
+     QColor qc;
+@@ -64,7 +99,7 @@
+     // System palette initialization:
+     QBrush br = qt_mac_toQBrush([NSColor selectedControlColor]);
+     palette->setBrush(QPalette::Active, QPalette::Highlight, br);
+-    const auto inactiveHighlight = qt_mac_toQBrush([NSColor unemphasizedSelectedContentBackgroundColor]);
++    const auto inactiveHighlight = qt_mac_toQBrush(qt_mac_inactiveSelectionColor());
+     palette->setBrush(QPalette::Inactive, QPalette::Highlight, inactiveHighlight);
+     palette->setBrush(QPalette::Disabled, QPalette::Highlight, inactiveHighlight);
+ 
+@@ -94,7 +129,7 @@
+     palette->setColor(QPalette::Inactive, QPalette::PlaceholderText, qc);
+     palette->setColor(QPalette::Disabled, QPalette::PlaceholderText, qc);
+ 
+-    qc = qt_mac_toQColor([NSColor controlAccentColor]);
++    qc = qt_mac_toQColor(qt_mac_accentColor());
+     palette->setColor(QPalette::Accent, qc);
+ 
+     return palette;
+@@ -155,7 +190,7 @@
+         if (mac_widget_colors[i].paletteRole == QPlatformTheme::MenuPalette
+                 || mac_widget_colors[i].paletteRole == QPlatformTheme::MenuBarPalette) {
+             // Cheap approximation for NSVisualEffectView (see deprecation note for selectedMenuItemTextColor)
+-            auto selectedMenuItemColor = [[NSColor controlAccentColor] highlightWithLevel:0.3];
++            auto selectedMenuItemColor = [qt_mac_accentColor() highlightWithLevel:0.3];
+             pal.setBrush(QPalette::Highlight, qt_mac_toQColor(selectedMenuItemColor));
+             qc = qt_mac_toQColor([NSColor labelColor]);
+             pal.setBrush(QPalette::ButtonText, qc);
+@@ -176,10 +211,10 @@
+         } else if (mac_widget_colors[i].paletteRole == QPlatformTheme::ItemViewPalette) {
+             NSArray<NSColor *> *baseColors = nil;
+             NSColor *activeHighlightColor = nil;
+-            baseColors = [NSColor alternatingContentBackgroundColors];
+-            activeHighlightColor = [NSColor selectedContentBackgroundColor];
++            baseColors = qt_mac_alternatingBackgroundColors();
++            activeHighlightColor = qt_mac_selectedContentBackgroundColor();
+             pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+-                         qt_mac_toQBrush([NSColor unemphasizedSelectedTextColor]));
++                         qt_mac_toQBrush(qt_mac_inactiveSelectionTextColor()));
+             pal.setBrush(QPalette::Base, qt_mac_toQBrush(baseColors[0]));
+             pal.setBrush(QPalette::AlternateBase, qt_mac_toQBrush(baseColors[1]));
+             pal.setBrush(QPalette::Active, QPalette::Highlight,
+@@ -482,7 +517,8 @@
+     NSAppearance *appearance = nil;
+     switch (scheme) {
+     case Qt::ColorScheme::Dark:
+-        appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
++        if (__builtin_available(macOS 10.14, *))
++            appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+         break;
+     case Qt::ColorScheme::Light:
+         appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+@@ -459,11 +459,13 @@
+     // the save panel to update and remove the extension.
+     const bool nameFieldHasExtension = m_panel.nameFieldStringValue.pathExtension.length > 0;
+     if (!m_panel.allowedFileTypes && !nameFieldHasExtension && !openpanel_cast(m_panel)) {
+-        if (!UTTypeDirectory.preferredFilenameExtension) {
+-            m_panel.allowedContentTypes = @[ UTTypeDirectory ];
+-            m_panel.allowedFileTypes = nil;
+-        } else {
+-            qWarning() << "UTTypeDirectory unexpectedly reported an extension";
++        if (__builtin_available(macOS 11.0, *)) {
++            if (!UTTypeDirectory.preferredFilenameExtension) {
++                m_panel.allowedContentTypes = @[ UTTypeDirectory ];
++                m_panel.allowedFileTypes = nil;
++            } else {
++                qWarning() << "UTTypeDirectory unexpectedly reported an extension";
++            }
+         }
+     }
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -302,11 +302,14 @@
+     // the current view (by setting additionalSafeAreaInsets). If the window
+     // uses NSWindowStyleMaskFullSizeContentView this also includes the area
+     // of the view covered by the title bar.
++    NSEdgeInsets viewInsets = {};
++    if (@available(macOS 11.0, *))
++        viewInsets = m_view.safeAreaInsets;
+     QMarginsF viewSafeAreaMargins = {
+-        m_view.safeAreaInsets.left,
+-        m_view.safeAreaInsets.top,
+-        m_view.safeAreaInsets.right,
+-        m_view.safeAreaInsets.bottom
++        viewInsets.left,
++        viewInsets.top,
++        viewInsets.right,
++        viewInsets.bottom
+     };
+ 
+     // The screen's safe area insets represent the distances from the screen's
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+@@ -242,7 +242,10 @@
+     float refresh = CGDisplayModeGetRefreshRate(displayMode);
+     m_refreshRate = refresh > 0 ? refresh : 60.0;
+     m_rotation = CGDisplayRotation(displayId);
+-    m_name = QString::fromNSString(nsScreen.localizedName);
++    if (@available(macOS 10.15, *))
++        m_name = QString::fromNSString(nsScreen.localizedName);
++    else
++        m_name = QStringLiteral("Display %1").arg(m_displayId);
+ 
+     const bool didChangeGeometry = m_geometry != previousGeometry || m_availableGeometry != previousAvailableGeometry;
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaservices.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaservices.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaservices.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaservices.mm
+@@ -42,14 +42,20 @@
+ class QCocoaColorPicker : public QPlatformServiceColorPicker
+ {
+ public:
+-    QCocoaColorPicker() : m_colorSampler([NSColorSampler new]) {}
++    QCocoaColorPicker()
++    {
++        if (@available(macOS 10.15, *))
++            m_colorSampler = [NSColorSampler new];
++    }
+     ~QCocoaColorPicker() { [m_colorSampler release]; }
+ 
+     void pickColor() override
+     {
+-        [m_colorSampler showSamplerWithSelectionHandler:^(NSColor *selectedColor) {
+-            emit colorPicked(qt_mac_toQColor(selectedColor));
+-        }];
++        if (@available(macOS 10.15, *)) {
++            [m_colorSampler showSamplerWithSelectionHandler:^(NSColor *selectedColor) {
++                emit colorPicked(qt_mac_toQColor(selectedColor));
++            }];
++        }
+     }
+ private:
+     NSColorSampler *m_colorSampler = nullptr;
+@@ -59,13 +65,18 @@
+ QPlatformServiceColorPicker *QCocoaServices::colorPicker(QWindow *parent)
+ {
+     Q_UNUSED(parent);
+-    return new QCocoaColorPicker;
++    if (@available(macOS 10.15, *))
++        return new QCocoaColorPicker;
++    return nullptr;
+ }
+ 
+ bool QCocoaServices::hasCapability(Capability capability) const
+ {
+     switch (capability) {
+-    case ColorPicking: return true;
++    case ColorPicking:
++        if (@available(macOS 10.15, *))
++            return true;
++        return false;
+     default: return false;
+     }
+ }

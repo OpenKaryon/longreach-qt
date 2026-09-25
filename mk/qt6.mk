@@ -165,6 +165,10 @@ qt6-macos-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-macos-amd64-smoke:
 	$(qt6-build-smoke)
 
+qt6-macos-amd64-audit: QT6_SMOKE_TARGET := macos-amd64
+qt6-macos-amd64-audit:
+	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_AMD64_IMAGE) -c 'sh /audit.sh $(QT6_MACOS_DEPLOYMENT_TARGET) /in/*'
+
 qt6-macos-arm64-smoke: QT6_SMOKE_TARGET := macos-arm64
 qt6-macos-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_ARM64_IMAGE)
 qt6-macos-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-arm64
@@ -173,6 +177,10 @@ qt6-macos-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_APP)
 qt6-macos-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-macos-arm64-smoke:
 	$(qt6-build-smoke)
+
+qt6-macos-arm64-audit: QT6_SMOKE_TARGET := macos-arm64
+qt6-macos-arm64-audit:
+	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_ARM64_IMAGE) -c 'MACHO_AUDIT_ARCH=arm64 sh /audit.sh $(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) /in/*'
 
 QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 

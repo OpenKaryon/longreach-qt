@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.14: the QML JIT retries mmap without the address hint and
+# then without MAP_JIT, both of which High Sierra rejects with EINVAL,
+# instead of crashing.
+#
+diff --git a/qtdeclarative/src/3rdparty/masm/wtf/OSAllocatorPosix.cpp b/qtdeclarative/src/3rdparty/masm/wtf/OSAllocatorPosix.cpp
+--- a/qtdeclarative/src/3rdparty/masm/wtf/OSAllocatorPosix.cpp
++++ b/qtdeclarative/src/3rdparty/masm/wtf/OSAllocatorPosix.cpp
+@@ -176,6 +176,16 @@
+ #endif
+ 
+     result = mmap(result, bytes, protection, flags, fd, 0);
++#if OS(DARWIN)
++    // macOS before 10.14 (measured on High Sierra 10.13.6) rejects MAP_JIT
++    // with EINVAL when an address hint is given, and for memory that is not
++    // executable. Retry the way that kernel accepts rather than CRASH().
++    if (result == MAP_FAILED && (flags & MAP_JIT)) {
++        result = mmap(nullptr, bytes, protection, flags, fd, 0);
++        if (result == MAP_FAILED)
++            result = mmap(nullptr, bytes, protection, flags & ~MAP_JIT, fd, 0);
++    }
++#endif
+     if (result == MAP_FAILED) {
+ #if ENABLE(LLINT)
+         if (executable)

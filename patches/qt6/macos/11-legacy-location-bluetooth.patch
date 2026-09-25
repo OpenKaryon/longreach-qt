@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS before 10.15: Bluetooth and location permissions without the
+# per-application authorization APIs (Catalina), and positioning without
+# their newer properties.
+#
+diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_bluetooth.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_bluetooth.mm
+--- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_bluetooth.mm
++++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_bluetooth.mm
+@@ -31,6 +31,9 @@
+ 
+ - (Qt::PermissionStatus)currentStatus
+ {
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *)) {
++#endif
+     auto status = CBCentralManager.authorization;
+     switch (status) {
+     case CBManagerAuthorizationNotDetermined:
+@@ -44,6 +47,11 @@
+ 
+     qCWarning(lcPermissions) << "Unknown permission status" << status << "detected in" << self;
+     return Qt::PermissionStatus::Denied;
++#ifdef Q_OS_MACOS
++    }
++    // The per-application Bluetooth authorization API appeared in Catalina.
++    return Qt::PermissionStatus::Granted;
++#endif
+ }
+ 
+ - (void)requestPermission:(QPermission)permission withCallback:(PermissionCallback)callback
+diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_location.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_location.mm
+--- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_location.mm
++++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_location.mm
+@@ -103,14 +103,21 @@
+ 
+ - (CLAuthorizationStatus)authorizationStatus
+ {
+-    if (self.manager)
+-        return self.manager.authorizationStatus;
++    if (self.manager) {
++#ifdef Q_OS_MACOS
++        if (@available(macOS 11.0, *))
++#endif
++            return self.manager.authorizationStatus;
++    }
+ 
+     return QT_IGNORE_DEPRECATIONS(CLLocationManager.authorizationStatus);
+ }
+ 
+ - (Qt::PermissionStatus)accuracyAuthorization:(QLocationPermission)permission
+ {
++#ifdef Q_OS_MACOS
++    if (@available(macOS 11.0, *)) {
++#endif
+     auto status = self.manager.accuracyAuthorization;
+ 
+     switch (status) {
+@@ -125,6 +132,11 @@
+ 
+     qCWarning(lcPermissions) << "Unknown accuracy status" << status << "detected in" << self;
+     return Qt::PermissionStatus::Denied;
++#ifdef Q_OS_MACOS
++    }
++    // Reduced accuracy authorization did not exist on older macOS.
++    return Qt::PermissionStatus::Granted;
++#endif
+ }
+ 
+ - (QStringList)usageDescriptionsFor:(QPermission)permission
+@@ -173,7 +185,14 @@
+         // only be called when the current authorization status is undetermined.
+         switch ([self authorizationStatus]) {
+         case kCLAuthorizationStatusNotDetermined:
++#ifdef Q_OS_MACOS
++            if (@available(macOS 10.15, *))
++#endif
+             [self.manager requestWhenInUseAuthorization];
++#ifdef Q_OS_MACOS
++            else
++                [self.manager startUpdatingLocation];
++#endif
+             break;
+         default:
+             [self deliverResult];
+@@ -188,7 +207,14 @@
+         // or authorized when in use.
+         switch ([self authorizationStatus]) {
+         case kCLAuthorizationStatusNotDetermined:
++#ifdef Q_OS_MACOS
++            if (@available(macOS 10.15, *))
++#endif
+             [self.manager requestAlwaysAuthorization];
++#ifdef Q_OS_MACOS
++            else
++                [self.manager startUpdatingLocation];
++#endif
+             break;
+ #ifdef Q_OS_IOS
+         case kCLAuthorizationStatusAuthorizedWhenInUse:
+@@ -238,6 +264,12 @@
+ 
+ - (void)deliverResult
+ {
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *)) {
++    } else {
++        [self.manager stopUpdatingLocation];
++    }
++#endif
+     auto request = m_requests.front();
+     m_requests.pop_front();
+ 
+diff --git a/qtpositioning/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm b/qtpositioning/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+--- a/qtpositioning/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
++++ b/qtpositioning/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+@@ -35,8 +35,25 @@
+     // Since Qt 6.6 the application requests the desired permissions.
+     // This delegate method is invoked always upon CLLocationManager
+     // instantiation, and later if authorization status changes.
++#ifdef Q_OS_MACOS
++    if (@available(macOS 11.0, *))
++#endif
+     m_positionInfoSource->changeAuthorizationStatus([manager authorizationStatus]);
+-}
++#ifdef Q_OS_MACOS
++    else
++        m_positionInfoSource->changeAuthorizationStatus([CLLocationManager authorizationStatus]);
++#endif
++}
++
++#ifdef Q_OS_MACOS
++- (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
++{
++    Q_UNUSED(manager);
++    if (@available(macOS 11.0, *))
++        return;
++    m_positionInfoSource->changeAuthorizationStatus(status);
++}
++#endif
+ 
+ - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation
+ {

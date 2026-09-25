@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: no os_activity log scopes below a 10.12 deployment target.
+#
+# Qt wraps Apple's os_activity in QAppleLogActivity and the
+# QT_APPLE_*_LOG_ACTIVITY macros, to group log lines under a named scope for
+# Console.app. os_activity itself dates from 10.10, but the two functions that
+# implementation calls - os_activity_scope_enter and os_activity_scope_leave -
+# are marked API_AVAILABLE(macos(10.12)) in the SDK headers. Building against
+# anything older therefore fails outright:
+#
+#   error: use of undeclared identifier 'os_activity_scope_leave'
+#   error: use of undeclared identifier '_os_activity_current'
+#
+# Note that this is a missing declaration, not an availability warning: below
+# 10.12 the symbols are not in the SDK at all, so no @available guard can reach
+# them and the block has to be compiled out.
+#
+# It is pure diagnostics, so the fallback is a no-op QAppleLogActivity plus the
+# three macros, keeping every call site compiling unchanged - the same principle
+# as the XP patches, degrade the feature rather than remove the code. The stub
+# keeps a non-trivial destructor deliberately: QT_APPLE_SCOPED_LOG_ACTIVITY
+# declares a local with that type, and a trivially destructible one would draw
+# -Wunused-variable.
+#
+# Adapted from patches/qt5/macos/02-os-activity-pre-10.12.patch in this kit.
+# The same hunks apply to the pristine Qt 6.8.4 qcore_mac_p.h; the Qt 6
+# macOS 10.11 probe failed here with both SDK 11.3 and SDK 14.0.
+#
+# This patch is not Intel-specific despite what the floor suggests - Apple
+# Silicon starts at 11.0, well above 10.12, so the guard is simply never taken
+# there and the file stays identical for both targets.
+#
+# Changes:
+#   qtbase/src/corelib/kernel/qcore_mac_p.h
+#       compile the os_activity block only from 10.12, with no-op equivalents
+#
+# Apply: patch -p1, from the Qt source root (qt-everywhere-src-6.8.4/)
+diff --git a/qtbase/src/corelib/kernel/qcore_mac_p.h b/qtbase/src/corelib/kernel/qcore_mac_p.h
+--- a/qtbase/src/corelib/kernel/qcore_mac_p.h
++++ b/qtbase/src/corelib/kernel/qcore_mac_p.h
+@@ -230,7 +230,12 @@
+ 
+ // --------------------------------------------------------------------------
+ 
+-#if !defined(QT_BOOTSTRAPPED)
++// os_activity_scope_enter/leave, which QAppleLogActivity::enter() and leave()
++// call, are API_AVAILABLE(macos(10.12)) in the SDK headers - not 10.10, which
++// is when os_activity itself appeared. Compiling this block below 10.12 gets as
++// far as "use of undeclared identifier 'os_activity_scope_leave'".
++#if !defined(QT_BOOTSTRAPPED) && (!defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
++    || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
+ 
+ QT_END_NAMESPACE
+ #include <os/activity.h>
+@@ -308,6 +313,32 @@
+ 
+ #define QT_APPLE_SCOPED_LOG_ACTIVITY(...) QAppleLogActivity scopedLogActivity = QT_APPLE_LOG_ACTIVITY(__VA_ARGS__).enter();
+ 
++#elif !defined(QT_BOOTSTRAPPED)
++
++// Below 10.12: no os_activity scopes. Keep the type and the macros so every
++// call site still compiles, and make them do nothing. These activities only
++// group log lines for Console.app, so nothing observable is lost.
++class Q_CORE_EXPORT QAppleLogActivity
++{
++public:
++    QAppleLogActivity() {}
++    ~QAppleLogActivity() {}
++
++    QAppleLogActivity(const QAppleLogActivity &) = delete;
++    QAppleLogActivity &operator=(const QAppleLogActivity &) = delete;
++
++    QAppleLogActivity(QAppleLogActivity &&) {}
++    QAppleLogActivity &operator=(QAppleLogActivity &&) { return *this; }
++
++    QAppleLogActivity &&enter() { return std::move(*this); }
++    void leave() {}
++};
++
++#define QT_APPLE_LOG_ACTIVITY(...) QAppleLogActivity()
++#define QT_APPLE_LOG_ACTIVITY_WITH_PARENT(...) QAppleLogActivity()
++#define QT_APPLE_SCOPED_LOG_ACTIVITY(...) \
++    QAppleLogActivity scopedLogActivity = QT_APPLE_LOG_ACTIVITY(__VA_ARGS__).enter();
++
+ #endif // !defined(QT_BOOTSTRAPPED)
+ 
+ // -------------------------------------------------------------------------

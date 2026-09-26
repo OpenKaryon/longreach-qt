@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 4.8.7 / X11: accessibility activation may return a generic widget interface
+# without QAccessibleTable2Interface (for example in a static SDK without a
+# specialized accessibility plugin). Check both interfaces before notifying
+# table changes and release the queried interface. Keep accessibility enabled.
+--- a/src/gui/itemviews/qabstractitemview.cpp
++++ b/src/gui/itemviews/qabstractitemview.cpp
+@@ -1066,7 +1066,11 @@
+ #ifndef QT_NO_ACCESSIBILITY
+ #ifdef Q_WS_X11
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(this)->table2Interface()->modelReset();
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(this);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->modelReset();
++        delete accessible;
+         QAccessible::updateAccessibility(this, 0, QAccessible::TableModelChanged);
+     }
+ #endif
+@@ -3293,7 +3297,11 @@
+ #ifndef QT_NO_ACCESSIBILITY
+ #ifdef Q_WS_X11
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(q)->table2Interface()->rowsRemoved(index, start, end);
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(q);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->rowsRemoved(index, start, end);
++        delete accessible;
+         QAccessible::updateAccessibility(q, 0, QAccessible::TableModelChanged);
+     }
+ #endif
+@@ -3373,7 +3381,11 @@
+ #ifndef QT_NO_ACCESSIBILITY
+ #ifdef Q_WS_X11
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(q)->table2Interface()->columnsRemoved(index, start, end);
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(q);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->columnsRemoved(index, start, end);
++        delete accessible;
+         QAccessible::updateAccessibility(q, 0, QAccessible::TableModelChanged);
+     }
+ #endif
+@@ -3396,7 +3408,11 @@
+ #ifdef Q_WS_X11
+     Q_Q(QAbstractItemView);
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(q)->table2Interface()->rowsInserted(index, start, end);
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(q);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->rowsInserted(index, start, end);
++        delete accessible;
+         QAccessible::updateAccessibility(q, 0, QAccessible::TableModelChanged);
+     }
+ #endif
+@@ -3420,7 +3436,11 @@
+ #ifndef QT_NO_ACCESSIBILITY
+ #ifdef Q_WS_X11
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(q)->table2Interface()->columnsInserted(index, start, end);
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(q);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->columnsInserted(index, start, end);
++        delete accessible;
+         QAccessible::updateAccessibility(q, 0, QAccessible::TableModelChanged);
+     }
+ #endif
+@@ -3448,7 +3468,11 @@
+ #ifdef Q_WS_X11
+     Q_Q(QAbstractItemView);
+     if (QAccessible::isActive()) {
+-        QAccessible::queryAccessibleInterface(q)->table2Interface()->modelReset();
++        QAccessibleInterface *accessible = QAccessible::queryAccessibleInterface(q);
++        QAccessibleTable2Interface *table = accessible ? accessible->table2Interface() : 0;
++        if (table)
++            table->modelReset();
++        delete accessible;
+         QAccessible::updateAccessibility(q, 0, QAccessible::TableModelChanged);
+     }
+ #endif

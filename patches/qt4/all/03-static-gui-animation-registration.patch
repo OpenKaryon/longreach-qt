@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 4.8.7: anchor GUI animation interpolator registration from QApplication.
+# The constructor-only archive object otherwise has no external reference and
+# may be omitted by static linkers; QColor/vector/quaternion interpolation then
+# yields an invalid QVariant. Keep existing shared-library initialization too.
+--- a/src/gui/animation/qguivariantanimation.cpp
++++ b/src/gui/animation/qguivariantanimation.cpp
+@@ -64,7 +64,7 @@
+     return QQuaternion::slerp(f, t, progress);
+ }
+ 
+-static int qRegisterGuiGetInterpolator()
++int qRegisterGuiGetInterpolator()
+ {
+     qRegisterAnimationInterpolator<QColor>(_q_interpolateVariant<QColor>);
+     qRegisterAnimationInterpolator<QVector2D>(_q_interpolateVariant<QVector2D>);
+--- a/src/gui/kernel/qapplication.cpp
++++ b/src/gui/kernel/qapplication.cpp
+@@ -963,6 +963,9 @@
+ extern void qInitDrawhelperAsm();
+ extern void qInitImageConversions();
+ extern int qRegisterGuiVariant();
++#ifndef QT_NO_ANIMATION
++extern int qRegisterGuiGetInterpolator();
++#endif
+ extern int qUnregisterGuiVariant();
+ #ifndef QT_NO_STATEMACHINE
+ extern int qRegisterGuiStateMachine();
+@@ -991,6 +994,10 @@
+         (void) QApplication::style();  // trigger creation of application style
+     // trigger registering of QVariant's GUI types
+     qRegisterGuiVariant();
++#ifndef QT_NO_ANIMATION
++    // Retain the GUI interpolation object when QtGui is linked statically.
++    qRegisterGuiGetInterpolator();
++#endif
+ #ifndef QT_NO_STATEMACHINE
+     // trigger registering of QStateMachine's GUI types
+     qRegisterGuiStateMachine();

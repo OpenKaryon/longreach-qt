@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "profiles": {
+    "lgpl-friendly": {
+      "description": "Excludes Qt modules whose open-source option is GPL-only.",
+      "maximum_copyleft": "LGPL",
+      "proprietary_application_possible": true
+    },
+    "gpl-enabled": {
+      "description": "Includes GPL-only Qt add-ons; a linked application must be GPL-compatible unless covered by a commercial Qt license.",
+      "maximum_copyleft": "GPL-3.0",
+      "proprietary_application_possible": false
+    },
+    "commercial-qt": {
+      "description": "Module availability matches gpl-enabled, but downstream rights come from the user's commercial Qt agreement, not from this repository.",
+      "maximum_copyleft": "contract",
+      "proprietary_application_possible": true
+    }
+  },
+  "modules": {
+    "QtBase": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtMultimedia": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtTextToSpeech": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtMobilityMultimediaKit": { "oss": "LGPL-2.1", "profile": "lgpl-friendly", "qt": "4" },
+    "QtWebSockets": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtWebChannel": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtSerialPort": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtSerialBus": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtRemoteObjects": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtSCXML": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "Qt3D": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtLocation": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtOpcUa": { "oss": "LGPL-3.0-or-GPL", "profile": "lgpl-friendly" },
+    "QtCharts": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtDataVisualization": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtQuick3D": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtGraphs": { "oss": "GPL-3.0-only", "profile": "gpl-enabled", "qt": "6" },
+    "QtQuick3DPhysics": { "oss": "GPL-3.0-only", "profile": "gpl-enabled", "qt": "6" },
+    "QtVirtualKeyboard": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtNetworkAuthorization": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtMqtt": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtCoap": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" },
+    "QtHttpServer": { "oss": "GPL-3.0-only", "profile": "gpl-enabled" }
+  },
+  "applications": {
+    "qt-selftest": {
+      "profile_by_qt": { "4": "lgpl-friendly", "5": "gpl-enabled", "6": "gpl-enabled" },
+      "gpl_triggers_by_qt": {
+        "4": [],
+        "5": ["QtNetworkAuthorization"],
+        "6": ["QtNetworkAuthorization", "QtMqtt", "QtCoap", "QtHttpServer", "QtVirtualKeyboard"]
+      }
+    },
+    "widgets-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "graphics-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "quick-qml-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "gl-heavy-gallery": {
+      "profile_by_qt": { "4": "lgpl-friendly", "5": "gpl-enabled", "6": "gpl-enabled" },
+      "gpl_triggers_by_qt": { "4": [], "5": ["QtCharts", "QtDataVisualization"], "6": ["QtCharts", "QtDataVisualization"] }
+    },
+    "painting-lab": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "multimedia-lab": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "network-gui": {
+      "profile_by_qt": { "4": "lgpl-friendly", "5": "gpl-enabled", "6": "gpl-enabled" },
+      "gpl_triggers_by_qt": { "4": [], "5": ["QtHttpServer"], "6": ["QtHttpServer"] }
+    },
+    "smoke-runner": { "profile": "lgpl-friendly", "gpl_triggers": [] }
+  }
+}

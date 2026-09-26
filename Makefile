@@ -100,6 +100,7 @@ endef
 # A bare `make` fetches the Qt 5 source archive.
 .DEFAULT_GOAL := download-qt5
 
+include $(PROJECT_DIR)mk/qt4.mk
 include $(PROJECT_DIR)mk/qt5.mk
 include $(PROJECT_DIR)mk/qt6.mk
 
@@ -133,6 +134,7 @@ regen-db:
 	$(PYTHON) scripts/audit/qt_api_audit.py "$(QT_SRC)" $(if $(QT),--qt $(QT),)
 
 image-sizes:
+	docker images --filter "reference=qt4-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 	docker images --filter "reference=qt5-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 	docker images --filter "reference=qt6-*" --format "{{.Repository}}:{{.Tag}}\t{{.Size}}"
 

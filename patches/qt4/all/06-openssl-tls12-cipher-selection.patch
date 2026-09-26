@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 4 SSL with OpenSSL 1.0.2: QSslSocket::setCiphers(QString) matches the
+# supported cipher names instead of constructing ciphers for protocol enums
+# 0..2, which misses the TLS 1.2 ciphers Qt 4 reports as UnknownProtocol.
+#
+--- a/src/network/ssl/qsslsocket.cpp
++++ b/src/network/ssl/qsslsocket.cpp
+@@ -1162,10 +1162,11 @@
+     Q_D(QSslSocket);
+     d->configuration.ciphers.clear();
++    const QList<QSslCipher> supported = supportedCiphers();
+     foreach (const QString &cipherName, ciphers.split(QLatin1String(":"),QString::SkipEmptyParts)) {
+-        for (int i = 0; i < 3; ++i) {
+-            // ### Crude
+-            QSslCipher cipher(cipherName, QSsl::SslProtocol(i));
+-            if (!cipher.isNull())
++        // OpenSSL 1.0.2 exposes TLS 1.2 ciphers whose protocol enum is
++        // UnknownProtocol in Qt4. Match the supported names, not enums 0..2.
++        foreach (const QSslCipher &cipher, supported) {
++            if (cipher.name() == cipherName)
+                 d->configuration.ciphers << cipher;
+         }
+     }

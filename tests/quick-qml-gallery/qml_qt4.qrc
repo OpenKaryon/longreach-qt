@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/qml_qt4">
+        <file>qml_qt4/main.qml</file>
+        <file>qml_qt4/particle.xpm</file>
+        <file>qml_qt4/particle-linear.xpm</file>
+        <file>qml_qt4/particle-wander.xpm</file>
+        <file>qml_qt4/demo.svg</file>
+        <file>qml_qt4/frame.svg</file>
+        <file>qml_qt4/path-guide.svg</file>
+        <file>qml_qt4/CatalogProbe.qml</file>
+        <file>qml_qt4/catalog.xml</file>
+        <file>qml_qt4/worker.js</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,372 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: newer file, locale and message-wait APIs resolved at run time
+# (FindFirstFileExW, GetFileAttributesExW, GetUserDefaultUILanguage,
+# SetFilePointerEx, MsgWaitForMultipleObjectsEx) with older fallbacks; ANSI
+# internal windows and messages; no direct Winsock 2 import in QtCore.
+#
+--- a/src/corelib/kernel/qeventdispatcher_win.cpp
++++ b/src/corelib/kernel/qeventdispatcher_win.cpp
+@@ -277,6 +277,33 @@
+ #endif
+ #endif // Q_OS_WINCE
+ 
++
++static DWORD qt_win95_wait_for_events(DWORD count, const HANDLE *handles, DWORD timeout, DWORD flags)
++{
++#ifndef Q_OS_WINCE
++    typedef DWORD (WINAPI *PtrWait)(DWORD, const HANDLE *, DWORD, DWORD, DWORD);
++    PtrWait wait = (PtrWait)GetProcAddress(GetModuleHandleA("user32.dll"), "MsgWaitForMultipleObjectsEx");
++    if (wait)
++        return wait(count, handles, timeout, QS_ALLINPUT, flags);
++    return MsgWaitForMultipleObjects(count, handles, FALSE, timeout, QS_ALLINPUT);
++#else
++    return MsgWaitForMultipleObjectsEx(count, handles, timeout, QS_ALLINPUT, flags);
++#endif
++}
++
++static BOOL qt_win95_peek_message(MSG *msg, HWND wnd, UINT first, UINT last, UINT remove)
++{
++    return QT_WA_INLINE(PeekMessageW(msg, wnd, first, last, remove), PeekMessageA(msg, wnd, first, last, remove));
++}
++static BOOL qt_win95_get_message(MSG *msg, HWND wnd, UINT first, UINT last)
++{
++    return QT_WA_INLINE(GetMessageW(msg, wnd, first, last), GetMessageA(msg, wnd, first, last));
++}
++static BOOL qt_win95_post_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
++{
++    return QT_WA_INLINE(PostMessageW(wnd, msg, wp, lp), PostMessageA(wnd, msg, wp, lp));
++}
++
+ class QEventDispatcherWin32Private;
+ 
+ struct QSockNot {
+@@ -388,7 +415,9 @@
+     if (internalHwnd)
+         DestroyWindow(internalHwnd);
+     QString className = QLatin1String("QEventDispatcherWin32_Internal_Widget") + QString::number(quintptr(qt_internal_proc));
+-    UnregisterClass((wchar_t*)className.utf16(), qWinAppInst());
++    QT_WA({ UnregisterClassW((wchar_t*)className.utf16(), qWinAppInst()); }, {
++        UnregisterClassA(className.toLocal8Bit().constData(), qWinAppInst());
++    });
+ }
+ 
+ void QEventDispatcherWin32Private::activateEventNotifier(QWinEventNotifier * wen)
+@@ -401,20 +430,20 @@
+ Q_CORE_EXPORT bool winPeekMessage(MSG* msg, HWND hWnd, UINT wMsgFilterMin,
+                      UINT wMsgFilterMax, UINT wRemoveMsg)
+ {
+-    return PeekMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
++    return qt_win95_peek_message(msg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
+ }
+ 
+ // ### Qt 5: remove
+ Q_CORE_EXPORT bool winPostMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ {
+-    return PostMessage(hWnd, msg, wParam, lParam);
++    return qt_win95_post_message(hWnd, msg, wParam, lParam);
+ }
+ 
+ // ### Qt 5: remove
+ Q_CORE_EXPORT bool winGetMessage(MSG* msg, HWND hWnd, UINT wMsgFilterMin,
+                      UINT wMsgFilterMax)
+ {
+-    return GetMessage(msg, hWnd, wMsgFilterMin, wMsgFilterMax);
++    return qt_win95_get_message(msg, hWnd, wMsgFilterMin, wMsgFilterMax);
+ }
+ 
+ // This function is called by a workerthread
+@@ -502,7 +531,7 @@
+         return 0;
+     }
+ 
+-    return DefWindowProc(hwnd, message, wp, lp);
++    return QT_WA_INLINE(DefWindowProcW(hwnd, message, wp, lp), DefWindowProcA(hwnd, message, wp, lp));
+ }
+ 
+ static inline UINT inputTimerMask()
+@@ -539,7 +568,7 @@
+                     // if this message IS the one that triggers sendPostedEvents(), no need to post it again
+                     && (msg->hwnd != d->internalHwnd
+                         || msg->message != WM_QT_SENDPOSTEDEVENTS)) {
+-                    PostMessage(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
++                    qt_win95_post_message(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
+                 }
+             } else if (d->sendPostedEventsWindowsTimerId == 0
+                        && localSerialNumber != d->lastSerialNumber) {
+@@ -579,8 +608,10 @@
+     wc.lpszMenuName = NULL;
+     wc.lpszClassName = reinterpret_cast<const wchar_t *> (className.utf16());
+ 
+-    RegisterClass(&wc);
+-    HWND wnd = CreateWindow(wc.lpszClassName,  // classname
++    HWND wnd = 0;
++    QT_WA({
++    RegisterClassW(&wc);
++    wnd = CreateWindowW(wc.lpszClassName,  // classname
+                             wc.lpszClassName,  // window name
+                             0,                 // style
+                             0, 0, 0, 0,        // geometry
+@@ -588,6 +619,17 @@
+                             0,                 // menu handle
+                             qWinAppInst(),     // application
+                             0);                // windows creation data.
++    }, {
++        QByteArray name = className.toLocal8Bit();
++        WNDCLASSA ansi;
++        memset(&ansi, 0, sizeof(ansi));
++        ansi.lpfnWndProc = qt_internal_proc;
++        ansi.hInstance = qWinAppInst();
++        ansi.lpszClassName = name.constData();
++        RegisterClassA(&ansi);
++        wnd = CreateWindowA(name.constData(), name.constData(), 0, 0, 0, 0, 0,
++                            0, 0, qWinAppInst(), 0);
++    });
+ 
+     if (!wnd) {
+         qWarning("QEventDispatcher: Failed to create QEventDispatcherWin32 internal window: %d\n", (int)GetLastError());
+@@ -674,7 +716,17 @@
+         sn_event |= FD_OOB;
+     // BoundsChecker may emit a warning for WSAAsyncSelect when sn_event == 0
+     // This is a BoundsChecker bug and not a Qt bug
++#ifdef Q_OS_WINCE
+     WSAAsyncSelect(socket, internalHwnd, sn_event ? unsigned(WM_QT_SOCKETNOTIFIER) : unsigned(0), sn_event);
++#else
++    typedef int (WINAPI *PtrAsyncSelect)(SOCKET, HWND, unsigned int, long);
++    QSystemLibrary library((QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++            ? QLatin1String("wsock32") : QLatin1String("ws2_32"));
++    PtrAsyncSelect asyncSelect = library.load() ? (PtrAsyncSelect)library.resolve("WSAAsyncSelect") : 0;
++    if (!asyncSelect || asyncSelect(socket, internalHwnd,
++            sn_event ? unsigned(WM_QT_SOCKETNOTIFIER) : unsigned(0), sn_event) == SOCKET_ERROR)
++        qWarning("QEventDispatcherWin32: cannot register socket notifier");
++#endif
+ }
+ 
+ void QEventDispatcherWin32::createInternalHwnd()
+@@ -688,7 +740,8 @@
+ 
+ #ifndef Q_OS_WINCE
+     // setup GetMessage hook needed to drive our posted events
+-    d->getMessageHook = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC) qt_GetMessageHook, NULL, GetCurrentThreadId());
++    d->getMessageHook = QT_WA_INLINE(SetWindowsHookExW(WH_GETMESSAGE, (HOOKPROC) qt_GetMessageHook, NULL, GetCurrentThreadId()),
++            SetWindowsHookExA(WH_GETMESSAGE, (HOOKPROC) qt_GetMessageHook, NULL, GetCurrentThreadId()));
+     if (!d->getMessageHook) {
+         qFatal("Qt: INTERNALL ERROR: failed to install GetMessage hook");
+     }
+@@ -752,7 +805,7 @@
+                 haveMessage = true;
+                 msg = d->queuedSocketEvents.takeFirst();
+             } else {
+-                haveMessage = PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
++                haveMessage = qt_win95_peek_message(&msg, 0, 0, 0, PM_REMOVE);
+                 if (haveMessage && (flags & QEventLoop::ExcludeUserInputEvents)
+                     && ((msg.message >= WM_KEYFIRST
+                          && msg.message <= WM_KEYLAST)
+@@ -781,7 +834,7 @@
+                 // no message - check for signalled objects
+                 for (int i=0; i<(int)nCount; i++)
+                     pHandles[i] = d->winEventNotifierList.at(i)->handle();
+-                waitRet = MsgWaitForMultipleObjectsEx(nCount, pHandles, 0, QS_ALLINPUT, MWMO_ALERTABLE);
++                waitRet = qt_win95_wait_for_events(nCount, pHandles, 0, MWMO_ALERTABLE);
+                 if ((haveMessage = (waitRet == WAIT_OBJECT_0 + nCount))) {
+                     // a new message has arrived, process it
+                     continue;
+@@ -841,7 +894,7 @@
+                 pHandles[i] = d->winEventNotifierList.at(i)->handle();
+ 
+             emit aboutToBlock();
+-            waitRet = MsgWaitForMultipleObjectsEx(nCount, pHandles, INFINITE, QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
++            waitRet = qt_win95_wait_for_events(nCount, pHandles, INFINITE, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
+             emit awake();
+             if (waitRet < WAIT_OBJECT_0 + nCount) {
+                 d->activateEventNotifier(d->winEventNotifierList.at(waitRet - WAIT_OBJECT_0));
+@@ -856,7 +909,7 @@
+     }
+ 
+     if (needWM_QT_SENDPOSTEDEVENTS)
+-        PostMessage(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
++        qt_win95_post_message(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
+ 
+     return retVal;
+ }
+@@ -864,7 +917,7 @@
+ bool QEventDispatcherWin32::hasPendingEvents()
+ {
+     MSG msg;
+-    return qGlobalPostedEventsCount() || PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);
++    return qGlobalPostedEventsCount() || qt_win95_peek_message(&msg, NULL, 0, 0, PM_NOREMOVE);
+ }
+ 
+ void QEventDispatcherWin32::registerSocketNotifier(QSocketNotifier *notifier)
+@@ -1094,7 +1147,7 @@
+     d->serialNumber.ref();
+     if (d->internalHwnd && d->wakeUps.testAndSetAcquire(0, 1)) {
+         // post a WM_QT_SENDPOSTEDEVENTS to this thread if there isn't one already pending
+-        PostMessage(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
++        qt_win95_post_message(d->internalHwnd, WM_QT_SENDPOSTEDEVENTS, 0, 0);
+     }
+ }
+ 
+--- a/src/corelib/tools/qlocale_win.cpp
++++ b/src/corelib/tools/qlocale_win.cpp
+@@ -564,7 +564,10 @@
+     }
+ 
+     // old Windows before Vista
+-    return QStringList(QString::fromLatin1(winLangCodeToIsoName(GetUserDefaultUILanguage())));
++    typedef LANGID (WINAPI *PtrUILanguage)();
++    PtrUILanguage uiLanguage = (PtrUILanguage)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetUserDefaultUILanguage");
++    LANGID language = uiLanguage ? uiLanguage() : LANGIDFROMLCID(GetUserDefaultLCID());
++    return QStringList(QString::fromLatin1(winLangCodeToIsoName(language)));
+ }
+ 
+ QVariant QSystemLocalePrivate::nativeLanguageName()
+--- a/src/corelib/io/qfsfileengine_win.cpp
++++ b/src/corelib/io/qfsfileengine_win.cpp
+@@ -75,6 +75,31 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#ifndef Q_OS_WINCE
++static BOOL qt_win95_set_file_pointer(HANDLE file, LARGE_INTEGER distance, PLARGE_INTEGER position, DWORD method)
++{
++    typedef BOOL (WINAPI *PtrSetPointer)(HANDLE, LARGE_INTEGER, PLARGE_INTEGER, DWORD);
++    PtrSetPointer setPointer = (PtrSetPointer)GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetFilePointerEx");
++    if (setPointer)
++        return setPointer(file, distance, position, method);
++    // Win9x supports positions below 4 GiB; retain NT's high word when available.
++    if ((QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) && distance.HighPart != 0) {
++        SetLastError(ERROR_INVALID_PARAMETER);
++        return FALSE;
++    }
++    LONG high = distance.HighPart;
++    SetLastError(NO_ERROR);
++    DWORD low = SetFilePointer(file, distance.LowPart, &high, method);
++    if (low == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
++        return FALSE;
++    if (position) {
++        position->LowPart = low;
++        position->HighPart = high;
++    }
++    return TRUE;
++}
++#endif
++
+ #if !defined(Q_OS_WINCE)
+ static inline bool isUncPath(const QString &path)
+ {
+@@ -275,7 +300,7 @@
+     LARGE_INTEGER currentFilePos;
+     LARGE_INTEGER offset;
+     offset.QuadPart = 0;
+-    if (!::SetFilePointerEx(fileHandle, offset, &currentFilePos, FILE_CURRENT)) {
++    if (!qt_win95_set_file_pointer(fileHandle, offset, &currentFilePos, FILE_CURRENT)) {
+         thatQ->setError(QFile::UnspecifiedError, qt_error_string());
+         return 0;
+     }
+@@ -311,7 +336,7 @@
+     LARGE_INTEGER currentFilePos;
+     LARGE_INTEGER offset;
+     offset.QuadPart = pos;
+-    if (!::SetFilePointerEx(fileHandle, offset, &currentFilePos, FILE_BEGIN)) {
++    if (!qt_win95_set_file_pointer(fileHandle, offset, &currentFilePos, FILE_BEGIN)) {
+         q->setError(QFile::UnspecifiedError, qt_error_string());
+         return false;
+     }
+--- a/src/corelib/io/qfilesystemengine_win.cpp
++++ b/src/corelib/io/qfilesystemengine_win.cpp
+@@ -138,6 +138,58 @@
+ #endif // !defined(Q_OS_WINCE)
+ 
+ QT_BEGIN_NAMESPACE
++
++#ifndef Q_OS_WINCE
++static BOOL qt_win95_get_file_attributes(LPCWSTR path, WIN32_FILE_ATTRIBUTE_DATA *data)
++{
++    typedef BOOL (WINAPI *PtrAttributes)(LPCWSTR, GET_FILEEX_INFO_LEVELS, LPVOID);
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)) {
++        PtrAttributes attributes = (PtrAttributes)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetFileAttributesExW");
++        if (attributes) {
++            if (attributes(path, GetFileExInfoStandard, data))
++                return TRUE;
++            if (GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++                return FALSE;
++        }
++    }
++    QString name = QString::fromWCharArray(path);
++    if (name.startsWith(QLatin1String("\\\\?\\UNC\\")))
++        name = QLatin1String("\\\\") + name.mid(8);
++    else if (name.startsWith(QLatin1String("\\\\?\\")))
++        name.remove(0, 4);
++    if (name.contains(QLatin1Char('*')) || name.contains(QLatin1Char('?'))) {
++        SetLastError(ERROR_INVALID_NAME);
++        return FALSE;
++    }
++    QByteArray ansi = name.toLocal8Bit();
++    HANDLE file = QT_WA_INLINE(CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                                         0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0),
++                              CreateFileA(ansi.constData(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                                         0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0));
++    BY_HANDLE_FILE_INFORMATION info;
++    if (file != INVALID_HANDLE_VALUE) {
++        BOOL ok = GetFileInformationByHandle(file, &info);
++        CloseHandle(file);
++        if (ok) {
++            data->dwFileAttributes = info.dwFileAttributes;
++            data->ftCreationTime = info.ftCreationTime;
++            data->ftLastAccessTime = info.ftLastAccessTime;
++            data->ftLastWriteTime = info.ftLastWriteTime;
++            data->nFileSizeHigh = info.nFileSizeHigh;
++            data->nFileSizeLow = info.nFileSizeLow;
++            return TRUE;
++        }
++    }
++    WIN32_FIND_DATAW wide;
++    WIN32_FIND_DATAA narrow;
++    HANDLE find = QT_WA_INLINE(FindFirstFileW(path, &wide), FindFirstFileA(ansi.constData(), &narrow));
++    if (find == INVALID_HANDLE_VALUE)
++        return FALSE;
++    QT_WA({ memcpy(data, &wide, sizeof(*data)); }, { memcpy(data, &narrow, sizeof(*data)); });
++    FindClose(find);
++    return TRUE;
++}
++#endif
+ 
+ Q_CORE_EXPORT int qt_ntfs_permission_lookup = 0;
+ 
+@@ -863,8 +915,13 @@
+         WIN32_FIND_DATA findData;
+         // The memory structure for WIN32_FIND_DATA is same as WIN32_FILE_ATTRIBUTE_DATA
+         // for all members used by fillFindData().
++#ifndef Q_OS_WINCE
++        bool ok = qt_win95_get_file_attributes((wchar_t*)fname.nativeFilePath().utf16(),
++                                        reinterpret_cast<WIN32_FILE_ATTRIBUTE_DATA *>(&findData));
++#else
+         bool ok = ::GetFileAttributesEx((wchar_t*)fname.nativeFilePath().utf16(), GetFileExInfoStandard,
+                                         reinterpret_cast<WIN32_FILE_ATTRIBUTE_DATA *>(&findData));
++#endif
+         if (ok) {
+             data.fillFromFindData(findData, false, fname.isDriveRoot());
+         } else {
+--- a/src/corelib/io/qfilesystemiterator_win.cpp
++++ b/src/corelib/io/qfilesystemiterator_win.cpp
+@@ -104,8 +104,18 @@
+         int searchOps =  0;         // FindExSearchNameMatch
+         if (onlyDirs)
+             searchOps = 1 ;         // FindExSearchLimitToDirectories
++#ifndef Q_OS_WINCE
++        typedef HANDLE (WINAPI *PtrFindEx)(LPCWSTR, FINDEX_INFO_LEVELS, LPVOID, FINDEX_SEARCH_OPS, LPVOID, DWORD);
++        PtrFindEx findEx = (PtrFindEx)GetProcAddress(GetModuleHandleA("kernel32.dll"), "FindFirstFileExW");
++        if (findEx)
++            findFileHandle = findEx((const wchar_t *)nativePath.utf16(), FINDEX_INFO_LEVELS(infoLevel), &findData,
++                                    FINDEX_SEARCH_OPS(searchOps), 0, dwAdditionalFlags);
++        else
++            findFileHandle = FindFirstFileW((const wchar_t *)nativePath.utf16(), &findData);
++#else
+         findFileHandle = FindFirstFileEx((const wchar_t *)nativePath.utf16(), FINDEX_INFO_LEVELS(infoLevel), &findData,
+                                          FINDEX_SEARCH_OPS(searchOps), 0, dwAdditionalFlags);
++#endif
+         if (findFileHandle == INVALID_HANDLE_VALUE) {
+             if (nativePath.startsWith(QLatin1String("\\\\?\\UNC\\"))) {
+                 QStringList parts = nativePath.split(QLatin1Char('\\'), QString::SkipEmptyParts);

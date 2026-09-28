@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# The win32-g++ mkspec: a static runtime, a size-optimised build that lets the
+# linker drop what an application never calls, and the Windows 9x branches.
+#
+# What it changes
+#   mkspecs/win32-g++/qmake.conf, which defines its own flags rather than
+#   including the shared gcc-base.conf the *nix specs use.
+#
+#     QMAKE_LFLAGS_APP  -static -static-libgcc -static-libstdc++
+#     QMAKE_LFLAGS_APP  -Wl,--gc-sections
+#     -Os instead of -O2
+#     -ffunction-sections -fdata-sections
+#     DEFINES += QT_WIN95_SUPPORT QT_NO_DIRECT3D
+#     QMAKE_SH = /bin/sh (the cross build runs on Linux)
+#
+# Why the runtime flags
+#   Qt 5 has `-static-runtime`, which bakes exactly this into the installed
+#   mkspec so every application linked against the SDK gets it for free. Qt 4's
+#   configure has no such option, so without this patch a statically linked Qt 4
+#   still produces an .exe that wants libgcc_s_dw2-1.dll, libstdc++-6.dll and
+#   libwinpthread-1.dll beside it - three DLLs, which is precisely what a static
+#   build exists to avoid. Measured before this patch: the smoke binary only
+#   came out clean because tests-qt4/qt4-selftest.pro passed the three flags
+#   itself, which is the wrong place for them - it makes every application on
+#   this SDK repeat them, and silently punishes the one that does not.
+#
+# Why the size flags
+#   See the header of the Linux patch; the reasoning is the same and the two are
+#   kept in step deliberately.
+#
+# Why QT_WIN95_SUPPORT
+#   It turns on the Windows 95/98/ME branches of the patches after this one:
+#   each selects the ANSI or older API at run time on a Win9x system and keeps
+#   the Unicode NT path otherwise, so the same build serves NT and Win9x. It
+#   is in the mkspec rather than on the configure line so that applications
+#   compile against the same definitions as the SDK.
+#
+# Where it applies
+#   Every Qt 4 Windows target.
+#
+#   QMAKE_LFLAGS_APP rather than QMAKE_LFLAGS, and that is checked rather than
+#   assumed: qmake/generators/win32/winmakefile.cpp:350 folds QMAKE_LFLAGS_APP
+#   into QMAKE_LFLAGS for the app template, so the Windows generator honours it
+#   the same way the Unix one does. Keeping it off the general variable leaves
+#   Qt's own link steps untouched.
+--- a/mkspecs/win32-g++/qmake.conf
++++ b/mkspecs/win32-g++/qmake.conf
+@@ -10,13 +10,14 @@
+ MAKEFILE_GENERATOR	= MINGW
+ 
+ load(device_config)
++QMAKE_SH = /bin/sh
+ 
+ equals(QMAKE_HOST.os, Windows): EXE_SUFFIX = .exe
+ 
+ TEMPLATE		= app
+ CONFIG			+= qt warn_on release link_prl copy_dir_files debug_and_release debug_and_release_target precompile_header
+ QT			+= core gui
+-DEFINES			+= UNICODE
++DEFINES			+= UNICODE QT_WIN95_SUPPORT QT_NO_DIRECT3D
+ QMAKE_COMPILER_DEFINES  += __GNUC__ WIN32
+ 
+ QMAKE_EXT_OBJ           = .o
+@@ -27,11 +28,11 @@
+ QMAKE_LEXFLAGS		=
+ QMAKE_YACC		= byacc
+ QMAKE_YACCFLAGS		= -d
+-QMAKE_CFLAGS		= -pipe
++QMAKE_CFLAGS		= -pipe -ffunction-sections -fdata-sections
+ QMAKE_CFLAGS_DEPS	= -M
+ QMAKE_CFLAGS_WARN_ON	= -Wall -Wextra
+ QMAKE_CFLAGS_WARN_OFF	= -w
+-QMAKE_CFLAGS_RELEASE	= -O2
++QMAKE_CFLAGS_RELEASE	= -Os
+ QMAKE_CFLAGS_DEBUG	= -g
+ QMAKE_CFLAGS_YACC	= -Wno-unused -Wno-parentheses
+ 
+@@ -61,6 +62,7 @@
+ QMAKE_LINK		= $${CROSS_COMPILE}g++
+ QMAKE_LINK_C		= $${CROSS_COMPILE}gcc
+ QMAKE_LFLAGS		=
++QMAKE_LFLAGS_APP	= -static -static-libgcc -static-libstdc++ -Wl,--gc-sections
+ QMAKE_LFLAGS_EXCEPTIONS_ON = -mthreads
+ QMAKE_LFLAGS_EXCEPTIONS_OFF =
+ QMAKE_LFLAGS_RELEASE	= -Wl,-s

@@ -1,0 +1,650 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: runtime ANSI/Unicode selection in QtCore - GetVersionExA at
+# startup (RtlGetVersion on NT), registry, events for threads, mutexes and
+# wait conditions, application paths and system-DLL loading; SwitchToThread
+# resolved dynamically. QString and the codecs stay Unicode. Restored from
+# Qt's removal commit 5ae330b6 and adapted to 4.8.7.
+#
+--- a/src/corelib/kernel/qcoreapplication_win.cpp
++++ b/src/corelib/kernel/qcoreapplication_win.cpp
+@@ -71,7 +71,12 @@
+     return appCmdShow;
+ #else
+     STARTUPINFO startupInfo;
+-    GetStartupInfo(&startupInfo);
++    QT_WA({ GetStartupInfoW(&startupInfo); }, {
++        STARTUPINFOA ansi;
++        GetStartupInfoA(&ansi);
++        startupInfo.dwFlags = ansi.dwFlags;
++        startupInfo.wShowWindow = ansi.wShowWindow;
++    });
+ 
+     return (startupInfo.dwFlags & STARTF_USESHOWWINDOW)
+         ? startupInfo.wShowWindow
+@@ -81,6 +86,11 @@
+ 
+ Q_CORE_EXPORT QString qAppFileName()                // get application file name
+ {
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        char buffer[MAX_PATH + 1] = { 0 };
++        DWORD length = GetModuleFileNameA(0, buffer, MAX_PATH);
++        return length && length < MAX_PATH ? QString::fromLocal8Bit(buffer, length) : QString();
++    }
+     // We do MAX_PATH + 2 here, and request with MAX_PATH + 1, so we can handle all paths
+     // up to, and including MAX_PATH size perfectly fine with string termination, as well
+     // as easily detect if the file path is indeed larger than MAX_PATH, in which case we
+--- a/src/corelib/plugin/qsystemlibrary.cpp
++++ b/src/corelib/plugin/qsystemlibrary.cpp
+@@ -95,6 +95,15 @@
+ 
+ static inline QString qSystemDirectory()
+ {
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        QVarLengthArray<char, MAX_PATH> ansi(MAX_PATH);
++        UINT length = GetSystemDirectoryA(ansi.data(), ansi.size());
++        if (length >= UINT(ansi.size())) {
++            ansi.resize(length + 1);
++            length = GetSystemDirectoryA(ansi.data(), ansi.size());
++        }
++        return length ? QString::fromLocal8Bit(ansi.constData(), length) : QString();
++    }
+     QVarLengthArray<wchar_t, MAX_PATH> fullPath;
+ 
+     UINT retLen = ::GetSystemDirectory(fullPath.data(), MAX_PATH);
+@@ -117,7 +126,8 @@
+     searchOrder << qSystemDirectory();
+ 
+     if (!onlySystemDirectory) {
+-        const QString PATH = QString::fromWCharArray((const wchar_t *)_wgetenv(L"PATH"));
++        const QString PATH = QT_WA_INLINE(QString::fromWCharArray((const wchar_t *)_wgetenv(L"PATH")),
++                                             QString::fromLocal8Bit(qgetenv("PATH")));
+         searchOrder << PATH.split(QLatin1Char(';'), QString::SkipEmptyParts);
+     }
+ 
+@@ -128,7 +138,8 @@
+         if (!fullPathAttempt.endsWith(QLatin1Char('\\')))
+             fullPathAttempt.append(QLatin1Char('\\'));
+         fullPathAttempt.append(fileName);
+-        HINSTANCE inst = ::LoadLibrary((const wchar_t *)fullPathAttempt.utf16());
++        HINSTANCE inst = QT_WA_INLINE(::LoadLibraryW((const wchar_t *)fullPathAttempt.utf16()),
++                                     ::LoadLibraryA(fullPathAttempt.toLocal8Bit().constData()));
+         if (inst != 0)
+             return inst;
+     }
+--- a/src/corelib/thread/qthread_win.cpp
++++ b/src/corelib/thread/qthread_win.cpp
+@@ -187,7 +187,7 @@
+     // Start watcher thread if it is not already running.
+     if (qt_adopted_thread_watcher_id == 0) {
+         if (qt_adopted_thread_wakeup == 0) {
+-            qt_adopted_thread_wakeup = CreateEvent(0, false, false, 0);
++            qt_adopted_thread_wakeup = QT_WA_INLINE(CreateEventW(0, false, false, 0), CreateEventA(0, false, false, 0));
+             qt_adopted_thread_handles.prepend(qt_adopted_thread_wakeup);
+         }
+ 
+@@ -421,10 +421,16 @@
+ void QThread::yieldCurrentThread()
+ {
+ #ifndef Q_OS_WINCE
+-    SwitchToThread();
+-#else
+-    ::Sleep(0);
+-#endif
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_NT_based) {
++        typedef BOOL (WINAPI *SwitchThread)();
++        SwitchThread switchThread = (SwitchThread)GetProcAddress(GetModuleHandleA("kernel32.dll"), "SwitchToThread");
++        if (switchThread) {
++            switchThread();
++            return;
++        }
++    }
++#endif
++        ::Sleep(0);
+ }
+ 
+ void QThread::sleep(unsigned long secs)
+@@ -483,11 +489,17 @@
+         return;
+     }
+ 
++    // Since Win 9x will have problems if the priority is idle or time critical
++    // we have to use the closest one instead
+     int prio;
+     d->priority = priority;
+     switch (d->priority) {
+     case IdlePriority:
+-        prio = THREAD_PRIORITY_IDLE;
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            prio = THREAD_PRIORITY_LOWEST;
++        } else {
++            prio = THREAD_PRIORITY_IDLE;
++        }
+         break;
+ 
+     case LowestPriority:
+@@ -511,7 +523,11 @@
+         break;
+ 
+     case TimeCriticalPriority:
+-        prio = THREAD_PRIORITY_TIME_CRITICAL;
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            prio = THREAD_PRIORITY_HIGHEST;
++        } else {
++            prio = THREAD_PRIORITY_TIME_CRITICAL;
++        }
+         break;
+ 
+     case InheritPriority:
+@@ -617,11 +633,17 @@
+ 
+     // copied from start() with a few modifications:
+ 
++    // Since Win 9x will have problems if the priority is idle or time critical
++    // we have to use the closest one instead
+     int prio;
+     d->priority = priority;
+     switch (d->priority) {
+     case IdlePriority:
+-        prio = THREAD_PRIORITY_IDLE;
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            prio = THREAD_PRIORITY_LOWEST;
++        } else {
++            prio = THREAD_PRIORITY_IDLE;
++        }
+         break;
+ 
+     case LowestPriority:
+@@ -645,7 +667,11 @@
+         break;
+ 
+     case TimeCriticalPriority:
+-        prio = THREAD_PRIORITY_TIME_CRITICAL;
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            prio = THREAD_PRIORITY_HIGHEST;
++        } else {
++            prio = THREAD_PRIORITY_TIME_CRITICAL;
++        }
+         break;
+ 
+     case InheritPriority:
+--- a/src/corelib/thread/qwaitcondition_win.cpp
++++ b/src/corelib/thread/qwaitcondition_win.cpp
+@@ -64,7 +64,11 @@
+ public:
+     inline QWaitConditionEvent() : priority(0), wokenUp(false)
+     {
+-        event = CreateEvent(NULL, TRUE, FALSE, NULL);
++        QT_WA ({
++            event = CreateEvent(NULL, TRUE, FALSE, NULL);
++        }, {
++            event = CreateEventA(NULL, TRUE, FALSE, NULL);
++        });
+     }
+     inline ~QWaitConditionEvent() { CloseHandle(event); }
+     int priority;
+--- a/src/corelib/thread/qmutex_win.cpp
++++ b/src/corelib/thread/qmutex_win.cpp
+@@ -50,7 +50,7 @@
+ QMutexPrivate::QMutexPrivate(QMutex::RecursionMode mode)
+     : QMutexData(mode), maximumSpinTime(MaximumSpinTimeThreshold), averageWaitTime(0), owner(0), count(0)
+ {
+-    event = CreateEvent(0, FALSE, FALSE, 0);
++    event = QT_WA_INLINE(CreateEventW(0, FALSE, FALSE, 0), CreateEventA(0, FALSE, FALSE, 0));
+     if (!event)
+         qWarning("QMutexPrivate::QMutexPrivate: Cannot create event");
+ }
+--- a/src/corelib/io/qsettings_win.cpp
++++ b/src/corelib/io/qsettings_win.cpp
+@@ -130,13 +130,24 @@
+ 
+ static QString errorCodeToString(DWORD errorCode)
+ {
+-    wchar_t *data = 0;
+-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, 0, errorCode, 0, data, 0, 0);
+-    QString result = QString::fromWCharArray(data);
+-
+-    if (data != 0)
+-        LocalFree(data);
+-
++    QString result;
++	QT_WA({
++		wchar_t *data = 0;
++		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
++			0, errorCode, 0,
++			(LPWSTR)&data, 0, 0);
++		result = QString::fromUtf16(reinterpret_cast<const ushort *> (data));
++		if (data != 0)
++			LocalFree(data);
++	},	{
++		char *data = 0;
++		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
++			0, errorCode, 0,
++			(char *)&data, 0, 0);
++		result = QString::fromLocal8Bit(data);
++		if (data != 0)
++			LocalFree(data);
++	})
+     if (result.endsWith(QLatin1Char('\n')))
+         result.truncate(result.length() - 1);
+ 
+@@ -147,8 +158,15 @@
+ static HKEY openKey(HKEY parentHandle, REGSAM perms, const QString &rSubKey)
+ {
+     HKEY resultHandle = 0;
+-    LONG res = RegOpenKeyEx(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()),
++
++    LONG res;
++    QT_WA( {
++        res = RegOpenKeyExW(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()),
+                             0, perms, &resultHandle);
++    } , {
++        res = RegOpenKeyExA(parentHandle, rSubKey.toLocal8Bit(),
++                            0, perms, &resultHandle);
++    } );
+ 
+     if (res == ERROR_SUCCESS)
+         return resultHandle;
+@@ -165,8 +183,14 @@
+         return resultHandle;
+ 
+     // try to create it
+-    LONG res = RegCreateKeyEx(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()), 0, 0,
++    LONG res;
++    QT_WA( {
++        res = RegCreateKeyExW(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()), 0, 0,
+                               REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
++    } , {
++        res = RegCreateKeyExA(parentHandle, rSubKey.toLocal8Bit(), 0, 0,
++                              REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
++    } );
+ 
+     if (res == ERROR_SUCCESS)
+         return resultHandle;
+@@ -201,14 +225,20 @@
+ static QStringList childKeysOrGroups(HKEY parentHandle, QSettingsPrivate::ChildSpec spec)
+ {
+     QStringList result;
++    LONG res;
+     DWORD numKeys;
+     DWORD maxKeySize;
+     DWORD numSubgroups;
+     DWORD maxSubgroupSize;
+ 
+     // Find the number of keys and subgroups, as well as the max of their lengths.
+-    LONG res = RegQueryInfoKey(parentHandle, 0, 0, 0, &numSubgroups, &maxSubgroupSize, 0,
++    QT_WA( {
++        res = RegQueryInfoKeyW(parentHandle, 0, 0, 0, &numSubgroups, &maxSubgroupSize, 0,
+                                &numKeys, &maxKeySize, 0, 0, 0);
++    }, {
++        res = RegQueryInfoKeyA(parentHandle, 0, 0, 0, &numSubgroups, &maxSubgroupSize, 0,
++                               &numKeys, &maxKeySize, 0, 0, 0);
++    } );
+ 
+     if (res != ERROR_SUCCESS) {
+         qWarning("QSettings: RegQueryInfoKey() failed: %s", errorCodeToString(res).toLatin1().data());
+@@ -228,21 +258,36 @@
+         m = maxSubgroupSize;
+     }
+ 
+-    /* The size does not include the terminating null character. */
++    /* Windows NT/2000/XP: The size does not include the terminating null character.
++       Windows Me/98/95: The size includes the terminating null character. */
+     ++m;
+ 
+     // Get the list
+-    QByteArray buff(m * sizeof(wchar_t), 0);
++    QByteArray buff(m*sizeof(ushort), 0);
+     for (int i = 0; i < n; ++i) {
+         QString item;
+-        DWORD l = buff.size() / sizeof(wchar_t);
+-        if (spec == QSettingsPrivate::ChildKeys) {
+-            res = RegEnumValue(parentHandle, i, reinterpret_cast<wchar_t *>(buff.data()), &l, 0, 0, 0, 0);
+-        } else {
+-            res = RegEnumKeyEx(parentHandle, i, reinterpret_cast<wchar_t *>(buff.data()), &l, 0, 0, 0, 0);
+-        }
+-        if (res == ERROR_SUCCESS)
+-            item = QString::fromWCharArray((const wchar_t *)buff.constData(), l);
++        QT_WA( {
++            DWORD l = buff.size() / sizeof(ushort);
++            if (spec == QSettingsPrivate::ChildKeys) {
++                res = RegEnumValueW(parentHandle, i,
++                                    reinterpret_cast<wchar_t *>(buff.data()),
++                                    &l, 0, 0, 0, 0);
++            } else {
++                res = RegEnumKeyExW(parentHandle, i,
++                                    reinterpret_cast<wchar_t *>(buff.data()),
++                                    &l, 0, 0, 0, 0);
++            }
++            if (res == ERROR_SUCCESS)
++                item = QString::fromUtf16(reinterpret_cast<ushort*>(buff.data()), l);
++        }, {
++            DWORD l = buff.size();
++            if (spec == QSettingsPrivate::ChildKeys)
++                res = RegEnumValueA(parentHandle, i, buff.data(), &l, 0, 0, 0, 0);
++            else
++                res = RegEnumKeyExA(parentHandle, i, buff.data(), &l, 0, 0, 0, 0);
++            if (res == ERROR_SUCCESS)
++                item = QString::fromLocal8Bit(buff.data(), l);
++        } );
+ 
+         if (res != ERROR_SUCCESS) {
+             qWarning("QSettings: RegEnumValue failed: %s", errorCodeToString(res).toLatin1().data());
+@@ -297,7 +342,12 @@
+         RegCloseKey(childGroupHandle);
+ 
+         // delete group itself
+-        LONG res = RegDeleteKey(parentHandle, reinterpret_cast<const wchar_t *>(group.utf16()));
++        LONG res;
++        QT_WA( {
++            res = RegDeleteKeyW(parentHandle, reinterpret_cast<const wchar_t *>(group.utf16()));
++        }, {
++            res = RegDeleteKeyA(parentHandle, group.toLocal8Bit());
++        } );
+         if (res != ERROR_SUCCESS) {
+             qWarning("QSettings: RegDeleteKey failed on subkey \"%s\": %s",
+                       group.toLatin1().data(), errorCodeToString(res).toLatin1().data());
+@@ -469,7 +519,12 @@
+     // get the size and type of the value
+     DWORD dataType;
+     DWORD dataSize;
+-    LONG res = RegQueryValueEx(handle, reinterpret_cast<const wchar_t *>(rSubkeyName.utf16()), 0, &dataType, 0, &dataSize);
++    LONG res;
++    QT_WA( {
++        res = RegQueryValueExW(handle, reinterpret_cast<const wchar_t *>(rSubkeyName.utf16()), 0, &dataType, 0, &dataSize);
++    }, {
++        res = RegQueryValueExA(handle, rSubkeyName.toLocal8Bit(), 0, &dataType, 0, &dataSize);
++    } );
+     if (res != ERROR_SUCCESS) {
+         RegCloseKey(handle);
+         return false;
+@@ -477,8 +532,13 @@
+ 
+     // get the value
+     QByteArray data(dataSize, 0);
+-    res = RegQueryValueEx(handle, reinterpret_cast<const wchar_t *>(rSubkeyName.utf16()), 0, 0,
+-                           reinterpret_cast<unsigned char*>(data.data()), &dataSize);
++    QT_WA( {
++        res = RegQueryValueExW(handle, reinterpret_cast<const wchar_t *>(rSubkeyName.utf16()), 0, 0,
++                               reinterpret_cast<unsigned char*>(data.data()), &dataSize);
++    }, {
++        res = RegQueryValueExA(handle, rSubkeyName.toLocal8Bit(), 0, 0,
++                               reinterpret_cast<unsigned char*>(data.data()), &dataSize);
++    } );
+     if (res != ERROR_SUCCESS) {
+         RegCloseKey(handle);
+         return false;
+@@ -489,7 +549,11 @@
+         case REG_SZ: {
+             QString s;
+             if (dataSize) {
+-                s = QString::fromWCharArray(((const wchar_t *)data.constData()));
++                QT_WA( {
++                    s = QString::fromUtf16(((const ushort*)data.constData()));
++                }, {
++                    s = QString::fromLocal8Bit(data.constData());
++                } );
+             }
+             if (value != 0)
+                 *value = stringToVariant(s);
+@@ -501,7 +565,12 @@
+             if (dataSize) {
+                 int i = 0;
+                 for (;;) {
+-                    QString s = QString::fromWCharArray((const wchar_t *)data.constData() + i);
++                    QString s;
++                    QT_WA( {
++                        s = QString::fromUtf16((const ushort*)data.constData() + i);
++                    }, {
++                        s = QString::fromLocal8Bit(data.constData() + i);
++                    } );
+                     i += s.length() + 1;
+ 
+                     if (s.isEmpty())
+@@ -518,7 +587,11 @@
+         case REG_BINARY: {
+             QString s;
+             if (dataSize) {
+-                s = QString::fromWCharArray((const wchar_t *)data.constData(), data.size() / 2);
++                QT_WA( {
++                    s = QString::fromUtf16((const ushort*)data.constData(), data.size()/2);
++                }, {
++                    s = QString::fromLocal8Bit(data.constData(), data.size());
++                } );
+             }
+             if (value != 0)
+                 *value = stringToVariant(s);
+@@ -571,8 +644,13 @@
+ #if defined(Q_OS_WINCE)
+         remove(regList.at(0).key()); 
+ #else
++        DWORD res;
+         QString emptyKey;
+-        DWORD res = RegDeleteKey(writeHandle(), reinterpret_cast<const wchar_t *>(emptyKey.utf16()));
++        QT_WA( {
++            res = RegDeleteKeyW(writeHandle(), reinterpret_cast<const wchar_t *>(emptyKey.utf16()));
++        }, {
++            res = RegDeleteKeyA(writeHandle(), emptyKey.toLocal8Bit());
++        } );
+         if (res != ERROR_SUCCESS) {
+             qWarning("QSettings: Failed to delete key \"%s\": %s",
+                     regList.at(0).key().toLatin1().data(), errorCodeToString(res).toLatin1().data());
+@@ -597,7 +675,11 @@
+     LONG res;
+     HKEY handle = openKey(writeHandle(), registryPermissions, keyPath(rKey));
+     if (handle != 0) {
+-        res = RegDeleteValue(handle, reinterpret_cast<const wchar_t *>(keyName(rKey).utf16()));
++        QT_WA( {
++            res = RegDeleteValueW(handle, reinterpret_cast<const wchar_t *>(keyName(rKey).utf16()));
++        }, {
++            res = RegDeleteValueA(handle, keyName(rKey).toLocal8Bit());
++        } );
+         RegCloseKey(handle);
+     }
+ 
+@@ -612,7 +694,12 @@
+             for (int i = 0; i < childKeys.size(); ++i) {
+                 QString group = childKeys.at(i);
+ 
+-                LONG res = RegDeleteValue(handle, reinterpret_cast<const wchar_t *>(group.utf16()));
++                LONG res;
++                QT_WA( {
++                    res = RegDeleteValueW(handle, reinterpret_cast<const wchar_t *>(group.utf16()));
++                }, {
++                    res = RegDeleteValueA(handle, group.toLocal8Bit());
++                } );
+                 if (res != ERROR_SUCCESS) {
+                     qWarning("QSettings: RegDeleteValue failed on subkey \"%s\": %s",
+                               group.toLatin1().data(), errorCodeToString(res).toLatin1().data());
+@@ -623,7 +710,11 @@
+             // For WinCE always Close the handle first.
+             RegCloseKey(handle);
+ #endif
+-            res = RegDeleteKey(writeHandle(), reinterpret_cast<const wchar_t *>(rKey.utf16()));
++            QT_WA( {
++                res = RegDeleteKeyW(writeHandle(), reinterpret_cast<const wchar_t *>(rKey.utf16()));
++            }, {
++                res = RegDeleteKeyA(writeHandle(), rKey.toLocal8Bit());
++            } );
+ 
+             if (res != ERROR_SUCCESS) {
+                 qWarning("QSettings: RegDeleteKey failed on key \"%s\": %s",
+@@ -679,15 +770,27 @@
+ 
+             if (type == REG_BINARY) {
+                 QString s = variantToString(value);
+-                regValueBuff = QByteArray((const char*)s.utf16(), s.length() * 2);
++                QT_WA( {
++                    regValueBuff = QByteArray((const char*)s.utf16(), s.length()*2);
++                }, {
++                    regValueBuff = QByteArray((const char*)s.toLocal8Bit(), s.length());
++                } );
+             } else {
+                 QStringList::const_iterator it = l.constBegin();
+                 for (; it != l.constEnd(); ++it) {
+                     const QString &s = *it;
+-                    regValueBuff += QByteArray((const char*)s.utf16(), (s.length() + 1) * 2);
++                    QT_WA( {
++                        regValueBuff += QByteArray((const char*)s.utf16(), (s.length() + 1)*2);
++                    }, {
++                        regValueBuff += QByteArray((const char*)s.toLocal8Bit(), s.length() + 1);
++                    } );
+                 }
+-                regValueBuff.append((char)0);
+-                regValueBuff.append((char)0);
++                QT_WA( {
++                    regValueBuff.append((char)0);
++                    regValueBuff.append((char)0);
++                }, {
++                    regValueBuff.append((char)0);
++                } );
+             }
+             break;
+         }
+@@ -709,6 +812,21 @@
+         }
+ 
+         case QVariant::ByteArray:
++            // On Win95/98/Me QString::toLocal8Bit() fails to handle chars > 0x7F. So we don't go through variantToString() at all.
++            if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++                QByteArray ba = value.toByteArray();
++                regValueBuff = "@ByteArray(";
++                regValueBuff += ba;
++                regValueBuff += ')';
++                if (ba.contains('\0')) {
++                    type = REG_BINARY;
++                } else {
++                    type = REG_SZ;
++                    regValueBuff += '\0';
++                }
++                    
++                break;
++            }
+             // fallthrough intended
+ 
+         default: {
+@@ -717,18 +835,33 @@
+             QString s = variantToString(value);
+             type = stringContainsNullChar(s) ? REG_BINARY : REG_SZ;
+             if (type == REG_BINARY) {
+-                regValueBuff = QByteArray((const char*)s.utf16(), s.length() * 2);
++                QT_WA( {
++                    regValueBuff = QByteArray((const char*)s.utf16(), s.length()*2);
++                }, {
++                    regValueBuff = QByteArray((const char*)s.toLocal8Bit(), s.length());
++                } );
+             } else {
+-                regValueBuff = QByteArray((const char*)s.utf16(), (s.length() + 1) * 2);
++                QT_WA( {
++                    regValueBuff = QByteArray((const char*)s.utf16(), (s.length() + 1)*2);
++                }, {
++                    regValueBuff = QByteArray((const char*)s.toLocal8Bit(), s.length() + 1);
++                } );
+             }
+             break;
+         }
+     }
+ 
+     // set the value
+-    LONG res = RegSetValueEx(handle, reinterpret_cast<const wchar_t *>(keyName(rKey).utf16()), 0, type,
++    LONG res;
++    QT_WA( {
++        res = RegSetValueExW(handle, reinterpret_cast<const wchar_t *>(keyName(rKey).utf16()), 0, type,
+                              reinterpret_cast<const unsigned char*>(regValueBuff.constData()),
+                              regValueBuff.size());
++    }, {
++        res = RegSetValueExA(handle, keyName(rKey).toLocal8Bit(), 0, type,
++                             reinterpret_cast<const unsigned char*>(regValueBuff.constData()),
++                             regValueBuff.size());
++    } );
+ 
+     if (res == ERROR_SUCCESS) {
+         deleteWriteHandleOnExit = false;
+--- a/src/corelib/global/qglobal.cpp
++++ b/src/corelib/global/qglobal.cpp
+@@ -1695,7 +1695,7 @@
+ #include "qt_windows.h"
+ QT_END_INCLUDE_NAMESPACE
+ 
+-#  ifndef Q_OS_WINCE
++#  if !defined(Q_OS_WINCE) && !defined(QT_WIN95_SUPPORT)
+ 
+ // Determine Windows versions >= 8 by querying the version of kernel32.dll.
+ static inline bool determineWinOsVersionPost8(OSVERSIONINFO *result)
+@@ -1767,11 +1767,30 @@
+ #    pragma warning( push )
+ #    pragma warning( disable : 4996 )
+ #  endif
++#if defined(QT_WIN95_SUPPORT) && !defined(Q_OS_WINCE)
++    OSVERSIONINFOA ansi = { sizeof(OSVERSIONINFOA), 0, 0, 0, 0, {'\0'} };
++    if (GetVersionExA(&ansi)) {
++        result.dwMajorVersion = ansi.dwMajorVersion;
++        result.dwMinorVersion = ansi.dwMinorVersion;
++        result.dwBuildNumber = ansi.dwBuildNumber;
++        result.dwPlatformId = ansi.dwPlatformId;
++        MultiByteToWideChar(CP_ACP, 0, ansi.szCSDVersion, -1, result.szCSDVersion,
++                           sizeof(result.szCSDVersion) / sizeof(result.szCSDVersion[0]));
++    }
++    // Query NT directly when available, preserving current Windows detection.
++    // The module is already loaded on NT; no attempt to load it on Win9x.
++    typedef LONG (WINAPI *RtlVersion)(OSVERSIONINFOW *);
++    HMODULE nt = GetModuleHandleA("ntdll.dll");
++    RtlVersion rtl = nt ? (RtlVersion)GetProcAddress(nt, "RtlGetVersion") : 0;
++    if (rtl && result.dwPlatformId == VER_PLATFORM_WIN32_NT)
++        rtl(&result);
++#else
+     GetVersionEx(&result);
++#endif
+ #  if defined(_MSC_VER) && _MSC_VER >= 1800
+ #    pragma warning( pop )
+ #  endif
+-#  ifndef Q_OS_WINCE
++#  if !defined(Q_OS_WINCE) && !defined(QT_WIN95_SUPPORT)
+     if (result.dwMajorVersion == 6 && result.dwMinorVersion == 2) {
+         if (!determineWinOsVersionPost8(&result))
+             determineWinOsVersionFallbackPost8(&result);
+@@ -2282,6 +2301,7 @@
+         break;
+     default: {
+ #ifdef Q_OS_WIN
++        QT_WA({
+         wchar_t *string = 0;
+         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+                       NULL,
+@@ -2292,6 +2312,14 @@
+                       NULL);
+         ret = QString::fromWCharArray(string);
+         LocalFree((HLOCAL)string);
++        }, {
++            char *string = 0;
++            FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
++                           NULL, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
++                           (LPSTR)&string, 0, NULL);
++            ret = QString::fromLocal8Bit(string);
++            LocalFree((HLOCAL)string);
++        });
+ 
+         if (ret.isEmpty() && errorCode == ERROR_MOD_NOT_FOUND)
+             ret = QString::fromLatin1("The specified module could not be found.");
+--- a/src/corelib/global/qglobal.h
++++ b/src/corelib/global/qglobal.h
+@@ -1811,12 +1811,17 @@
+ 
+ #if defined(Q_WS_WIN) || defined(Q_OS_CYGWIN)
+ #if defined(QT3_SUPPORT)
+-inline QT3_SUPPORT bool qt_winUnicode() { return true; }
++inline QT3_SUPPORT bool qt_winUnicode() { return !(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based); }
+ inline QT3_SUPPORT int qWinVersion() { return QSysInfo::WindowsVersion; }
+ #endif
+ 
+ // ### Qt 5: remove Win9x support macros QT_WA and QT_WA_INLINE.
++#if defined(QT_WIN95_SUPPORT) && !defined(Q_OS_WINCE)
++#define QT_WA(unicode, ansi) if (!(QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)) { unicode } else { ansi }
++#define QT_WA_INLINE(unicode, ansi) (!(QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based) ? (unicode) : (ansi))
++#else
+ #define QT_WA(unicode, ansi) unicode
+ #define QT_WA_INLINE(unicode, ansi) (unicode)
++#endif
+ 
+ #endif /* Q_WS_WIN */

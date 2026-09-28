@@ -1,0 +1,426 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: ANSI file creation, temporary paths, directory iteration,
+# current directories and copy/rename/remove; metadata from an open handle
+# when directory entries are stale; NT's extended-path prefix stripped on
+# Win9x. NT keeps the Unicode paths.
+#
+--- /dev/null
++++ b/src/corelib/io/qwin95file_p.h
+@@ -0,0 +1,66 @@
++/* SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
++ * Copyright (C) 2026 OpenKaryon
++ *
++ * Windows 9x: ANSI forms of the path and directory-search calls of QtCore's
++ * file engine, chosen at run time; NT keeps the Unicode ones.
++ */
++
++#ifndef QWIN95FILE_P_H
++#define QWIN95FILE_P_H
++#include "qstring.h"
++#include "qbytearray.h"
++#include "qt_windows.h"
++QT_BEGIN_NAMESPACE
++
++// Internal to the experimental Win95 port; paths still stay Unicode in Qt.
++static inline QByteArray qt_win95_local_path(QString path)
++{
++    if (path.startsWith(QLatin1String("\\\\?\\UNC\\")))
++        path = QLatin1String("\\\\") + path.mid(8);
++    else if (path.startsWith(QLatin1String("\\\\?\\")))
++        path.remove(0, 4);
++    return path.replace(QLatin1Char('/'), QLatin1Char('\\')).toLocal8Bit();
++}
++
++static inline void qt_win95_copy_find_data(const WIN32_FIND_DATAA &ansi, WIN32_FIND_DATAW *wide)
++{
++    memset(wide, 0, sizeof(*wide));
++    wide->dwFileAttributes = ansi.dwFileAttributes;
++    wide->ftCreationTime = ansi.ftCreationTime;
++    wide->ftLastAccessTime = ansi.ftLastAccessTime;
++    wide->ftLastWriteTime = ansi.ftLastWriteTime;
++    wide->nFileSizeHigh = ansi.nFileSizeHigh;
++    wide->nFileSizeLow = ansi.nFileSizeLow;
++    wide->dwReserved0 = ansi.dwReserved0;
++    wide->dwReserved1 = ansi.dwReserved1;
++    const QString name = QString::fromLocal8Bit(ansi.cFileName);
++    const int nameLength = qMin(name.size(), MAX_PATH - 1);
++    memcpy(wide->cFileName, name.utf16(), nameLength * sizeof(wchar_t));
++    const QString alternate = QString::fromLocal8Bit(ansi.cAlternateFileName);
++    const int alternateLength = qMin(alternate.size(), 13);
++    memcpy(wide->cAlternateFileName, alternate.utf16(), alternateLength * sizeof(wchar_t));
++}
++
++static inline HANDLE qt_win95_find_first(const QString &path, WIN32_FIND_DATAW *wide)
++{
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based))
++        return FindFirstFileW((LPCWSTR)path.utf16(), wide);
++    WIN32_FIND_DATAA ansi;
++    HANDLE handle = FindFirstFileA(qt_win95_local_path(path).constData(), &ansi);
++    if (handle != INVALID_HANDLE_VALUE)
++        qt_win95_copy_find_data(ansi, wide);
++    return handle;
++}
++
++static inline BOOL qt_win95_find_next(HANDLE handle, WIN32_FIND_DATAW *wide)
++{
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based))
++        return FindNextFileW(handle, wide);
++    WIN32_FIND_DATAA ansi;
++    BOOL ok = FindNextFileA(handle, &ansi);
++    if (ok)
++        qt_win95_copy_find_data(ansi, wide);
++    return ok;
++}
++QT_END_NAMESPACE
++#endif
+--- a/src/corelib/io/qfsfileengine_win.cpp
++++ b/src/corelib/io/qfsfileengine_win.cpp
+@@ -52,6 +52,7 @@
+ #include "qvarlengtharray.h"
+ #include "qdatetime.h"
+ #include "qt_windows.h"
++#include "qwin95file_p.h"
+ 
+ #if !defined(Q_OS_WINCE)
+ #  include <sys/types.h>
+@@ -151,13 +152,11 @@
+     // WriteOnly can create files, ReadOnly cannot.
+     DWORD creationDisp = (openMode & QIODevice::WriteOnly) ? OPEN_ALWAYS : OPEN_EXISTING;
+     // Create the file handle.
+-    fileHandle = CreateFile((const wchar_t*)fileEntry.nativeFilePath().utf16(),
+-                            accessRights,
+-                            shareMode,
+-                            &securityAtts,
+-                            creationDisp,
+-                            FILE_ATTRIBUTE_NORMAL,
+-                            NULL);
++    fileHandle = QT_WA_INLINE(
++            CreateFileW((const wchar_t*)fileEntry.nativeFilePath().utf16(), accessRights,
++                        shareMode, &securityAtts, creationDisp, FILE_ATTRIBUTE_NORMAL, NULL),
++            CreateFileA(qt_win95_local_path(fileEntry.nativeFilePath()).constData(), accessRights,
++                        shareMode, &securityAtts, creationDisp, FILE_ATTRIBUTE_NORMAL, NULL));
+ 
+     // Bail out on error.
+     if (fileHandle == INVALID_HANDLE_VALUE) {
+--- a/src/corelib/io/qtemporaryfile.cpp
++++ b/src/corelib/io/qtemporaryfile.cpp
+@@ -62,6 +62,10 @@
+ #include "qcoreapplication.h"
+ #endif
+ 
++#if defined(Q_OS_WIN) && !defined(Q_OS_WINCE)
++#include "qwin95file_p.h"
++#endif
++
+ QT_BEGIN_NAMESPACE
+ 
+ #if defined(Q_OS_WIN) || defined(Q_OS_SYMBIAN)
+@@ -168,10 +172,11 @@
+     for (;;) {
+         // Atomically create file and obtain handle
+ #if defined(Q_OS_WIN)
+-        file = CreateFile((const wchar_t *)path.constData(),
+-                GENERIC_READ | GENERIC_WRITE,
+-                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_NEW,
+-                FILE_ATTRIBUTE_NORMAL, NULL);
++        file = QT_WA_INLINE(
++                CreateFileW((const wchar_t *)path.constData(), GENERIC_READ | GENERIC_WRITE,
++                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL),
++                CreateFileA(qt_win95_local_path(path).constData(), GENERIC_READ | GENERIC_WRITE,
++                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL));
+ 
+         if (file != INVALID_HANDLE_VALUE)
+             return true;
+--- a/src/corelib/io/qfilesystemengine_win.cpp
++++ b/src/corelib/io/qfilesystemengine_win.cpp
+@@ -54,6 +54,7 @@
+ #include "qvarlengtharray.h"
+ #include "qdatetime.h"
+ #include "qt_windows.h"
++#include "qwin95file_p.h"
+ 
+ #if !defined(Q_OS_WINCE)
+ #  include <sys/types.h>
+@@ -484,7 +485,7 @@
+ 
+     // can't handle drives
+     if (!path.endsWith(QLatin1Char(':'))) {
+-        HANDLE hFind = ::FindFirstFile((wchar_t*)path.utf16(), &findData);
++        HANDLE hFind = qt_win95_find_first(path, &findData);
+         if (hFind != INVALID_HANDLE_VALUE) {
+             ::FindClose(hFind);
+             return true;
+@@ -564,6 +565,7 @@
+     // can be //server or //server/share
+     QString absPath;
+ #if !defined(Q_OS_WINCE)
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)) {
+     QVarLengthArray<wchar_t, MAX_PATH> buf(qMax(MAX_PATH, path.size() + 1));
+     wchar_t *fileName = 0;
+     DWORD retLen = GetFullPathName((wchar_t*)path.utf16(), buf.size(), buf.data(), &fileName);
+@@ -573,6 +575,17 @@
+     }
+     if (retLen != 0)
+         absPath = QString::fromWCharArray(buf.data(), retLen);
++    } else {
++    QVarLengthArray<char, MAX_PATH> buf(qMax(MAX_PATH, path.size() + 1));
++    const QByteArray name = qt_win95_local_path(path);
++    DWORD retLen = GetFullPathNameA(name.constData(), buf.size(), buf.data(), 0);
++    if (retLen >= (DWORD)buf.size()) {
++        buf.resize(retLen + 1);
++        retLen = GetFullPathNameA(name.constData(), buf.size(), buf.data(), 0);
++    }
++    if (retLen != 0 && retLen < (DWORD)buf.size())
++        absPath = QString::fromLocal8Bit(buf.data(), retLen);
++    }
+ #else
+     if (path.startsWith(QLatin1Char('/')) || path.startsWith(QLatin1Char('\\')))
+         absPath = QDir::toNativeSeparators(path);
+@@ -771,12 +784,14 @@
+                                 | QFileSystemMetaData::OtherPermissions | QFileSystemMetaData::UserExecutePermission;
+         // calculate user permissions
+         if (what & QFileSystemMetaData::UserReadPermission) {
+-            if (::_waccess((wchar_t*)entry.nativeFilePath().utf16(), R_OK) == 0)
++            if (QT_WA_INLINE(::_waccess((wchar_t*)entry.nativeFilePath().utf16(), R_OK),
++                    ::_access(qt_win95_local_path(entry.nativeFilePath()).constData(), R_OK)) == 0)
+                 data.entryFlags |= QFileSystemMetaData::UserReadPermission;
+             data.knownFlagsMask |= QFileSystemMetaData::UserReadPermission;
+         }
+         if (what & QFileSystemMetaData::UserWritePermission) {
+-            if (::_waccess((wchar_t*)entry.nativeFilePath().utf16(), W_OK) == 0)
++            if (QT_WA_INLINE(::_waccess((wchar_t*)entry.nativeFilePath().utf16(), W_OK),
++                    ::_access(qt_win95_local_path(entry.nativeFilePath()).constData(), W_OK)) == 0)
+                 data.entryFlags |= QFileSystemMetaData::UserWritePermission;
+             data.knownFlagsMask |= QFileSystemMetaData::UserWritePermission;
+         }
+@@ -967,12 +982,14 @@
+     if (platformId == 1 && QFSFileEnginePrivate::longFileName(path).size() > 256)
+         return false;
+ #endif
+-    return ::CreateDirectory((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16(), 0);
++    return QT_WA_INLINE(::CreateDirectoryW((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16(), 0),
++            ::CreateDirectoryA(qt_win95_local_path(path).constData(), 0));
+ }
+ 
+ static inline bool rmDir(const QString &path)
+ {
+-    return ::RemoveDirectory((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16());
++    return QT_WA_INLINE(::RemoveDirectoryW((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16()),
++            ::RemoveDirectoryA(qt_win95_local_path(path).constData()));
+ }
+ 
+ static bool isDirPath(const QString &dirPath, bool *existed)
+@@ -981,7 +998,8 @@
+     if (path.length() == 2 && path.at(1) == QLatin1Char(':'))
+         path += QLatin1Char('\\');
+ 
+-    DWORD fileAttrib = ::GetFileAttributes((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16());
++    DWORD fileAttrib = QT_WA_INLINE(::GetFileAttributesW((wchar_t*)QFSFileEnginePrivate::longFileName(path).utf16()),
++            ::GetFileAttributesA(qt_win95_local_path(path).constData()));
+     if (fileAttrib == INVALID_FILE_ATTRIBUTES) {
+         int errorCode = GetLastError();
+         if (errorCode == ERROR_ACCESS_DENIED || errorCode == ERROR_SHARING_VIOLATION) {
+@@ -1133,10 +1151,17 @@
+ QString QFileSystemEngine::tempPath()
+ {
+     QString ret;
+-    wchar_t tempPath[MAX_PATH];
+-    DWORD len = GetTempPath(MAX_PATH, tempPath);
+-    if (len)
+-        ret = QString::fromWCharArray(tempPath, len);
++    QT_WA({
++        wchar_t tempPath[MAX_PATH];
++        DWORD len = GetTempPathW(MAX_PATH, tempPath);
++        if (len && len < MAX_PATH)
++            ret = QString::fromWCharArray(tempPath, len);
++    }, {
++        char tempPath[MAX_PATH];
++        DWORD len = GetTempPathA(MAX_PATH, tempPath);
++        if (len && len < MAX_PATH)
++            ret = QString::fromLocal8Bit(tempPath, len);
++    });
+     if (!ret.isEmpty()) {
+         while (ret.endsWith(QLatin1Char('\\')))
+             ret.chop(1);
+@@ -1163,7 +1188,8 @@
+ #if !defined(Q_OS_WINCE)
+     //TODO: this should really be using nativeFilePath(), but that returns a path in long format \\?\c:\foo
+     //which causes many problems later on when it's returned through currentPath()
+-    return ::SetCurrentDirectory(reinterpret_cast<const wchar_t*>(QDir::toNativeSeparators(entry.filePath()).utf16())) != 0;
++    return QT_WA_INLINE(::SetCurrentDirectoryW(reinterpret_cast<const wchar_t*>(QDir::toNativeSeparators(entry.filePath()).utf16())),
++            ::SetCurrentDirectoryA(qt_win95_local_path(entry.filePath()).constData())) != 0;
+ #else
+     qfsPrivateCurrentDir = entry.filePath();
+     return true;
+@@ -1174,6 +1200,7 @@
+ {
+     QString ret;
+ #if !defined(Q_OS_WINCE)
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)) {
+     DWORD size = 0;
+     wchar_t currentName[PATH_MAX];
+     size = ::GetCurrentDirectory(PATH_MAX, currentName);
+@@ -1187,6 +1214,16 @@
+             ret = QString::fromWCharArray(currentName, size);
+         }
+     }
++    } else {
++    QVarLengthArray<char, MAX_PATH> current(MAX_PATH);
++    DWORD size = GetCurrentDirectoryA(current.size(), current.data());
++    if (size >= (DWORD)current.size()) {
++        current.resize(size + 1);
++        size = GetCurrentDirectoryA(current.size(), current.data());
++    }
++    if (size && size < (DWORD)current.size())
++        ret = QString::fromLocal8Bit(current.data(), size);
++    }
+     if (ret.length() >= 2 && ret[1] == QLatin1Char(':'))
+         ret[0] = ret.at(0).toUpper(); // Force uppercase drive letters.
+ #else
+@@ -1213,8 +1250,10 @@
+ //static
+ bool QFileSystemEngine::copyFile(const QFileSystemEntry &source, const QFileSystemEntry &target, QSystemError &error)
+ {
+-    bool ret = ::CopyFile((wchar_t*)source.nativeFilePath().utf16(),
+-                          (wchar_t*)target.nativeFilePath().utf16(), true) != 0;
++    bool ret = QT_WA_INLINE(::CopyFileW((wchar_t*)source.nativeFilePath().utf16(),
++                          (wchar_t*)target.nativeFilePath().utf16(), true),
++            ::CopyFileA(qt_win95_local_path(source.nativeFilePath()).constData(),
++                        qt_win95_local_path(target.nativeFilePath()).constData(), true)) != 0;
+     if(!ret)
+         error = QSystemError(::GetLastError(), QSystemError::NativeError);
+     return ret;
+@@ -1223,8 +1262,10 @@
+ //static
+ bool QFileSystemEngine::renameFile(const QFileSystemEntry &source, const QFileSystemEntry &target, QSystemError &error)
+ {
+-    bool ret = ::MoveFile((wchar_t*)source.nativeFilePath().utf16(),
+-                          (wchar_t*)target.nativeFilePath().utf16()) != 0;
++    bool ret = QT_WA_INLINE(::MoveFileW((wchar_t*)source.nativeFilePath().utf16(),
++                          (wchar_t*)target.nativeFilePath().utf16()),
++            ::MoveFileA(qt_win95_local_path(source.nativeFilePath()).constData(),
++                        qt_win95_local_path(target.nativeFilePath()).constData())) != 0;
+     if(!ret)
+         error = QSystemError(::GetLastError(), QSystemError::NativeError);
+     return ret;
+@@ -1233,7 +1274,8 @@
+ //static
+ bool QFileSystemEngine::removeFile(const QFileSystemEntry &entry, QSystemError &error)
+ {
+-    bool ret = ::DeleteFile((wchar_t*)entry.nativeFilePath().utf16()) != 0;
++    bool ret = QT_WA_INLINE(::DeleteFileW((wchar_t*)entry.nativeFilePath().utf16()),
++            ::DeleteFileA(qt_win95_local_path(entry.nativeFilePath()).constData())) != 0;
+     if(!ret)
+         error = QSystemError(::GetLastError(), QSystemError::NativeError);
+     return ret;
+@@ -1256,7 +1298,8 @@
+     if (mode == 0) // not supported
+         return false;
+ 
+-    bool ret = (::_wchmod((wchar_t*)entry.nativeFilePath().utf16(), mode) == 0);
++    bool ret = (QT_WA_INLINE(::_wchmod((wchar_t*)entry.nativeFilePath().utf16(), mode),
++            ::_chmod(qt_win95_local_path(entry.nativeFilePath()).constData(), mode)) == 0);
+     if(!ret)
+         error = QSystemError(errno, QSystemError::StandardLibraryError);
+     return ret;
+@@ -1266,7 +1309,15 @@
+ {
+     QDateTime ret;
+ 
+-#if defined(Q_OS_WINCE)
++#ifndef Q_OS_WINCE
++    typedef BOOL (WINAPI *PtrLocalTime)(const TIME_ZONE_INFORMATION *, const SYSTEMTIME *, LPSYSTEMTIME);
++    PtrLocalTime toLocalTime = 0;
++    if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based))
++        toLocalTime = (PtrLocalTime)GetProcAddress(GetModuleHandleA("kernel32.dll"), "SystemTimeToTzSpecificLocalTime");
++    if (!toLocalTime) {
++#else
++    {
++#endif
+     SYSTEMTIME systime;
+     FILETIME ftime;
+     systime.wYear = 1970;
+@@ -1284,14 +1335,15 @@
+     unsigned __int64 difftime = acttime - time1970;
+     difftime /= 10000000;
+     ret.setTime_t((unsigned int)difftime);
+-#else
++#ifndef Q_OS_WINCE
++    } else {
+     SYSTEMTIME sTime, lTime;
+     FileTimeToSystemTime(time, &sTime);
+-    SystemTimeToTzSpecificLocalTime(0, &sTime, &lTime);
++    toLocalTime(0, &sTime, &lTime);
+     ret.setDate(QDate(lTime.wYear, lTime.wMonth, lTime.wDay));
+     ret.setTime(QTime(lTime.wHour, lTime.wMinute, lTime.wSecond, lTime.wMilliseconds));
+ #endif
+-
++    }
+     return ret;
+ }
+ 
+--- a/src/corelib/io/qfilesystemiterator_win.cpp
++++ b/src/corelib/io/qfilesystemiterator_win.cpp
+@@ -49,6 +49,7 @@
+ #include "qplatformdefs.h"
+ 
+ #include <QtCore/qt_windows.h>
++#include "qwin95file_p.h"
+ 
+ QT_BEGIN_NAMESPACE
+ #ifndef  QT_NO_FILESYSTEMITERATOR
+@@ -107,11 +108,11 @@
+ #ifndef Q_OS_WINCE
+         typedef HANDLE (WINAPI *PtrFindEx)(LPCWSTR, FINDEX_INFO_LEVELS, LPVOID, FINDEX_SEARCH_OPS, LPVOID, DWORD);
+         PtrFindEx findEx = (PtrFindEx)GetProcAddress(GetModuleHandleA("kernel32.dll"), "FindFirstFileExW");
+-        if (findEx)
++        if (!(QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) && findEx)
+             findFileHandle = findEx((const wchar_t *)nativePath.utf16(), FINDEX_INFO_LEVELS(infoLevel), &findData,
+                                     FINDEX_SEARCH_OPS(searchOps), 0, dwAdditionalFlags);
+         else
+-            findFileHandle = FindFirstFileW((const wchar_t *)nativePath.utf16(), &findData);
++            findFileHandle = qt_win95_find_first(nativePath, &findData);
+ #else
+         findFileHandle = FindFirstFileEx((const wchar_t *)nativePath.utf16(), FINDEX_INFO_LEVELS(infoLevel), &findData,
+                                          FINDEX_SEARCH_OPS(searchOps), 0, dwAdditionalFlags);
+@@ -137,7 +138,7 @@
+             if (++uncShareIndex >= uncShares.count())
+                 return false;
+         } else {
+-            if (!FindNextFile(findFileHandle, &findData))
++            if (!qt_win95_find_next(findFileHandle, &findData))
+                 return false;
+         }
+     }
+--- a/src/corelib/kernel/qeventdispatcher_win.cpp
++++ b/src/corelib/kernel/qeventdispatcher_win.cpp
+@@ -479,7 +479,7 @@
+ #ifdef GWLP_USERDATA
+     QEventDispatcherWin32 *q = (QEventDispatcherWin32 *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+ #else
+-    QEventDispatcherWin32 *q = (QEventDispatcherWin32 *) GetWindowLong(hwnd, GWL_USERDATA);
++    QEventDispatcherWin32 *q = (QEventDispatcherWin32 *) QT_WA_INLINE(GetWindowLongW(hwnd, GWL_USERDATA), GetWindowLongA(hwnd, GWL_USERDATA));
+ #endif
+     QEventDispatcherWin32Private *d = 0;
+     if (q != 0)
+@@ -638,7 +638,8 @@
+ #ifdef GWLP_USERDATA
+     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)eventDispatcher);
+ #else
+-    SetWindowLong(wnd, GWL_USERDATA, (LONG)eventDispatcher);
++    QT_WA({ SetWindowLongW(wnd, GWL_USERDATA, (LONG)eventDispatcher); },
++        { SetWindowLongA(wnd, GWL_USERDATA, (LONG)eventDispatcher); });
+ #endif
+ 
+     return wnd;
+@@ -872,7 +873,7 @@
+ 
+                 if (!filterEvent(&msg)) {
+                     TranslateMessage(&msg);
+-                    DispatchMessage(&msg);
++                    QT_WA({ DispatchMessageW(&msg); }, { DispatchMessageA(&msg); });
+                 }
+             } else if (waitRet < WAIT_OBJECT_0 + nCount) {
+                 d->activateEventNotifier(d->winEventNotifierList.at(waitRet - WAIT_OBJECT_0));

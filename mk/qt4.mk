@@ -15,9 +15,20 @@ QT4_ARCHIVE_SHA256 ?= e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f
 
 QT4_WIN_AMD64_IMAGE := qt4-win-amd64
 
+# Qt Mobility, Qt 4's add-on outside the source archive, pinned by commit.
+QT_MOBILITY_COMMIT := fb3e9bc2d941462f1244aaf0ea79425a307f883d
+QT_MOBILITY_ARCHIVE := qt-mobility-$(QT_MOBILITY_COMMIT).tar.xz
+QT_MOBILITY_PATH := $(DOWNLOAD_DIR)/$(QT_MOBILITY_ARCHIVE)
+QT_MOBILITY_URL := https://code.qt.io/qt-mobility/qt-mobility.git
+
 .PHONY: download-qt4 download-qt4-openssl download-qt-mobility \
         qt4-linux-i386 qt4-linux-amd64 qt4-win-i386 qt4-win-amd64 \
         qt4-extract-tests qt4-package-tests
+
+download-qt-mobility: $(QT_MOBILITY_PATH)
+
+$(QT_MOBILITY_PATH):
+	$(PYTHON) scripts/fetch/fetch-git-archive.py "$(QT_MOBILITY_URL)" "$(QT_MOBILITY_COMMIT)" "$@" qt-mobility
 
 download-qt4: $(QT4_ARCHIVE_PATH)
 

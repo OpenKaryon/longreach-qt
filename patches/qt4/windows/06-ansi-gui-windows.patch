@@ -1,0 +1,2102 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: ANSI window classes, window creation and captions, keyboard and
+# mouse input mapping and input methods, the clipboard and drag and drop,
+# cursors, sounds, monitors and the raster window surface (layered windows
+# optional). From the GUI removal commit 55137901, adapted to 4.8.7.
+#
+--- a/src/gui/kernel/qwidget_win.cpp
++++ b/src/gui/kernel/qwidget_win.cpp
+@@ -150,8 +150,14 @@
+     if (!qt_is_gui_used)
+         return;
+     QSystemLibrary library(QLatin1String("wintab32"));
+-    ptrWTOpen = (PtrWTOpen)library.resolve("WTOpenW");
+-    ptrWTInfo = (PtrWTInfo)library.resolve("WTInfoW");
++    QT_WA({
++        ptrWTOpen = (PtrWTOpen)library.resolve("WTOpenW");
++        ptrWTInfo = (PtrWTInfo)library.resolve("WTInfoW");
++    } , {
++        ptrWTOpen = (PtrWTOpen)library.resolve("WTOpenA");
++        ptrWTInfo = (PtrWTInfo)library.resolve("WTInfoA");
++    });
++
+     ptrWTClose = (PtrWTClose)library.resolve("WTClose");
+     ptrWTQueueSizeGet = (PtrWTQueueSizeGet)library.resolve("WTQueueSizeGet");
+     ptrWTQueueSizeSet = (PtrWTQueueSizeSet)library.resolve("WTQueueSizeSet");
+@@ -295,18 +301,25 @@
+ 
+     if (desktop && !q->testAttribute(Qt::WA_DontShowOnScreen)) {                                // desktop widget
+         popup = false;                                // force this flags off
+-        data.crect.setRect(GetSystemMetrics(76 /* SM_XVIRTUALSCREEN  */), GetSystemMetrics(77 /* SM_YVIRTUALSCREEN  */),
++        if (QSysInfo::WindowsVersion != QSysInfo::WV_NT && QSysInfo::WindowsVersion != QSysInfo::WV_95)
++            data.crect.setRect(GetSystemMetrics(76 /* SM_XVIRTUALSCREEN  */), GetSystemMetrics(77 /* SM_YVIRTUALSCREEN  */),
+                            GetSystemMetrics(78 /* SM_CXVIRTUALSCREEN */), GetSystemMetrics(79 /* SM_CYVIRTUALSCREEN */));
++        else
++            data.crect.setRect(0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+     }
+ 
+     parentw = q->parentWidget() ? q->parentWidget()->effectiveWinId() : 0;
+ 
++#ifdef UNICODE
+     QString title;
++    const TCHAR *ttitle = 0;
++#endif
++    QByteArray title95;
+     int style = WS_CHILD;
+     int exsty = 0;
+ 
+     if (window) {
+-        style = GetWindowLong(window, GWL_STYLE);
++        style = GetWindowLongA(window, GWL_STYLE);
+         if (!style)
+             qErrnoWarning("QWidget::create: GetWindowLong failed");
+         topLevel = false; // #### needed for some IE plugins??
+@@ -355,7 +368,12 @@
+     }
+ 
+     if (flags & Qt::WindowTitleHint) {
+-        title = q->isWindow() ? qAppName() : q->objectName();
++        QT_WA({
++            title = q->isWindow() ? qAppName() : q->objectName();
++            ttitle = (TCHAR*)title.utf16();
++        } , {
++            title95 = q->isWindow() ? qAppName().toLocal8Bit() : q->objectName().toLatin1();
++        });
+     }
+ 
+     // The Qt::WA_WState_Created flag is checked by translateConfigEvent() in
+@@ -368,13 +386,13 @@
+             destroyw = data.winid;
+         id = window;
+         setWinId(window);
+-        LONG res = SetWindowLong(window, GWL_STYLE, style);
++        LONG res = SetWindowLongA(window, GWL_STYLE, style);
+         if (!res)
+             qErrnoWarning("QWidget::create: Failed to set window style");
+ #ifdef _WIN64
+-        res = SetWindowLongPtr( window, GWLP_WNDPROC, (LONG_PTR)QtWndProc );
++        res = SetWindowLongPtrA( window, GWLP_WNDPROC, (LONG_PTR)QtWndProc );
+ #else
+-        res = SetWindowLong( window, GWL_WNDPROC, (LONG)QtWndProc );
++        res = SetWindowLongA( window, GWL_WNDPROC, (LONG)QtWndProc );
+ #endif
+         if (!res)
+             qErrnoWarning("QWidget::create: Failed to set window procedure");
+@@ -433,10 +451,16 @@
+             }
+         }
+ 
+-        id = CreateWindowEx(exsty, reinterpret_cast<const wchar_t *>(windowClassName.utf16()),
+-                            reinterpret_cast<const wchar_t *>(title.utf16()), style,
+-                            x, y, w, h,
+-                            parentw, NULL, appinst, NULL);
++        QT_WA({
++            const TCHAR *cname = (TCHAR*)windowClassName.utf16();
++            id = CreateWindowEx(exsty, cname, ttitle, style,
++                                x, y, w, h,
++                                parentw, 0, appinst, 0);
++        } , {
++            id = CreateWindowExA(exsty, windowClassName.toLatin1(), title95, style,
++                                 x, y, w, h,
++                                 parentw, 0, appinst, 0);
++        });
+         if (!id)
+             qErrnoWarning("QWidget::create: Failed to create window");
+         setWinId(id);
+@@ -448,10 +472,16 @@
+             SetWindowPos(id, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+         winUpdateIsOpaque();
+     } else if (q->testAttribute(Qt::WA_NativeWindow) || paintOnScreen()) { // create child widget
+-        id = CreateWindowEx(exsty, reinterpret_cast<const wchar_t *>(windowClassName.utf16()),
+-                            reinterpret_cast<const wchar_t *>(title.utf16()), style,
+-                            data.crect.left(), data.crect.top(), data.crect.width(), data.crect.height(),
++        QT_WA({
++            const TCHAR *cname = (TCHAR*)windowClassName.utf16();
++            id = CreateWindowEx(exsty, cname, ttitle, style,
++                                data.crect.left(), data.crect.top(), data.crect.width(), data.crect.height(),
+                             parentw, NULL, appinst, NULL);
++        } , {
++            id = CreateWindowExA(exsty, windowClassName.toLatin1(), title95, style,
++                                 data.crect.left(), data.crect.top(), data.crect.width(), data.crect.height(),
++                            parentw, NULL, appinst, NULL);
++        });
+         if (!id)
+             qErrnoWarning("QWidget::create: Failed to create window");
+         SetWindowPos(id, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+@@ -701,7 +731,7 @@
+     // Show borderless toplevel windows in tasklist & NavBar
+     if (!parent) {
+         QString txt = q->windowTitle().isEmpty()?qAppName():q->windowTitle();
+-        SetWindowText(q->internalWinId(), (wchar_t*)txt.utf16());
++        SetWindowText(q->internalWinId(), (TCHAR*)txt.utf16());
+     }
+ #endif
+     invalidateBuffer(q->rect());
+@@ -792,7 +822,11 @@
+         return;
+ 
+     Q_ASSERT(q->testAttribute(Qt::WA_WState_Created));
+-    SetWindowText(q->internalWinId(), (wchar_t*)caption.utf16());
++    QT_WA({
++        SetWindowText(q->internalWinId(), (TCHAR*)caption.utf16());
++    } , {
++        SetWindowTextA(q->internalWinId(), caption.toLocal8Bit());
++    });
+ }
+ 
+ HICON qt_createIcon(QIcon icon, int xSize, int ySize, QPixmap **cache)
+@@ -840,11 +874,11 @@
+                                   GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON),
+                                   &(x->iconPixmap));
+     if (x->winIconBig) {
+-        SendMessage(q->internalWinId(), WM_SETICON, 0 /* ICON_SMALL */, (LPARAM)x->winIconSmall);
+-        SendMessage(q->internalWinId(), WM_SETICON, 1 /* ICON_BIG */, (LPARAM)x->winIconBig);
++        SendMessageA(q->internalWinId(), WM_SETICON, 0 /* ICON_SMALL */, (LPARAM)x->winIconSmall);
++        SendMessageA(q->internalWinId(), WM_SETICON, 1 /* ICON_BIG */, (LPARAM)x->winIconBig);
+     } else {
+-        SendMessage(q->internalWinId(), WM_SETICON, 0 /* ICON_SMALL */, (LPARAM)x->winIconSmall);
+-        SendMessage(q->internalWinId(), WM_SETICON, 1 /* ICON_BIG */, (LPARAM)x->winIconSmall);
++        SendMessageA(q->internalWinId(), WM_SETICON, 0 /* ICON_SMALL */, (LPARAM)x->winIconSmall);
++        SendMessageA(q->internalWinId(), WM_SETICON, 1 /* ICON_BIG */, (LPARAM)x->winIconSmall);
+     }
+ }
+ 
+@@ -871,7 +905,7 @@
+ /* Works only as long as pointer is inside the application's window,
+    which is good enough for QDockWidget.
+ 
+-   Doesn't call SetWindowsHookEx() - this function causes a system-wide
++   Doesn't call SetWindowsHookExA() - this function causes a system-wide
+    freeze if any other app on the system installs a hook and fails to
+    process events. */
+ void QWidgetPrivate::grabMouseWhileInWindow()
+@@ -895,7 +929,7 @@
+     if (!qt_nograb()) {
+         if (mouseGrb)
+             mouseGrb->releaseMouse();
+-        journalRec = SetWindowsHookEx(WH_JOURNALRECORD, (HOOKPROC)qJournalRecordProc, GetModuleHandle(0), 0);
++        journalRec = SetWindowsHookExA(WH_JOURNALRECORD, (HOOKPROC)qJournalRecordProc, GetModuleHandleA(0), 0);
+         Q_ASSERT(testAttribute(Qt::WA_WState_Created));
+         SetCapture(effectiveWinId());
+         mouseGrb = this;
+@@ -911,7 +945,7 @@
+     if (!qt_nograb()) {
+         if (mouseGrb)
+             mouseGrb->releaseMouse();
+-        journalRec = SetWindowsHookEx(WH_JOURNALRECORD, (HOOKPROC)qJournalRecordProc, GetModuleHandle(0), 0);
++        journalRec = SetWindowsHookExA(WH_JOURNALRECORD, (HOOKPROC)qJournalRecordProc, GetModuleHandleA(0), 0);
+         Q_ASSERT(testAttribute(Qt::WA_WState_Created));
+         SetCapture(effectiveWinId());
+         mouseGrbCur = new QCursor(cursor);
+@@ -1019,7 +1053,7 @@
+             if (newstate & Qt::WindowFullScreen) {
+                 if (d->topData()->normalGeometry.width() < 0 && !(oldstate & Qt::WindowMaximized))
+                     d->topData()->normalGeometry = geometry();
+-                d->topData()->savedFlags = Qt::WindowFlags(GetWindowLong(internalWinId(), GWL_STYLE));
++                d->topData()->savedFlags = Qt::WindowFlags(GetWindowLongA(internalWinId(), GWL_STYLE));
+ #ifndef Q_FLATTEN_EXPOSE
+                 UINT style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP;
+ #else
+@@ -1030,6 +1064,6 @@
+                 if (isVisible())
+                     style |= WS_VISIBLE;
+-                SetWindowLong(internalWinId(), GWL_STYLE, style);
++                SetWindowLongA(internalWinId(), GWL_STYLE, style);
+                 QRect r = QApplication::desktop()->screenGeometry(this);
+                 UINT swpf = SWP_FRAMECHANGED;
+                 if (newstate & Qt::WindowActive)
+@@ -1041,7 +1075,7 @@
+                 UINT style = d->topData()->savedFlags;
+                 if (isVisible())
+                     style |= WS_VISIBLE;
+-                SetWindowLong(internalWinId(), GWL_STYLE, style);
++                SetWindowLongA(internalWinId(), GWL_STYLE, style);
+ 
+                 UINT swpf = SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOSIZE | SWP_NOMOVE;
+                 if (newstate & Qt::WindowActive)
+@@ -1415,7 +1449,7 @@
+             UINT style = top->savedFlags;
+             if (q->isVisible())
+                 style |= WS_VISIBLE;
+-            SetWindowLong(q->internalWinId(), GWL_STYLE, style);
++            SetWindowLongA(q->internalWinId(), GWL_STYLE, style);
+ 
+             UINT swpf = SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOSIZE | SWP_NOMOVE;
+             if (data.window_state & Qt::WindowActive)
+@@ -1430,7 +1464,7 @@
+     QTLWExtra *tlwExtra = q->window()->d_func()->maybeTopData();
+     const bool inTopLevelResize = tlwExtra ? tlwExtra->inTopLevelResize : false;
+     const bool isTranslucentWindow = !isOpaque && ptrUpdateLayeredWindowIndirect && (data.window_flags & Qt::FramelessWindowHint)
+-                                     && GetWindowLong(q->internalWinId(), GWL_EXSTYLE) & Q_WS_EX_LAYERED;
++                                     && GetWindowLongA(q->internalWinId(), GWL_EXSTYLE) & Q_WS_EX_LAYERED;
+ 
+     if (q->testAttribute(Qt::WA_WState_ConfigPending)) {        // processing config event
+         if (q->internalWinId())
+@@ -1601,11 +1635,11 @@
+         return;
+ 
+     if (!isOpaque && ptrUpdateLayeredWindowIndirect) {
+-        SetWindowLong(q->internalWinId(), GWL_EXSTYLE,
+-            GetWindowLong(q->internalWinId(), GWL_EXSTYLE) | Q_WS_EX_LAYERED);
++        SetWindowLongA(q->internalWinId(), GWL_EXSTYLE,
++            GetWindowLongA(q->internalWinId(), GWL_EXSTYLE) | Q_WS_EX_LAYERED);
+     } else {
+-        SetWindowLong(q->internalWinId(), GWL_EXSTYLE,
+-            GetWindowLong(q->internalWinId(), GWL_EXSTYLE) & ~Q_WS_EX_LAYERED);
++        SetWindowLongA(q->internalWinId(), GWL_EXSTYLE,
++            GetWindowLongA(q->internalWinId(), GWL_EXSTYLE) & ~Q_WS_EX_LAYERED);
+     }
+ #endif
+ }
+@@ -1615,12 +1649,12 @@
+ #ifndef Q_WS_WINCE_WM
+     Q_Q(QWidget);
+     if (q->isWindow() && q->testAttribute(Qt::WA_WState_Created)) {
+-        int style = GetWindowLong(q->internalWinId(), GWL_STYLE);
++        int style = GetWindowLongA(q->internalWinId(), GWL_STYLE);
+         if (shouldShowMaximizeButton())
+             style |= WS_MAXIMIZEBOX;
+         else
+             style &= ~WS_MAXIMIZEBOX;
+-        SetWindowLong(q->internalWinId(), GWL_STYLE, style);
++        SetWindowLongA(q->internalWinId(), GWL_STYLE, style);
+     }
+ #endif
+ }
+@@ -1906,8 +1940,10 @@
+     RECT rect = {0,0,0,0};
+ 
+     QTLWExtra *top = topData();
+-    uint exstyle = GetWindowLong(q->internalWinId(), GWL_EXSTYLE);
+-    uint style = GetWindowLong(q->internalWinId(), GWL_STYLE);
++    uint exstyle = QT_WA_INLINE(GetWindowLongW(q->internalWinId(), GWL_EXSTYLE),
++                                GetWindowLongA(q->internalWinId(), GWL_EXSTYLE));
++    uint style = QT_WA_INLINE(GetWindowLongW(q->internalWinId(), GWL_STYLE),
++                              GetWindowLongA(q->internalWinId(), GWL_STYLE));
+ #ifndef Q_WS_WINCE
+     if (AdjustWindowRectEx(&rect, style & ~(WS_OVERLAPPED), FALSE, exstyle)) {
+ #else
+@@ -1923,10 +1959,11 @@
+ {
+     Q_Q(QWidget);
+ 
+-    if (!isOpaque && ptrUpdateLayeredWindow && (data.window_flags & Qt::FramelessWindowHint)) {
+-        if (GetWindowLong(q->internalWinId(), GWL_EXSTYLE) & Q_WS_EX_LAYERED) {
+-            BLENDFUNCTION blend = {AC_SRC_OVER, 0, (BYTE)(255.0 * level), AC_SRC_ALPHA};
+-            ptrUpdateLayeredWindow(q->internalWinId(), NULL, NULL, NULL, NULL, NULL, 0, &blend, Q_ULW_ALPHA);
++    if (!isOpaque && ptrUpdateLayeredWindowIndirect && (data.window_flags & Qt::FramelessWindowHint)) {
++        if (GetWindowLongA(q->internalWinId(), GWL_EXSTYLE) & Q_WS_EX_LAYERED) {
++            Q_BLENDFUNCTION blend = {AC_SRC_OVER, 0, (int)(255.0 * level), Q_AC_SRC_ALPHA};
++                    Q_UPDATELAYEREDWINDOWINFO info = {sizeof(info), NULL, NULL, NULL, NULL, NULL, 0, &blend, Q_ULW_ALPHA, NULL};
++            (*ptrUpdateLayeredWindowIndirect)(q->internalWinId(), &info);
+         }
+         return;
+     }
+@@ -1942,15 +1979,15 @@
+     if (!ptrSetLayeredWindowAttributes)
+         return;
+ 
+-    int wl = GetWindowLong(q->internalWinId(), GWL_EXSTYLE);
++    int wl = GetWindowLongA(q->internalWinId(), GWL_EXSTYLE);
+ 
+     if (level != 1.0) {
+         if ((wl&Q_WS_EX_LAYERED) == 0)
+-            SetWindowLong(q->internalWinId(), GWL_EXSTYLE, wl | Q_WS_EX_LAYERED);
++            SetWindowLongA(q->internalWinId(), GWL_EXSTYLE, wl|Q_WS_EX_LAYERED);
+     } else if (wl&Q_WS_EX_LAYERED) {
+-        SetWindowLong(q->internalWinId(), GWL_EXSTYLE, wl & ~Q_WS_EX_LAYERED);
+-    }
+-    ptrSetLayeredWindowAttributes(q->internalWinId(), 0, (int)(level * 255), Q_LWA_ALPHA);
++        SetWindowLongA(q->internalWinId(), GWL_EXSTYLE, wl & ~Q_WS_EX_LAYERED);
++    }
++    (*ptrSetLayeredWindowAttributes)(q->internalWinId(), 0, (int)(level * 255), Q_LWA_ALPHA);
+ }
+ #endif //Q_WS_WINCE
+ 
+--- a/src/gui/kernel/qclipboard_win.cpp
++++ b/src/gui/kernel/qclipboard_win.cpp
+@@ -208,7 +208,7 @@
+     if (clipData == 0) {
+         clipData = GetClipboardData(CF_UNICODETEXT);
+         if (clipData != 0)
+-            clipText = QString::fromWCharArray((wchar_t *)clipData);
++            clipText = QString::fromUtf16((unsigned short *)clipData);
+     } else {
+         clipText = QString::fromLatin1((const char*)clipData);
+     }
+@@ -361,7 +361,8 @@
+             // displaying a runtime assert, which is not caught by isHungAppWindow().
+             qWarning("%s: Cowardly refusing to send clipboard message to application under debugger...", Q_FUNC_INFO);
+         } else {
+-            SendMessage(d->nextClipboardViewer, m->message, m->wParam, m->lParam);
++            QT_WA({ SendMessageW(d->nextClipboardViewer, m->message, m->wParam, m->lParam); },
++                    { SendMessageA(d->nextClipboardViewer, m->message, m->wParam, m->lParam); });
+         }
+     }
+ 
+--- a/src/gui/kernel/qkeymapper_win.cpp
++++ b/src/gui/kernel/qkeymapper_win.cpp
+@@ -58,6 +58,9 @@
+ // Implemented elsewhere
+ extern "C" LRESULT QT_WIN_CALLBACK QtWndProc(HWND, UINT, WPARAM, LPARAM);
+ 
++Q_CORE_EXPORT bool winPostMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
++Q_CORE_EXPORT bool winPeekMessage(MSG* msg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax,
++                                  UINT wRemoveMsg);
+ extern Q_CORE_EXPORT QLocale qt_localeFromLCID(LCID id);
+ #ifndef LANG_PASHTO
+ #define LANG_PASHTO 0x63
+@@ -491,13 +494,13 @@
+     Q_ASSERT(vk > 0 && vk < 256);
+     int code = 0;
+     QChar unicodeBuffer[5];
+-    int res = ToUnicode(vk, scancode, kbdBuffer, reinterpret_cast<LPWSTR>(unicodeBuffer), 5, 0);
++    int res = QT_WA_INLINE(ToUnicode(vk, scancode, kbdBuffer, reinterpret_cast<LPWSTR>(unicodeBuffer), 5, 0), ToAscii(vk, scancode, kbdBuffer, reinterpret_cast<LPWORD>(unicodeBuffer), 0));
+     // When Ctrl modifier is used ToUnicode does not return correct values. In order to assign the
+     // right key the control modifier is removed for just that function if the previous call failed.
+     if (res == 0 && kbdBuffer[VK_CONTROL]) {
+         const unsigned char controlState = kbdBuffer[VK_CONTROL];
+         kbdBuffer[VK_CONTROL] = 0;
+-        res = ToUnicode(vk, scancode, kbdBuffer, reinterpret_cast<LPWSTR>(unicodeBuffer), 5, 0);
++        res = QT_WA_INLINE(ToUnicode(vk, scancode, kbdBuffer, reinterpret_cast<LPWSTR>(unicodeBuffer), 5, 0), ToAscii(vk, scancode, kbdBuffer, reinterpret_cast<LPWORD>(unicodeBuffer), 0));
+         kbdBuffer[VK_CONTROL] = controlState;
+     }
+     if (res)
+@@ -529,6 +532,38 @@
+             a += '@';                       // to @..A..Z.._
+     }
+     return a & 0xff;
++}
++
++static int inputcharset = CP_ACP;
++static inline QChar wmchar_to_unicode(DWORD c)
++{
++    // qt_winMB2QString is the generalization of this function.
++    QT_WA({
++        return QChar((ushort)c);
++    } , {
++        char mb[2];
++        mb[0] = c & 0xff;
++        mb[1] = 0;
++        WCHAR wc[1];
++        MultiByteToWideChar(inputcharset, MB_PRECOMPOSED, mb, -1, wc, 1);
++        return QChar(wc[0]);
++    });
++}
++
++static inline QChar imechar_to_unicode(DWORD c)
++{
++    // qt_winMB2QString is the generalization of this function.
++    QT_WA({
++        return QChar((ushort)c);
++    } , {
++        char mb[3];
++        mb[0] = (c >> 8) & 0xff;
++        mb[1] = c & 0xff;
++        mb[2] = 0;
++        WCHAR wc[1];
++        MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mb, -1, wc, 1);
++        return QChar(wc[0]);
++    });
+ }
+ 
+ static inline bool isModifierKey(int code)
+@@ -635,15 +670,42 @@
+ 
+     /* MAKELCID()'s first argument is a WORD, and GetKeyboardLayout()
+      * returns a DWORD. */
+-
+-    LCID newLCID = MAKELCID((quintptr)GetKeyboardLayout(0), SORT_DEFAULT);
+ //    keyboardInputLocale = qt_localeFromLCID(newLCID);
+-
++     LCID newLCID = MAKELCID(
++         reinterpret_cast<quintptr>(GetKeyboardLayout(0)),
++         SORT_DEFAULT
++     );
++     keyboardInputLocale = qt_localeFromLCID(newLCID);
+     bool bidi = false;
+-    wchar_t LCIDFontSig[16];
+-    if (GetLocaleInfo(newLCID, LOCALE_FONTSIGNATURE, LCIDFontSig, sizeof(LCIDFontSig) / sizeof(wchar_t))
+-        && (LCIDFontSig[7] & (wchar_t)0x0800))
++#ifdef UNICODE
++    if (QSysInfo::WindowsVersion >= QSysInfo::WV_2000) {
++        WCHAR wchLCIDFontSig[16];
++        if (GetLocaleInfoW(newLCID,
++                           LOCALE_FONTSIGNATURE,
++                           &wchLCIDFontSig[0],
++                           (sizeof(wchLCIDFontSig)/sizeof(WCHAR)))
++            && (wchLCIDFontSig[7] & (WCHAR)0x0800))
+         bidi = true;
++    } else
++#endif //UNICODE
++    {
++        if (newLCID == 0x0859 ||  //Sindhi (Arabic script)
++            newLCID == 0x0460)    //Kashmiri (Arabic script)
++            bidi = true;;
++
++        switch (PRIMARYLANGID(newLCID))
++        {
++            case LANG_ARABIC:
++            case LANG_HEBREW:
++            case LANG_URDU:
++            case LANG_FARSI:
++            case LANG_PASHTO:
++            //case LANG_UIGHUR:
++            case LANG_SYRIAC:
++            case LANG_DIVEHI:
++                bidi = true;
++        }
++    }
+ 
+     keyboardInputDirection = bidi ? Qt::RightToLeft : Qt::LeftToRight;
+ }
+@@ -817,13 +879,13 @@
+ 
+     quint32 nModifiers = 0;
+ 
+-#if defined(Q_OS_WINCE)
++    if (QSysInfo::WindowsVersion < QSysInfo::WV_NT || QSysInfo::WindowsVersion & QSysInfo::WV_CE_based) {
+         nModifiers |= (GetKeyState(VK_SHIFT  ) < 0 ? ShiftAny : 0);
+         nModifiers |= (GetKeyState(VK_CONTROL) < 0 ? ControlAny : 0);
+         nModifiers |= (GetKeyState(VK_MENU   ) < 0 ? AltAny : 0);
+         nModifiers |= (GetKeyState(VK_LWIN   ) < 0 ? MetaLeft : 0);
+         nModifiers |= (GetKeyState(VK_RWIN   ) < 0 ? MetaRight : 0);
+-#else
++    } else {
+         // Map native modifiers to some bit representation
+         nModifiers |= (GetKeyState(VK_LSHIFT  ) & 0x80 ? ShiftLeft : 0);
+         nModifiers |= (GetKeyState(VK_RSHIFT  ) & 0x80 ? ShiftRight : 0);
+@@ -837,8 +899,7 @@
+         nModifiers |= (GetKeyState(VK_CAPITAL ) & 0x01 ? CapsLock : 0);
+         nModifiers |= (GetKeyState(VK_NUMLOCK ) & 0x01 ? NumLock : 0);
+         nModifiers |= (GetKeyState(VK_SCROLL  ) & 0x01 ? ScrollLock : 0);
+-#endif // Q_OS_WINCE
+-
++    }
+     if (msg.lParam & ExtendedKey)
+         nModifiers |= msg.lParam & ExtendedKey;
+ 
+@@ -852,7 +913,7 @@
+     // A multi-character key not found by our look-ahead
+     if (msgType == WM_CHAR) {
+         QString s;
+-        QChar ch = QChar((ushort)msg.wParam);
++        QChar ch = wmchar_to_unicode(msg.wParam);
+         if (!ch.isNull())
+             s += ch;
+ 
+@@ -863,7 +924,7 @@
+     // Input method characters not found by our look-ahead
+     else if (msgType == WM_IME_CHAR) {
+         QString s;
+-        QChar ch = QChar((ushort)msg.wParam);
++        QChar ch = imechar_to_unicode(msg.wParam);
+         if (!ch.isNull())
+             s += ch;
+ 
+@@ -1023,9 +1084,11 @@
+                                 : msgType == WM_IME_KEYDOWN ? WM_IME_CHAR : WM_SYSCHAR);
+ 
+             QChar uch;
+-            if (PeekMessage(&wm_char, 0, charType, charType, PM_REMOVE)) {
++            if (winPeekMessage(&wm_char, 0, charType, charType, PM_REMOVE)) {
+                 // Found a ?_CHAR
+-                uch = QChar((ushort)wm_char.wParam);
++                uch = charType == WM_IME_CHAR
++                                    ? imechar_to_unicode(wm_char.wParam)
++                                    : wmchar_to_unicode(wm_char.wParam);
+                 if (msgType == WM_SYSKEYDOWN && uch.isLetter() && (msg.lParam & KF_ALTDOWN))
+                     uch = uch.toLower(); // (See doc of WM_SYSCHAR) Alt-letter
+                 if (!code && !uch.row())
+@@ -1038,7 +1101,7 @@
+             // to find the correct key using the current message parameters & keyboard state.
+             if (uch.isNull() && msgType == WM_IME_KEYDOWN) {
+                 BYTE keyState[256];
+-                wchar_t newKey[3] = {0};
++                WCHAR newKey[3] = {0};
+                 GetKeyboardState(keyState);
+                 int val = ToUnicode(vk_key, scancode, keyState, newKey, 2,  0);
+                 if (val == 1) {
+@@ -1056,10 +1119,18 @@
+                     uch = QChar(QLatin1Char(0x7f)); // Windows doesn't know this one.
+                 } else {
+                     if (msgType != WM_SYSKEYDOWN || !code) {
+-                        UINT map = MapVirtualKey(msg.wParam, 2);
++                        UINT map;
++                        QT_WA({
++                            map = MapVirtualKey(msg.wParam, 2);
++                        } , {
++                            map = MapVirtualKeyA(msg.wParam, 2);
++                            // High-order bit is 0x8000 on '95
++                            if (map & 0x8000)
++                                map = (map^0x8000)|0x80000000;
++                        });
+                         // If the high bit of the return value is set, it's a deadkey
+                         if (!(map & 0x80000000))
+-                            uch = QChar((ushort)map);
++                            uch = wmchar_to_unicode((DWORD)map);
+                     }
+                 }
+                 if (!code && !uch.row())
+@@ -1200,8 +1271,6 @@
+         if (QApplicationPrivate::instance()->qt_tryAccelEvent(widget, &a))
+             return true;
+     }
+-#else
+-    Q_UNUSED(grab);
+ #endif
+     if (!widget->isEnabled())
+         return false;
+--- a/src/gui/kernel/qdnd_win.cpp
++++ b/src/gui/kernel/qdnd_win.cpp
+@@ -154,9 +154,9 @@
+ #ifdef QDND_DEBUG
+     qDebug("QOleDataObject::GetData(LPFORMATETC pformatetc, LPSTGMEDIUM pmedium)");
+ #ifndef Q_OS_WINCE
+-    wchar_t buf[256] = {0};
+-    GetClipboardFormatName(pformatetc->cfFormat, buf, 255);
+-    qDebug("CF = %d : %s", pformatetc->cfFormat, QString::fromWCharArray(buf));
++    char buf[256] = {0};
++    GetClipboardFormatNameA(pformatetc->cfFormat, buf, 255);
++    qDebug("CF = %d : %s", pformatetc->cfFormat, buf);
+ #endif
+ #endif
+ 
+@@ -398,47 +398,52 @@
+             int h = cpm.height();
+ 
+             if (!pm.isNull()) {
+-                int x1 = qMin(-hotSpot.x(), 0);
+-                int x2 = qMax(pm.width() - hotSpot.x(), cpm.width());
+-                int y1 = qMin(-hotSpot.y(), 0);
+-                int y2 = qMax(pm.height() - hotSpot.y(), cpm.height());
+-
+-                w = x2 - x1 + 1;
+-                h = y2 - y1 + 1;
++                int x1 = qMin(-hotSpot.x(),0);
++                int x2 = qMax(pm.width()-hotSpot.x(),cpm.width());
++                int y1 = qMin(-hotSpot.y(),0);
++                int y2 = qMax(pm.height()-hotSpot.y(),cpm.height());
++
++                w = x2-x1+1;
++                h = y2-y1+1;
+             }
+ 
+             QRect srcRect = pm.rect();
+             QPoint pmDest = QPoint(qMax(0, -hotSpot.x()), qMax(0, -hotSpot.y()));
+             QPoint newHotSpot = hotSpot;
+ 
+-#if defined(Q_OS_WINCE)
+-            // Limited cursor size
+-            int reqw = GetSystemMetrics(SM_CXCURSOR);
+-            int reqh = GetSystemMetrics(SM_CYCURSOR);
+-
+-            QPoint hotspotInPM = newHotSpot - pmDest;
+-            if (reqw < w) {
+-                // Not wide enough - move objectpm right
+-                qreal r = qreal(newHotSpot.x()) / w;
+-                newHotSpot = QPoint(int(r * reqw), newHotSpot.y());
+-                if (newHotSpot.x() + cpm.width() > reqw)
+-                    newHotSpot.setX(reqw - cpm.width());
+-
+-                srcRect = QRect(QPoint(hotspotInPM.x() - newHotSpot.x(), srcRect.top()), QSize(reqw, srcRect.height()));
++#if !defined(Q_OS_WINCE) || defined(GWES_ICONCURS)
++                        bool limitedCursorSize = (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++                                                  || (QSysInfo::WindowsVersion == QSysInfo::WV_NT)
++                                  || (QSysInfo::WindowsVersion == QSysInfo::WV_CE);
++
++            if (limitedCursorSize) {
++                // Limited cursor size
++                int reqw = GetSystemMetrics(SM_CXCURSOR);
++                int reqh = GetSystemMetrics(SM_CYCURSOR);
++
++                QPoint hotspotInPM = newHotSpot - pmDest;
++                if (reqw < w) {
++                    // Not wide enough - move objectpm right
++                    qreal r = qreal(newHotSpot.x()) / w;
++                    newHotSpot = QPoint(int(r * reqw), newHotSpot.y());
++                    if (newHotSpot.x() + cpm.width() > reqw)
++                        newHotSpot.setX(reqw - cpm.width());
++
++                    srcRect = QRect(QPoint(hotspotInPM.x() - newHotSpot.x(), srcRect.top()), QSize(reqw, srcRect.height()));
++                }
++                if (reqh < h) {
++                    qreal r = qreal(newHotSpot.y()) / h;
++                    newHotSpot = QPoint(newHotSpot.x(), int(r * reqh));
++                    if (newHotSpot.y() + cpm.height() > reqh)
++                        newHotSpot.setY(reqh - cpm.height());
++
++                    srcRect = QRect(QPoint(srcRect.left(), hotspotInPM.y() - newHotSpot.y()), QSize(srcRect.width(), reqh));
++                }
++                // Always use system cursor size
++                w = reqw;
++                h = reqh;
+             }
+-            if (reqh < h) {
+-                qreal r = qreal(newHotSpot.y()) / h;
+-                newHotSpot = QPoint(newHotSpot.x(), int(r * reqh));
+-                if (newHotSpot.y() + cpm.height() > reqh)
+-                    newHotSpot.setY(reqh - cpm.height());
+-
+-                srcRect = QRect(QPoint(srcRect.left(), hotspotInPM.y() - newHotSpot.y()), QSize(srcRect.width(), reqh));
+-            }
+-            // Always use system cursor size
+-            w = reqw;
+-            h = reqh;
+-#endif
+-
++#endif
+             QPixmap newCursor(w, h);
+             if (!pm.isNull()) {
+                 newCursor.fill(QColor(0, 0, 0, 0));
+--- a/src/gui/kernel/qdesktopwidget_win.cpp
++++ b/src/gui/kernel/qdesktopwidget_win.cpp
+@@ -157,13 +157,18 @@
+ #ifndef Q_OS_WINCE
+     QSystemLibrary user32Lib(QLatin1String("user32"));
+     enumDisplayMonitors = (EnumFunc)user32Lib.resolve("EnumDisplayMonitors");
+-    getMonitorInfo = (InfoFunc)user32Lib.resolve("GetMonitorInfoW");
++    getMonitorInfo = (InfoFunc)user32Lib.resolve(QT_WA_INLINE("GetMonitorInfoW", "GetMonitorInfoA"));
+ 
+     if (!enumDisplayMonitors || !getMonitorInfo) {
+-        screenCount = GetSystemMetrics(80);  // SM_CMONITORS
++        screenCount = qMax(1, GetSystemMetrics(80));  // SM_CMONITORS
+         rects->resize(screenCount);
+-        for (int i = 0; i < screenCount; ++i)
++        RECT work = { 0, 0, that->width(), that->height() };
++        SystemParametersInfoA(SPI_GETWORKAREA, 0, &work, 0);
++        workrects->resize(screenCount);
++        for (int i = 0; i < screenCount; ++i) {
+             rects->replace(i, that->rect());
++            workrects->replace(i, QRect(work.left, work.top, work.right - work.left, work.bottom - work.top));
++        }
+         return;
+     }
+     // Calls enumCallback
+--- a/src/gui/kernel/qcursor_win.cpp
++++ b/src/gui/kernel/qcursor_win.cpp
+@@ -316,50 +316,54 @@
+         phand_bits, phandm_bits
+     };
+ 
+-    wchar_t *sh = 0;
++    unsigned short *sh;
+     switch (cshape) {                        // map to windows cursor
+     case Qt::ArrowCursor:
+-        sh = IDC_ARROW;
++        sh = (unsigned short*)IDC_ARROW;
+         break;
+     case Qt::UpArrowCursor:
+-        sh = IDC_UPARROW;
++        sh = (unsigned short*)IDC_UPARROW;
+         break;
+     case Qt::CrossCursor:
+-        sh = IDC_CROSS;
++        sh = (unsigned short*)IDC_CROSS;
+         break;
+     case Qt::WaitCursor:
+-        sh = IDC_WAIT;
++        sh = (unsigned short*)IDC_WAIT;
+         break;
+     case Qt::IBeamCursor:
+-        sh = IDC_IBEAM;
++        sh = (unsigned short*)IDC_IBEAM;
+         break;
+     case Qt::SizeVerCursor:
+-        sh = IDC_SIZENS;
++        sh = (unsigned short*)IDC_SIZENS;
+         break;
+     case Qt::SizeHorCursor:
+-        sh = IDC_SIZEWE;
++        sh = (unsigned short*)IDC_SIZEWE;
+         break;
+     case Qt::SizeBDiagCursor:
+-        sh = IDC_SIZENESW;
++        sh = (unsigned short*)IDC_SIZENESW;
+         break;
+     case Qt::SizeFDiagCursor:
+-        sh = IDC_SIZENWSE;
++        sh = (unsigned short*)IDC_SIZENWSE;
+         break;
+     case Qt::SizeAllCursor:
+-        sh = IDC_SIZEALL;
++        sh = (unsigned short*)IDC_SIZEALL;
+         break;
+     case Qt::ForbiddenCursor:
+-        sh = IDC_NO;
++        sh = (unsigned short*)IDC_NO;
+         break;
+     case Qt::WhatsThisCursor:
+-        sh = IDC_HELP;
++        sh = (unsigned short*)IDC_HELP;
+         break;
+     case Qt::BusyCursor:
+-        sh = IDC_APPSTARTING;
++        sh = (unsigned short*)IDC_APPSTARTING;
+         break;
+     case Qt::PointingHandCursor:
+-        sh = IDC_HAND;
+-        break;
++        if ((QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) > QSysInfo::WV_95 ||
++            (QSysInfo::WindowsVersion & QSysInfo::WV_NT_based) > QSysInfo::WV_NT) {
++            sh = (unsigned short*)IDC_HAND;
++            break;
++        }
++        // fall through
+     case Qt::BlankCursor:
+     case Qt::SplitVCursor:
+     case Qt::SplitHCursor:
+@@ -482,11 +486,13 @@
+         qWarning("QCursor::update: Invalid cursor shape %d", cshape);
+         return;
+     }
+-#ifdef Q_WS_WINCE
+-    hcurs = LoadCursor(0, sh);
+-#else
+-    hcurs = (HCURSOR)LoadImage(0, sh, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+-#endif
++    // ### From MSDN:
++    // ### LoadCursor has been superseded by the LoadImage function.
++    QT_WA({
++        hcurs = LoadCursorW(0, reinterpret_cast<const TCHAR *>(sh));
++    } , {
++        hcurs = LoadCursorA(0, reinterpret_cast<const char*>(sh));
++    });
+ }
+ 
+ QT_END_NAMESPACE
+--- a/src/gui/kernel/qwidget.cpp
++++ b/src/gui/kernel/qwidget.cpp
+@@ -1028,8 +1028,8 @@
+     \list
+     \o X11: This feature relies on the use of an X server that supports ARGB visuals
+     and a compositing window manager.
+-    \o Windows: The widget needs to have the Qt::FramelessWindowHint window flag set
+-    for the translucency to work.
++    \o Windows: This feature requires Windows 2000 or later. The widget needs to have
++    the Qt::FramelessWindowHint window flag set for the translucency to work.
+     \endlist
+ 
+ 
+@@ -11128,8 +11128,8 @@
+ 
+   By default the value of this property is 1.0.
+ 
+-  This feature is available on Embedded Linux, Mac OS X, Windows,
+-  and X11 platforms that support the Composite extension.
++  This feature is available on Embedded Linux, Mac OS X, X11 platforms that
++  support the Composite extension, and Windows 2000 and later.
+ 
+   This feature is not available on Windows CE.
+ 
+--- a/src/gui/kernel/qapplication_win.cpp
++++ b/src/gui/kernel/qapplication_win.cpp
+@@ -163,6 +163,24 @@
+ 
+ #endif
+ 
++#ifndef FLASHW_STOP
++typedef struct {
++    UINT  cbSize;
++    HWND  hwnd;
++    DWORD dwFlags;
++    UINT  uCount;
++    DWORD dwTimeout;
++} FLASHWINFO, *PFLASHWINFO;
++#define FLASHW_STOP         0
++#define FLASHW_CAPTION      0x00000001
++#define FLASHW_TRAY         0x00000002
++#define FLASHW_ALL          (FLASHW_CAPTION | FLASHW_TRAY)
++#define FLASHW_TIMER        0x00000004
++#define FLASHW_TIMERNOFG    0x0000000C
++#endif /* FLASHW_STOP */
++typedef BOOL (WINAPI *PtrFlashWindowEx)(PFLASHWINFO pfwi);
++static PtrFlashWindowEx pFlashWindowEx = 0;
++
+ #include <windowsx.h>
+ #include <limits.h>
+ #include <string.h>
+@@ -287,6 +305,10 @@
+ 
+ // from qregion_win.cpp
+ extern HRGN qt_tryCreateRegion(QRegion::RegionType type, int left, int top, int right, int bottom);
++
++Q_CORE_EXPORT bool winPeekMessage(MSG* msg, HWND hWnd, UINT wMsgFilterMin,
++                            UINT wMsgFilterMax, UINT wRemoveMsg);
++Q_CORE_EXPORT bool winPostMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+ 
+ // support for on-the-fly changes of the XP theme engine
+ #ifndef WM_THEMECHANGED
+@@ -388,6 +410,8 @@
+ #define APPCOMMAND_MEDIA_CHANNEL_DOWN     52
+ #endif // APPCOMMAND_MICROPHONE_VOLUME_MUTE
+ 
++static UINT WM95_MOUSEWHEEL = 0;
++
+ #if (_WIN32_WINNT < 0x0400)
+ // This struct is defined in winuser.h if the _WIN32_WINNT >= 0x0400 -- in the
+ // other cases we have to define it on our own.
+@@ -552,13 +576,14 @@
+     pal.setColor(QPalette::Inactive, QPalette::Light, pal.light().color());
+     pal.setColor(QPalette::Inactive, QPalette::Dark, pal.dark().color());
+ 
+-    if (pal.midlight() == pal.button())
+-        pal.setColor(QPalette::Midlight, pal.button().color().lighter(110));
+-    if (pal.background() != pal.base()) {
+-        pal.setColor(QPalette::Inactive, QPalette::Highlight, pal.color(QPalette::Inactive, QPalette::Window));
+-        pal.setColor(QPalette::Inactive, QPalette::HighlightedText, pal.color(QPalette::Inactive, QPalette::Text));
+-    }
+-
++    if (QSysInfo::WindowsVersion != QSysInfo::WV_NT && QSysInfo::WindowsVersion != QSysInfo::WV_95) {
++        if (pal.midlight() == pal.button())
++            pal.setColor(QPalette::Midlight, pal.button().color().lighter(110));
++        if (pal.background() != pal.base()) {
++            pal.setColor(QPalette::Inactive, QPalette::Highlight, pal.color(QPalette::Inactive, QPalette::Window));
++            pal.setColor(QPalette::Inactive, QPalette::HighlightedText, pal.color(QPalette::Inactive, QPalette::Text));
++        }
++    }
+     const QColor bg = pal.background().color();
+     const QColor fg = pal.foreground().color(), btn = pal.button().color();
+     QColor disabled((fg.red()+btn.red())/2,(fg.green()+btn.green())/2,
+@@ -613,18 +638,35 @@
+ static void qt_set_windows_font_resources()
+ {
+ #ifndef Q_WS_WINCE
+-    NONCLIENTMETRICS ncm;
+-    ncm.cbSize = FIELD_OFFSET(NONCLIENTMETRICS, lfMessageFont) + sizeof(LOGFONT);
+-    SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize , &ncm, 0);
+-
+-    QFont menuFont = qt_LOGFONTtoQFont(ncm.lfMenuFont, true);
+-    QFont messageFont = qt_LOGFONTtoQFont(ncm.lfMessageFont, true);
+-    QFont statusFont = qt_LOGFONTtoQFont(ncm.lfStatusFont, true);
+-    QFont titleFont = qt_LOGFONTtoQFont(ncm.lfCaptionFont, true);
+-
+-    LOGFONT lfIconTitleFont;
+-    SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(lfIconTitleFont), &lfIconTitleFont, 0);
+-    QFont iconTitleFont = qt_LOGFONTtoQFont(lfIconTitleFont, true);
++    QFont menuFont;
++    QFont messageFont;
++    QFont statusFont;
++    QFont titleFont;
++    QFont iconTitleFont;
++    QT_WA({
++        NONCLIENTMETRICS ncm;
++        ncm.cbSize = FIELD_OFFSET(NONCLIENTMETRICS, lfMessageFont) + sizeof(LOGFONTW);
++        SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize , &ncm, 0);
++        menuFont = qt_LOGFONTtoQFont(ncm.lfMenuFont,true);
++        messageFont = qt_LOGFONTtoQFont(ncm.lfMessageFont,true);
++        statusFont = qt_LOGFONTtoQFont(ncm.lfStatusFont,true);
++        titleFont = qt_LOGFONTtoQFont(ncm.lfCaptionFont,true);
++        LOGFONTW lfIconTitleFont;
++        SystemParametersInfoW(SPI_GETICONTITLELOGFONT, sizeof(lfIconTitleFont), &lfIconTitleFont, 0);
++        iconTitleFont = qt_LOGFONTtoQFont(lfIconTitleFont,true);
++    } , {
++        // A version
++        NONCLIENTMETRICSA ncm;
++        ncm.cbSize = FIELD_OFFSET(NONCLIENTMETRICSA, lfMessageFont) + sizeof(LOGFONTA);
++        SystemParametersInfoA(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
++        menuFont = qt_LOGFONTtoQFont((LOGFONT&)ncm.lfMenuFont,true);
++        messageFont = qt_LOGFONTtoQFont((LOGFONT&)ncm.lfMessageFont,true);
++        statusFont = qt_LOGFONTtoQFont((LOGFONT&)ncm.lfStatusFont,true);
++        titleFont = qt_LOGFONTtoQFont((LOGFONT&)ncm.lfCaptionFont,true);
++        LOGFONTA lfIconTitleFont;
++        SystemParametersInfoA(SPI_GETICONTITLELOGFONT, sizeof(lfIconTitleFont), &lfIconTitleFont, 0);
++        iconTitleFont = qt_LOGFONTtoQFont((LOGFONT&)lfIconTitleFont,true);
++    });
+ 
+     QApplication::setFont(menuFont, "QMenu");
+     QApplication::setFont(menuFont, "QMenuBar");
+@@ -654,13 +696,26 @@
+ 
+ static void qt_win_read_cleartype_settings()
+ {
+-    UINT result = 0;
+ #ifdef Q_OS_WINCE
+-    if (SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &result, 0))
+-        qt_cleartype_enabled = result;
++     UINT result;
++     BOOL ok;
++     ok = SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &result, 0);
++     if (ok)
++         qt_cleartype_enabled = result;
+ #else
+-    if (SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &result, 0))
+-        qt_cleartype_enabled = (result == FE_FONTSMOOTHINGCLEARTYPE);
++    QT_WA({
++        UINT result;
++        BOOL ok;
++        ok = SystemParametersInfoW(SPI_GETFONTSMOOTHINGTYPE, 0, &result, 0);
++        if (ok)
++            qt_cleartype_enabled = (result == FE_FONTSMOOTHINGCLEARTYPE);
++    }, {
++        UINT result;
++        BOOL ok;
++        ok = SystemParametersInfoA(SPI_GETFONTSMOOTHINGTYPE, 0, &result, 0);
++        if (ok)
++            qt_cleartype_enabled = (result == FE_FONTSMOOTHINGCLEARTYPE);
++    });
+ #endif
+ 
+     int winSmooth;
+@@ -688,7 +743,7 @@
+     QPalette pal = *QApplicationPrivate::sys_pal;
+     QColor menuCol(qt_colorref2qrgb(GetSysColor(COLOR_MENU)));
+     QColor menuText(qt_colorref2qrgb(GetSysColor(COLOR_MENUTEXT)));
+-    BOOL isFlat = false;
++    BOOL isFlat = 0;
+     if ((QSysInfo::WindowsVersion >= QSysInfo::WV_XP
+         && (QSysInfo::WindowsVersion & QSysInfo::WV_NT_based)))
+         SystemParametersInfo(SPI_GETFLATMENU, 0, &isFlat, 0);
+@@ -721,8 +776,10 @@
+                     menu.color(QPalette::Active, QPalette::Highlight));
+     menu.setColor(QPalette::Inactive, QPalette::HighlightedText,
+                     menu.color(QPalette::Active, QPalette::HighlightedText));
+-    menu.setColor(QPalette::Inactive, QPalette::ButtonText,
+-                    pal.color(QPalette::Inactive, QPalette::Dark));
++
++    if (QSysInfo::WindowsVersion != QSysInfo::WV_NT && QSysInfo::WindowsVersion != QSysInfo::WV_95)
++        menu.setColor(QPalette::Inactive, QPalette::ButtonText,
++                        pal.color(QPalette::Inactive, QPalette::Dark));
+     QApplication::setPalette(menu, "QMenu");
+ 
+     if ((QSysInfo::WindowsVersion >= QSysInfo::WV_XP
+@@ -756,10 +813,15 @@
+   qt_init() - initializes Qt for Windows
+  *****************************************************************************/
+ 
++typedef BOOL (WINAPI *PtrUpdateLayeredWindow)(HWND hwnd, HDC hdcDst, const POINT *pptDst,
++    const SIZE *psize, HDC hdcSrc, const POINT *pptSrc, COLORREF crKey,
++    const Q_BLENDFUNCTION *pblend, DWORD dwflags);
++
+ typedef BOOL (WINAPI *PtrSetProcessDPIAware) (VOID);
++
++static PtrUpdateLayeredWindow ptrUpdateLayeredWindow = 0;
+ static PtrSetProcessDPIAware ptrSetProcessDPIAware = 0;
+-PtrUpdateLayeredWindow ptrUpdateLayeredWindow = 0;
+-PtrUpdateLayeredWindowIndirect ptrUpdateLayeredWindowIndirect = 0;
++
+ static BOOL WINAPI qt_updateLayeredWindowIndirect(HWND hwnd, const Q_UPDATELAYEREDWINDOWINFO *info)
+ {
+     return (*ptrUpdateLayeredWindow)(hwnd, info->hdcDst, info->pptDst, info->psize, info->hdcSrc,
+@@ -825,30 +887,46 @@
+ #endif
+     qApp->setObjectName(priv->appName());
+ 
++#if !defined(Q_WS_WINCE)
+     // default font
+-#ifndef Q_WS_WINCE
+-    HGDIOBJ stockFont = GetStockObject(DEFAULT_GUI_FONT);
+-#else
+-    HGDIOBJ stockFont = GetStockObject(SYSTEM_FONT);
+-#endif
+-
+-    LOGFONT lf;
+-    GetObject(stockFont, sizeof(lf), &lf);
+-    QFont systemFont = qt_LOGFONTtoQFont(lf, true);
+-
+-#ifndef Q_WS_WINCE
+-    if (systemFont.family() == QLatin1String("MS Shell Dlg")) {
+-        systemFont.setFamily(QLatin1String("MS Shell Dlg 2"));
+-    }
+-#endif
+-
+-    QApplicationPrivate::setSystemFont(systemFont);
++    HFONT hfont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
++    QFont f(QLatin1String("MS Sans Serif"),8);
++    int result = 0;
++    QT_WA({
++            LOGFONT lf;
++            if (result = GetObject(hfont, sizeof(lf), &lf))
++                f = qt_LOGFONTtoQFont((LOGFONT&)lf,true);
++        } , {
++              LOGFONTA lf;
++              if (result = GetObjectA(hfont, sizeof(lf), &lf))
++                  f = qt_LOGFONTtoQFont((LOGFONT&)lf,true);
++          });
++    if (result
++        && QSysInfo::WindowsVersion >= QSysInfo::WV_2000
++        && QSysInfo::WindowsVersion <= QSysInfo::WV_NT_based
++        && f.family() == QLatin1String("MS Shell Dlg"))
++        f.setFamily(QLatin1String("MS Shell Dlg 2"));
++    QApplicationPrivate::setSystemFont(f);
++#else //Q_WS_WINCE
++        LOGFONT lf;
++        HGDIOBJ stockFont = GetStockObject(SYSTEM_FONT);
++        int result = 0;
++        result = GetObject(stockFont, sizeof(lf), &lf);
++        QFont font = qt_LOGFONTtoQFont(lf, true);
++        if (result)
++          QApplicationPrivate::setSystemFont(font);
++#endif //Q_WS_WINCE
+ 
+     // QFont::locale_init();  ### Uncomment when it does something on Windows
+ 
+     if (QApplication::desktopSettingsAware())
+         qt_set_windows_resources();
+ 
++    QT_WA({
++        WM95_MOUSEWHEEL = RegisterWindowMessage(L"MSWHEEL_ROLLMSG");
++    } , {
++        WM95_MOUSEWHEEL = RegisterWindowMessageA("MSWHEEL_ROLLMSG");
++    });
+ #ifndef QT_NO_TABLETEVENT
+     initWinTabFunctions();
+ #endif // QT_NO_TABLETEVENT
+@@ -1035,10 +1113,10 @@
+     // unique ID on WinCE to make sure we can
+     // move the windows to the front when starting
+     // a second instance.
+-    wchar_t uniqueAppID[MAX_PATH];
+-    GetModuleFileName(0, uniqueAppID, MAX_PATH);
+-    cname = QString::number(RegisterWindowMessage(
+-              (const wchar_t *) QString::fromWCharArray(uniqueAppID).toLower().replace(QLatin1Char('\\'),
++    wchar_t uniqueAppID[256];
++    GetModuleFileNameW(0, uniqueAppID, 255);
++    cname = QString::number(RegisterWindowMessageW(
++              (const wchar_t *) QString::fromUtf16((const ushort *)uniqueAppID).toLower().replace(QLatin1Char('\\'),
+               QLatin1Char('_')).utf16()));
+ #endif
+ 
+@@ -1050,9 +1128,15 @@
+     static int classExists = -1;
+ 
+     if (classExists == -1) {
+-        WNDCLASS wcinfo;
+-        classExists = GetClassInfo((HINSTANCE)qWinAppInst(), (wchar_t*)cname.utf16(), &wcinfo);
+-        classExists = classExists && wcinfo.lpfnWndProc != QtWndProc;
++        QT_WA({
++            WNDCLASS wcinfo;
++            classExists = GetClassInfo(qWinAppInst(), (TCHAR*)cname.utf16(), &wcinfo);
++            classExists = classExists && wcinfo.lpfnWndProc != QtWndProc;
++        }, {
++            WNDCLASSA wcinfo;
++            classExists = GetClassInfoA(qWinAppInst(), cname.toLatin1(), &wcinfo);
++            classExists = classExists && wcinfo.lpfnWndProc != QtWndProc;
++        });
+     }
+ 
+     if (classExists)
+@@ -1061,6 +1145,26 @@
+     if (winclassNames()->contains(cname))        // already registered in our list
+         return cname;
+ 
++    ATOM atom;
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        WNDCLASSEXA wc;
++        memset(&wc, 0, sizeof(wc));
++        wc.cbSize = sizeof(wc);
++        wc.style = style;
++        wc.lpfnWndProc = (WNDPROC)QtWndProc;
++        wc.hInstance = qWinAppInst();
++        if (icon) {
++            wc.hIcon = LoadIconA(qWinAppInst(), "IDI_ICON1");
++            if (!wc.hIcon)
++                wc.hIcon = LoadIconA(0, MAKEINTRESOURCEA(32512));
++            wc.hIconSm = wc.hIcon;
++        }
++        if (w && !qt_widget_private(w)->isGLWidget)
++            wc.hbrBackground = (HBRUSH)GetSysColorBrush(COLOR_WINDOW);
++        const QByteArray name = cname.toLatin1();
++        wc.lpszClassName = name.constData();
++        atom = RegisterClassExA(&wc);
++    } else {
+ #ifndef Q_WS_WINCE
+     WNDCLASSEX wc;
+     wc.cbSize       = sizeof(WNDCLASSEX);
+@@ -1103,10 +1207,12 @@
+     wc.lpszClassName = (wchar_t*)cname.utf16();
+ 
+ #ifndef Q_WS_WINCE
+-    ATOM atom = RegisterClassEx(&wc);
++    atom = RegisterClassEx(&wc);
+ #else
+-    ATOM atom = RegisterClass(&wc);
+-#endif
++    atom = RegisterClass(&wc);
++#endif
++
++    }
+ 
+ #ifndef QT_NO_DEBUG
+     if (!atom)
+@@ -1129,7 +1235,11 @@
+     WinClassNameHash *hash = winclassNames();
+     QHash<QString, int>::ConstIterator it = hash->constBegin();
+     while (it != hash->constEnd()) {
+-        UnregisterClass((wchar_t*)it.key().utf16(), qWinAppInst());
++        QT_WA({
++            UnregisterClass((TCHAR*)it.key().utf16(), qWinAppInst());
++        } , {
++            UnregisterClassA(it.key().toLatin1(), qWinAppInst());
++        });
+         ++it;
+     }
+     hash->clear();
+@@ -1357,7 +1467,14 @@
+ #else
+     bool stopFlash = duration < 0;
+ 
+-    if (widget && (!widget->isActiveWindow() || stopFlash)) {
++    if (!pFlashWindowEx) {
++#ifndef Q_OS_WINCE
++        QSystemLibrary themeLib(QLatin1String("user32"));
++        pFlashWindowEx  = (PtrFlashWindowEx)themeLib.resolve("FlashWindowEx");
++#endif
++    }
++
++    if (pFlashWindowEx && widget && (!widget->isActiveWindow() || stopFlash)) {
+         DWORD timeOut = GetCaretBlinkTime();
+         if (timeOut <= 0)
+             timeOut = 250;
+@@ -1375,7 +1492,7 @@
+         info.dwTimeout = stopFlash ? 0 : timeOut;
+         info.uCount = stopFlash ? 0 : flashCount;
+ 
+-        FlashWindowEx(&info);
++        pFlashWindowEx(&info);
+     }
+ #endif
+ }
+@@ -1748,7 +1865,7 @@
+             // Sometimes we only get a WM_MOUSEMOVE message
+             // and sometimes we get both a WM_MOUSEMOVE and
+             // a WM_LBUTTONDOWN/UP, this creates a spurious mouse
+-            // press/release event, using the PeekMessage
++            // press/release event, using the winPeekMessage
+             // will help us fix this.  This leaves us with a
+             // question:
+             //    This effectively kills using the mouse AND the
+@@ -1758,14 +1875,16 @@
+             bool is_mouse_move = (message == WM_MOUSEMOVE);
+             if (is_mouse_move) {
+                 MSG msg1;
+-                if (PeekMessage(&msg1, msg.hwnd, WM_MOUSEFIRST,
+-                                WM_MOUSELAST, PM_NOREMOVE))
++                if (winPeekMessage(&msg1, msg.hwnd, WM_MOUSEFIRST,
++                                    WM_MOUSELAST, PM_NOREMOVE))
+                     next_is_button = (msg1.message == WM_LBUTTONUP
+                                        || msg1.message == WM_LBUTTONDOWN);
+             }
+             if (!is_mouse_move || (is_mouse_move && !next_is_button))
+                 qt_tabletChokeMouse = false;
+         }
++    } else if (message == WM95_MOUSEWHEEL) {
++        result = widget->translateWheelEvent(msg);
+     } else {
+         switch (message) {
+         case WM_TOUCH:
+@@ -1796,7 +1915,7 @@
+         case WM_IME_KEYDOWN:
+         case WM_CHAR: {
+             MSG msg1;
+-            bool anyMsg = PeekMessage(&msg1, msg.hwnd, 0, 0, PM_NOREMOVE);
++            bool anyMsg = winPeekMessage(&msg1, msg.hwnd, 0, 0, PM_NOREMOVE);
+             if (anyMsg && msg1.message == WM_DEADCHAR) {
+                 result = true; // consume event since there is a dead char next
+                 break;
+@@ -1935,7 +2054,11 @@
+ #ifndef QT_NO_WHATSTHIS
+                 QWhatsThis::enterWhatsThisMode();
+ #endif
+-                DefWindowProc(hwnd, WM_NCPAINT, 1, 0);
++                QT_WA({
++                    DefWindowProc(hwnd, WM_NCPAINT, 1, 0);
++                } , {
++                    DefWindowProcA(hwnd, WM_NCPAINT, 1, 0);
++                });
+                 break;
+ #if defined(QT_NON_COMMERCIAL)
+                 QT_NC_SYSCOMMAND
+@@ -1997,7 +2120,7 @@
+                 // On Windows CE, lParam parameter is a constant, not a char pointer.
+                 if (msg.lParam == INI_INTL) {
+ #else
+-                QString area = QString::fromWCharArray((wchar_t*)msg.lParam);
++                QString area = QT_WA_INLINE(QString::fromWCharArray((wchar_t*)msg.lParam), QString::fromLocal8Bit((char*)msg.lParam));
+                 if (area == QLatin1String("intl")) {
+ #endif
+                     QLocalePrivate::updateSystemPrivate();
+@@ -2428,7 +2551,11 @@
+                         text = widget->objectName();
+                     ret = qMin<int>(wParam - 1, text.size());
+                     text.resize(ret);
+-                    memcpy((void *)lParam, text.utf16(), (text.size() + 1) * sizeof(ushort));
++                    QT_WA({
++                        memcpy((void *)lParam, text.utf16(), (text.size() + 1) * 2);
++                    }, {
++                        memcpy((void *)lParam, text.toLocal8Bit().data(), text.size() + 1);
++                    });
+                     delete acc;
+                 }
+                 if (!ret) {
+@@ -2534,11 +2661,11 @@
+ 
+ #ifndef Q_WS_WINCE
+         case WM_INPUTLANGCHANGE: {
+-            wchar_t info[7];
+-            if (!GetLocaleInfo(MAKELCID(lParam, SORT_DEFAULT), LOCALE_IDEFAULTANSICODEPAGE, info, 6)) {
++            char info[7];
++            if (!GetLocaleInfoA(MAKELCID(lParam, SORT_DEFAULT), LOCALE_IDEFAULTANSICODEPAGE, info, 6)) {
+                 inputcharset = CP_ACP;
+             } else {
+-                inputcharset = QString::fromWCharArray(info).toInt();
++                inputcharset = QString::fromLatin1(info).toInt();
+             }
+             QKeyMapper::changeKeyboard();
+             break;
+@@ -2785,7 +2912,8 @@
+     if (type != WM_NCHITTEST) {
+ #endif
+         if ((type >= WM_MOUSEFIRST && type <= WM_MOUSELAST) ||
+-             type == WM_MOUSEWHEEL || type == WM_MOUSEHWHEEL ||
++             type == WM_MOUSEWHEEL || type == (int)WM95_MOUSEWHEEL ||
++             type == WM_MOUSEHWHEEL ||
+              type == WM_MOUSELEAVE ||
+              (type >= WM_KEYFIRST && type <= WM_KEYLAST)
+ #ifndef Q_WS_WINCE
+@@ -3026,10 +3154,10 @@
+     // reset button state
+ 
+     MSG msg = {0, 0, 0, 0, 0, {0, 0} };
+-    while (PeekMessage(&msg, 0, WM_MOUSEMOVE, WM_MOUSEMOVE, PM_REMOVE))
++    while (winPeekMessage(&msg, 0, WM_MOUSEMOVE, WM_MOUSEMOVE, PM_REMOVE))
+         ;
+     if (msg.message == WM_MOUSEMOVE)
+-        PostMessage(msg.hwnd, msg.message, 0, msg.lParam);
++        winPostMessage(msg.hwnd, msg.message, 0, msg.lParam);
+ }
+ 
+ // In DnD, the mouse release event never appears, so the
+@@ -3064,8 +3192,8 @@
+     // Compress mouse move events
+     if (msg.message == WM_MOUSEMOVE) {
+         MSG mouseMsg;
+-        while (PeekMessage(&mouseMsg, msg.hwnd, WM_MOUSEFIRST,
+-               WM_MOUSELAST, PM_NOREMOVE)) {
++        while (winPeekMessage(&mouseMsg, msg.hwnd, WM_MOUSEFIRST,
++                WM_MOUSELAST, PM_NOREMOVE)) {
+             if (mouseMsg.message == WM_MOUSEMOVE) {
+ #define PEEKMESSAGE_IS_BROKEN 1
+ #ifdef PEEKMESSAGE_IS_BROKEN
+@@ -3076,12 +3204,12 @@
+                 // key release events (kls 2003-05-13):
+                 MSG keyMsg;
+                 bool done = false;
+-                while (PeekMessage(&keyMsg, 0, WM_KEYFIRST, WM_KEYLAST,
+-                       PM_NOREMOVE)) {
++                while (winPeekMessage(&keyMsg, 0, WM_KEYFIRST, WM_KEYLAST,
++                        PM_NOREMOVE)) {
+                     if (keyMsg.time < mouseMsg.time) {
+                         if ((keyMsg.lParam & 0xC0000000) == 0x40000000) {
+-                            PeekMessage(&keyMsg, 0, keyMsg.message,
+-                                        keyMsg.message, PM_REMOVE);
++                            winPeekMessage(&keyMsg, 0, keyMsg.message,
++                                            keyMsg.message, PM_REMOVE);
+                         } else {
+                             done = true;
+                             break;
+@@ -3110,8 +3238,8 @@
+                 msgPtr->pt.y = GET_Y_LPARAM(mouseMsg.lParam);
+                 ClientToScreen(msg.hwnd, &(msgPtr->pt));
+                 // Remove the mouse move message
+-                PeekMessage(&mouseMsg, msg.hwnd, WM_MOUSEMOVE,
+-                            WM_MOUSEMOVE, PM_REMOVE);
++                winPeekMessage(&mouseMsg, msg.hwnd, WM_MOUSEMOVE,
++                                WM_MOUSEMOVE, PM_REMOVE);
+             } else {
+                 break; // there was no more WM_MOUSEMOVE event
+             }
+@@ -3346,7 +3474,7 @@
+                 POINT widgetpt = gpos;
+                 ScreenToClient(hwndTarget, &widgetpt);
+                 LPARAM lParam = MAKELPARAM(widgetpt.x, widgetpt.y);
+-                PostMessage(hwndTarget, msg.message, msg.wParam, lParam);
++                winPostMessage(hwndTarget, msg.message, msg.wParam, lParam);
+             }
+         } else if (type == QEvent::MouseButtonRelease && button == Qt::RightButton
+                 && QApplication::activePopupWidget() == activePopupWidget) {
+@@ -3772,8 +3900,8 @@
+         return;
+ 
+     QSystemLibrary library(QLatin1String("wintab32"));
+-    ptrWTInfo = (PtrWTInfo)library.resolve("WTInfoW");
+-    ptrWTGet = (PtrWTGet)library.resolve("WTGetW");
++    ptrWTInfo = (PtrWTInfo)library.resolve(QT_WA_INLINE("WTInfoW", "WTInfoA"));
++    ptrWTGet = (PtrWTGet)library.resolve(QT_WA_INLINE("WTGetW", "WTGetA"));
+     ptrWTEnable = (PtrWTEnable)library.resolve("WTEnable");
+     ptrWTOverlap = (PtrWTEnable)library.resolve("WTOverlap");
+     ptrWTPacketsGet = (PtrWTPacketsGet)library.resolve("WTPacketsGet");
+@@ -4062,7 +4190,11 @@
+ #ifdef SPI_SETWHEELSCROLLLINES
+     if (n < 0)
+         n = 0;
+-    SystemParametersInfo(SPI_SETWHEELSCROLLLINES, (uint)n, 0, 0);
++    QT_WA({
++        SystemParametersInfo(SPI_SETWHEELSCROLLLINES, (uint)n, 0, 0);
++    } , {
++        SystemParametersInfoA(SPI_SETWHEELSCROLLLINES, (uint)n, 0, 0);
++    });
+ #else
+     QApplicationPrivate::wheel_scroll_lines = n;
+ #endif
+@@ -4072,7 +4204,11 @@
+ {
+ #ifdef SPI_GETWHEELSCROLLLINES
+     uint i = 3;
+-    SystemParametersInfo(SPI_GETWHEELSCROLLLINES, sizeof(uint), &i, 0);
++    QT_WA({
++        SystemParametersInfo(SPI_GETWHEELSCROLLLINES, sizeof(uint), &i, 0);
++    } , {
++        SystemParametersInfoA(SPI_GETWHEELSCROLLLINES, sizeof(uint), &i, 0);
++    });
+     if (i > INT_MAX)
+         i = INT_MAX;
+     return i;
+@@ -4117,7 +4253,8 @@
+     if (QColormap::instance().depth() < 16)
+         return false;
+ 
+-    if (!effect_override && desktopSettingsAware()) {
++    if (!effect_override && desktopSettingsAware()
++        && !(QSysInfo::WindowsVersion == QSysInfo::WV_95 || QSysInfo::WindowsVersion == QSysInfo::WV_NT)) {
+         // we know that they can be used when we are here
+         BOOL enabled = false;
+         UINT api;
+@@ -4126,22 +4263,33 @@
+             api = SPI_GETMENUANIMATION;
+             break;
+         case Qt::UI_FadeMenu:
++            if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++                return false;
+             api = SPI_GETMENUFADE;
+             break;
+         case Qt::UI_AnimateCombo:
+             api = SPI_GETCOMBOBOXANIMATION;
+             break;
+         case Qt::UI_AnimateTooltip:
+-            api = SPI_GETTOOLTIPANIMATION;
++            if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++                api = SPI_GETMENUANIMATION;
++            else
++                api = SPI_GETTOOLTIPANIMATION;
+             break;
+         case Qt::UI_FadeTooltip:
++            if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++                return false;
+             api = SPI_GETTOOLTIPFADE;
+             break;
+         default:
+             api = SPI_GETUIEFFECTS;
+             break;
+         }
+-        SystemParametersInfo(api, 0, &enabled, 0);
++        QT_WA({
++            SystemParametersInfo(api, 0, &enabled, 0);
++        } , {
++            SystemParametersInfoA(api, 0, &enabled, 0);
++        });
+         return enabled;
+     }
+ 
+--- a/src/gui/kernel/qmime_win.cpp
++++ b/src/gui/kernel/qmime_win.cpp
+@@ -279,7 +279,11 @@
+ */
+ int QWindowsMime::registerMimeType(const QString &mime)
+ {
++#ifdef Q_OS_WINCE
+     int f = RegisterClipboardFormat(reinterpret_cast<const wchar_t *> (mime.utf16()));
++#else
++    int f = RegisterClipboardFormatA(mime.toLocal8Bit());
++#endif
+     if (!f)
+         qErrnoWarning("QWindowsMime::registerMimeType: Failed to register clipboard format");
+ 
+@@ -395,9 +399,9 @@
+         while (S_OK == fmtenum->Next(1, &fmtetc, 0)) {
+ #if defined(QMIME_DEBUG) && !defined(Q_OS_WINCE)
+             qDebug("QWindowsMime::allMimesForFormats()");
+-            wchar_t buf[256] = {0};
+-            GetClipboardFormatName(fmtetc.cfFormat, buf, 255);
+-            qDebug("CF = %d : %s", fmtetc.cfFormat, QString::fromWCharArray(buf));
++            char buf[256] = {0};
++            GetClipboardFormatNameA(fmtetc.cfFormat, buf, 255);
++            qDebug("CF = %d : %s", fmtetc.cfFormat, buf);
+ #endif
+             for (int i=mimes.size()-1; i>=0; --i) {
+                 QString format = mimes.at(i)->mimeForFormat(fmtetc);
+@@ -498,7 +502,7 @@
+                 ++u;
+             }
+             res.truncate(ri);
+-            const int byteLength = res.length() * sizeof(ushort);
++            const int byteLength = res.length()*2;
+             QByteArray r(byteLength + 2, '\0');
+             memcpy(r.data(), res.unicode(), byteLength);
+             r[byteLength] = 0;
+@@ -543,7 +547,7 @@
+         QString str;
+         QByteArray data = getData(CF_UNICODETEXT, pDataObj);
+         if (!data.isEmpty()) {
+-            str = QString::fromWCharArray((const wchar_t *)data.data());
++            str = QString::fromUtf16((const unsigned short *)data.data());
+             str.replace(QLatin1String("\r\n"), QLatin1String("\n"));
+         } else {
+             data = getData(CF_TEXT, pDataObj);
+@@ -614,7 +618,11 @@
+             for (int i=0; i<urls.size(); i++) {
+                 QString fn = QDir::toNativeSeparators(urls.at(i).toLocalFile());
+                 if (!fn.isEmpty()) {
+-                    size += sizeof(ushort) * (fn.length() + 1);
++                    QT_WA({
++                        size += sizeof(TCHAR)*(fn.length()+1);
++                    } , {
++                        size += fn.toLocal8Bit().length()+1;
++                    });
+                     fileNames.append(fn);
+                 }
+             }
+@@ -626,16 +634,30 @@
+             d->fNC = true;
+             char* files = ((char*)d) + d->pFiles;
+ 
+-            d->fWide = true;
+-            wchar_t* f = (wchar_t*)files;
+-            for (int i=0; i<fileNames.size(); i++) {
+-                int l = fileNames.at(i).length();
+-                memcpy(f, fileNames.at(i).utf16(), l * sizeof(ushort));
+-                f += l;
+-                *f++ = 0;
+-            }
+-            *f = 0;
+-
++            QT_WA({
++                d->fWide = true;
++                TCHAR* f = (TCHAR*)files;
++                for (int i=0; i<fileNames.size(); i++) {
++                    int l = fileNames.at(i).length();
++                    memcpy(f, fileNames.at(i).utf16(), l*sizeof(TCHAR));
++                    f += l;
++                    *f++ = 0;
++                }
++                *f = 0;
++            } , {
++                d->fWide = false;
++                char* f = files;
++                for (int i=0; i<fileNames.size(); i++) {
++                    QByteArray c = fileNames.at(i).toLocal8Bit();
++                    if (!c.isEmpty()) {
++                        int l = c.length();
++                        memcpy(f, c.constData(), l);
++                        f += l;
++                        *f++ = 0;
++                    }
++                }
++                *f = 0;
++            });
+             return setData(result, pmedium);
+         } else if (getCf(formatetc) == CF_INETURL_W) {
+             QList<QUrl> urls = mimeData->urls();
+@@ -700,15 +722,15 @@
+ 
+             LPDROPFILES hdrop = (LPDROPFILES)data.data();
+             if (hdrop->fWide) {
+-                const wchar_t* filesw = (const wchar_t *)(data.data() + hdrop->pFiles);
+-                int i = 0;
++                const ushort* filesw = (const ushort*)(data.data() + hdrop->pFiles);
++                int i=0;
+                 while (filesw[i]) {
+-                    QString fileurl = QString::fromWCharArray(filesw + i);
++                    QString fileurl = QString::fromUtf16(filesw+i);
+                     urls += QUrl::fromLocalFile(fileurl);
+                     i += fileurl.length()+1;
+                 }
+             } else {
+-                const char* files = (const char *)data.data() + hdrop->pFiles;
++                const char* files = (const char*)data.data() + hdrop->pFiles;
+                 int i=0;
+                 while (files[i]) {
+                     urls += QUrl::fromLocalFile(QString::fromLocal8Bit(files+i));
+@@ -724,7 +746,7 @@
+             QByteArray data = getData(CF_INETURL_W, pDataObj);
+             if (data.isEmpty())
+                 return QVariant();
+-            return QUrl(QString::fromWCharArray((const wchar_t *)data.constData()));
++            return QUrl(QString::fromUtf16((const unsigned short *)data.constData()));
+          } else if (canGetData(CF_INETURL, pDataObj)) {
+             QByteArray data = getData(CF_INETURL, pDataObj);
+             if (data.isEmpty())
+@@ -893,7 +915,11 @@
+ 
+ QWindowsMimeImage::QWindowsMimeImage()
+ {
+-    CF_PNG = RegisterClipboardFormat(L"PNG");
++#ifdef Q_OS_WINCE
++    CF_PNG = RegisterClipboardFormat(reinterpret_cast<const wchar_t *> (QString::fromLatin1("PNG").utf16()));
++#else
++    CF_PNG = RegisterClipboardFormatA("PNG");
++#endif
+ }
+ 
+ QVector<FORMATETC> QWindowsMimeImage::formatsForMime(const QString &mimeType, const QMimeData *mimeData) const
+@@ -1092,7 +1118,7 @@
+                 ++u;
+             }
+             res.truncate(ri);
+-            const int byteLength = res.length() * sizeof(ushort);
++            const int byteLength = res.length()*2;
+             QByteArray r(byteLength + 2, '\0');
+             memcpy(r.data(), res.unicode(), byteLength);
+             r[byteLength] = 0;
+@@ -1132,8 +1158,8 @@
+             qDebug("QBuiltInMimes::convertToMime()");
+ #endif
+             if (mimeType == QLatin1String("text/html") && preferredType == QVariant::String) {
+-                // text/html is in wide chars on windows (compatible with Mozilla)
+-                val = QString::fromWCharArray((const wchar_t *)data.data());
++                // text/html is in wide chars on windows (compatible with mozillia)
++                val = QString::fromUtf16((const unsigned short *)data.data());
+             } else {
+                 val = data; // it should be enough to return the data and let QMimeData do the rest.
+             }
+@@ -1258,7 +1284,11 @@
+ {
+     if (isCustomMimeType(mimeType)) {
+         QString clipFormat = customMimeType(mimeType);
++#ifdef Q_OS_WINCE
+         int cf = RegisterClipboardFormat(reinterpret_cast<const wchar_t *> (clipFormat.utf16()));
++#else
++        int cf = RegisterClipboardFormatA(clipFormat.toLocal8Bit());
++#endif
+         return canGetData(cf, pDataObj);
+     } else if (formats.keys(mimeType).isEmpty()) {
+         // if it is not in there then register it an see if we can get it
+@@ -1278,7 +1308,11 @@
+         QByteArray data;
+         if (isCustomMimeType(mimeType)) {
+             QString clipFormat = customMimeType(mimeType);
++#ifdef Q_OS_WINCE
+             int cf = RegisterClipboardFormat(reinterpret_cast<const wchar_t *> (clipFormat.utf16()));
++#else
++            int cf = RegisterClipboardFormatA(clipFormat.toLocal8Bit());
++#endif
+             data = getData(cf, pDataObj);
+         } else if (formats.keys(mimeType).isEmpty()) {
+             int cf = QWindowsMime::registerMimeType(mimeType);
+@@ -1295,38 +1329,46 @@
+ QString QLastResortMimes::mimeForFormat(const FORMATETC &formatetc) const
+ {
+     QString format = formats.value(getCf(formatetc));
+-    if (!format.isEmpty())
+-        return format;
+-
+-    wchar_t buffer[256];
+-    int len = GetClipboardFormatName(getCf(formatetc), buffer, 256);
+-
+-    if (len) {
+-        QString clipFormat = QString::fromWCharArray(buffer, len);
++    if (format.isEmpty()) {
++        QByteArray ba;
++        QString clipFormat;
++        int len;
++        QT_WA({
++            ba.resize(256*2);
++            len = GetClipboardFormatNameW(getCf(formatetc), (TCHAR*)ba.data(), 255);
++            if (len) 
++                clipFormat = QString::fromUtf16((ushort *)ba.data(), len);
++        } , {
++            ba.resize(256);
++            len = GetClipboardFormatNameA(getCf(formatetc), ba.data(), 255);
++            if (len)
++                clipFormat = QString::fromLocal8Bit(ba.data(), len);
++       });
++        if (len) {
+ #ifndef QT_NO_DRAGANDDROP
+-        if (QInternalMimeData::canReadData(clipFormat))
+-            format = clipFormat;
+-        else if((formatetc.cfFormat >= 0xC000)){
+-            //create the mime as custom. not registered.
+-            if (!excludeList.contains(clipFormat, Qt::CaseInsensitive)) {
+-                //check if this is a mime type
+-                bool ianaType = false;
+-                int sz = ianaTypes.size();
+-                for (int i = 0; i < sz; i++) {
+-                    if (clipFormat.startsWith(ianaTypes[i], Qt::CaseInsensitive)) {
+-                        ianaType =  true;
+-                        break;
++            if (QInternalMimeData::canReadData(clipFormat))
++                format = clipFormat;
++            else if((formatetc.cfFormat >= 0xC000)){
++                //create the mime as custom. not registered.
++                if (!excludeList.contains(clipFormat, Qt::CaseInsensitive)) {
++                    //check if this is a mime type
++                    bool ianaType = false;
++                    int sz = ianaTypes.size();
++                    for (int i = 0; i < sz; i++) {
++                        if (clipFormat.startsWith(ianaTypes[i], Qt::CaseInsensitive)) {
++                            ianaType =  true;
++                            break;
++                        }
+                     }
++                    if (!ianaType)
++                        format = QLatin1String(x_qt_windows_mime) + clipFormat + QLatin1Char('\"');
++                    else
++                        format = clipFormat;
+                 }
+-                if (!ianaType)
+-                    format = QLatin1String(x_qt_windows_mime) + clipFormat + QLatin1Char('\"');
+-                else
+-                    format = clipFormat;
+             }
+-        }
+ #endif //QT_NO_DRAGANDDROP
+-    }
+-
++        }
++    }
+     return format;
+ }
+ 
+--- a/src/gui/kernel/qsound_win.cpp
++++ b/src/gui/kernel/qsound_win.cpp
+@@ -77,8 +77,13 @@
+ QAuServerWindows::QAuServerWindows(QObject* parent) :
+     QAuServer(parent), current(0)
+ {
+-    mutex = CreateMutex(0, 0, 0);
+-    event = CreateEvent(0, FALSE, FALSE, 0);
++    QT_WA({
++        mutex = CreateMutexW(0, 0, 0);
++        event = CreateEventW(0, FALSE, FALSE, 0);
++    } , {
++        mutex = CreateMutexA(0, 0, 0);
++        event = CreateEventA(0, FALSE, FALSE, 0);
++    });
+ }
+ 
+ QAuServerWindows::~QAuServerWindows()
+@@ -128,9 +133,13 @@
+         if (loops == -1)
+             flags |= SND_LOOP;
+ 
+-        PlaySound((wchar_t*)filename.utf16(), 0, flags);
+-        if (sound && loops == 1)
+-            server->decLoop(sound);
++        QT_WA({
++            PlaySoundW((TCHAR*)filename.utf16(), 0, flags);
++        } , {
++            PlaySoundA(QFile::encodeName(filename).data(), 0, flags);
++        });
++	if (sound && loops == 1)
++	    server->decLoop(sound);
+ 
+         // GUI thread continues, but we are done as well.
+         SetEvent(event);
+@@ -139,13 +148,18 @@
+         QPointer<QSound> guarded_sound = sound;
+         SetEvent(event);
+ 
+-        for (int l = 0; l < loops && server->current; ++l) {
+-            PlaySound((wchar_t*)filename.utf16(), 0, SND_FILENAME | SND_SYNC);
+-
+-            if (guarded_sound)
+-                server->decLoop(guarded_sound);
+-        }
+-        server->current = 0;
++	for (int l = 0; l < loops && server->current; ++l) {
++	    QT_WA( {
++		PlaySoundW( (TCHAR*)filename.utf16(), 0, SND_FILENAME|SND_SYNC );
++	    } , {
++		PlaySoundA( QFile::encodeName(filename).data(), 0,
++		    SND_FILENAME|SND_SYNC );
++	    } );
++
++	    if (guarded_sound)
++		server->decLoop(guarded_sound);
++	}
++	server->current = 0;
+     }
+     ReleaseMutex(mutex);
+ 
+@@ -155,7 +169,7 @@
+ void QAuServerWindows::playHelper(const QString &filename, int loop, QSound *snd)
+ {
+     if (loop == 0)
+-        return;
++	return;
+     // busy?
+     if (WaitForSingleObject(mutex, 0) == WAIT_TIMEOUT)
+         return;
+--- a/src/gui/kernel/qapplication.cpp
++++ b/src/gui/kernel/qapplication.cpp
+@@ -1006,6 +1006,12 @@
+ 
+     if (qgetenv("QT_USE_NATIVE_WINDOWS").toInt() > 0)
+         q->setAttribute(Qt::AA_NativeWindows);
++
++#if defined(Q_WS_WIN)
++    // Alien is not currently working on Windows 98
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++        q->setAttribute(Qt::AA_NativeWindows);
++#endif
+ 
+ #ifdef Q_WS_WINCE
+ #ifdef QT_AUTO_MAXIMIZE_THRESHOLD
+@@ -4870,13 +4876,13 @@
+ {
+     // We will use the following information to create the GUID
+     // 1. absolute path to application
+-    wchar_t tempFilename[MAX_PATH];
+-    if (!GetModuleFileName(0, tempFilename, MAX_PATH))
++    wchar_t tempFilename[512];
++    if (!GetModuleFileNameW(0, tempFilename, 512))
+         return S_FALSE;
+-    unsigned int hash = qHash(QString::fromWCharArray(tempFilename));
++    unsigned int hash = qHash(QString::fromUtf16((const unsigned short *) tempFilename));
+     guid->Data1 = hash;
+     // 2. creation time of file
+-    QFileInfo info(QString::fromWCharArray(tempFilename));
++    QFileInfo info(QString::fromUtf16((const unsigned short *) tempFilename));
+     guid->Data2 = qHash(info.created().toTime_t());
+     // 3. current system time
+     guid->Data3 = qHash(QDateTime::currentDateTime().toTime_t());
+@@ -4910,10 +4916,10 @@
+     GUID guid;
+     CoCreateGuid(&guid);
+     StringFromGUID2(guid, guidstr, 40);
+-    id = QString::fromWCharArray(guidstr);
++    id = QString::fromUtf16((ushort*)guidstr);
+     CoCreateGuid(&guid);
+     StringFromGUID2(guid, guidstr, 40);
+-    key = QString::fromWCharArray(guidstr);
++    key = QString::fromUtf16((ushort*)guidstr);
+ #endif
+     d->sessionId = id;
+     d->sessionKey = key;
+--- a/src/gui/inputmethod/qwininputcontext_win.cpp
++++ b/src/gui/inputmethod/qwininputcontext_win.cpp
+@@ -46,11 +46,16 @@
+ #include "qfont.h"
+ #include "qwidget.h"
+ #include "qapplication.h"
++#include "qlibrary.h"
+ #include "qevent.h"
+ #include "qtextformat.h"
+ #include "qtextboundaryfinder.h"
+ 
+ //#define Q_IME_DEBUG
++
++/* Active Input method support on Win95/98/NT */
++#include <objbase.h>
++#include <initguid.h>
+ 
+ #ifdef Q_IME_DEBUG
+ #include "qdebug.h"
+@@ -215,6 +220,25 @@
+ QWinInputContext::QWinInputContext(QObject *parent)
+     : QInputContext(parent), recursionGuard(false)
+ {
++    if (QSysInfo::WindowsVersion < QSysInfo::WV_2000) {
++        // try to get the Active IMM COM object on Win95/98/NT, where english versions don't
++        // support the regular Windows input methods.
++        if (CoCreateInstance(CLSID_CActiveIMM, NULL, CLSCTX_INPROC_SERVER,
++            IID_IActiveIMMApp, (LPVOID *)&aimm) != S_OK) {
++            aimm = 0;
++        }
++        if (aimm && (aimm->QueryInterface(IID_IActiveIMMMessagePumpOwner, (LPVOID *)&aimmpump) != S_OK ||
++                        aimm->Activate(true) != S_OK)) {
++            aimm->Release();
++            aimm = 0;
++            if (aimmpump)
++                aimmpump->Release();
++            aimmpump = 0;
++        }
++        if (aimmpump)
++            aimmpump->Start();
++    }
++
+ #ifndef Q_WS_WINCE
+     QSysInfo::WinVersion ver = QSysInfo::windowsVersion();
+     if (ver & QSysInfo::WV_NT_based  && ver >= QSysInfo::WV_VISTA) {
+@@ -240,21 +264,25 @@
+             delete []lpList;
+         }
+     } else {
+-        // figure out whether a RTL language is installed
+-        qt_use_rtl_extensions = IsValidLanguageGroup(LGRPID_ARABIC, LGRPID_INSTALLED)
+-                                || IsValidLanguageGroup(LGRPID_HEBREW, LGRPID_INSTALLED)
+-                                || IsValidLocale(MAKELCID(MAKELANGID(LANG_ARABIC, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
+-                                || IsValidLocale(MAKELCID(MAKELANGID(LANG_HEBREW, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
++	    // figure out whether a RTL language is installed
++    	typedef BOOL(WINAPI *PtrIsValidLanguageGroup)(DWORD,DWORD);
++    	PtrIsValidLanguageGroup isValidLanguageGroup = (PtrIsValidLanguageGroup)QLibrary::resolve(QLatin1String("kernel32"), "IsValidLanguageGroup");
++    	if (isValidLanguageGroup) {
++        	qt_use_rtl_extensions = isValidLanguageGroup(LGRPID_ARABIC, LGRPID_INSTALLED)
++	            	                 || isValidLanguageGroup(LGRPID_HEBREW, LGRPID_INSTALLED);
++    	}
++    	qt_use_rtl_extensions |= IsValidLocale(MAKELCID(MAKELANGID(LANG_ARABIC, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
++        	                  || IsValidLocale(MAKELCID(MAKELANGID(LANG_HEBREW, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
+ #ifdef LANG_SYRIAC
+-                                || IsValidLocale(MAKELCID(MAKELANGID(LANG_SYRIAC, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
+-#endif
+-                                || IsValidLocale(MAKELCID(MAKELANGID(LANG_FARSI, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED);
++            	              || IsValidLocale(MAKELCID(MAKELANGID(LANG_SYRIAC, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED)
++#endif
++                	          || IsValidLocale(MAKELCID(MAKELANGID(LANG_FARSI, SUBLANG_DEFAULT), SORT_DEFAULT), LCID_INSTALLED);
+     }
+ #else
+     qt_use_rtl_extensions = false;
+ #endif
+ 
+-    WM_MSIME_MOUSE = RegisterWindowMessage(L"MSIMEMouseOperation");
++    WM_MSIME_MOUSE = QT_WA_INLINE(RegisterWindowMessage(L"MSIMEMouseOperation"), RegisterWindowMessageA("MSIMEMouseOperation"));
+ }
+ 
+ QWinInputContext::~QWinInputContext()
+@@ -311,13 +339,26 @@
+         ImmNotifyIME(imc, dwAction, dwIndex, dwValue);
+ }
+ 
+-static LONG getCompositionString(HIMC himc, DWORD dwIndex, LPVOID lpbuf, DWORD dBufLen)
++static LONG getCompositionString(HIMC himc, DWORD dwIndex, LPVOID lpbuf, DWORD dBufLen, bool *unicode = 0)
+ {
+     LONG len = 0;
++    if (unicode)
++        *unicode = true;
+     if (aimm)
+         aimm->GetCompositionStringW(himc, dwIndex, dBufLen, &len, lpbuf);
+     else
+-        len = ImmGetCompositionString(himc, dwIndex, lpbuf, dBufLen);
++    {
++        if(QSysInfo::WindowsVersion != QSysInfo::WV_95) {
++            len = ImmGetCompositionStringW(himc, dwIndex, lpbuf, dBufLen);
++        }
++#if !defined(Q_WS_WINCE)
++        else {
++            len = ImmGetCompositionStringA(himc, dwIndex, lpbuf, dBufLen);
++            if (unicode)
++                *unicode = false;
++        }
++#endif
++    }
+     return len;
+ }
+ 
+@@ -330,7 +371,8 @@
+ {
+     const int bufferSize = 256;
+     wchar_t buffer[bufferSize];
+-    int len = getCompositionString(himc, dwindex, buffer, bufferSize * sizeof(wchar_t));
++    bool unicode = true;
++    int len = getCompositionString(himc, dwindex, buffer, sizeof(buffer), &unicode);
+ 
+     if (selStart) {
+         char attrbuffer[bufferSize];
+@@ -348,8 +390,12 @@
+ 
+     if (len <= 0)
+         return QString();
+-
+-    return QString((QChar*)buffer, len / sizeof(QChar));
++    if (unicode) {
++        return QString((QChar *)buffer, len/sizeof(QChar));
++    }
++    else {
++        return QString::fromLocal8Bit(reinterpret_cast<const char *>(buffer), len);
++    }
+ }
+ 
+ void QWinInputContext::TranslateMessage(const MSG *msg)
+@@ -363,7 +409,11 @@
+     LRESULT retval;
+     if (!aimm || aimm->OnDefWindowProc(hwnd, msg, wParam, lParam, &retval) != S_OK)
+     {
+-        retval = ::DefWindowProc(hwnd, msg, wParam, lParam);
++        QT_WA({
++            retval = ::DefWindowProc(hwnd, msg, wParam, lParam);
++        } , {
++            retval = ::DefWindowProcA(hwnd,msg, wParam, lParam);
++        });
+     }
+     return retval;
+ }
+@@ -385,13 +435,21 @@
+     HFONT hf;
+     hf = f.handle();
+ 
+-    LOGFONT lf;
+-    if (GetObject(hf, sizeof(lf), &lf)) {
+-        if (aimm)
+-            aimm->SetCompositionFontW(imc, &lf);
+-        else
+-            ImmSetCompositionFont(imc, &lf);
+-    }
++    QT_WA({
++        LOGFONT lf;
++        if (GetObject(hf, sizeof(lf), &lf))
++            if (aimm)
++                aimm->SetCompositionFontW(imc, &lf);
++            else
++                ImmSetCompositionFont(imc, &lf);
++    } , {
++        LOGFONTA lf;
++        if (GetObjectA(hf, sizeof(lf), &lf))
++            if (aimm)
++                aimm->SetCompositionFontA(imc, &lf);
++            else
++                ImmSetCompositionFontA(imc, &lf);
++    });
+ 
+     QRect r = w->inputMethodQuery(Qt::ImMicroFocus).toRect();
+ 
+--- a/src/gui/painting/qwindowsurface_raster_p.h
++++ b/src/gui/painting/qwindowsurface_raster_p.h
+@@ -68,6 +68,13 @@
+ #define Q_ULW_ALPHA               0x00000002 // copied from ULW_ALPHA in winuser.h
+ #define Q_AC_SRC_ALPHA            0x00000001 // copied from AC_SRC_ALPHA in winuser.h
+ 
++struct Q_BLENDFUNCTION {
++  BYTE     BlendOp;
++  BYTE     BlendFlags;
++  BYTE     SourceConstantAlpha;
++  BYTE     AlphaFormat;
++};
++
+ struct Q_UPDATELAYEREDWINDOWINFO {
+     DWORD cbSize;
+     HDC hdcDst;
+@@ -76,16 +83,12 @@
+     HDC hdcSrc;
+     const POINT *pptSrc;
+     COLORREF crKey;
+-    const BLENDFUNCTION *pblend;
++    const Q_BLENDFUNCTION *pblend;
+     DWORD dwFlags;
+     const RECT *prcDirty;
+ };
+ 
+-typedef BOOL (WINAPI *PtrUpdateLayeredWindow)(HWND hwnd, HDC hdcDst, const POINT *pptDst,
+-             const SIZE *psize, HDC hdcSrc, const POINT *pptSrc, COLORREF crKey,
+-             const BLENDFUNCTION *pblend, DWORD dwflags);
+ typedef BOOL (WINAPI *PtrUpdateLayeredWindowIndirect)(HWND hwnd, const Q_UPDATELAYEREDWINDOWINFO *pULWInfo);
+-extern PtrUpdateLayeredWindow ptrUpdateLayeredWindow;
+ extern PtrUpdateLayeredWindowIndirect ptrUpdateLayeredWindowIndirect;
+ #endif
+ 
+--- a/src/gui/painting/qwindowsurface_raster.cpp
++++ b/src/gui/painting/qwindowsurface_raster.cpp
+@@ -43,7 +43,6 @@
+ 
+ #include <qglobal.h> // for Q_WS_WIN define (non-PCH)
+ #ifdef Q_WS_WIN
+-#include <qlibrary.h>
+ #include <qt_windows.h>
+ #endif
+ 
+@@ -71,6 +70,10 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++#ifdef Q_WS_WIN
++PtrUpdateLayeredWindowIndirect ptrUpdateLayeredWindowIndirect;
++#endif
++
+ class QRasterWindowSurfacePrivate
+ {
+ public:
+@@ -84,6 +87,9 @@
+ #ifndef QT_NO_XRENDER
+     uint translucentBackground : 1;
+ #endif
++#endif
++#if defined(Q_WS_WIN) && !defined(Q_WS_WINCE)
++    uint canUseLayeredWindow : 1;
+ #endif
+     uint inSetGeometry : 1;
+ };
+@@ -101,6 +107,10 @@
+     d_ptr->needsSync = false;
+ #endif
+ #endif
++#if defined(Q_WS_WIN) && !defined(Q_WS_WINCE)
++    d_ptr->canUseLayeredWindow = ptrUpdateLayeredWindowIndirect
++        && (qt_widget_private(window)->data.window_flags & Qt::FramelessWindowHint);
++#endif
+     d_ptr->image = 0;
+     d_ptr->inSetGeometry = false;
+ 
+@@ -146,7 +156,8 @@
+ #if (defined(Q_WS_X11) && !defined(QT_NO_XRENDER)) || (defined(Q_WS_WIN) && !defined(Q_WS_WINCE))
+     if (!qt_widget_private(window())->isOpaque && window()->testAttribute(Qt::WA_TranslucentBackground)) {
+ #if defined(Q_WS_WIN) && !defined(Q_WS_WINCE)
+-        if (d_ptr->image->image.format() != QImage::Format_ARGB32_Premultiplied)
++        if (d_ptr->image->image.format() != QImage::Format_ARGB32_Premultiplied
++            && d_ptr->canUseLayeredWindow)
+             prepareBuffer(QImage::Format_ARGB32_Premultiplied, window());
+ #endif
+         QPainter p(&d_ptr->image->image);
+@@ -175,7 +186,7 @@
+     QRect br = rgn.boundingRect();
+ 
+ #ifndef Q_WS_WINCE
+-    if (!qt_widget_private(window())->isOpaque
++    if (d->canUseLayeredWindow && !qt_widget_private(window())->isOpaque
+         && window()->testAttribute(Qt::WA_TranslucentBackground)
+         && (qt_widget_private(window())->data.window_flags & Qt::FramelessWindowHint))
+     {
+@@ -186,11 +197,12 @@
+         SIZE size = {r.width(), r.height()};
+         POINT ptDst = {r.x(), r.y()};
+         POINT ptSrc = {0, 0};
+-        BLENDFUNCTION blend = {AC_SRC_OVER, 0, (BYTE)(255.0 * window()->windowOpacity()), Q_AC_SRC_ALPHA};
++        Q_BLENDFUNCTION blend = {AC_SRC_OVER, 0, (BYTE)(255.0 * window()->windowOpacity()), Q_AC_SRC_ALPHA};
+         RECT dirty = {dirtyRect.x(), dirtyRect.y(),
+             dirtyRect.x() + dirtyRect.width(), dirtyRect.y() + dirtyRect.height()};
+         Q_UPDATELAYEREDWINDOWINFO info = {sizeof(info), NULL, &ptDst, &size, d->image->hdc, &ptSrc, 0, &blend, Q_ULW_ALPHA, &dirty};
+-        ptrUpdateLayeredWindowIndirect(window()->internalWinId(), &info);
++
++        (*ptrUpdateLayeredWindowIndirect)(window()->internalWinId(), &info);
+     } else
+ #endif
+     {
+@@ -349,7 +361,7 @@
+ #ifndef Q_WS_WIN
+         if (d_ptr->translucentBackground)
+ #else
+-        if (!qt_widget_private(window())->isOpaque)
++        if (!qt_widget_private(window())->isOpaque && d->canUseLayeredWindow)
+ #endif
+             prepareBuffer(QImage::Format_ARGB32_Premultiplied, window());
+         else
+--- a/src/gui/painting/qregion.cpp
++++ b/src/gui/painting/qregion.cpp
+@@ -91,6 +91,10 @@
+ 
+     Example of using complex regions:
+     \snippet doc/src/snippets/code/src_gui_painting_qregion.cpp 0
++
++    \warning Due to window system limitations, the whole coordinate space for a
++    region is limited to the points between -32767 and 32767 on Windows
++    95/98/ME. You can circumvent this limitation by using a QPainterPath.
+ 
+     \section1 Additional License Information
+ 
+--- a/src/gui/image/qpixmap_win.cpp
++++ b/src/gui/image/qpixmap_win.cpp
+@@ -182,7 +182,13 @@
+     BITMAP bitmap_info;
+     memset(&bitmap_info, 0, sizeof(BITMAP));
+ 
+-    int res = GetObject(bitmap, sizeof(BITMAP), &bitmap_info);
++    int res;
++    QT_WA({
++            res = GetObjectW(bitmap, sizeof(BITMAP), &bitmap_info);
++        } , {
++              res = GetObjectA(bitmap, sizeof(BITMAP), &bitmap_info);
++          });
++
+     if (!res) {
+         qErrnoWarning("QPixmap::fromWinHBITMAP(), failed to get bitmap info");
+         return QPixmap();

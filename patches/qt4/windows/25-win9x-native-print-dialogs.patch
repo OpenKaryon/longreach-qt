@@ -1,0 +1,358 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x and old NT: PRINTDLGA/W, as Qt 4.5 used, where comdlg32 has no
+# PrintDlgExW; the extended dialog remains on newer NT.
+#
+--- a/src/gui/dialogs/qprintdialog_win.cpp
++++ b/src/gui/dialogs/qprintdialog_win.cpp
+@@ -45,10 +45,11 @@
+ 
+ #include <qwidget.h>
+ #include <qapplication.h>
+ #include <qmessagebox.h>
+ #include <private/qapplication_p.h>
++#include <private/qsystemlibrary_p.h>
+ 
+ #include <private/qabstractprintdialog_p.h>
+ #include <private/qprintengine_win_p.h>
+ #include <private/qprinter_p.h>
+ 
+@@ -86,11 +87,11 @@
+ 
+ static void qt_win_setup_PRINTDLGEX(PRINTDLGEX *pd, QWidget *parent,
+                                     QPrintDialog *pdlg,
+                                     QPrintDialogPrivate *d, HGLOBAL *tempDevNames)
+ {
+-    DEVMODE *devMode = d->ep->devMode;
++    DEVMODEW *devMode = d->ep->devModeW();
+ 
+     if (devMode) {
+         int size = sizeof(DEVMODE) + devMode->dmDriverExtra;
+         pd->hDevMode = GlobalAlloc(GHND, size);
+         {
+@@ -176,10 +177,70 @@
+         d->ep->fileName = d->ep->port;
+     else if (!d->ep->printToFile && d->ep->fileName == QLatin1String("FILE:"))
+         d->ep->fileName.clear();
+ }
+ 
++
++// Qt 4.5 used PRINTDLGA/W. Keep this path for Win9x and NT systems whose
++// comdlg32 has no PrintDlgExW. The extended dialog remains available on NT.
++template <class PrintDialog, class DeviceMode>
++static bool qt_win_legacyPrintDialog(QWidget *parent, QPrintDialog *pdlg,
++                                    QPrintDialogPrivate *d,
++                                    BOOL (WINAPI *showDialog)(PrintDialog *))
++{
++    PrintDialog pd;
++    memset(&pd, 0, sizeof(pd));
++    pd.lStructSize = sizeof(pd);
++    const DeviceMode *mode = static_cast<const DeviceMode *>(d->ep->devMode);
++    if (mode) {
++        const int size = mode->dmSize + mode->dmDriverExtra;
++        pd.hDevMode = GlobalAlloc(GHND, size);
++        if (!pd.hDevMode) return false;
++        void *copy = GlobalLock(pd.hDevMode);
++        if (!copy) { GlobalFree(pd.hDevMode); return false; }
++        memcpy(copy, mode, size);
++        GlobalUnlock(pd.hDevMode);
++    }
++    pd.hDevNames = reinterpret_cast<HGLOBAL>(d->ep->createDevNames());
++    if (!pd.hDevNames) { GlobalFree(pd.hDevMode); return false; }
++    pd.hwndOwner = parent ? parent->winId() : 0;
++    pd.Flags = PD_RETURNDC | PD_USEDEVMODECOPIESANDCOLLATE;
++    if (!pdlg->isOptionEnabled(QPrintDialog::PrintSelection)) pd.Flags |= PD_NOSELECTION;
++    if (!pdlg->isOptionEnabled(QPrintDialog::PrintToFile)) pd.Flags |= PD_DISABLEPRINTTOFILE;
++    if (pdlg->isOptionEnabled(QPrintDialog::PrintPageRange)) {
++        pd.nMinPage = qBound(0, pdlg->minPage(), 65535);
++        pd.nMaxPage = qBound(0, pdlg->maxPage(), 65535);
++    }
++    if (!pd.nMinPage && !pd.nMaxPage) pd.Flags |= PD_NOPAGENUMS;
++    if (pdlg->isOptionEnabled(QPrintDialog::PrintSelection)
++            && pdlg->printRange() == QPrintDialog::Selection) pd.Flags |= PD_SELECTION;
++    else if (pdlg->isOptionEnabled(QPrintDialog::PrintPageRange)
++             && pdlg->printRange() == QPrintDialog::PageRange) pd.Flags |= PD_PAGENUMS;
++    if (d->ep->printToFile) pd.Flags |= PD_PRINTTOFILE;
++    pd.nFromPage = qBound(0, qMax(pdlg->fromPage(), pdlg->minPage()), 65535);
++    pd.nToPage = pdlg->toPage() > 0 ? qBound(0, qMin(pdlg->toPage(), pdlg->maxPage()), 65535) : 1;
++    pd.nCopies = qBound(1, d->ep->num_copies, 65535);
++
++    const bool result = showDialog(&pd) && pd.hDC;
++    if (result) {
++        if (pd.Flags & PD_SELECTION) { pdlg->setPrintRange(QPrintDialog::Selection); pdlg->setFromTo(0, 0); }
++        else if (pd.Flags & PD_PAGENUMS) { pdlg->setPrintRange(QPrintDialog::PageRange); pdlg->setFromTo(pd.nFromPage, pd.nToPage); }
++        else { pdlg->setPrintRange(QPrintDialog::AllPages); pdlg->setFromTo(0, 0); }
++        d->ep->printToFile = (pd.Flags & PD_PRINTTOFILE) != 0;
++        d->ep->readDevnames(pd.hDevNames);
++        d->ep->readDevmode(pd.hDevMode); // engine adopts this handle
++        d->ep->updateCustomPaperSize();
++        if (d->ep->printToFile && d->ep->fileName.isEmpty()) d->ep->fileName = d->ep->port;
++        else if (!d->ep->printToFile && d->ep->fileName == QLatin1String("FILE:")) d->ep->fileName.clear();
++    } else if (pd.hDevMode) {
++        GlobalFree(pd.hDevMode);
++    }
++    if (pd.hDC) DeleteDC(pd.hDC);
++    GlobalFree(pd.hDevNames);
++    return result;
++}
++
+ static bool warnIfNotNative(QPrinter *printer)
+ {
+     if (printer->outputFormat() != QPrinter::NativeFormat) {
+         qWarning("QPrintDialog: Cannot be used on non-native printers");
+         return false;
+@@ -234,10 +295,24 @@
+     QWidget modal_widget;
+     modal_widget.setAttribute(Qt::WA_NoChildEventsForParent, true);
+     modal_widget.setParent(parent, Qt::Window);
+     QApplicationPrivate::enterModal(&modal_widget);
+ 
++    typedef HRESULT (WINAPI *PrintDlgExFunction)(LPPRINTDLGEXW);
++    PrintDlgExFunction extended = 0;
++    if (QT_WA_INLINE(true, false))
++        extended = reinterpret_cast<PrintDlgExFunction>(QSystemLibrary::resolve(QLatin1String("comdlg32"), "PrintDlgExW"));
++    if (!extended) {
++        const bool result = QT_WA_INLINE(
++            (qt_win_legacyPrintDialog<PRINTDLGW, DEVMODEW>(parent, q, this, PrintDlgW)),
++            (qt_win_legacyPrintDialog<PRINTDLGA, DEVMODEA>(parent, q, this, PrintDlgA)));
++        QApplicationPrivate::leaveModal(&modal_widget);
++        qt_win_eatMouseMove();
++        printer->d_func()->validPrinter = !ep->name.isEmpty();
++        q->done(result);
++        return result;
++    }
+     HGLOBAL *tempDevNames = ep->createDevNames();
+ 
+     bool done;
+     bool result;
+     bool doPrinting;
+@@ -250,11 +325,11 @@
+     qt_win_setup_PRINTDLGEX(&pd, parent, q, this, tempDevNames);
+ 
+     do {
+         done = true;
+         doPrinting = false;
+-        result = (PrintDlgEx(&pd) == S_OK);
++        result = (extended(&pd) == S_OK);
+         if (result && (pd.dwResultAction == PD_RESULT_PRINT
+                        || pd.dwResultAction == PD_RESULT_APPLY))
+         {
+             doPrinting = (pd.dwResultAction == PD_RESULT_PRINT);
+             if ((pd.Flags & PD_PAGENUMS)
+@@ -287,11 +362,14 @@
+         // update printer validity
+         printer->d_func()->validPrinter = !ep->name.isEmpty();
+     }
+ 
+     // Cleanup...
+-    GlobalFree(tempDevNames);
++    if (pd.hDC) DeleteDC(pd.hDC);
++    if (!(result && (pd.dwResultAction == PD_RESULT_PRINT || pd.dwResultAction == PD_RESULT_APPLY)) && pd.hDevMode)
++        GlobalFree(pd.hDevMode);
++    GlobalFree(pd.hDevNames);
+ 
+     q->done(result && doPrinting);
+ 
+     return result && doPrinting;
+ }
+--- a/src/gui/dialogs/qpagesetupdialog_win.cpp
++++ b/src/gui/dialogs/qpagesetupdialog_win.cpp
+@@ -61,97 +61,66 @@
+ QPageSetupDialog::QPageSetupDialog(QWidget *parent)
+     : QAbstractPageSetupDialog(*(new QPageSetupDialogPrivate), 0, parent)
+ {
+ }
+ 
++
++template <class PageDialog, class DeviceMode>
++static bool qt_win_pageSetupDialog(QWin32PrintEnginePrivate *ep, QWidget *parent,
++                                  BOOL (WINAPI *showDialog)(PageDialog *))
++{
++    PageDialog psd;
++    memset(&psd, 0, sizeof(psd));
++    psd.lStructSize = sizeof(psd);
++    const DeviceMode *mode = static_cast<const DeviceMode *>(ep->devMode);
++    if (mode) {
++        const int size = mode->dmSize + mode->dmDriverExtra;
++        psd.hDevMode = GlobalAlloc(GHND, size);
++        if (!psd.hDevMode) return false;
++        void *copy = GlobalLock(psd.hDevMode);
++        if (!copy) { GlobalFree(psd.hDevMode); return false; }
++        memcpy(copy, mode, size);
++        GlobalUnlock(psd.hDevMode);
++    }
++    psd.hDevNames = reinterpret_cast<HGLOBAL>(ep->createDevNames());
++    if (!psd.hDevNames) { GlobalFree(psd.hDevMode); return false; }
++    psd.hwndOwner = parent ? parent->winId() : 0;
++    psd.Flags = PSD_MARGINS;
++    const bool metric = QLocale::system().measurementSystem() == QLocale::MetricSystem;
++    psd.Flags |= metric ? PSD_INHUNDREDTHSOFMILLIMETERS : PSD_INTHOUSANDTHSOFINCHES;
++    const double multiplier = metric ? 1 : 25.4 / 10;
++    const QRect margins = ep->getPageMargins();
++    psd.rtMargin.left = margins.left() / multiplier;
++    psd.rtMargin.top = margins.top() / multiplier;
++    psd.rtMargin.right = margins.width() / multiplier;
++    psd.rtMargin.bottom = margins.height() / multiplier;
++    const bool result = showDialog(&psd);
++    if (result) {
++        ep->readDevnames(psd.hDevNames);
++        ep->readDevmode(psd.hDevMode); // engine adopts the returned handle
++        ep->setPageMargins(psd.rtMargin.left * multiplier, psd.rtMargin.top * multiplier,
++                           psd.rtMargin.right * multiplier, psd.rtMargin.bottom * multiplier);
++        ep->updateCustomPaperSize();
++    } else if (psd.hDevMode) {
++        GlobalFree(psd.hDevMode);
++    }
++    GlobalFree(psd.hDevNames);
++    return result;
++}
++
+ int QPageSetupDialog::exec()
+ {
+     Q_D(QPageSetupDialog);
+-
+     if (d->printer->outputFormat() != QPrinter::NativeFormat)
+         return Rejected;
+-
+-    QWin32PrintEngine *engine = static_cast<QWin32PrintEngine*>(d->printer->paintEngine());
+-    QWin32PrintEnginePrivate *ep = static_cast<QWin32PrintEnginePrivate *>(engine->d_ptr.data());
+-
+-    PAGESETUPDLG psd;
+-    memset(&psd, 0, sizeof(PAGESETUPDLG));
+-    psd.lStructSize = sizeof(PAGESETUPDLG);
+-
+-    // we need a temp DEVMODE struct if we don't have a global DEVMODE
+-    HGLOBAL hDevMode = 0;
+-    int devModeSize = 0;
+-    if (!ep->globalDevMode) {
+-        devModeSize = sizeof(DEVMODE) + ep->devMode->dmDriverExtra;
+-        hDevMode = GlobalAlloc(GHND, devModeSize);
+-        if (hDevMode) {
+-            void *dest = GlobalLock(hDevMode);
+-            memcpy(dest, ep->devMode, devModeSize);
+-            GlobalUnlock(hDevMode);
+-        }
+-        psd.hDevMode = hDevMode;
+-    } else {
+-        psd.hDevMode = ep->devMode;
+-    }
+-
+-    HGLOBAL *tempDevNames = ep->createDevNames();
+-    psd.hDevNames = tempDevNames;
+-
++    QWin32PrintEngine *engine = static_cast<QWin32PrintEngine *>(d->printer->paintEngine());
++    QWin32PrintEnginePrivate *ep = engine->d_func();
+     QWidget *parent = parentWidget();
+     parent = parent ? parent->window() : QApplication::activeWindow();
+-    Q_ASSERT(!parent ||parent->testAttribute(Qt::WA_WState_Created));
+-    psd.hwndOwner = parent ? parent->winId() : 0;
+-
+-    psd.Flags = PSD_MARGINS;
+-    double multiplier = 1;
+-    switch (QLocale::system().measurementSystem()) {
+-    case QLocale::MetricSystem:
+-        psd.Flags |= PSD_INHUNDREDTHSOFMILLIMETERS;
+-        multiplier = 1;
+-        break;
+-    case QLocale::ImperialSystem:
+-        psd.Flags |= PSD_INTHOUSANDTHSOFINCHES;
+-        multiplier = 25.4/10;
+-        break;
+-    }
+-
+-    QRect marginRect = ep->getPageMargins();
+-    psd.rtMargin.left   = marginRect.left()   / multiplier;
+-    psd.rtMargin.top    = marginRect.top()    / multiplier;
+-    psd.rtMargin.right  = marginRect.width()  / multiplier;;
+-    psd.rtMargin.bottom = marginRect.height() / multiplier;;
+-
+-    bool result = PageSetupDlg(&psd);
+-    if (result) {
+-        ep->readDevnames(psd.hDevNames);
+-        ep->readDevmode(psd.hDevMode);
+-
+-        QRect theseMargins = QRect(psd.rtMargin.left   * multiplier,
+-                                   psd.rtMargin.top    * multiplier,
+-                                   psd.rtMargin.right  * multiplier,
+-                                   psd.rtMargin.bottom * multiplier);
+-
+-        if (theseMargins != marginRect) {
+-            ep->setPageMargins(psd.rtMargin.left   * multiplier,
+-                               psd.rtMargin.top    * multiplier,
+-                               psd.rtMargin.right  * multiplier,
+-                               psd.rtMargin.bottom * multiplier);
+-        }
+-
+-        ep->updateCustomPaperSize();
+-
+-        // copy from our temp DEVMODE struct
+-        if (!ep->globalDevMode && hDevMode) {
+-            void *src = GlobalLock(hDevMode);
+-            memcpy(ep->devMode, src, devModeSize);
+-            GlobalUnlock(hDevMode);
+-        }
+-    }
+-
+-    if (!ep->globalDevMode && hDevMode)
+-        GlobalFree(hDevMode);
+-    GlobalFree(tempDevNames);
++    const bool result = QT_WA_INLINE(
++        (qt_win_pageSetupDialog<PAGESETUPDLGW, DEVMODEW>(ep, parent, PageSetupDlgW)),
++        (qt_win_pageSetupDialog<PAGESETUPDLGA, DEVMODEA>(ep, parent, PageSetupDlgA)));
+     done(result);
+     return result;
+ }
+ 
+ void QPageSetupDialog::setVisible(bool visible)
+--- a/src/gui/painting/qprintengine_win.cpp
++++ b/src/gui/painting/qprintengine_win.cpp
+@@ -1011,12 +1011,11 @@
+     }
+ }
+ 
+ QWin32PrintEnginePrivate::~QWin32PrintEnginePrivate()
+ {
+-    if (hdc)
+-        release();
++    release();
+ }
+ 
+ void QWin32PrintEnginePrivate::initialize()
+ {
+     if (hdc)
+@@ -1164,28 +1163,24 @@
+                      qRound(inchesToMM(devPaperRect.bottom() - devPhysicalPageRect.bottom()) * 100.0 / dpi_y));
+ }
+ 
+ void QWin32PrintEnginePrivate::release()
+ {
+-    if (hdc == 0)
+-        return;
+-
+-    if (globalDevMode) { // Devmode comes from print dialog
++    if (hdc) DeleteDC(hdc);
++    if (hPrinter) ClosePrinter(hPrinter);
++    if (globalDevMode) { // accepted native dialog: this engine owns the handle
+         GlobalUnlock(globalDevMode);
+-    } else {            // Devmode comes from initialize...
+-        // devMode is a part of the same memory block as pInfo so one free is enough...
++        GlobalFree(globalDevMode);
++    } else if (hMem) {
+         GlobalUnlock(hMem);
+         GlobalFree(hMem);
+     }
+-    if (hPrinter)
+-        ClosePrinter(hPrinter);
+-    DeleteDC(hdc);
+-
+     hdc = 0;
+     hPrinter = 0;
+     pInfo = 0;
+     hMem = 0;
++    globalDevMode = 0;
+     devMode = 0;
+ }
+ 
+ QList<QVariant> QWin32PrintEnginePrivate::queryResolutions() const
+ {

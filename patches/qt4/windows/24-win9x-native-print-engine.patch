@@ -1,0 +1,504 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: the native print engine without the Unicode and
+# complex-transform text path; Qt's outline fallback draws the glyphs.
+#
+--- a/src/gui/painting/qprintengine_win_p.h
++++ b/src/gui/painting/qprintengine_win_p.h
+@@ -169,7 +169,8 @@
+     void readDevnames(HGLOBAL globalDevnames);
+ 
+     inline bool resetDC() {
+-        hdc = ResetDC(hdc, devMode);
++        QT_WA({ hdc = ResetDCW(hdc, devModeW()); },
++              { hdc = ResetDCA(hdc, devModeA()); });
+         return hdc != 0;
+     }
+ 
+@@ -191,8 +192,12 @@
+     HANDLE hPrinter;
+ 
+     HGLOBAL globalDevMode;
+-    DEVMODE *devMode;
+-    PRINTER_INFO_2 *pInfo;
++    DEVMODEW *devModeW() const { return static_cast<DEVMODEW *>(devMode); }
++    DEVMODEA *devModeA() const { return static_cast<DEVMODEA *>(devMode); }
++    PRINTER_INFO_2W *pInfoW() const { return static_cast<PRINTER_INFO_2W *>(pInfo); }
++    PRINTER_INFO_2A *pInfoA() const { return static_cast<PRINTER_INFO_2A *>(pInfo); }
++    void *devMode;
++    void *pInfo;
+     HGLOBAL hMem;
+ 
+     HDC hdc;
+--- a/src/gui/painting/qprintengine_win.cpp
++++ b/src/gui/painting/qprintengine_win.cpp
+@@ -199,18 +199,33 @@
+     if (d->printToFile && d->fileName.isEmpty())
+         d->fileName = d->port;
+ 
+-    d->devMode->dmCopies = d->num_copies;
+-
+-    DOCINFO di;
+-    memset(&di, 0, sizeof(DOCINFO));
+-    di.cbSize = sizeof(DOCINFO);
+-    di.lpszDocName = reinterpret_cast<const wchar_t *>(d->docName.utf16());
+-    if (d->printToFile && !d->fileName.isEmpty())
+-        di.lpszOutput = reinterpret_cast<const wchar_t *>(d->fileName.utf16());
+-    if (ok && StartDoc(d->hdc, &di) == SP_ERROR) {
+-        qErrnoWarning("QWin32PrintEngine::begin: StartDoc failed");
+-        ok = false;
+-    }
++    QT_WA({
++        d->devModeW()->dmCopies = d->num_copies;
++        DOCINFOW di;
++        memset(&di, 0, sizeof(di));
++        di.cbSize = sizeof(di);
++        di.lpszDocName = reinterpret_cast<const wchar_t *>(d->docName.utf16());
++        if (d->printToFile && !d->fileName.isEmpty())
++            di.lpszOutput = reinterpret_cast<const wchar_t *>(d->fileName.utf16());
++        if (ok && StartDocW(d->hdc, &di) == SP_ERROR) {
++            qErrnoWarning("QWin32PrintEngine::begin: StartDoc failed");
++            ok = false;
++        }
++    }, {
++        d->devModeA()->dmCopies = d->num_copies;
++        DOCINFOA di;
++        memset(&di, 0, sizeof(di));
++        di.cbSize = sizeof(di);
++        const QByteArray docName = d->docName.toLocal8Bit();
++        const QByteArray fileName = d->fileName.toLocal8Bit();
++        di.lpszDocName = docName.constData();
++        if (d->printToFile && !fileName.isEmpty())
++            di.lpszOutput = fileName.constData();
++        if (ok && StartDocA(d->hdc, &di) == SP_ERROR) {
++            qErrnoWarning("QWin32PrintEngine::begin: StartDoc failed");
++            ok = false;
++        }
++    });
+ 
+     if (StartPage(d->hdc) <= 0) {
+         qErrnoWarning("QWin32PrintEngine::begin: StartPage failed");
+@@ -341,7 +356,10 @@
+ 
+     const QTextItemInt &ti = static_cast<const QTextItemInt &>(textItem);
+     QRgb brushColor = state->pen().brush().color().rgb();
+-    bool fallBack = state->pen().brush().style() != Qt::SolidPattern
++    // Win9x cannot use the Unicode/complex-transform native text path.
++    // The alpha engine's existing outline/raster fallback uses Qt's glyphs.
++    bool fallBack = (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)
++                    || state->pen().brush().style() != Qt::SolidPattern
+                     || qAlpha(brushColor) != 0xff
+                     || d->txop >= QTransform::TxProject
+                     || ti.fontEngine->type() != QFontEngine::Win;
+@@ -950,6 +968,17 @@
+     d->has_brush = has_brush;
+ }
+ 
++static int qt_win_printerCapabilities(const QString &name, const QString &port,
++                                      WORD capability, void *output, void *mode)
++{
++    return QT_WA_INLINE(
++        DeviceCapabilitiesW(reinterpret_cast<const wchar_t *>(name.utf16()),
++                            reinterpret_cast<const wchar_t *>(port.utf16()), capability,
++                            static_cast<LPWSTR>(output), static_cast<DEVMODEW *>(mode)),
++        DeviceCapabilitiesA(name.toLocal8Bit().constData(), port.toLocal8Bit().constData(),
++                            capability, static_cast<LPSTR>(output), static_cast<DEVMODEA *>(mode)));
++}
++
+ void QWin32PrintEnginePrivate::queryDefault()
+ {
+     /* Read the default printer name, driver and port with the intuitive function
+@@ -1002,7 +1031,8 @@
+ 
+     txop = QTransform::TxNone;
+ 
+-    bool ok = OpenPrinter((LPWSTR)name.utf16(), (LPHANDLE)&hPrinter, 0);
++    bool ok = QT_WA_INLINE(OpenPrinterW((LPWSTR)name.utf16(), &hPrinter, 0),
++                           OpenPrinterA((LPSTR)name.toLocal8Bit().constData(), &hPrinter, 0));
+     if (!ok) {
+         qErrnoWarning("QWin32PrintEngine::initialize: OpenPrinter failed");
+         return;
+@@ -1011,14 +1041,16 @@
+     // Fetch the PRINTER_INFO_2 with DEVMODE data containing the
+     // printer settings.
+     DWORD infoSize, numBytes;
+-    GetPrinter(hPrinter, 2, NULL, 0, &infoSize);
++    QT_WA({ GetPrinterW(hPrinter, 2, NULL, 0, &infoSize); },
++          { GetPrinterA(hPrinter, 2, NULL, 0, &infoSize); });
+     hMem = GlobalAlloc(GHND, infoSize);
+-    pInfo = (PRINTER_INFO_2*) GlobalLock(hMem);
+-    ok = GetPrinter(hPrinter, 2, (LPBYTE)pInfo, infoSize, &numBytes);
++    pInfo = GlobalLock(hMem);
++    ok = QT_WA_INLINE(GetPrinterW(hPrinter, 2, (LPBYTE)pInfo, infoSize, &numBytes),
++                      GetPrinterA(hPrinter, 2, (LPBYTE)pInfo, infoSize, &numBytes));
+ 
+     if (!ok) {
+         qErrnoWarning("QWin32PrintEngine::initialize: GetPrinter failed");
+-        GlobalUnlock(pInfo);
++        GlobalUnlock(hMem);
+         GlobalFree(hMem);
+         ClosePrinter(hPrinter);
+         pInfo = 0;
+@@ -1027,15 +1059,20 @@
+         return;
+     }
+ 
+-    devMode = pInfo->pDevMode;
+-    hdc = CreateDC(reinterpret_cast<const wchar_t *>(program.utf16()),
+-                   reinterpret_cast<const wchar_t *>(name.utf16()), 0, devMode);
++    devMode = QT_WA_INLINE(static_cast<void *>(pInfoW()->pDevMode),
++                          static_cast<void *>(pInfoA()->pDevMode));
++    QT_WA({
++        hdc = CreateDCW(reinterpret_cast<const wchar_t *>(program.utf16()),
++                        reinterpret_cast<const wchar_t *>(name.utf16()), 0, devModeW());
++    }, {
++        hdc = CreateDCA(program.toLocal8Bit().constData(), name.toLocal8Bit().constData(), 0, devModeA());
++    });
+ 
+     Q_ASSERT(hPrinter);
+     Q_ASSERT(pInfo);
+ 
+     if (devMode) {
+-        num_copies = devMode->dmCopies;
++        num_copies = QT_WA_INLINE(devModeW()->dmCopies, devModeA()->dmCopies);
+     }
+ 
+     initHDC();
+@@ -1155,16 +1192,12 @@
+     // Read the supported resolutions of the printer.
+     QList<QVariant> list;
+ 
+-    DWORD numRes = DeviceCapabilities(reinterpret_cast<const wchar_t *>(name.utf16()),
+-                                      reinterpret_cast<const wchar_t *>(port.utf16()),
+-                                      DC_ENUMRESOLUTIONS, 0, 0);
++    DWORD numRes = qt_win_printerCapabilities(name, port, DC_ENUMRESOLUTIONS, 0, 0);
+     if (numRes == (DWORD)-1)
+         return list;
+ 
+     LONG *enumRes = (LONG*)malloc(numRes * 2 * sizeof(LONG));
+-    DWORD errRes = DeviceCapabilities(reinterpret_cast<const wchar_t *>(name.utf16()),
+-                                      reinterpret_cast<const wchar_t *>(port.utf16()),
+-                                      DC_ENUMRESOLUTIONS, (LPWSTR)enumRes, 0);
++    DWORD errRes = qt_win_printerCapabilities(name, port, DC_ENUMRESOLUTIONS, enumRes, 0);
+ 
+     if (errRes == (DWORD)-1) {
+         qErrnoWarning("QWin32PrintEngine::queryResolutions: DeviceCapabilities failed");
+@@ -1217,7 +1250,7 @@
+         {
+             if (!d->devMode)
+                 break;
+-            d->devMode->dmCollate = value.toBool() ? DMCOLLATE_TRUE : DMCOLLATE_FALSE;
++            QT_WA_INLINE(d->devModeW()->dmCollate, d->devModeA()->dmCollate) = value.toBool() ? DMCOLLATE_TRUE : DMCOLLATE_FALSE;
+             d->doReinit();
+         }
+         break;
+@@ -1226,7 +1259,7 @@
+         {
+             if (!d->devMode)
+                 break;
+-            d->devMode->dmColor = (value.toInt() == QPrinter::Color) ? DMCOLOR_COLOR : DMCOLOR_MONOCHROME;
++            QT_WA_INLINE(d->devModeW()->dmColor, d->devModeA()->dmColor) = (value.toInt() == QPrinter::Color) ? DMCOLOR_COLOR : DMCOLOR_MONOCHROME;
+             d->doReinit();
+         }
+         break;
+@@ -1253,7 +1286,7 @@
+         if (!d->devMode)
+             break;
+         d->num_copies = value.toInt();
+-        d->devMode->dmCopies = d->num_copies;
++        QT_WA_INLINE(d->devModeW()->dmCopies, d->devModeA()->dmCopies) = d->num_copies;
+         d->doReinit();
+         break;
+ 
+@@ -1262,8 +1295,8 @@
+             if (!d->devMode)
+                 break;
+             int orientation = value.toInt() == QPrinter::Landscape ? DMORIENT_LANDSCAPE : DMORIENT_PORTRAIT;
+-            int old_orientation = d->devMode->dmOrientation;
+-            d->devMode->dmOrientation = orientation;
++            int old_orientation = QT_WA_INLINE(d->devModeW()->dmOrientation, d->devModeA()->dmOrientation);
++            QT_WA_INLINE(d->devModeW()->dmOrientation, d->devModeA()->dmOrientation) = orientation;
+             if (d->has_custom_paper_size && old_orientation != orientation)
+                 d->paper_size = QSizeF(d->paper_size.height(), d->paper_size.width());
+             d->doReinit();
+@@ -1282,7 +1315,7 @@
+     case PPK_PaperSize:
+         if (!d->devMode)
+             break;
+-        d->devMode->dmPaperSize = mapPaperSizeDevmode(QPrinter::PaperSize(value.toInt()));
++        QT_WA_INLINE(d->devModeW()->dmPaperSize, d->devModeA()->dmPaperSize) = mapPaperSizeDevmode(QPrinter::PaperSize(value.toInt()));
+         d->has_custom_paper_size = (QPrinter::PaperSize(value.toInt()) == QPrinter::Custom);
+         d->doReinit();
+         break;
+@@ -1297,7 +1330,7 @@
+             if (v.contains(value))
+                 dmMapped = mapPaperSourceDevmode(QPrinter::PaperSource(value.toInt()));
+ 
+-            d->devMode->dmDefaultSource = dmMapped;
++            QT_WA_INLINE(d->devModeW()->dmDefaultSource, d->devModeA()->dmDefaultSource) = dmMapped;
+             d->doReinit();
+         }
+         break;
+@@ -1331,7 +1364,7 @@
+         if (!d->devMode)
+             break;
+         d->has_custom_paper_size = false;
+-        d->devMode->dmPaperSize = value.toInt();
++        QT_WA_INLINE(d->devModeW()->dmPaperSize, d->devModeA()->dmPaperSize) = value.toInt();
+         d->doReinit();
+         break;
+ 
+@@ -1341,27 +1374,29 @@
+         d->paper_size = value.toSizeF();
+         if (!d->devMode)
+             break;
+-        int orientation = d->devMode->dmOrientation;
+-        DWORD needed = 0;
+-        DWORD returned = 0;
+-        if (!EnumForms(d->hPrinter, 1, 0, 0, &needed, &returned)) {
+-            BYTE *forms = (BYTE *) malloc(needed);
+-            if (EnumForms(d->hPrinter, 1, forms, needed, &needed, &returned)) {
+-                for (DWORD i=0; i< returned; ++i) {
+-                    FORM_INFO_1 *formArray = reinterpret_cast<FORM_INFO_1 *>(forms);
+-                    // the form sizes are specified in 1000th of a mm,
+-                    // convert the size to Points
+-                    QSizeF size((formArray[i].Size.cx * 72/25.4)/1000.0,
+-                                (formArray[i].Size.cy * 72/25.4)/1000.0);
+-                    if (qAbs(d->paper_size.width() - size.width()) <= 2
+-                        && qAbs(d->paper_size.height() - size.height()) <= 2)
+-                    {
+-                        d->devMode->dmPaperSize = i + 1;
+-                        break;
++        int orientation = QT_WA_INLINE(d->devModeW()->dmOrientation, d->devModeA()->dmOrientation);
++        if (!(QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)) {
++            DWORD needed = 0;
++            DWORD returned = 0;
++            if (!EnumForms(d->hPrinter, 1, 0, 0, &needed, &returned)) {
++                BYTE *forms = (BYTE *) malloc(needed);
++                if (EnumForms(d->hPrinter, 1, forms, needed, &needed, &returned)) {
++                    for (DWORD i=0; i< returned; ++i) {
++                        FORM_INFO_1 *formArray = reinterpret_cast<FORM_INFO_1 *>(forms);
++                        // the form sizes are specified in 1000th of a mm,
++                        // convert the size to Points
++                        QSizeF size((formArray[i].Size.cx * 72/25.4)/1000.0,
++                                    (formArray[i].Size.cy * 72/25.4)/1000.0);
++                        if (qAbs(d->paper_size.width() - size.width()) <= 2
++                            && qAbs(d->paper_size.height() - size.height()) <= 2)
++                        {
++                            QT_WA_INLINE(d->devModeW()->dmPaperSize, d->devModeA()->dmPaperSize) = i + 1;
++                            break;
++                        }
+                     }
+                 }
++                free(forms);
+             }
+-            free(forms);
+         }
+         if (orientation != DMORIENT_PORTRAIT)
+             d->paper_size = QSizeF(d->paper_size.height(), d->paper_size.width());
+@@ -1402,7 +1437,7 @@
+             if (!d->devMode) {
+                 value = QPrinter::Color;
+             } else {
+-                value = (d->devMode->dmColor == DMCOLOR_COLOR) ? QPrinter::Color : QPrinter::GrayScale;
++                value = (QT_WA_INLINE(d->devModeW()->dmColor, d->devModeA()->dmColor) == DMCOLOR_COLOR) ? QPrinter::Color : QPrinter::GrayScale;
+             }
+         }
+         break;
+@@ -1432,7 +1467,7 @@
+             if (!d->devMode) {
+                 value = QPrinter::Portrait;
+             } else {
+-                value = (d->devMode->dmOrientation == DMORIENT_LANDSCAPE) ? QPrinter::Landscape : QPrinter::Portrait;
++                value = (QT_WA_INLINE(d->devModeW()->dmOrientation, d->devModeA()->dmOrientation) == DMORIENT_LANDSCAPE) ? QPrinter::Landscape : QPrinter::Portrait;
+             }
+         }
+         break;
+@@ -1466,7 +1501,7 @@
+             if (!d->devMode) {
+                 value = QPrinter::A4;
+             } else {
+-                value = mapDevmodePaperSize(d->devMode->dmPaperSize);
++                value = mapDevmodePaperSize(QT_WA_INLINE(d->devModeW()->dmPaperSize, d->devModeA()->dmPaperSize));
+             }
+         }
+         break;
+@@ -1485,7 +1520,7 @@
+         if (!d->devMode) {
+             value = QPrinter::Auto;
+         } else {
+-            value = mapDevmodePaperSource(d->devMode->dmDefaultSource);
++            value = mapDevmodePaperSource(QT_WA_INLINE(d->devModeW()->dmDefaultSource, d->devModeA()->dmDefaultSource));
+         }
+         break;
+ 
+@@ -1506,21 +1541,19 @@
+         if (!d->devMode) {
+             value = -1;
+         } else {
+-            value = d->devMode->dmPaperSize;
++            value = QT_WA_INLINE(d->devModeW()->dmPaperSize, d->devModeA()->dmPaperSize);
+         }
+         break;
+ 
+     case PPK_PaperSources:
+         {
+-            int available = DeviceCapabilities((const wchar_t *)d->name.utf16(),
+-                                               (const wchar_t *)d->port.utf16(), DC_BINS, 0, d->devMode);
++            int available = qt_win_printerCapabilities(d->name, d->port, DC_BINS, 0, d->devMode);
+ 
+             if (available <= 0)
+                 break;
+ 
+             wchar_t *data = new wchar_t[available];
+-            int count = DeviceCapabilities((const wchar_t *)d->name.utf16(),
+-                                           (const wchar_t *)d->port.utf16(), DC_BINS, data, d->devMode);
++            int count = qt_win_printerCapabilities(d->name, d->port, DC_BINS, data, d->devMode);
+ 
+             QList<QVariant> out;
+             for (int i=0; i<count; ++i) {
+@@ -1575,64 +1608,85 @@
+ 
+ HGLOBAL *QWin32PrintEnginePrivate::createDevNames()
+ {
+-    int size = sizeof(DEVNAMES)
+-               + program.length() * 2 + 2
+-               + name.length() * 2 + 2
+-               + port.length() * 2 + 2;
+-    HGLOBAL *hGlobal = (HGLOBAL *) GlobalAlloc(GMEM_MOVEABLE, size);
+-    DEVNAMES *dn = (DEVNAMES*) GlobalLock(hGlobal);
+-
+-    dn->wDriverOffset = sizeof(DEVNAMES) / sizeof(wchar_t);
+-    dn->wDeviceOffset = dn->wDriverOffset + program.length() + 1;
+-    dn->wOutputOffset = dn->wDeviceOffset + name.length() + 1;
+-
+-    memcpy((ushort*)dn + dn->wDriverOffset, program.utf16(), program.length() * 2 + 2);
+-    memcpy((ushort*)dn + dn->wDeviceOffset, name.utf16(), name.length() * 2 + 2);
+-    memcpy((ushort*)dn + dn->wOutputOffset, port.utf16(), port.length() * 2 + 2);
++    const bool unicode = QT_WA_INLINE(true, false);
++    const QByteArray driverA = program.toLocal8Bit();
++    const QByteArray deviceA = name.toLocal8Bit();
++    const QByteArray portA = port.toLocal8Bit();
++    const int unit = unicode ? sizeof(wchar_t) : 1;
++    const int driverLength = unicode ? program.length() : driverA.size();
++    const int deviceLength = unicode ? name.length() : deviceA.size();
++    const int portLength = unicode ? port.length() : portA.size();
++    const int bytes = sizeof(DEVNAMES) + unit * (driverLength + deviceLength + portLength + 3);
++    HGLOBAL handle = GlobalAlloc(GMEM_MOVEABLE, bytes);
++    if (!handle)
++        return 0;
++    DEVNAMES *dn = static_cast<DEVNAMES *>(GlobalLock(handle));
++    if (!dn) {
++        GlobalFree(handle);
++        return 0;
++    }
++    dn->wDriverOffset = sizeof(DEVNAMES) / unit;
++    dn->wDeviceOffset = dn->wDriverOffset + driverLength + 1;
++    dn->wOutputOffset = dn->wDeviceOffset + deviceLength + 1;
+     dn->wDefault = 0;
+-
+-    GlobalUnlock(hGlobal);
+-
+-//         printf("QPrintDialogWinPrivate::createDevNames()\n"
+-//                " -> wDriverOffset: %d\n"
+-//                " -> wDeviceOffset: %d\n"
+-//                " -> wOutputOffset: %d\n",
+-//                dn->wDriverOffset,
+-//                dn->wDeviceOffset,
+-//                dn->wOutputOffset);
+-
+-//         printf("QPrintDialogWinPrivate::createDevNames(): %s, %s, %s\n",
+-//                QString::fromWCharArray((wchar_t*)(dn) + dn->wDriverOffset).latin1(),
+-//                QString::fromWCharArray((wchar_t*)(dn) + dn->wDeviceOffset).latin1(),
+-//                QString::fromWCharArray((wchar_t*)(dn) + dn->wOutputOffset).latin1());
+-
+-    return hGlobal;
++    BYTE *buffer = reinterpret_cast<BYTE *>(dn);
++    if (unicode) {
++        memcpy(buffer + unit * dn->wDriverOffset, program.utf16(), unit * (driverLength + 1));
++        memcpy(buffer + unit * dn->wDeviceOffset, name.utf16(), unit * (deviceLength + 1));
++        memcpy(buffer + unit * dn->wOutputOffset, port.utf16(), unit * (portLength + 1));
++    } else {
++        memcpy(buffer + dn->wDriverOffset, driverA.constData(), driverLength + 1);
++        memcpy(buffer + dn->wDeviceOffset, deviceA.constData(), deviceLength + 1);
++        memcpy(buffer + dn->wOutputOffset, portA.constData(), portLength + 1);
++    }
++    GlobalUnlock(handle);
++    return reinterpret_cast<HGLOBAL *>(handle);
+ }
+ 
+ void QWin32PrintEnginePrivate::readDevnames(HGLOBAL globalDevnames)
+ {
+     if (globalDevnames) {
+-        DEVNAMES *dn = (DEVNAMES*) GlobalLock(globalDevnames);
+-        name = QString::fromWCharArray((wchar_t*)(dn) + dn->wDeviceOffset);
+-        port = QString::fromWCharArray((wchar_t*)(dn) + dn->wOutputOffset);
+-        program = QString::fromWCharArray((wchar_t*)(dn) + dn->wDriverOffset);
+-        GlobalUnlock(globalDevnames);
++        QT_WA( {
++            DEVNAMES *dn = (DEVNAMES*) GlobalLock(globalDevnames);
++            name = QString::fromUtf16((ushort*)(dn) + dn->wDeviceOffset);
++            port = QString::fromUtf16((ushort*)(dn) + dn->wOutputOffset);
++            program = QString::fromUtf16((ushort*)(dn) + dn->wDriverOffset);
++            GlobalUnlock(globalDevnames);
++        }, {
++            DEVNAMES *dn = (DEVNAMES*) GlobalLock(globalDevnames);
++            name = QString::fromLocal8Bit((char*)(dn) + dn->wDeviceOffset);
++            port = QString::fromLocal8Bit((char*)(dn) + dn->wOutputOffset);
++            program = QString::fromLocal8Bit((char*)(dn) + dn->wDriverOffset);
++            GlobalUnlock(globalDevnames);
++        } );
+     }
+ }
+ 
+ void QWin32PrintEnginePrivate::readDevmode(HGLOBAL globalDevmode)
+ {
+     if (globalDevmode) {
+-        DEVMODE *dm = (DEVMODE*) GlobalLock(globalDevmode);
+-        release();
+-        globalDevMode = globalDevmode;
+-        devMode = dm;
+-        hdc = CreateDC(reinterpret_cast<const wchar_t *>(program.utf16()),
+-                       reinterpret_cast<const wchar_t *>(name.utf16()), 0, dm);
+-
+-        num_copies = devMode->dmCopies;
+-        if (!OpenPrinter((wchar_t*)name.utf16(), &hPrinter, 0))
+-            qWarning("QPrinter: OpenPrinter() failed after reading DEVMODE.");
++        QT_WA( {
++            DEVMODE *dm = (DEVMODE*) GlobalLock(globalDevmode);
++            release();
++            globalDevMode = globalDevmode;
++            devMode = dm;
++            hdc = CreateDC(reinterpret_cast<const wchar_t *>(program.utf16()),
++                           reinterpret_cast<const wchar_t *>(name.utf16()), 0, dm);
++
++            num_copies = devModeW()->dmCopies;
++            if (!OpenPrinterW((LPWSTR)name.utf16(), (LPHANDLE)&hPrinter, 0))
++                qWarning("QPrinter: OpenPrinter() failed after reading DEVMODE.");
++        }, {
++            DEVMODEA *dm = (DEVMODEA*) GlobalLock(globalDevmode);
++            release();
++            globalDevMode = globalDevmode;
++            devMode = dm;
++            hdc = CreateDCA(program.toLocal8Bit(), name.toLocal8Bit(), 0, dm);
++
++            num_copies = devModeA()->dmCopies;
++            if (!OpenPrinterA((LPSTR)name.toLocal8Bit().data(), (LPHANDLE)&hPrinter, 0))
++                qWarning("QPrinter: OpenPrinter() failed after reading DEVMODE.");
++        } );
+     }
+ 
+     if (hdc)
+@@ -1753,7 +1807,10 @@
+ 
+ void QWin32PrintEnginePrivate::updateCustomPaperSize()
+ {
+-    uint paperSize = devMode->dmPaperSize;
++    // Win9x does not support the NT form catalogue.
++    if (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)
++        return;
++    uint paperSize = QT_WA_INLINE(devModeW()->dmPaperSize, devModeA()->dmPaperSize);
+     if (paperSize > 0 && mapDevmodePaperSize(paperSize) == QPrinter::Custom) {
+         has_custom_paper_size = true;
+         DWORD needed = 0;

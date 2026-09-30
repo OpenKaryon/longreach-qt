@@ -1,0 +1,225 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: printer discovery with the ANSI level-5 enumeration, which
+# Win9x supports for local and network connections.
+#
+--- a/src/gui/painting/qprinterinfo_win.cpp
++++ b/src/gui/painting/qprinterinfo_win.cpp
+@@ -58,6 +58,25 @@
+ 
+     DWORD needed = 0;
+     DWORD returned = 0;
++    if (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based) {
++        // Win9x enumerates local/network connections with ANSI level 5.
++        EnumPrintersA(PRINTER_ENUM_LOCAL, NULL, 5, 0, 0, &needed, &returned);
++        if (!needed)
++            return printers;
++        LPBYTE buffer = new BYTE[needed];
++        if (EnumPrintersA(PRINTER_ENUM_LOCAL, NULL, 5, buffer, needed, &needed, &returned)) {
++            PPRINTER_INFO_5A infoList = reinterpret_cast<PPRINTER_INFO_5A>(buffer);
++            QPrinterInfo defPrn = defaultPrinter();
++            for (uint i = 0; i < returned; ++i) {
++                QPrinterInfo printerInfo(QString::fromLocal8Bit(infoList[i].pPrinterName));
++                if (printerInfo.printerName() == defPrn.printerName())
++                    printerInfo.d_ptr->isDefault = true;
++                printers.append(printerInfo);
++            }
++        }
++        delete [] buffer;
++        return printers;
++    }
+     if (!EnumPrinters(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS, NULL, 4, 0, 0, &needed, &returned)) {
+         LPBYTE buffer = new BYTE[needed];
+         if (EnumPrinters(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS, NULL, 4, buffer, needed, &needed, &returned)) {
+@@ -81,10 +100,17 @@
+ QPrinterInfo QPrinterInfo::defaultPrinter()
+ {
+     QString noPrinters(QLatin1String("qt_no_printers"));
+-    wchar_t buffer[256];
+-    GetProfileString(L"windows", L"device", (wchar_t*)noPrinters.utf16(), buffer, 256);
+-    QString output = QString::fromWCharArray(buffer);
+-    if (output != noPrinters) {
++    QString output;
++    QT_WA({
++        wchar_t buffer[256] = {0};
++        GetProfileStringW(L"windows", L"device", (wchar_t*)noPrinters.utf16(), buffer, 256);
++        output = QString::fromWCharArray(buffer);
++    }, {
++        char buffer[256] = {0};
++        GetProfileStringA("windows", "device", noPrinters.toLocal8Bit().constData(), buffer, 256);
++        output = QString::fromLocal8Bit(buffer);
++    });
++    if (!output.isEmpty() && output != noPrinters) {
+         // Filter out the name of the printer, which should be everything before a comma.
+         QString printerName = output.split(QLatin1Char(',')).value(0);
+         QPrinterInfo printerInfo(printerName);
+@@ -103,6 +129,20 @@
+     if (isNull())
+         return paperSizes;
+ 
++    if (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based) {
++        const QByteArray name = d->name.toLocal8Bit();
++        int count = DeviceCapabilitiesA(name.constData(), NULL, DC_PAPERS, NULL, NULL);
++        if (count <= 0)
++            return paperSizes;
++        WORD *papers = new WORD[count];
++        const int returned = DeviceCapabilitiesA(name.constData(), NULL, DC_PAPERS,
++                                                 reinterpret_cast<LPSTR>(papers), NULL);
++        for (int c = 0; c < qMin(count, returned); ++c)
++            paperSizes.append(mapDevmodePaperSize(papers[c]));
++        delete [] papers;
++        return paperSizes;
++    }
++
+     DWORD size = DeviceCapabilities(reinterpret_cast<const wchar_t*>(d->name.utf16()),
+                                     NULL, DC_PAPERS, NULL, NULL);
+     if ((int)size != -1) {
+--- a/src/gui/painting/qprintengine_win.cpp
++++ b/src/gui/painting/qprintengine_win.cpp
+@@ -956,11 +956,17 @@
+      * Strings "windows" and "device" are specified in the MSDN under EnumPrinters()
+      */
+     QString noPrinters(QLatin1String("qt_no_printers"));
+-    wchar_t buffer[256];
+-    GetProfileString(L"windows", L"device",
+-                     reinterpret_cast<const wchar_t *>(noPrinters.utf16()),
+-                     buffer, 256);
+-    QString output = QString::fromWCharArray(buffer);
++    QString output;
++    QT_WA({
++        wchar_t buffer[256] = {0};
++        GetProfileStringW(L"windows", L"device",
++                         reinterpret_cast<const wchar_t *>(noPrinters.utf16()), buffer, 256);
++        output = QString::fromWCharArray(buffer);
++    }, {
++        char buffer[256] = {0};
++        GetProfileStringA("windows", "device", noPrinters.toLocal8Bit().constData(), buffer, 256);
++        output = QString::fromLocal8Bit(buffer);
++    });
+     if (output.isEmpty() || output == noPrinters) // no printers
+         return;
+ 
+--- a/src/gui/painting/qprinter.cpp
++++ b/src/gui/painting/qprinter.cpp
+@@ -605,7 +605,11 @@
+     if (!defPrn.isNull()) {
+         setPrinterName(defPrn.printerName());
+     } else if (QPrinterInfo::availablePrinters().isEmpty()
+-               && d_ptr->paintEngine->type() != QPaintEngine::Windows
++               && (d_ptr->paintEngine->type() != QPaintEngine::Windows
++#if defined(Q_WS_WIN) && defined(QT_WIN95_SUPPORT)
++                   || (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)
++#endif
++                  )
+                && d_ptr->paintEngine->type() != QPaintEngine::MacPrinter) {
+         setOutputFormat(QPrinter::PdfFormat);
+     }
+@@ -2118,8 +2122,15 @@
+ bool qt_compat_QPrinter_printSetup(QPrinter *printer, QPrinterPrivate *pd, QWidget *parent)
+ {
+     Q_UNUSED(pd);
++#ifndef QT_NO_PRINTDIALOG
+     QPrintDialog dlg(printer, parent);
+     return dlg.exec() != 0;
++#else
++    Q_UNUSED(printer);
++    Q_UNUSED(parent);
++    qWarning("QPrinter::setup: print dialogs are unavailable in this build");
++    return false;
++#endif
+ }
+ 
+ 
+@@ -2202,14 +2213,14 @@
+                "'min' must be less than or equal to 'max'");
+     d->minPage = minPage;
+     d->maxPage = maxPage;
+-    d->options |= QPrintDialog::PrintPageRange;
++    d->options |= QAbstractPrintDialog::PrintPageRange;
+ }
+ 
+ /*!
+     Returns true if the printer is set up to collate copies of printed documents;
+     otherwise returns false.
+ 
+-    Use QPrintDialog::isOptionEnabled(QPrintDialog::PrintCollateCopies)
++    Use QPrintDialog::isOptionEnabled(QAbstractPrintDialog::PrintCollateCopies)
+     instead.
+ 
+     \sa collateCopies()
+@@ -2217,13 +2228,13 @@
+ bool QPrinter::collateCopiesEnabled() const
+ {
+     Q_D(const QPrinter);
+-    return (d->options & QPrintDialog::PrintCollateCopies);
+-}
+-
+-/*!
+-    Use QPrintDialog::setOption(QPrintDialog::PrintCollateCopies)
++    return (d->options & QAbstractPrintDialog::PrintCollateCopies);
++}
++
++/*!
++    Use QPrintDialog::setOption(QAbstractPrintDialog::PrintCollateCopies)
+     or QPrintDialog::setOptions(QPrintDialog::options()
+-    & ~QPrintDialog::PrintCollateCopies) instead, depending on \a
++    & ~QAbstractPrintDialog::PrintCollateCopies) instead, depending on \a
+     enable.
+ */
+ void QPrinter::setCollateCopiesEnabled(bool enable)
+@@ -2231,9 +2242,9 @@
+     Q_D(QPrinter);
+ 
+     if (enable)
+-        d->options |= QPrintDialog::PrintCollateCopies;
++        d->options |= QAbstractPrintDialog::PrintCollateCopies;
+     else
+-        d->options &= ~QPrintDialog::PrintCollateCopies;
++        d->options &= ~QAbstractPrintDialog::PrintCollateCopies;
+ }
+ 
+ /*!
+@@ -2243,9 +2254,9 @@
+ {
+     Q_D(QPrinter);
+     if (enable)
+-        d->options |= QPrintDialog::PrintDialogOption(1 << option);
++        d->options |= QAbstractPrintDialog::PrintDialogOption(1 << option);
+     else
+-        d->options &= ~QPrintDialog::PrintDialogOption(1 << option);
++        d->options &= ~QAbstractPrintDialog::PrintDialogOption(1 << option);
+ }
+ 
+ /*!
+@@ -2254,7 +2265,7 @@
+ bool QPrinter::isOptionEnabled( PrinterOption option ) const
+ {
+     Q_D(const QPrinter);
+-    return (d->options & QPrintDialog::PrintDialogOption(option));
++    return (d->options & QAbstractPrintDialog::PrintDialogOption(option));
+ }
+ 
+ #endif // QT3_SUPPORT
+--- a/src/gui/painting/qpdf.cpp
++++ b/src/gui/painting/qpdf.cpp
+@@ -1939,7 +1939,7 @@
+ #ifdef Q_WS_WIN
+     if (ti.fontEngine->type() == QFontEngine::Win) {
+         QFontEngineWin *fe = static_cast<QFontEngineWin *>(ti.fontEngine);
+-        size = fe->tm.tmHeight;
++        size = QT_WA_INLINE(fe->tm.w.tmHeight, fe->tm.a.tmHeight);
+     }
+ #endif
+ 
+--- a/src/gui/painting/qprintengine_pdf.cpp
++++ b/src/gui/painting/qprintengine_pdf.cpp
+@@ -658,7 +658,7 @@
+ #ifdef Q_WS_WIN
+         if (ti.fontEngine->type() == QFontEngine::Win) {
+             QFontEngineWin *fe = static_cast<QFontEngineWin *>(ti.fontEngine);
+-            size = fe->tm.tmHeight;
++            size = QT_WA_INLINE(fe->tm.w.tmHeight, fe->tm.a.tmHeight);
+         }
+ #endif
+         int synthesized = ti.fontEngine->synthesized();

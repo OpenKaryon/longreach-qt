@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtScript: the JIT's SSE2 check also asks the OS, since Windows 95 does not
+# save SSE state across task switches even on a CPU that has SSE2.
+#
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/assembler/MacroAssemblerX86Common.h
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/assembler/MacroAssemblerX86Common.h
+@@ -34,6 +34,10 @@
+ #include "X86Assembler.h"
+ #include "AbstractMacroAssembler.h"
+ 
++#if OS(WINDOWS) && defined(QT_WIN95_SUPPORT)
++#include <windows.h>
++#endif
++
+ namespace JSC {
+ 
+ class MacroAssemblerX86Common : public AbstractMacroAssembler<X86Assembler> {
+@@ -994,6 +998,19 @@
+ #endif
+             static const int SSE2FeatureBit = 1 << 26;
+             s_sse2CheckState = (flags & SSE2FeatureBit) ? HasSSE2 : NoSSE2;
++#if OS(WINDOWS) && defined(QT_WIN95_SUPPORT)
++            // CPUID does not establish that the OS enables/saves XMM state.
++            // Win95 can expose a modern CPU but fault on JIT-generated SSE2.
++            // Resolve this optional API so old systems retain loader support.
++            typedef BOOL (WINAPI *ProcessorFeatureFunction)(DWORD);
++            HMODULE kernel = GetModuleHandleA("kernel32.dll");
++            ProcessorFeatureFunction feature = kernel
++                ? reinterpret_cast<ProcessorFeatureFunction>(GetProcAddress(kernel, "IsProcessorFeaturePresent"))
++                : 0;
++            // PF_XMMI64_INSTRUCTIONS_AVAILABLE (absent from some old headers).
++            if (!feature || !feature(10))
++                s_sse2CheckState = NoSSE2;
++#endif
+         }
+         // Only check once.
+         ASSERT(s_sse2CheckState != NotCheckedSSE2);

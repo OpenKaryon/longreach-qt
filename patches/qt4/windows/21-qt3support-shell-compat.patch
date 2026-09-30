@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: Qt3Support's dialogs - ExtractIconExA on Win9x with the W form
+# resolved on NT; the directory picker through QFileDialog, so there are no
+# static SHBrowseForFolderW/SHGetPathFromIDListW imports.
+#
+--- a/src/qt3support/dialogs/q3filedialog.cpp
++++ b/src/qt3support/dialogs/q3filedialog.cpp
+@@ -4838,6 +4838,23 @@
+ 
+ 
+ #if defined(Q_WS_WIN)
++
++#ifdef QT_WIN95_SUPPORT
++static UINT qt3_win95_ExtractIconEx(LPCWSTR path, int index,
++                                  HICON *large, HICON *small, UINT count)
++{
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        const QByteArray local = QString::fromWCharArray(path).toLocal8Bit();
++        return ExtractIconExA(local.constData(), index, large, small, count);
++    }
++    typedef UINT (WINAPI *ExtractIconsW)(LPCWSTR, int, HICON *, HICON *, UINT);
++    ExtractIconsW extract = reinterpret_cast<ExtractIconsW>(
++        GetProcAddress(GetModuleHandleA("shell32.dll"), "ExtractIconExW"));
++    return extract ? extract(path, index, large, small, count) : 0;
++}
++#undef ExtractIconEx
++#define ExtractIconEx qt3_win95_ExtractIconEx
++#endif
+ 
+ // ### FIXME: this code is duplicated in qdns.cpp
+ static QString getWindowsRegString(HKEY key, const QString &subKey)
+--- a/src/qt3support/dialogs/q3filedialog_win.cpp
++++ b/src/qt3support/dialogs/q3filedialog_win.cpp
+@@ -44,6 +44,9 @@
+ #ifndef QT_NO_FILEDIALOG
+ 
+ #include "qapplication.h"
++#ifdef QT_WIN95_SUPPORT
++#include "qfiledialog.h"
++#endif
+ #include "private/qapplication_p.h"
+ #include "qt_windows.h"
+ #include "qregexp.h"
+@@ -413,6 +416,7 @@
+ 
+ // MFC Directory Dialog. Contrib: Steve Williams (minor parts from Scott Powers)
+ 
++#ifndef QT_WIN95_SUPPORT
+ static int __stdcall winGetExistDirCallbackProc(HWND hwnd,
+                                                 UINT uMsg,
+                                                 LPARAM lParam,
+@@ -438,6 +442,8 @@
+     return 0;
+ }
+ 
++#endif // !QT_WIN95_SUPPORT
++
+ #ifndef BIF_NEWDIALOGSTYLE
+ #define BIF_NEWDIALOGSTYLE     0x0040   // Use the new dialog layout with the ability to resize
+ #endif
+@@ -448,7 +454,14 @@
+                                              const char* /*name*/,
+                                              const QString& caption)
+ {
+-#ifndef Q_OS_WINCE
++#if defined(QT_WIN95_SUPPORT)
++    // Reuse QtGui's maintained dialog path; Win9x uses Qt widgets, NT keeps
++    // the Unicode native dialog. Avoid static imports of NT-only shell APIs.
++    QFileDialog::Options options = QFileDialog::ShowDirsOnly;
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++        options |= QFileDialog::DontUseNativeDialog;
++    return QFileDialog::getExistingDirectory(parent, caption, initialDirectory, options);
++#elif !defined(Q_OS_WINCE)
+     QString currentDir = QDir::currentDirPath();
+     QString result;
+     if (parent)

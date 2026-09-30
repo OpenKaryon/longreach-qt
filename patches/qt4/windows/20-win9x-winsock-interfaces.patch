@@ -1,0 +1,110 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x and NT 4.0: enumerate network interfaces through Winsock 2.
+#
+# Qt 4.8 lists interfaces through IP Helper. Windows 9x has no usable
+# GetAdaptersInfo, and on Windows NT 4.0 SP6a it resolves but returns no
+# adapters (measured: QNetworkInterface::allInterfaces() was empty, and
+# QNetworkAccessManager then held local requests as if offline). When IP
+# Helper yields nothing, SIO_GET_INTERFACE_LIST lists the configured IPv4
+# addresses, with flags, on both.
+#
+--- a/src/network/kernel/qnetworkinterface_win.cpp
++++ b/src/network/kernel/qnetworkinterface_win.cpp
+@@ -49,6 +49,10 @@
+ #include <qhash.h>
+ #include <qurl.h>
+ #include <private/qsystemlibrary_p.h>
++#ifdef QT_WIN95_SUPPORT
++#include <ws2tcpip.h>
++#include <qvector.h>
++#endif
+ 
+ QT_BEGIN_NAMESPACE
+ 
+@@ -271,16 +275,80 @@
+     return interfaces;
+ }
+ 
++#ifdef QT_WIN95_SUPPORT
++static QList<QNetworkInterfacePrivate *> interfaceListingWin9x()
++{
++    QList<QNetworkInterfacePrivate *> interfaces;
++    WSADATA data;
++    if (WSAStartup(MAKEWORD(2, 2), &data) != 0)
++        return interfaces;
++    SOCKET socketHandle = socket(AF_INET, SOCK_DGRAM, 0);
++    if (socketHandle == INVALID_SOCKET) {
++        WSACleanup();
++        return interfaces;
++    }
++    QVector<INTERFACE_INFO> entries(16);
++    DWORD bytes = 0;
++    int result;
++    do {
++        result = WSAIoctl(socketHandle, SIO_GET_INTERFACE_LIST, 0, 0,
++                          entries.data(), entries.size() * sizeof(INTERFACE_INFO),
++                          &bytes, 0, 0);
++        if (result == 0 || WSAGetLastError() != WSAEFAULT || entries.size() >= 1024)
++            break;
++        entries.resize(entries.size() * 2);
++    } while (true);
++    if (result == 0 && bytes <= DWORD(entries.size() * sizeof(INTERFACE_INFO))) {
++        const int count = bytes / sizeof(INTERFACE_INFO);
++        for (int i = 0; i < count; ++i) {
++            const INTERFACE_INFO &native = entries.at(i);
++            QNetworkAddressEntry address;
++            address.setIp(addressFromSockaddr((sockaddr *)&native.iiAddress));
++            address.setNetmask(addressFromSockaddr((sockaddr *)&native.iiNetmask));
++            if (address.ip().isNull())
++                continue;
++            QNetworkInterfacePrivate *iface = new QNetworkInterfacePrivate;
++            // Winsock supplies no native name, index or hardware address.
++            // Keep index=0 (unknown); use an explicit generated identifier.
++            iface->name = QString::fromLatin1("win9x-%1-%2").arg(i).arg(address.ip().toString());
++            if (native.iiFlags & IFF_UP)
++                iface->flags |= QNetworkInterface::IsUp | QNetworkInterface::IsRunning;
++            if (native.iiFlags & IFF_BROADCAST)
++                iface->flags |= QNetworkInterface::CanBroadcast;
++            if (native.iiFlags & IFF_LOOPBACK)
++                iface->flags |= QNetworkInterface::IsLoopBack;
++            if (native.iiFlags & IFF_POINTTOPOINT)
++                iface->flags |= QNetworkInterface::IsPointToPoint;
++            if (native.iiFlags & IFF_MULTICAST)
++                iface->flags |= QNetworkInterface::CanMulticast;
++            // Qt's existing postProcess() computes the IPv4 broadcast address.
++            iface->addressEntries << address;
++            interfaces << iface;
++        }
++    }
++    closesocket(socketHandle);
++    WSACleanup();
++    return interfaces;
++}
++#endif
++
+ static QList<QNetworkInterfacePrivate *> interfaceListing()
+ {
+     resolveLibs();
++    QList<QNetworkInterfacePrivate *> interfaces;
+     if (ptrGetAdaptersAddresses != NULL)
+-        return interfaceListingWinXP();
++        interfaces = interfaceListingWinXP();
+     else if (ptrGetAdaptersInfo != NULL)
+-        return interfaceListingWin2k();
++        interfaces = interfaceListingWin2k();
+ 
+-    // failed
+-    return QList<QNetworkInterfacePrivate *>();
++#ifdef QT_WIN95_SUPPORT
++    // Windows 9x has no usable IP Helper, and the GetAdaptersInfo of
++    // Windows NT 4.0 SP6a resolves but lists nothing. Winsock 2 enumerates
++    // the configured addresses on both.
++    if (interfaces.isEmpty())
++        interfaces = interfaceListingWin9x();
++#endif
++    return interfaces;
+ }
+ 
+ QList<QNetworkInterfacePrivate *> QNetworkInterfaceManager::scan()

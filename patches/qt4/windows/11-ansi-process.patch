@@ -1,0 +1,148 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: CreateProcessA and an ANSI environment block, as Qt 4.5 chose
+# at run time; CreateProcessW on NT.
+#
+--- a/src/corelib/io/qprocess_win.cpp
++++ b/src/corelib/io/qprocess_win.cpp
+@@ -54,6 +54,7 @@
+ #include <private/qwineventnotifier_p.h>
+ #include <private/qthread_p.h>
+ #include <qdebug.h>
++#include <cstring>
+ 
+ #include "private/qfsfileengine_p.h" // for longFileName
+ 
+@@ -280,7 +281,22 @@
+ #if !defined(Q_OS_WINCE)
+     // Calls to setenv() affect the low-level environment as well.
+     // This is not the case the other way round.
+-    if (wchar_t *envStrings = GetEnvironmentStringsW()) {
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        if (char *envStrings = GetEnvironmentStringsA()) {
++            for (const char *entry = envStrings; *entry; ) {
++                int entryLen = strlen(entry);
++                // + 1 to permit magic cmd variable names starting with =
++                if (const char *equal = strchr(entry + 1, '=')) {
++                    int nameLen = equal - entry;
++                    QString name = QString::fromLocal8Bit(entry, nameLen);
++                    QString value = QString::fromLocal8Bit(equal + 1, entryLen - nameLen - 1);
++                    env.d->hash.insert(QProcessEnvironmentPrivate::Key(name), value);
++                }
++                entry += entryLen + 1;
++            }
++            FreeEnvironmentStringsA(envStrings);
++        }
++    } else if (wchar_t *envStrings = GetEnvironmentStringsW()) {
+         for (const wchar_t *entry = envStrings; *entry; ) {
+             int entryLen = wcslen(entry);
+             // + 1 to permit magic cmd variable names starting with =
+@@ -325,6 +341,20 @@
+         QProcessEnvironmentPrivate::Hash::ConstIterator it = copy.constBegin(),
+                                                        end = copy.constEnd();
+ 
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            for ( ; it != end; ++it) {
++                if (it.key().isEmpty() && it.value().isEmpty())
++                    continue;
++                QString entry = QString(it.key());
++                entry += QLatin1Char('=');
++                entry += it.value();
++                envlist.append(entry.toLocal8Bit());
++                envlist.append('\0');
++            }
++            envlist.append('\0');
++            return envlist;
++        }
++
+         static const wchar_t equal = L'=';
+         static const wchar_t nul = L'\0';
+ 
+@@ -412,21 +442,32 @@
+                             (wchar_t*)args.utf16(),
+                             0, 0, false, 0, 0, 0, 0, pid);
+ #else
+-    DWORD dwCreationFlags = CREATE_NO_WINDOW;
+-    dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+-    STARTUPINFOW startupInfo = { sizeof( STARTUPINFO ), 0, 0, 0,
+-                                 (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
+-                                 (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
+-                                 0, 0, 0,
+-                                 STARTF_USESTDHANDLES,
+-                                 0, 0, 0,
+-                                 stdinChannel.pipe[0], stdoutChannel.pipe[1], stderrChannel.pipe[1]
+-    };
+-    success = CreateProcess(0, (wchar_t*)args.utf16(),
+-                            0, 0, TRUE, dwCreationFlags,
+-                            environment.isEmpty() ? 0 : envlist.data(),
+-                            workingDirectory.isEmpty() ? 0 : (wchar_t*)QDir::toNativeSeparators(workingDirectory).utf16(),
+-                            &startupInfo, pid);
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        STARTUPINFOA startupInfo = { sizeof(STARTUPINFOA), 0, 0, 0,
++                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                     0, 0, 0, STARTF_USESTDHANDLES, 0, 0, 0,
++                                     stdinChannel.pipe[0], stdoutChannel.pipe[1], stderrChannel.pipe[1]
++        };
++        QByteArray command = args.toLocal8Bit();
++        QByteArray directory = QDir::toNativeSeparators(workingDirectory).toLocal8Bit();
++        success = CreateProcessA(0, command.data(), 0, 0, TRUE, 0,
++                                 environment.isEmpty() ? 0 : envlist.data(),
++                                 workingDirectory.isEmpty() ? 0 : directory.data(),
++                                 &startupInfo, pid);
++    } else {
++        STARTUPINFOW startupInfo = { sizeof(STARTUPINFOW), 0, 0, 0,
++                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                     0, 0, 0, STARTF_USESTDHANDLES, 0, 0, 0,
++                                     stdinChannel.pipe[0], stdoutChannel.pipe[1], stderrChannel.pipe[1]
++        };
++        success = CreateProcessW(0, (wchar_t*)args.utf16(),
++                                 0, 0, TRUE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
++                                 environment.isEmpty() ? 0 : envlist.data(),
++                                 workingDirectory.isEmpty() ? 0 : (wchar_t*)QDir::toNativeSeparators(workingDirectory).utf16(),
++                                 &startupInfo, pid);
++    }
+     if (!success) {
+         // Capture the error string before we do CloseHandle below
+         q->setErrorString(QProcess::tr("Process failed to start: %1").arg(qt_error_string()));
+@@ -853,15 +894,29 @@
+                                 (wchar_t*)args.utf16(),
+                                 0, 0, false, CREATE_NEW_CONSOLE, 0, 0, 0, &pinfo);
+ #else
+-        STARTUPINFOW startupInfo = { sizeof( STARTUPINFO ), 0, 0, 0,
+-                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
+-                                     (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
+-                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+-                                   };
+-        success = CreateProcess(0, (wchar_t*)args.utf16(),
+-                                0, 0, FALSE, CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE, 0,
+-                                workingDir.isEmpty() ? 0 : (wchar_t*)workingDir.utf16(),
+-                                &startupInfo, &pinfo);
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++            STARTUPINFOA startupInfo = { sizeof(STARTUPINFOA), 0, 0, 0,
++                                         (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                         (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0
++                                       };
++            QByteArray command = args.toLocal8Bit();
++            QByteArray directory = QDir::toNativeSeparators(workingDir).toLocal8Bit();
++            success = CreateProcessA(0, command.data(), 0, 0, FALSE,
++                                     CREATE_NEW_CONSOLE, 0,
++                                     workingDir.isEmpty() ? 0 : directory.data(),
++                                     &startupInfo, &pinfo);
++        } else {
++            STARTUPINFOW startupInfo = { sizeof(STARTUPINFOW), 0, 0, 0,
++                                         (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                         (ulong)CW_USEDEFAULT, (ulong)CW_USEDEFAULT,
++                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0
++                                       };
++            success = CreateProcessW(0, (wchar_t*)args.utf16(),
++                                     0, 0, FALSE, CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE, 0,
++                                     workingDir.isEmpty() ? 0 : (wchar_t*)workingDir.utf16(),
++                                     &startupInfo, &pinfo);
++        }
+ #endif // Q_OS_WINCE
+ 
+     if (success) {

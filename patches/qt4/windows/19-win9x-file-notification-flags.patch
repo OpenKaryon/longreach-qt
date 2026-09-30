@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: no FILE_NOTIFY_CHANGE_SECURITY in the watcher filter (0x11f
+# fails with error 87 on Windows 95, 0x1f works); NT keeps the full mask.
+#
+--- a/src/corelib/io/qfilesystemwatcher_win.cpp
++++ b/src/corelib/io/qfilesystemwatcher_win.cpp
+@@ -110,7 +110,7 @@
+         // qDebug()<<"Looking for a thread/handle for"<<normalPath;
+ 
+         const QString absolutePath = isDir ? fileInfo.absoluteFilePath() : fileInfo.absolutePath();
+-        const uint flags = isDir
++        uint flags = isDir
+                            ? (FILE_NOTIFY_CHANGE_DIR_NAME
+                               | FILE_NOTIFY_CHANGE_FILE_NAME)
+                            : (FILE_NOTIFY_CHANGE_DIR_NAME
+@@ -119,6 +119,9 @@
+                               | FILE_NOTIFY_CHANGE_SIZE
+                               | FILE_NOTIFY_CHANGE_LAST_WRITE
+                               | FILE_NOTIFY_CHANGE_SECURITY);
++        // Win9x rejects the NT-only security notification filter (error 87).
++        if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++            flags &= ~FILE_NOTIFY_CHANGE_SECURITY;
+ 
+         QWindowsFileSystemWatcherEngine::PathInfo pathInfo;
+         pathInfo.absolutePath = absolutePath;

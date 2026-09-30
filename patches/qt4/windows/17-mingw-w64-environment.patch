@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# MinGW-w64: an explicit ANSI GetEnvironmentStrings call for Win9x; under
+# UNICODE MinGW-w64 aliases the plain name to the W form and has no A alias.
+#
+--- a/src/corelib/io/qprocess_win.cpp
++++ b/src/corelib/io/qprocess_win.cpp
+@@ -61,6 +61,14 @@
+ #include <errno.h>
+ #include <stdlib.h>
+ 
++// MinGW-w64 exposes the ANSI entry under its original unsuffixed name.
++// UNICODE otherwise aliases that name to W and leaves no A declaration.
++// Calls below explicitly choose A or W according to the running Windows.
++#if defined(__MINGW64_VERSION_MAJOR) && !defined(GetEnvironmentStringsA)
++#  undef GetEnvironmentStrings
++#  define GetEnvironmentStringsA GetEnvironmentStrings
++#endif
++
+ QT_BEGIN_NAMESPACE
+ 
+ #define NOTIFYTIMEOUT 50

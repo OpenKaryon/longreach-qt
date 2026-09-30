@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: GetVersionExA for SQLite's Win9x/NT branch; with UNICODE the
+# neutral call imports GetVersionExW, a failure stub on Windows 95.
+#
+--- a/src/3rdparty/sqlite/sqlite3.c
++++ b/src/3rdparty/sqlite/sqlite3.c
+@@ -31616,10 +31616,11 @@
+ #else
+   static int isNT(void){
+     if( sqlite3_os_type==0 ){
+-      OSVERSIONINFO sInfo;
++      OSVERSIONINFOA sInfo;
++      memset(&sInfo, 0, sizeof(sInfo));
+       sInfo.dwOSVersionInfoSize = sizeof(sInfo);
+-      GetVersionEx(&sInfo);
+-      sqlite3_os_type = sInfo.dwPlatformId==VER_PLATFORM_WIN32_NT ? 2 : 1;
++      sqlite3_os_type = GetVersionExA(&sInfo)
++          && sInfo.dwPlatformId==VER_PLATFORM_WIN32_NT ? 2 : 1;
+     }
+     return sqlite3_os_type==2;
+   }

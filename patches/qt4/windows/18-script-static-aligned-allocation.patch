@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtScript on Windows 95: the collector uses MinGW's static aligned allocator;
+# MSVCRT's _aligned_malloc/_aligned_free do not exist there.
+#
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp
+@@ -197,7 +197,7 @@
+ #elif OS(WINCE)
+     void* address = VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+ #elif OS(WINDOWS)
+-#if COMPILER(MINGW) && !COMPILER(MINGW64)
++#if COMPILER(MINGW) && (!COMPILER(MINGW64) || defined(QT_WIN95_SUPPORT))
+     void* address = __mingw_aligned_malloc(BLOCK_SIZE, BLOCK_SIZE);
+ #else
+     void* address = _aligned_malloc(BLOCK_SIZE, BLOCK_SIZE);
+@@ -288,7 +288,7 @@
+ #elif OS(WINCE)
+     VirtualFree(block, 0, MEM_RELEASE);
+ #elif OS(WINDOWS)
+-#if COMPILER(MINGW) && !COMPILER(MINGW64)
++#if COMPILER(MINGW) && (!COMPILER(MINGW64) || defined(QT_WIN95_SUPPORT))
+     __mingw_aligned_free(block);
+ #else
+     _aligned_free(block);

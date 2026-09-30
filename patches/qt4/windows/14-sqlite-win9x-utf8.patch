@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: SQLite's own UTF-8 conversion where Windows rejects CP_UTF8, so
+# database file names outside the ANSI code page still work.
+#
+diff --git a/src/3rdparty/sqlite/sqlite3.c b/src/3rdparty/sqlite/sqlite3.c
+index 24da5e1..1720d81 100644
+--- a/src/3rdparty/sqlite/sqlite3.c
++++ b/src/3rdparty/sqlite/sqlite3.c
+@@ -31636,6 +31636,27 @@ static WCHAR *utf8ToUnicode(const char *zFilename){
+   WCHAR *zWideFilename;
+ 
+   nChar = MultiByteToWideChar(CP_UTF8, 0, zFilename, -1, NULL, 0);
++  if( nChar==0 ){
++    /* Win95 has no CP_UTF8 conversion. Decode with SQLite's UTF-8 reader. */
++    const u8 *zIn = (const u8*)zFilename;
++    WCHAR *zWrite;
++    zWideFilename = malloc( (strlen(zFilename)+1)*sizeof(WCHAR) );
++    if( zWideFilename==0 ) return 0;
++    zWrite = zWideFilename;
++    while( *zIn ){
++      u32 c = sqlite3Utf8Read(zIn, &zIn);
++      if( c>0x10ffff ) c = 0xfffd;
++      if( c<=0xffff ){
++        *(zWrite++) = (WCHAR)c;
++      }else{
++        c -= 0x10000;
++        *(zWrite++) = (WCHAR)(0xd800 + (c>>10));
++        *(zWrite++) = (WCHAR)(0xdc00 + (c&0x3ff));
++      }
++    }
++    *zWrite = 0;
++    return zWideFilename;
++  }
+   zWideFilename = malloc( nChar*sizeof(zWideFilename[0]) );
+   if( zWideFilename==0 ){
+     return 0;
+@@ -31657,6 +31678,41 @@ static char *unicodeToUtf8(const WCHAR *zWideFilename){
+   char *zFilename;
+ 
+   nByte = WideCharToMultiByte(CP_UTF8, 0, zWideFilename, -1, 0, 0, 0, 0);
++  if( nByte==0 ){
++    /* Win95 has no CP_UTF8 conversion. Encode the UTF-16 path ourselves. */
++    const WCHAR *zIn = zWideFilename;
++    char *zWrite;
++    size_t nWide = 0;
++    while( zIn[nWide] ) nWide++;
++    zFilename = malloc( nWide*3+1 );
++    if( zFilename==0 ) return 0;
++    zWrite = zFilename;
++    while( *zIn ){
++      u32 c = *(zIn++);
++      if( c>=0xd800 && c<=0xdbff && *zIn>=0xdc00 && *zIn<=0xdfff ){
++        c = 0x10000 + ((c-0xd800)<<10) + (*(zIn++)-0xdc00);
++      }else if( c>=0xd800 && c<=0xdfff ){
++        c = 0xfffd;
++      }
++      if( c<0x80 ){
++        *(zWrite++) = (char)c;
++      }else if( c<0x800 ){
++        *(zWrite++) = (char)(0xc0 | (c>>6));
++        *(zWrite++) = (char)(0x80 | (c&0x3f));
++      }else if( c<0x10000 ){
++        *(zWrite++) = (char)(0xe0 | (c>>12));
++        *(zWrite++) = (char)(0x80 | ((c>>6)&0x3f));
++        *(zWrite++) = (char)(0x80 | (c&0x3f));
++      }else{
++        *(zWrite++) = (char)(0xf0 | (c>>18));
++        *(zWrite++) = (char)(0x80 | ((c>>12)&0x3f));
++        *(zWrite++) = (char)(0x80 | ((c>>6)&0x3f));
++        *(zWrite++) = (char)(0x80 | (c&0x3f));
++      }
++    }
++    *zWrite = 0;
++    return zFilename;
++  }
+   zFilename = malloc( nByte );
+   if( zFilename==0 ){
+     return 0;

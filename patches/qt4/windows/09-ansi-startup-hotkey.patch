@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 95: startup information and hotkeys through GetStartupInfoA; the
+# Windows 95 GetStartupInfoW export is an unimplemented stub.
+#
+--- a/src/gui/kernel/qwidget_win.cpp
++++ b/src/gui/kernel/qwidget_win.cpp
+@@ -1169,12 +1169,14 @@
+         QTLWExtra *extra = topData();
+         if (!extra->hotkeyRegistered) {
+             // Try to set the hotkey using information from STARTUPINFO
+-            STARTUPINFO startupInfo;
+-            GetStartupInfo(&startupInfo);
++            STARTUPINFOA startupInfo;
++            memset(&startupInfo, 0, sizeof(startupInfo));
++            GetStartupInfoA(&startupInfo);
+             // If STARTF_USEHOTKEY is set, hStdInput is the virtual keycode
+             if (startupInfo.dwFlags & 0x00000200) {
+                 WPARAM hotKey = (WPARAM)startupInfo.hStdInput;
+-                SendMessage(data.winid, WM_SETHOTKEY, hotKey, 0);
++                QT_WA_INLINE(SendMessageW(data.winid, WM_SETHOTKEY, hotKey, 0),
++                             SendMessageA(data.winid, WM_SETHOTKEY, hotKey, 0));
+             }
+             extra->hotkeyRegistered = 1;
+         }

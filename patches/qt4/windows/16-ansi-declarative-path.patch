@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: QML file-name case checking through FindFirstFileA instead of
+# a direct GetLongPathNameW import; NT resolves the Unicode API at run time.
+#
+--- a/src/declarative/qml/qdeclarativeengine.cpp
++++ b/src/declarative/qml/qdeclarativeengine.cpp
+@@ -2540,14 +2540,41 @@
+ #if defined(Q_OS_MAC)
+     QString canonical = info.canonicalFilePath();
+ #elif defined(Q_OS_WIN32)
+-    wchar_t buffer[1024];
+-
+-    DWORD rv = ::GetShortPathName((wchar_t*)absolute.utf16(), buffer, 1024);
+-    if (rv == 0 || rv >= 1024) return true;
+-    rv = ::GetLongPathName(buffer, buffer, 1024);
+-    if (rv == 0 || rv >= 1024) return true;
+-
+-    QString canonical((QChar *)buffer);
++    QString canonical;
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based) {
++        // Win95 has no GetLongPathName. Read the stored spelling of each
++        // component through the ANSI directory API instead of disabling the
++        // QML case check. Keep drive and UNC roots intact.
++        const QStringList parts = QDir::fromNativeSeparators(absolute).split(QLatin1Char('/'));
++        int first = 1;
++        canonical = parts.value(0);
++        if (absolute.startsWith(QLatin1String("//"))) {
++            if (parts.size() < 4) return true;
++            canonical = QLatin1String("//") + parts.at(2) + QLatin1Char('/') + parts.at(3);
++            first = 4;
++        }
++        for (int i = first; i < parts.size(); ++i) {
++            if (parts.at(i).isEmpty()) continue;
++            const QByteArray native = QDir::toNativeSeparators(
++                canonical + QLatin1Char('/') + parts.at(i)).toLocal8Bit();
++            WIN32_FIND_DATAA data;
++            HANDLE handle = FindFirstFileA(native.constData(), &data);
++            if (handle == INVALID_HANDLE_VALUE) return true;
++            FindClose(handle);
++            canonical += QLatin1Char('/') + QString::fromLocal8Bit(data.cFileName);
++        }
++    } else {
++        typedef DWORD (WINAPI *LongPathNameW)(LPCWSTR, LPWSTR, DWORD);
++        static LongPathNameW longPathName = (LongPathNameW)GetProcAddress(
++            GetModuleHandleA("kernel32.dll"), "GetLongPathNameW");
++        if (!longPathName) return true;
++        wchar_t buffer[1024];
++        DWORD rv = GetShortPathNameW((const wchar_t*)absolute.utf16(), buffer, 1024);
++        if (rv == 0 || rv >= 1024) return true;
++        rv = longPathName(buffer, buffer, 1024);
++        if (rv == 0 || rv >= 1024) return true;
++        canonical = QString((QChar *)buffer);
++    }
+ #endif
+ 
+     int absoluteLength = absolute.length();

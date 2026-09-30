@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: the file system watcher with ANSI CreateEvent and
+# FindFirstChangeNotification, without the trailing separators Windows 95
+# rejects (error 3); drive roots keep theirs.
+#
+--- a/src/corelib/io/qfilesystemwatcher_win.cpp
++++ b/src/corelib/io/qfilesystemwatcher_win.cpp
+@@ -46,6 +46,7 @@
+ 
+ #include <qdebug.h>
+ #include <qfileinfo.h>
++#include <qfile.h>
+ #include <qstringlist.h>
+ #include <qset.h>
+ #include <qdatetime.h>
+@@ -163,7 +164,14 @@
+             const QString effectiveAbsolutePath =
+                     isDir ? (absolutePath + QLatin1Char('/')) : absolutePath;
+ 
+-            handle.handle = FindFirstChangeNotification((wchar_t*) QDir::toNativeSeparators(effectiveAbsolutePath).utf16(), false, flags);
++            const QString nativePath = QDir::toNativeSeparators(effectiveAbsolutePath);
++            // Win9x rejects a trailing slash on non-root notification paths.
++            QString ansiPath = nativePath;
++            while (ansiPath.length() > 3 && ansiPath.endsWith(QLatin1Char('\\')))
++                ansiPath.chop(1);
++            handle.handle = QT_WA_INLINE(
++                FindFirstChangeNotificationW((const wchar_t *) nativePath.utf16(), false, flags),
++                FindFirstChangeNotificationA(QFile::encodeName(ansiPath).constData(), false, flags));
+             handle.flags = flags;
+             if (handle.handle == INVALID_HANDLE_VALUE)
+                 continue;
+@@ -306,7 +314,8 @@
+ QWindowsFileSystemWatcherEngineThread::QWindowsFileSystemWatcherEngineThread()
+         : msg(0)
+ {
+-    if (HANDLE h = CreateEvent(0, false, false, 0)) {
++    if (HANDLE h = QT_WA_INLINE(CreateEventW(0, false, false, 0),
++                                  CreateEventA(0, false, false, 0))) {
+         handles.reserve(MAXIMUM_WAIT_OBJECTS);
+         handles.append(h);
+     }

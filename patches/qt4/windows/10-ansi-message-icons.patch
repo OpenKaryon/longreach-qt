@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 95: LoadIconA for the standard message-box icons (LoadIconW on
+# NT); shared icon handles are not destroyed and invalid ones are rejected
+# before GetIconInfo.
+#
+--- a/src/gui/styles/qwindowsstyle.cpp
++++ b/src/gui/styles/qwindowsstyle.cpp
+@@ -1067,30 +1067,34 @@
+         }
+     case SP_MessageBoxInformation:
+         {
+-            HICON iconHandle = LoadIcon(NULL, IDI_INFORMATION);
+-            desktopIcon = QPixmap::fromWinHICON( iconHandle );
+-            DestroyIcon(iconHandle);
++            HICON iconHandle = (HICON)QT_WA_INLINE(LoadIconW(NULL, IDI_INFORMATION),
++                                                  LoadIconA(NULL, MAKEINTRESOURCEA(32516)));
++            if (iconHandle)
++                desktopIcon = QPixmap::fromWinHICON(iconHandle);
+             break;
+         }
+     case SP_MessageBoxWarning:
+         {
+-            HICON iconHandle = LoadIcon(NULL, IDI_WARNING);
+-            desktopIcon = QPixmap::fromWinHICON( iconHandle );
+-            DestroyIcon(iconHandle);
++            HICON iconHandle = (HICON)QT_WA_INLINE(LoadIconW(NULL, IDI_WARNING),
++                                                  LoadIconA(NULL, MAKEINTRESOURCEA(32515)));
++            if (iconHandle)
++                desktopIcon = QPixmap::fromWinHICON(iconHandle);
+             break;
+         }
+     case SP_MessageBoxCritical:
+         {
+-            HICON iconHandle = LoadIcon(NULL, IDI_ERROR);
+-            desktopIcon = QPixmap::fromWinHICON( iconHandle );
+-            DestroyIcon(iconHandle);
++            HICON iconHandle = (HICON)QT_WA_INLINE(LoadIconW(NULL, IDI_ERROR),
++                                                  LoadIconA(NULL, MAKEINTRESOURCEA(32513)));
++            if (iconHandle)
++                desktopIcon = QPixmap::fromWinHICON(iconHandle);
+             break;
+         }
+     case SP_MessageBoxQuestion:
+         {
+-            HICON iconHandle = LoadIcon(NULL, IDI_QUESTION);
+-            desktopIcon = QPixmap::fromWinHICON( iconHandle );
+-            DestroyIcon(iconHandle);
++            HICON iconHandle = (HICON)QT_WA_INLINE(LoadIconW(NULL, IDI_QUESTION),
++                                                  LoadIconA(NULL, MAKEINTRESOURCEA(32514)));
++            if (iconHandle)
++                desktopIcon = QPixmap::fromWinHICON(iconHandle);
+             break;
+         }
+     case SP_VistaShield:
+--- a/src/gui/image/qpixmap_win.cpp
++++ b/src/gui/image/qpixmap_win.cpp
+@@ -391,14 +391,20 @@
+ #else //ifndef Q_WS_WINCE
+ QPixmap QPixmap::fromWinHICON(HICON icon)
+ {
++    if (!icon)
++        return QPixmap();
+     HDC screenDevice = GetDC(0);
+     HDC hdc = CreateCompatibleDC(screenDevice);
+     ReleaseDC(0, screenDevice);
+ 
+     ICONINFO iconinfo;
++    memset(&iconinfo, 0, sizeof(iconinfo));
+     bool result = GetIconInfo(icon, &iconinfo);
+-    if (!result)
++    if (!result) {
+         qWarning("QPixmap::fromWinHICON(), failed to GetIconInfo()");
++        DeleteDC(hdc);
++        return QPixmap();
++    }
+ 
+     int w = 0;
+     int h = 0;

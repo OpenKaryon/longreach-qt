@@ -15,6 +15,8 @@ QT4_ARCHIVE_SHA256 ?= e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f
 
 QT4_WIN_I386_IMAGE := qt4-win-i386
 QT4_WIN_AMD64_IMAGE := qt4-win-amd64
+QT4_LINUX_I386_IMAGE := qt4-linux-i386
+QT4_LINUX_AMD64_IMAGE := qt4-linux-amd64
 
 # Qt Mobility, Qt 4's add-on outside the source archive, pinned by commit.
 QT_MOBILITY_COMMIT := fb3e9bc2d941462f1244aaf0ea79425a307f883d
@@ -50,6 +52,15 @@ $(QT4_ARCHIVE_PATH):
 
 QT4_BUILD_ARGS = --build-arg QT4_VERSION=$(QT4_VERSION) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
 
+# Linux i386 and amd64 from the pinned Debian 3.1 Sarge packages.
+qt4-linux-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch i386
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/386 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/i386/Dockerfile -t $(QT4_LINUX_I386_IMAGE) .
+
+qt4-linux-amd64: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch amd64
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/amd64/Dockerfile -t $(QT4_LINUX_AMD64_IMAGE) .
+
 # Windows 95 OSR2 and later: the Win9x backport, one configure.
 qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/windows/i386/Dockerfile -t $(QT4_WIN_I386_IMAGE) .
@@ -68,6 +79,8 @@ QT4_TESTS_OUT = $(ARTIFACTS_DIR)/tests-$(QT4_IMAGE)
 qt4-extract-tests:
 ifeq ($(QT4_IMAGE),$(QT4_WIN_I386_IMAGE))
 	$(PYTHON) scripts/build/qt4-win95-examples.py --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
+else ifeq ($(QT4_IMAGE),$(QT4_LINUX_I386_IMAGE))
+	$(PYTHON) scripts/build/qt4-sarge-examples.py --arch i386 --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 else ifeq ($(QT4_IMAGE),$(QT4_LINUX_AMD64_IMAGE))
 	$(PYTHON) scripts/build/qt4-sarge-examples.py --arch amd64 --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 else
@@ -90,6 +103,10 @@ qt4-package-tests: qt4-extract-tests
 
 QT4_IMAGE_CONFIG = qt4=$(QT4_VERSION),$(QT4_ARCHIVE_URL);openssl=$(OPENSSL_VERSION),$(OPENSSL_URL);download=$(DOWNLOAD_DIR)
 QT4_WIN95_IMAGE_CONFIG = qt4=4.8.7;platform=win95-i386;openssl=1.0.2u,ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16;download=downloads
+QT4_SARGE_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-i386;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
+QT4_SARGE_AMD64_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-amd64;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
 
 $(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_WIN95_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),QT4_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_AMD64_IMAGE_CONFIG))

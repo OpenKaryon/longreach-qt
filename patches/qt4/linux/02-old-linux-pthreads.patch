@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Linux without futexes: QT_NO_LINUX_FUTEX (set by the Sarge mkspec) selects
+# QMutex's and QThread's pthread paths, as on other Unix systems, for
+# kernels and glibc versions older than Qt 4.8 assumes.
+#
+--- a/src/corelib/thread/qmutex_unix.cpp
++++ b/src/corelib/thread/qmutex_unix.cpp
+@@ -56,7 +56,7 @@
+ #if defined(Q_OS_MAC)
+ # include <mach/mach.h>
+ # include <mach/task.h>
+-#elif defined(Q_OS_LINUX) && !defined(QT_LINUXBASE)
++#elif defined(Q_OS_LINUX) && !defined(QT_LINUXBASE) && !defined(QT_NO_LINUX_FUTEX)
+ # include <linux/futex.h>
+ # include <sys/syscall.h>
+ # include <unistd.h>
+@@ -65,7 +65,7 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
+-#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE)
++#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE) || defined(QT_NO_LINUX_FUTEX)
+ static void report_error(int code, const char *where, const char *what)
+ {
+     if (code != 0)
+@@ -77,7 +77,7 @@
+ QMutexPrivate::QMutexPrivate(QMutex::RecursionMode mode)
+     : QMutexData(mode), maximumSpinTime(MaximumSpinTimeThreshold), averageWaitTime(0), owner(0), count(0)
+ {
+-#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE)
++#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE) || defined(QT_NO_LINUX_FUTEX)
+     wakeup = false;
+     report_error(pthread_mutex_init(&mutex, NULL), "QMutex", "mutex init");
+     report_error(pthread_cond_init(&cond, NULL), "QMutex", "cv init");
+@@ -86,13 +86,13 @@
+ 
+ QMutexPrivate::~QMutexPrivate()
+ {
+-#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE)
++#if !defined(Q_OS_LINUX) || defined(QT_LINUXBASE) || defined(QT_NO_LINUX_FUTEX)
+     report_error(pthread_cond_destroy(&cond), "QMutex", "cv destroy");
+     report_error(pthread_mutex_destroy(&mutex), "QMutex", "mutex destroy");
+ #endif
+ }
+ 
+-#if defined(Q_OS_LINUX) && !defined(QT_LINUXBASE)
++#if defined(Q_OS_LINUX) && !defined(QT_LINUXBASE) && !defined(QT_NO_LINUX_FUTEX)
+ 
+ static inline int _q_futex(volatile int *addr, int op, int val, const struct timespec *timeout, int *addr2, int val2)
+ {
+--- a/src/corelib/thread/qmutex_p.h
++++ b/src/corelib/thread/qmutex_p.h
+@@ -79,7 +79,7 @@
+     Qt::HANDLE owner;
+     uint count;
+ 
+-#if defined(Q_OS_UNIX) && (!defined(Q_OS_LINUX) || defined(QT_LINUXBASE)) && !defined(Q_OS_SYMBIAN)
++#if defined(Q_OS_UNIX) && (!defined(Q_OS_LINUX) || defined(QT_LINUXBASE) || defined(QT_NO_LINUX_FUTEX)) && !defined(Q_OS_SYMBIAN)
+     volatile bool wakeup;
+     pthread_mutex_t mutex;
+     pthread_cond_t cond;
+--- a/src/corelib/thread/qthread_unix.cpp
++++ b/src/corelib/thread/qthread_unix.cpp
+@@ -299,7 +299,11 @@
+ {
+ #  if defined(Q_OS_LINUX) && !defined(QT_LINUXBASE)
+     Q_UNUSED(threadId);
++#    ifdef PR_SET_NAME
+     prctl(PR_SET_NAME, (unsigned long)name, 0, 0, 0);
++#    else
++    Q_UNUSED(name);
++#    endif
+ #  elif (defined(Q_OS_MAC) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_6)
+     Q_UNUSED(threadId);
+     if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_6)

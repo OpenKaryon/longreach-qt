@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Build Qt 4 for size, link the C++ runtime statically, and let the linker drop
+# what an application never calls.
+#
+# What it changes
+#   mkspecs/common/gcc-base.conf, the shared GCC base every *nix spec in Qt 4
+#   includes (linux-g++ -> gcc-base-unix.conf -> gcc-base.conf).
+#
+#     -Os instead of -O2                    optimise for size
+#     -ffunction-sections -fdata-sections   one section per function/object
+#     -Wl,--gc-sections on QMAKE_LFLAGS_APP drop unreferenced sections at link
+#     -static-libgcc -static-libstdc++      no C++ runtime .so to ship
+#
+# Why the runtime flags here too
+#   Measured on the first qt4-linux-i386 build: Qt itself was properly static -
+#   no libQt* in NEEDED at all - but the binary still carried
+#   libstdc++.so.6 and libgcc_s.so.1. The Qt 5 Linux targets in this kit do not;
+#   The Lucid and Sarge builds lean on that when it argues that a newer compiler can sit on an
+#   older glibc, since libstdc++ then never enters the floor. Qt 4 should not be
+#   the odd one out.
+#
+#   Not plain -static, which is what the Windows patch uses. On Linux the X11,
+#   fontconfig and freetype libraries are supposed to come from the system, and
+#   a fully static binary would both bloat and break that. Only the C++ runtime
+#   is pulled in.
+#
+# Why
+#   Every other target in this kit is configured with -optimize-size, which is
+#   Qt 5's and Qt 6's way of saying -Os. Qt 4's configure has no such option and
+#   no way to pass qmake variables on the command line, so the mkspec is the
+#   only place left to say it.
+#
+#   The section flags are a separate mechanism and worth naming as such, because
+#   they are the ones that do what "optimize size" is usually assumed to do.
+#   -Os is the compiler emitting smaller code; --gc-sections is the linker
+#   discarding functions and data nothing in the program refers to. Without
+#   -ffunction-sections the linker has nothing to discard at that granularity -
+#   the unit is the whole object file - which matters enormously for a static
+#   Qt, where an application links a .a per module and uses a fraction of it.
+#
+#   Note this is the only place in the repository where section GC is used. The
+#   Qt 5 and Qt 6 targets do not do it; whether they should is a separate
+#   question against builds that are already validated on real hardware.
+#
+# Where it applies
+#   Every Qt 4 Linux target. The Windows targets have their own copy of these
+#   flags in mkspecs/win32-g++/qmake.conf, which does not include gcc-base.conf -
+#   see patches/qt4/windows/all/.
+#
+#   --gc-sections goes on QMAKE_LFLAGS_APP rather than QMAKE_LFLAGS on purpose:
+#   applications are where it pays, and keeping it off the general variable
+#   leaves Qt's own link steps and configure's compile tests exactly as they
+#   were.
+--- a/mkspecs/common/gcc-base.conf
++++ b/mkspecs/common/gcc-base.conf
+@@ -31,11 +31,11 @@
+ # you can use the manual test in tests/manual/mkspecs.
+ #
+ 
+-QMAKE_CFLAGS                += -pipe
++QMAKE_CFLAGS                += -pipe -ffunction-sections -fdata-sections
+ QMAKE_CFLAGS_DEPS           += -M
+ QMAKE_CFLAGS_WARN_ON        += -Wall -W
+ QMAKE_CFLAGS_WARN_OFF       += -w
+-QMAKE_CFLAGS_RELEASE        += -O2
++QMAKE_CFLAGS_RELEASE        += -Os
+ QMAKE_CFLAGS_DEBUG          += -g
+ QMAKE_CFLAGS_SHLIB          += -fPIC
+ QMAKE_CFLAGS_STATIC_LIB     += -fPIC
+@@ -55,6 +55,6 @@
+ 
+ QMAKE_LFLAGS         +=
+ QMAKE_LFLAGS_DEBUG   +=
+-QMAKE_LFLAGS_APP     +=
++QMAKE_LFLAGS_APP     += -static-libgcc -static-libstdc++ -Wl,--gc-sections
+ QMAKE_LFLAGS_RELEASE +=
+ 

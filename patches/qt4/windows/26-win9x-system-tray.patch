@@ -1,0 +1,191 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: the system tray with Shell 4.0's ANSI NOTIFYICONDATA and
+# callbacks; no balloons there. The Unicode export stays optional.
+#
+--- a/src/gui/util/qsystemtrayicon_win.cpp
++++ b/src/gui/util/qsystemtrayicon_win.cpp
+@@ -101,6 +101,24 @@
+ typedef HRESULT (WINAPI *PtrShell_NotifyIconGetRect)(const Q_NOTIFYICONIDENTIFIER* identifier, RECT* iconLocation);
+ typedef BOOL (WINAPI *PtrChangeWindowMessageFilter)(UINT message, DWORD dwFlag);
+ typedef BOOL (WINAPI *PtrChangeWindowMessageFilterEx)(HWND hWnd, UINT message, DWORD action, void* pChangeFilterStruct);
++
++typedef BOOL (WINAPI *PtrShell_NotifyIconW)(DWORD, PNOTIFYICONDATAW);
++typedef LPVOID (WINAPI *PtrVirtualAllocEx)(HANDLE, LPVOID, SIZE_T, DWORD, DWORD);
++typedef BOOL (WINAPI *PtrVirtualFreeEx)(HANDLE, LPVOID, SIZE_T, DWORD);
++
++static bool qt_win_trayIsWin9x()
++{
++    return QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based;
++}
++
++static BOOL qt_win_notifyIconW(DWORD message, PNOTIFYICONDATAW data)
++{
++    // The Unicode export is absent in the original Win95 shell. Keep it
++    // optional even though the Win9x branch below always calls the ANSI API.
++    static PtrShell_NotifyIconW notify = reinterpret_cast<PtrShell_NotifyIconW>(
++        QSystemLibrary::resolve(QLatin1String("shell32"), "Shell_NotifyIconW"));
++    return notify ? notify(message, data) : FALSE;
++}
+ 
+ class QSystemTrayIconSys : QWidget
+ {
+@@ -138,7 +156,11 @@
+     : hIcon(0), q(object), ignoreNextMouseRelease(false)
+ 
+ {
+-    if (QSysInfo::windowsVersion() >= QSysInfo::WV_VISTA) {
++    if (qt_win_trayIsWin9x()) {
++        // Shell 4.0 supports only the original ANSI structure and callbacks.
++        notifyIconSize = FIELD_OFFSET(NOTIFYICONDATAA, szTip[64]);
++        version = 0;
++    } else if (QSysInfo::windowsVersion() >= QSysInfo::WV_VISTA) {
+         notifyIconSize = sizeof(NOTIFYICONDATA);
+         version = NOTIFYICON_VERSION_4;
+     } else {
+@@ -146,11 +168,12 @@
+         version = NOTIFYICON_VERSION;
+     }
+ 
+-    maxTipLength = 128;
++    maxTipLength = qt_win_trayIsWin9x() ? 64 : 128;
+ 
+     // For restoring the tray icon after explorer crashes
+     if (!MYWM_TASKBARCREATED) {
+-        MYWM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
++        MYWM_TASKBARCREATED = QT_WA_INLINE(RegisterWindowMessageW(L"TaskbarCreated"),
++                                              RegisterWindowMessageA("TaskbarCreated"));
+     }
+ 
+     // Allow the WM_TASKBARCREATED message through the UIPI filter on Windows Vista and higher
+@@ -209,6 +232,7 @@
+ 
+ bool QSystemTrayIconSys::showMessage(const QString &title, const QString &message, QSystemTrayIcon::MessageIcon type, uint uSecs)
+ {
++    if (qt_win_trayIsWin9x()) return false; // Shell 4.0 has no native balloons.
+     NOTIFYICONDATA tnd;
+     memset(&tnd, 0, notifyIconSize);
+ 
+@@ -224,11 +248,32 @@
+ 
+     Q_ASSERT(testAttribute(Qt::WA_WState_Created));
+ 
+-    return Shell_NotifyIcon(NIM_MODIFY, &tnd);
++    return qt_win_notifyIconW(NIM_MODIFY, &tnd);
+ }
+ 
+ bool QSystemTrayIconSys::trayMessage(DWORD msg)
+ {
++    if (qt_win_trayIsWin9x()) {
++        NOTIFYICONDATAA data;
++        memset(&data, 0, sizeof(data));
++        data.cbSize = notifyIconSize;
++        data.hWnd = winId();
++        data.uID = q_uNOTIFYICONID;
++        if (msg == NIM_ADD || msg == NIM_MODIFY) {
++            data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
++            data.uCallbackMessage = MYWM_NOTIFYICON;
++            data.hIcon = hIcon;
++            QString tip = q->toolTip();
++            QByteArray encoded = tip.toLocal8Bit();
++            while (encoded.size() >= maxTipLength && !tip.isEmpty()) {
++                tip.chop(1); // don't split a multibyte local-codepage character
++                encoded = tip.toLocal8Bit();
++            }
++            memcpy(data.szTip, encoded.constData(), encoded.size() + 1);
++        }
++        // NIM_SETVERSION/NIF_SHOWTIP were introduced after the Win95 shell.
++        return Shell_NotifyIconA(msg, &data);
++    }
+     NOTIFYICONDATA tnd;
+     memset(&tnd, 0, notifyIconSize);
+ 
+@@ -244,10 +289,10 @@
+         setIconContents(tnd);
+     }
+ 
+-    bool success = Shell_NotifyIcon(msg, &tnd);
++    bool success = qt_win_notifyIconW(msg, &tnd);
+ 
+     if (msg == NIM_ADD)
+-        return success && Shell_NotifyIcon(NIM_SETVERSION, &tnd);
++        return success && qt_win_notifyIconW(NIM_SETVERSION, &tnd);
+     else
+         return success;
+ }
+@@ -288,6 +333,9 @@
+             }
+ 
+             switch (message) {
++            case WM_LBUTTONUP:
++                if (version != 0) break;
++                // Original shell callbacks do not send NIN_SELECT.
+             case NIN_SELECT:
+             case NIN_KEYSELECT:
+                 if (ignoreNextMouseRelease)
+@@ -302,6 +350,9 @@
+                 emit q->activated(QSystemTrayIcon::DoubleClick);
+                 break;
+ 
++            case WM_RBUTTONUP:
++                if (version != 0) break;
++                // Original shell callbacks do not send WM_CONTEXTMENU.
+             case WM_CONTEXTMENU:
+                 if (q->contextMenu()) {
+                     q->contextMenu()->popup(gpos);
+@@ -350,6 +401,13 @@
+ */
+ QRect QSystemTrayIconSys::findIconGeometry(const int iconId)
+ {
++    // Win95's tray is not the NT toolbar layout inspected below.
++    if (qt_win_trayIsWin9x()) return QRect();
++    static PtrVirtualAllocEx allocate = reinterpret_cast<PtrVirtualAllocEx>(
++        QSystemLibrary::resolve(QLatin1String("kernel32"), "VirtualAllocEx"));
++    static PtrVirtualFreeEx release = reinterpret_cast<PtrVirtualFreeEx>(
++        QSystemLibrary::resolve(QLatin1String("kernel32"), "VirtualFreeEx"));
++    if (!allocate || !release) return QRect();
+     static PtrShell_NotifyIconGetRect Shell_NotifyIconGetRect =
+         (PtrShell_NotifyIconGetRect)QSystemLibrary::resolve(QLatin1String("shell32"), "Shell_NotifyIconGetRect");
+ 
+@@ -398,7 +456,7 @@
+         return ret;
+ 
+     int buttonCount = SendMessage(trayHandle, TB_BUTTONCOUNT, 0, 0);
+-    LPVOID data = VirtualAllocEx(trayProcess, NULL, sizeof(TBBUTTON), MEM_COMMIT, PAGE_READWRITE);
++    LPVOID data = allocate(trayProcess, NULL, sizeof(TBBUTTON), MEM_COMMIT, PAGE_READWRITE);
+ 
+     if ( buttonCount < 1 || !data ) {
+         CloseHandle(trayProcess);
+@@ -436,14 +494,14 @@
+             }
+         }
+     }
+-    VirtualFreeEx(trayProcess, data, 0, MEM_RELEASE);
++    release(trayProcess, data, 0, MEM_RELEASE);
+     CloseHandle(trayProcess);
+     return ret;
+ }
+ 
+ void QSystemTrayIconPrivate::showMessage_sys(const QString &title, const QString &message, QSystemTrayIcon::MessageIcon type, int timeOut)
+ {
+-    if (!sys || !allowsMessages())
++    if (!sys || !supportsMessages_sys())
+         return;
+ 
+     uint uSecs = 0;
+@@ -511,12 +569,12 @@
+ 
+ bool QSystemTrayIconPrivate::isSystemTrayAvailable_sys()
+ {
+-    return true;
++    return !qt_win_trayIsWin9x() || FindWindowA("Shell_TrayWnd", NULL) != 0;
+ }
+ 
+ bool QSystemTrayIconPrivate::supportsMessages_sys()
+ {
+-    return allowsMessages();
++    return !qt_win_trayIsWin9x() && allowsMessages();
+ }
+ 
+ QT_END_NAMESPACE

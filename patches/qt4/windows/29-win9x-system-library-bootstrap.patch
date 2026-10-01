@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: QSystemLibrary can run during QTextCodec initialisation; it
+# converts the search path at the native code-page boundary instead of
+# entering Qt's codecs, keeping the restricted search order.
+#
+--- a/src/corelib/plugin/qsystemlibrary.cpp
++++ b/src/corelib/plugin/qsystemlibrary.cpp
+@@ -115,8 +115,67 @@
+     return QString::fromWCharArray(fullPath.constData(), int(retLen));
+ }
+ 
++// System library loading can run during QTextCodec initialization. Do not
++// enter Qt's locale codecs to convert a Win9x search path: use the native
++// code-page boundary instead, and retain the original restricted search order.
++static HINSTANCE qLoadSystemLibraryAnsi(const wchar_t *libraryName, bool onlySystemDirectory)
++{
++    const int nameLength = WideCharToMultiByte(CP_ACP, 0, libraryName, -1, 0, 0, 0, 0);
++    if (nameLength <= 0)
++        return 0;
++    QVarLengthArray<char, MAX_PATH> ansiName(nameLength);
++    BOOL substituted = FALSE;
++    if (WideCharToMultiByte(CP_ACP, 0, libraryName, -1, ansiName.data(), nameLength,
++                            0, &substituted) != nameLength || substituted)
++        return 0;
++    const QByteArray fileName = QByteArray(ansiName.constData(), nameLength - 1) + ".dll";
++    QList<QByteArray> searchOrder;
++
++#if !defined(QT_BOOTSTRAPPED)
++    if (!onlySystemDirectory) {
++        char application[MAX_PATH + 1] = { 0 };
++        const DWORD length = GetModuleFileNameA(0, application, MAX_PATH);
++        if (length && length < MAX_PATH) {
++            const QByteArray path(application, length);
++            const int separator = path.lastIndexOf('\\');
++            if (separator >= 0)
++                searchOrder.append(path.left(separator));
++        }
++    }
++#endif
++
++    QVarLengthArray<char, MAX_PATH> system(MAX_PATH);
++    UINT length = GetSystemDirectoryA(system.data(), system.size());
++    if (length >= UINT(system.size())) {
++        system.resize(length + 1);
++        length = GetSystemDirectoryA(system.data(), system.size());
++    }
++    if (length && length < UINT(system.size()))
++        searchOrder.append(QByteArray(system.constData(), length));
++    if (!onlySystemDirectory) {
++        const QList<QByteArray> paths = qgetenv("PATH").split(';');
++        for (int i = 0; i < paths.size(); ++i) {
++            if (!paths.at(i).isEmpty())
++                searchOrder.append(paths.at(i));
++        }
++    }
++    for (int i = 0; i < searchOrder.size(); ++i) {
++        QByteArray fullPath = searchOrder.at(i);
++        if (!fullPath.endsWith('\\'))
++            fullPath.append('\\');
++        fullPath.append(fileName);
++        HINSTANCE instance = LoadLibraryA(fullPath.constData());
++        if (instance)
++            return instance;
++    }
++    return 0;
++}
++
+ HINSTANCE QSystemLibrary::load(const wchar_t *libraryName, bool onlySystemDirectory /* = true */)
+ {
++    if (QSysInfo::WindowsVersion & QSysInfo::WV_DOS_based)
++        return qLoadSystemLibraryAnsi(libraryName, onlySystemDirectory);
++
+     QStringList searchOrder;
+ 
+ #if !defined(QT_BOOTSTRAPPED)

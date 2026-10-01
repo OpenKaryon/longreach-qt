@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: accessibility text copies bounded in bytes for ANSI windows,
+# and empty or null buffers rejected first.
+#
+--- a/src/gui/kernel/qapplication_win.cpp
++++ b/src/gui/kernel/qapplication_win.cpp
+@@ -2426,13 +2426,25 @@
+                     QString text = acc->text(QAccessible::Name, 0);
+                     if (text.isEmpty())
+                         text = widget->objectName();
+-                    ret = qMin<int>(wParam - 1, text.size());
+-                    text.resize(ret);
+-                    QT_WA({
+-                        memcpy((void *)lParam, text.utf16(), (text.size() + 1) * 2);
+-                    }, {
+-                        memcpy((void *)lParam, text.toLocal8Bit().data(), text.size() + 1);
+-                    });
++                    // Bound the copy in bytes for ANSI Win9x windows, and
++                    // reject empty/null buffers before subtracting capacity.
++                    if (!wParam || !lParam) {
++                        delete acc;
++                        RETURN(0);
++                    }
++#ifndef Q_OS_WINCE
++                    if (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based) {
++                        const QByteArray bytes = text.toLocal8Bit();
++                        ret = int(qMin<quintptr>(wParam - 1, bytes.size()));
++                        memcpy((void *)lParam, bytes.constData(), ret);
++                        reinterpret_cast<char *>(lParam)[ret] = '\0';
++                    } else
++#endif
++                    {
++                        ret = int(qMin<quintptr>(wParam - 1, text.size()));
++                        text.resize(ret);
++                        memcpy((void *)lParam, text.utf16(), (ret + 1) * sizeof(ushort));
++                    }
+                     delete acc;
+                 }
+                 if (!ret) {
+--- a/src/gui/accessible/qaccessible_win.cpp
++++ b/src/gui/accessible/qaccessible_win.cpp
+@@ -338,7 +338,13 @@
+         QString file;
+ #endif
+         if (!file.isEmpty()) {
+-				    PlaySound(reinterpret_cast<const wchar_t *>(soundName.utf16()), 0, SND_ALIAS | SND_ASYNC | SND_NODEFAULT | SND_NOWAIT);
++            const DWORD flags = SND_ALIAS | SND_ASYNC | SND_NODEFAULT | SND_NOWAIT;
++#ifndef Q_OS_WINCE
++            if (QSysInfo::windowsVersion() & QSysInfo::WV_DOS_based)
++                PlaySoundA(soundName.toLocal8Bit().constData(), 0, flags);
++            else
++#endif
++                PlaySoundW(reinterpret_cast<const wchar_t *>(soundName.utf16()), 0, flags);
+         }
+     }
+ 

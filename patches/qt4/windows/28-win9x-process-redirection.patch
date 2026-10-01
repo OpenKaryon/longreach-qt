@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows 9x: QProcess opens redirection files with CreateFileA on Win9x and
+# CreateFileW on NT, chosen at run time.
+#
+--- a/src/corelib/io/qprocess_win.cpp
++++ b/src/corelib/io/qprocess_win.cpp
+@@ -56,6 +56,7 @@
+ #include <qdebug.h>
+ 
+ #include "private/qfsfileengine_p.h" // for longFileName
++#include "qwin95file_p.h"
+ 
+ 
+ #ifndef QT_NO_PROCESS
+@@ -123,14 +124,13 @@
+         if (&channel == &stdinChannel) {
+             // try to open in read-only mode
+             channel.pipe[1] = INVALID_Q_PIPE;
+-            channel.pipe[0] =
+-                CreateFile((const wchar_t*)QFSFileEnginePrivate::longFileName(channel.file).utf16(),
+-                           GENERIC_READ,
+-                           FILE_SHARE_READ | FILE_SHARE_WRITE,
+-                           &secAtt,
+-                           OPEN_EXISTING,
+-                           FILE_ATTRIBUTE_NORMAL,
+-                           NULL);
++            channel.pipe[0] = QT_WA_INLINE(
++                CreateFileW((const wchar_t *)QFSFileEnginePrivate::longFileName(channel.file).utf16(),
++                            GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                            &secAtt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL),
++                CreateFileA(qt_win95_local_path(channel.file).constData(),
++                            GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                            &secAtt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+ 
+             if (channel.pipe[0] != INVALID_Q_PIPE)
+                 return true;
+@@ -139,14 +139,13 @@
+         } else {
+             // open in write mode
+             channel.pipe[0] = INVALID_Q_PIPE;
+-            channel.pipe[1] =
+-                CreateFile((const wchar_t *)QFSFileEnginePrivate::longFileName(channel.file).utf16(),
+-                           GENERIC_WRITE,
+-                           FILE_SHARE_READ | FILE_SHARE_WRITE,
+-                           &secAtt,
+-                           channel.append ? OPEN_ALWAYS : CREATE_ALWAYS,
+-                           FILE_ATTRIBUTE_NORMAL,
+-                           NULL);
++            channel.pipe[1] = QT_WA_INLINE(
++                CreateFileW((const wchar_t *)QFSFileEnginePrivate::longFileName(channel.file).utf16(),
++                            GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                            &secAtt, channel.append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL),
++                CreateFileA(qt_win95_local_path(channel.file).constData(),
++                            GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
++                            &secAtt, channel.append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL));
+ 
+             if (channel.pipe[1] != INVALID_Q_PIPE) {
+                 if (channel.append) {

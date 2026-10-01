@@ -1,0 +1,467 @@
+{
+  "distribution": "Debian 3.1 Sarge",
+  "architecture": "amd64",
+  "index_url": "https://archive.debian.org/debian-amd64/dists/sarge/main/binary-amd64/Packages.gz",
+  "index_sha256": "8d46f507c5af8790b0d045449ff686d703b05d6d589fe989e0354c6b066f7a20",
+  "packages": [
+    {
+      "package": "libc6",
+      "version": "2.3.2.ds1-22sarge6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/g/glibc/libc6_2.3.2.ds1-22sarge6_amd64.deb",
+      "file": "libc6_2.3.2.ds1-22sarge6_amd64.deb",
+      "bytes": 4327708,
+      "sha256": "89ffa00cf74e17a10f9b673f17931515a22144d416d99661011892decdd76fc1",
+      "archive_md5": "bd529f21b544736094a7c032e2f6559d"
+    },
+    {
+      "package": "libc6-dev",
+      "version": "2.3.2.ds1-22sarge6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/g/glibc/libc6-dev_2.3.2.ds1-22sarge6_amd64.deb",
+      "file": "libc6-dev_2.3.2.ds1-22sarge6_amd64.deb",
+      "bytes": 4495392,
+      "sha256": "bc2cb106721848cf07a6f99b16bb00b26b28fb1a7328c2ceb122c1596b963986",
+      "archive_md5": "43ce82815737c996f611bf97d27dd95d"
+    },
+    {
+      "package": "linux-kernel-headers",
+      "version": "2.5.999-test7-bk-17",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/l/linux-kernel-headers/linux-kernel-headers_2.5.999-test7-bk-17_amd64.deb",
+      "file": "linux-kernel-headers_2.5.999-test7-bk-17_amd64.deb",
+      "bytes": 1487688,
+      "sha256": "193da31552cbeb96dff484cb2844a8cef5a4a293337206d65f3b3d25680c7d60",
+      "archive_md5": "6d1ac732181d2380d27b5c9f20bf30b8"
+    },
+    {
+      "package": "libdb1-compat",
+      "version": "2.1.3-7",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/d/db1-compat/libdb1-compat_2.1.3-7_amd64.deb",
+      "file": "libdb1-compat_2.1.3-7_amd64.deb",
+      "bytes": 35204,
+      "sha256": "ce35fc41dfa6f49d5ca3d56fb1ab1a7ea39c79c171d8f9f86e7ce46646029e2a",
+      "archive_md5": "b71c33f8a34ba7791081d2da87bff2d6"
+    },
+    {
+      "package": "libgcc1",
+      "version": "1:3.4.3-13sarge1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/g/gcc-3.4/libgcc1_3.4.3-13sarge1_amd64.deb",
+      "file": "libgcc1_3.4.3-13sarge1_amd64.deb",
+      "bytes": 84726,
+      "sha256": "d9bf67c2c6023aafc6a182e6fee41b058996055ad724b2e7ed732a777a911e04",
+      "archive_md5": "c6f8f328aaab43c4299e93aafb2ebc7c"
+    },
+    {
+      "package": "libstdc++5",
+      "version": "1:3.3.5-13",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/g/gcc-3.3/libstdc++5_3.3.5-13_amd64.deb",
+      "file": "libstdc++5_3.3.5-13_amd64.deb",
+      "bytes": 290410,
+      "sha256": "9a4041ee66cabc954e7dc485d5428465090a455208a12280e881647b8511076a",
+      "archive_md5": "575b1d35326287905575a19746460d22"
+    },
+    {
+      "package": "libx11-6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libx11-6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libx11-6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 749202,
+      "sha256": "0a921dee0385e82671b61f5cd5a6fd8ca34809fec15f503f3515fda750c1707b",
+      "archive_md5": "e50d2337a512854fc486f56b5693e166"
+    },
+    {
+      "package": "libx11-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libx11-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libx11-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 1421460,
+      "sha256": "304fa5e08e8b8c1eb6e7640232fb088584ff1b794853e0ce4db1bdddcb015f9f",
+      "archive_md5": "0047ff35404238214402dec07a45ec1a"
+    },
+    {
+      "package": "libxext6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxext6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxext6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 190994,
+      "sha256": "0c5b37d33e1c19d142595e886a6a5858971258b7db153acfff790a0918e44286",
+      "archive_md5": "6eeb69478a76d25556e2c33477120e4c"
+    },
+    {
+      "package": "libxext-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxext-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxext-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 251190,
+      "sha256": "b6cdabc36bbe7f6852682e915602c4c2ef361cec43bdacf1f1fc3b5f8179c1cb",
+      "archive_md5": "6b064819a2fd3f100bcadda0cd9014dd"
+    },
+    {
+      "package": "libxrender1",
+      "version": "0.8.3-7",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xrender/libxrender1_0.8.3-7_amd64.deb",
+      "file": "libxrender1_0.8.3-7_amd64.deb",
+      "bytes": 26310,
+      "sha256": "3533b0d506bc6a8d44a779fd6a13ef338249dfc737fbe4841b9334e0e4c0d26c",
+      "archive_md5": "33a62fdd0f0d5ad301c423b4b560e668"
+    },
+    {
+      "package": "libxrender-dev",
+      "version": "0.8.3-7",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xrender/libxrender-dev_0.8.3-7_amd64.deb",
+      "file": "libxrender-dev_0.8.3-7_amd64.deb",
+      "bytes": 29994,
+      "sha256": "6a669dafce19ea42dbdba7b8bbb0225b3a692334242802e20036a273cf2ef632",
+      "archive_md5": "2cde8bf93a7a62b7ad83eed98179bb64"
+    },
+    {
+      "package": "libxrandr2",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxrandr2_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxrandr2_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 171934,
+      "sha256": "169e719494077c495ec2c190abc3ce283b4024ee3f4c0d99a6f0af5502b2f3b8",
+      "archive_md5": "af69dffbbfc6dce2e8653c435a86172a"
+    },
+    {
+      "package": "libxrandr-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxrandr-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxrandr-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 171812,
+      "sha256": "80add6ba9b538b02a359629e211506973adbddf826aff035781ab66d6a33e0d4",
+      "archive_md5": "f9cb020e30565bb97364c334cff76d00"
+    },
+    {
+      "package": "libxcursor1",
+      "version": "1.1.3-1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xcursor/libxcursor1_1.1.3-1_amd64.deb",
+      "file": "libxcursor1_1.1.3-1_amd64.deb",
+      "bytes": 25464,
+      "sha256": "586be96d2559fccf88586b2487f9e4e33e4d361a7b151d6a263c94afe0b669dd",
+      "archive_md5": "cbe54eb21cee15c92dac29b67da5a542"
+    },
+    {
+      "package": "libxcursor-dev",
+      "version": "1.1.3-1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xcursor/libxcursor-dev_1.1.3-1_amd64.deb",
+      "file": "libxcursor-dev_1.1.3-1_amd64.deb",
+      "bytes": 33668,
+      "sha256": "6c0747b469539e328bb2c5eedee64995cdb185b75bc31fa47272e520764c36f9",
+      "archive_md5": "c8ca23930b65cc641b1da53c2369e757"
+    },
+    {
+      "package": "libxi6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxi6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxi6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 180328,
+      "sha256": "54e515376f541e228f138a86a03c48dc0d10f19460cedcc8394ba10196ba4abb",
+      "archive_md5": "a8d0d9ef354adcbb4961971c6c7a1808"
+    },
+    {
+      "package": "libxi-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxi-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxi-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 232932,
+      "sha256": "f670fef49202b2e3baab46065bda0967ec60e6bedaed0b9449894ebf2dc07f66",
+      "archive_md5": "a432af761a4dbf72db00e9237ff09199"
+    },
+    {
+      "package": "libice6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libice6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libice6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 205216,
+      "sha256": "e6608940f4f9930cfd90df22db18c76c08962debd13b38ce6a52668dce0a973c",
+      "archive_md5": "e5be361da06fa8a94ee72e350a938b1d"
+    },
+    {
+      "package": "libice-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libice-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libice-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 209696,
+      "sha256": "7a80e395b74648b564def6f78a3b143a75196942f8dcebeb8450d18b3c9d4fd3",
+      "archive_md5": "b5311b5da58ef7a164ef446482a87bc9"
+    },
+    {
+      "package": "libsm6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libsm6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libsm6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 183290,
+      "sha256": "682a6812c89e014fe9bfb0d4da98fe72f634c230dd6e19708314bc3747186f2d",
+      "archive_md5": "a0769048afe7ed74facec7dea2321f18"
+    },
+    {
+      "package": "libsm-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libsm-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libsm-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 178278,
+      "sha256": "1a5e1290256ffd470d0127735be22ed1421aad2730d7c7f535170dec4281200e",
+      "archive_md5": "3491ea963519d9dd28101561a908c482"
+    },
+    {
+      "package": "libxt6",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxt6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxt6_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 345884,
+      "sha256": "343919a1245ee421bf6843f7d0db0b17c5ddfe755b6840cc90c5c9f5bfd0eb71",
+      "archive_md5": "b279879e8e72142bec29a676fa1f2222"
+    },
+    {
+      "package": "libxt-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/libxt-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "libxt-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 644056,
+      "sha256": "3bd3baeb9aa45a20001e09685ba4e01edcaf5b5fbb906d29aef0cca81482484e",
+      "archive_md5": "b8a3484443d0991842f31a02cbe40801"
+    },
+    {
+      "package": "xlibs-static-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibs-static-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xlibs-static-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 889414,
+      "sha256": "df07764f0ca94c90ee9f3f225d3e7a292f1957a594318575b5d74dd579fdb67b",
+      "archive_md5": "62157ad15bcbd4b63ded6e872de84f26"
+    },
+    {
+      "package": "x-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/x-dev_4.3.0.dfsg.1-14sarge3_all.deb",
+      "file": "x-dev_4.3.0.dfsg.1-14sarge3_all.deb",
+      "bytes": 216300,
+      "sha256": "fd5488c9f599190083caa448f135653141a2d46b5459486560cc7b231bae4117",
+      "archive_md5": "f92e6fdafdc83218777ecc6be96c42e5"
+    },
+    {
+      "package": "libfontconfig1",
+      "version": "2.3.1-2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/f/fontconfig/libfontconfig1_2.3.1-2_amd64.deb",
+      "file": "libfontconfig1_2.3.1-2_amd64.deb",
+      "bytes": 125008,
+      "sha256": "97107612bcf87a690dc6b46e80945a9b1e9b3e02274b9ee4f88aae3fca746c19",
+      "archive_md5": "d2692e4f2c24afe5c3a8c55e0eabbd15"
+    },
+    {
+      "package": "libfontconfig1-dev",
+      "version": "2.3.1-2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/f/fontconfig/libfontconfig1-dev_2.3.1-2_amd64.deb",
+      "file": "libfontconfig1-dev_2.3.1-2_amd64.deb",
+      "bytes": 452512,
+      "sha256": "2b784b57804496d4dd7d679b0544e5a8ec4e198d23734f9b4eb574071c9352ce",
+      "archive_md5": "14a0de551d230fb8ff6606ff9fdc4f4f"
+    },
+    {
+      "package": "fontconfig",
+      "version": "2.3.1-2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/f/fontconfig/fontconfig_2.3.1-2_amd64.deb",
+      "file": "fontconfig_2.3.1-2_amd64.deb",
+      "bytes": 110552,
+      "sha256": "e4bf3938debaef98b8c1d7cc9ae2afeeaf77535c6ab723a87e62c2e78a404e96",
+      "archive_md5": "4599e1b2aeecb60b8aeca3a5e200fe63"
+    },
+    {
+      "package": "libfreetype6",
+      "version": "2.1.7-6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/f/freetype/libfreetype6_2.1.7-6_amd64.deb",
+      "file": "libfreetype6_2.1.7-6_amd64.deb",
+      "bytes": 390236,
+      "sha256": "a0ef6111294f57160385d18239e13455ad039c767ebe006d1e6968bd128a8905",
+      "archive_md5": "6b1c46c525b13bf78e6aa6adfe876300"
+    },
+    {
+      "package": "libfreetype6-dev",
+      "version": "2.1.7-6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/f/freetype/libfreetype6-dev_2.1.7-6_amd64.deb",
+      "file": "libfreetype6-dev_2.1.7-6_amd64.deb",
+      "bytes": 723742,
+      "sha256": "036c679b6c0d5da44973541b2286aba6aa4616d76681a5e65ee4c1115ee9ca67",
+      "archive_md5": "e8cfab359664bd05c9606e21b632c9d6"
+    },
+    {
+      "package": "libexpat1",
+      "version": "1.95.8-3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/e/expat/libexpat1_1.95.8-3_amd64.deb",
+      "file": "libexpat1_1.95.8-3_amd64.deb",
+      "bytes": 60458,
+      "sha256": "5cb435fffdb166ccc4369ccabbd298f10047e7d7036e99ab2724b86c70b43b79",
+      "archive_md5": "89ae29e64c4fda4404dd3e4bc0471547"
+    },
+    {
+      "package": "libexpat1-dev",
+      "version": "1.95.8-3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/e/expat/libexpat1-dev_1.95.8-3_amd64.deb",
+      "file": "libexpat1-dev_1.95.8-3_amd64.deb",
+      "bytes": 130196,
+      "sha256": "e564e01dfc8894e88fd6528cffe420efbbc3cfe6b973ac8437212bc76c9e3152",
+      "archive_md5": "2a36f9ad1ef03db9b8fd347e343b8ec1"
+    },
+    {
+      "package": "zlib1g",
+      "version": "1:1.2.2-4.sarge.2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/z/zlib/zlib1g_1.2.2-4.sarge.2_amd64.deb",
+      "file": "zlib1g_1.2.2-4.sarge.2_amd64.deb",
+      "bytes": 67298,
+      "sha256": "2384c1c8975cca947a60da9771e8ea36db70c1f2a021e3d296a2d52d1ee66aaa",
+      "archive_md5": "ce68f539762dc35d4a4119aa20cf14ef"
+    },
+    {
+      "package": "zlib1g-dev",
+      "version": "1:1.2.2-4.sarge.2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/z/zlib/zlib1g-dev_1.2.2-4.sarge.2_amd64.deb",
+      "file": "zlib1g-dev_1.2.2-4.sarge.2_amd64.deb",
+      "bytes": 503740,
+      "sha256": "fb29784d575d246a9563b8b77594cca06e66c47c5932e4e98242c0cc23fc5bc9",
+      "archive_md5": "fa00a365669a212af5470fb2ba29fcad"
+    },
+    {
+      "package": "libasound2",
+      "version": "1.0.8-3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/a/alsa-lib/libasound2_1.0.8-3_amd64.deb",
+      "file": "libasound2_1.0.8-3_amd64.deb",
+      "bytes": 338760,
+      "sha256": "b0bc40d38d9a7b58f914ae42da750a5ef28cf64165641092fe77e56d773c6ae4",
+      "archive_md5": "e17f4cd4c12c766be440875501ccb57b"
+    },
+    {
+      "package": "libasound2-dev",
+      "version": "1.0.8-3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/a/alsa-lib/libasound2-dev_1.0.8-3_amd64.deb",
+      "file": "libasound2-dev_1.0.8-3_amd64.deb",
+      "bytes": 474812,
+      "sha256": "87741ec790bae15af3ad539672759234d154c381d647c5a2fc814c6ce54398e0",
+      "archive_md5": "022d9f25c40901496963266b7d69ace6"
+    },
+    {
+      "package": "xlibmesa-gl",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibmesa-gl_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xlibmesa-gl_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 333400,
+      "sha256": "d5c38f170a62fd42e00ad56b77931839910cd6f75f4b0af733a7df04c0e9e251",
+      "archive_md5": "337c32366e9062e338637c62751bc2e0"
+    },
+    {
+      "package": "xlibmesa-gl-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibmesa-gl-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xlibmesa-gl-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 735080,
+      "sha256": "ceffa3674ce4d66e7d3c01362e9a7015b77f58b8dc92f7c2b6b4295e03b74ae5",
+      "archive_md5": "ab8a40397b1bc8820456cb31b48b6e8e"
+    },
+    {
+      "package": "xlibmesa-glu",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibmesa-glu_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xlibmesa-glu_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 368168,
+      "sha256": "a00fcf72a3d2606a85cd9c3e8fe9a76c7628c2ce88b7a822f1250aceb7f11b5a",
+      "archive_md5": "f27e5a9a3d6edf421f5996bf5de23e7f"
+    },
+    {
+      "package": "xlibmesa-glu-dev",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibmesa-glu-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xlibmesa-glu-dev_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 460318,
+      "sha256": "24e7495ac2450b39bff79fdc77a15474a9c69d4c21d189f0706c5831b3b205bf",
+      "archive_md5": "f84676fae98017b3f4a02c679e1049c0"
+    },
+    {
+      "package": "xvfb",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xvfb_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xvfb_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 1763754,
+      "sha256": "31410bda49d98a953f90b9517c44384f3d408ffe07a235e432ed42742dbda24b",
+      "archive_md5": "96b12578953cc3c63e25635391f92d22"
+    },
+    {
+      "package": "xserver-common",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xserver-common_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "file": "xserver-common_4.3.0.dfsg.1-14sarge3_amd64.deb",
+      "bytes": 336974,
+      "sha256": "3fce22f3fb4789eb69deaf404cf94b7c3af923d365623f5153e6eacd385634ce",
+      "archive_md5": "84891fe4b7d4d97eb22171d6dd7b7a44"
+    },
+    {
+      "package": "xfree86-common",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xfree86-common_4.3.0.dfsg.1-14sarge3_all.deb",
+      "file": "xfree86-common_4.3.0.dfsg.1-14sarge3_all.deb",
+      "bytes": 815416,
+      "sha256": "8f14d34f512f708c45cf84d524ea5b2c3bd401b85f05d06a473c0f4b565ad585",
+      "archive_md5": "7afd6df9c773c1ad1795d07c678a6165"
+    },
+    {
+      "package": "xlibs-data",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xlibs-data_4.3.0.dfsg.1-14sarge3_all.deb",
+      "file": "xlibs-data_4.3.0.dfsg.1-14sarge3_all.deb",
+      "bytes": 906826,
+      "sha256": "d2745303870ab1d6ce3721dd6104d5f9d749529fd805cba1718554800e4a1dbf",
+      "archive_md5": "34317f6f891bba528fa18f0f30ba3966"
+    },
+    {
+      "package": "xfonts-base",
+      "version": "4.3.0.dfsg.1-14sarge3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/x/xfree86/xfonts-base_4.3.0.dfsg.1-14sarge3_all.deb",
+      "file": "xfonts-base_4.3.0.dfsg.1-14sarge3_all.deb",
+      "bytes": 5490432,
+      "sha256": "fafe4fe59e5e2846f174c03b72c8f3b8001c78dd5a5decb91e3cc4f3aaea3907",
+      "archive_md5": "430c601eae47de9d742012e2b12e9148"
+    },
+    {
+      "package": "ttf-bitstream-vera",
+      "version": "1.10-3",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/t/ttf-bitstream-vera/ttf-bitstream-vera_1.10-3_all.deb",
+      "file": "ttf-bitstream-vera_1.10-3_all.deb",
+      "bytes": 353678,
+      "sha256": "db8f2a0818cfd6b8db1a5d7f3d9b1771721cd35250a0581e8da48d225639b08b",
+      "archive_md5": "4872e1e039b1d550368e028b47e639a4"
+    },
+    {
+      "package": "bash",
+      "version": "2.05b-26",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/b/bash/bash_2.05b-26_amd64.deb",
+      "file": "bash_2.05b-26_amd64.deb",
+      "bytes": 666076,
+      "sha256": "5ece9f8764f1e8ee0ff566893baa50e489c80865ddbf8527e5bf9961b8d87a03",
+      "archive_md5": "8088ad8611038840bba1b7a6df44793b"
+    },
+    {
+      "package": "coreutils",
+      "version": "5.2.1-2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/c/coreutils/coreutils_5.2.1-2_amd64.deb",
+      "file": "coreutils_5.2.1-2_amd64.deb",
+      "bytes": 2694242,
+      "sha256": "c1b772533f8f79484da416079bc6f79b212faefa3982c28703d47c3f4f833931",
+      "archive_md5": "7e7fc6c6b26667b362658a421706fe0f"
+    },
+    {
+      "package": "libncurses5",
+      "version": "5.4-4",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/n/ncurses/libncurses5_5.4-4_amd64.deb",
+      "file": "libncurses5_5.4-4_amd64.deb",
+      "bytes": 298238,
+      "sha256": "ef192789f1c0945741889ec6dc3ab9b5b2a79cbdde2ca00a02b56f1dd2c9f5de",
+      "archive_md5": "9a37011df8a6b53dae3c8be7fb3e4432"
+    },
+    {
+      "package": "locales",
+      "version": "2.3.2.ds1-22sarge6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/g/glibc/locales_2.3.2.ds1-22sarge6_all.deb",
+      "file": "locales_2.3.2.ds1-22sarge6_all.deb",
+      "bytes": 3987396,
+      "sha256": "740eb51541c402fabfc6f5e7c6044983df085801d5f70e717e41f5e3bccbc274",
+      "archive_md5": "e94f1e1e15da1ee9f0c037234f7f386b"
+    }
+  ]
+}

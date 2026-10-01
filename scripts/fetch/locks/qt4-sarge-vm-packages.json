@@ -1,0 +1,58 @@
+{
+  "packages": [
+    {
+      "package": "kernel-image-2.6.8-4-386",
+      "version": "2.6.8-17sarge1",
+      "url": "https://archive.debian.org/debian/pool/main/k/kernel-image-2.6.8-i386/kernel-image-2.6.8-4-386_2.6.8-17sarge1_i386.deb",
+      "file": "kernel-image-2.6.8-4-386_2.6.8-17sarge1_i386.deb",
+      "bytes": 14079400,
+      "sha256": "a21cb17de21ab8478fdbe99de89788f4b50ab0d28bbb1e48d48bf961bead19a1",
+      "archive_md5": "b3034d3d756026061d6d1ae64f7670ac"
+    },
+    {
+      "package": "net-tools",
+      "version": "1.60-10",
+      "url": "https://archive.debian.org/debian/pool/main/n/net-tools/net-tools_1.60-10_i386.deb",
+      "file": "net-tools_1.60-10_i386.deb",
+      "bytes": 248252,
+      "sha256": "881a80ee9e256d46671a5fba2d380fab79928eb164f2d5baf290a640644da5f4",
+      "archive_md5": "8e74343ed3ae2459e5eb0a5b849c38bf"
+    },
+    {
+      "package": "module-init-tools",
+      "version": "3.2-pre1-2",
+      "url": "https://archive.debian.org/debian/pool/main/m/module-init-tools/module-init-tools_3.2-pre1-2_i386.deb",
+      "file": "module-init-tools_3.2-pre1-2_i386.deb",
+      "bytes": 73078,
+      "sha256": "db0757b3ab0b3753eaf64a065d804a293429c4f37552d54d30e1717ec6481def",
+      "archive_md5": "103acb09ba6ddacfe3ab1ee1904953ee"
+    },
+    {
+      "package": "libblkid1",
+      "version": "1.37-2sarge1",
+      "url": "https://archive.debian.org/debian/pool/main/e/e2fsprogs/libblkid1_1.37-2sarge1_i386.deb",
+      "file": "libblkid1_1.37-2sarge1_i386.deb",
+      "bytes": 41468,
+      "sha256": "ea0bc4f9df0725dd4b5d812289b04474345cb39efd88192404a7a155834ea999",
+      "archive_md5": "06bcb970193a861fd0e34eb58c1d6cf4"
+    },
+    {
+      "package": "libuuid1",
+      "version": "1.37-2sarge1",
+      "url": "https://archive.debian.org/debian/pool/main/e/e2fsprogs/libuuid1_1.37-2sarge1_i386.deb",
+      "file": "libuuid1_1.37-2sarge1_i386.deb",
+      "bytes": 31624,
+      "sha256": "f402ac7c30617940dc2a17166dc2876b21f3f4441c736a8f1e64c6849fc8b02e",
+      "archive_md5": "919f7e25d7259420ab8d8fd8127e382b"
+    },
+    {
+      "package": "mount",
+      "version": "2.12p-4sarge2",
+      "url": "https://archive.debian.org/debian/pool/main/u/util-linux/mount_2.12p-4sarge2_i386.deb",
+      "file": "mount_2.12p-4sarge2_i386.deb",
+      "bytes": 140038,
+      "sha256": "bf2e8bac2700722d51e36eca863c40ac7577d20554826e5a640b343c14db1b18",
+      "archive_md5": "41d4c24fcd78ef78253ffe7d0dceab22"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Resolve Carbon font family names through ATS when CoreText is absent.
+--- a/src/gui/text/qfontdatabase_mac.cpp
++++ b/src/gui/text/qfontdatabase_mac.cpp
+@@ -546,6 +546,7 @@
+ 
+ QString QFontDatabase::resolveFontFamilyAlias(const QString &family)
+ {
++#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+     QCFString expectedFamily = QCFString(family);
+ 
+     QCFType<CFMutableDictionaryRef> attributes = CFDictionaryCreateMutable(NULL, 0,
+@@ -563,6 +564,13 @@
+ 
+     QCFString familyName = (CFStringRef) CTFontDescriptorCopyLocalizedAttribute(matched, kCTFontFamilyNameAttribute, NULL);
+     return familyName;
++#else
++    ATSFontFamilyRef ref = ATSFontFamilyFindFromName(QCFString(family), kATSOptionFlagsDefault);
++    QCFString canonical;
++    if (ref != kInvalidFontFamily && ATSFontFamilyGetName(ref, kATSOptionFlagsDefault, &canonical) == noErr)
++        return canonical;
++    return family;
++#endif
+ }
+ 
+ QT_END_NAMESPACE

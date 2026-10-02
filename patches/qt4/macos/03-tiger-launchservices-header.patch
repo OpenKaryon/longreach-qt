@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Tiger exposes LaunchServices in ApplicationServices, not CoreServices.
+--- a/src/corelib/io/qfilesystemengine_unix.cpp
++++ b/src/corelib/io/qfilesystemengine_unix.cpp
+@@ -59,6 +59,7 @@
+ 
+ #if !defined(QWS) && !defined(Q_WS_QPA) && defined(Q_OS_MAC)
+ # include <CoreFoundation/CFBundle.h>
++# include <ApplicationServices/ApplicationServices.h>
+ #endif
+ 
+ QT_BEGIN_NAMESPACE

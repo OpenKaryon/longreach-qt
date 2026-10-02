@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Accept modern GCC byte order macros when building host tools for a Mac target.
+--- a/configure
++++ b/configure
+@@ -8301,7 +8301,7 @@
+     cat >>"$outpath/src/corelib/global/qconfig.h.new" <<EOF
+ #if defined(__BIG_ENDIAN__)
+ # define Q_BYTE_ORDER Q_BIG_ENDIAN
+-#elif defined(__LITTLE_ENDIAN__)
++#elif defined(__LITTLE_ENDIAN__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+ # define Q_BYTE_ORDER Q_LITTLE_ENDIAN
+ #else
+ # error "Unable to determine byte order!"

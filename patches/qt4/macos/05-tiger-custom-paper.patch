@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Use Tiger PrintCore paper creation when building against the 10.4 SDK.
+--- a/src/gui/painting/qprintengine_mac.mm
++++ b/src/gui/painting/qprintengine_mac.mm
+@@ -187,7 +187,11 @@
+             paperMargins.top = topMargin;
+             paperMargins.right = rightMargin;
+             paperMargins.bottom = bottomMargin;
++#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+             PMPaperCreateCustom(printer, paperId, QCFString("Custom size"), customSize.width(), customSize.height(), &paperMargins, &customPaper);
++#else
++            PMPaperCreate(printer, paperId, QCFString("Custom size"), customSize.width(), customSize.height(), &paperMargins, &customPaper);
++#endif
+             PMPageFormat tmp;
+             PMCreatePageFormatWithPMPaper(&tmp, customPaper);
+             PMCopyPageFormat(tmp, format);

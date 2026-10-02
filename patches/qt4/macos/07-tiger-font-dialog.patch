@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Use AppKit font names and traits on Tiger, which predates CoreText.
+--- a/src/gui/dialogs/qfontdialog_mac.mm
++++ b/src/gui/dialogs/qfontdialog_mac.mm
+@@ -141,16 +141,24 @@
+     QFont newFont;
+     if (cocoaFont) {
+         int pSize = qRound([cocoaFont pointSize]);
++#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+         CTFontDescriptorRef font = CTFontCopyFontDescriptor((CTFontRef)cocoaFont);
+         // QCoreTextFontDatabase::populateFontDatabase() is using localized names
+         QString family = QCFString::toQString((CFStringRef) CTFontDescriptorCopyLocalizedAttribute(font, kCTFontFamilyNameAttribute, NULL));
+         QString style = QCFString::toQString((CFStringRef) CTFontDescriptorCopyLocalizedAttribute(font, kCTFontStyleNameAttribute, NULL));
+ 
+         newFont = QFontDatabase().font(family, style, pSize);
++        CFRelease(font);
++#else
++        QString family = QCFString::toQString((CFStringRef)[cocoaFont familyName]);
++        newFont = QFont(family, pSize);
++        NSFontTraitMask traits = [[NSFontManager sharedFontManager] traitsOfFont:cocoaFont];
++        newFont.setBold(traits & NSBoldFontMask);
++        newFont.setItalic(traits & NSItalicFontMask);
++#endif
+         newFont.setUnderline(resolveFont.underline());
+         newFont.setStrikeOut(resolveFont.strikeOut());
+ 
+-        CFRelease(font);
+     }
+     return newFont;
+ }

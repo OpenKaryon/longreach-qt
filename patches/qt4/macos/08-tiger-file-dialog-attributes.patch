@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Query file metadata through the NSFileManager selector present on Tiger.
+--- a/src/gui/dialogs/qfiledialog_mac.mm
++++ b/src/gui/dialogs/qfiledialog_mac.mm
+@@ -322,7 +322,11 @@
+ 
+     // Always accept directories regardless of their names (unless it is a bundle):
+     NSFileManager *fm = [NSFileManager defaultManager];
++#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+     NSDictionary *fileAttrs = [fm attributesOfItemAtPath:filename error:nil];
++#else
++    NSDictionary *fileAttrs = [fm fileAttributesAtPath:filename traverseLink:YES];
++#endif
+     if (!fileAttrs)
+         return NO; // Error accessing the file means 'no'.
+     NSString *fileType = [fileAttrs fileType];

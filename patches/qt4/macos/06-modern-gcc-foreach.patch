@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Avoid break in a GNU statement expression in the for increment clause.
+# Modern host GCC exited the outer loop after the first UI attribute.
+--- a/src/corelib/global/qglobal.h
++++ b/src/corelib/global/qglobal.h
+@@ -2496,8 +2496,8 @@
+ #define Q_FOREACH(variable, container)                                \
+ for (QForeachContainer<__typeof__(container)> _container_(container); \
+      !_container_.brk && _container_.i != _container_.e;              \
+-     __extension__  ({ ++_container_.brk; ++_container_.i; }))                       \
+-    for (variable = *_container_.i;; __extension__ ({--_container_.brk; break;}))
++     ++_container_.brk, ++_container_.i)                       \
++    for (variable = *_container_.i; !_container_.brk; --_container_.brk)
+ 
+ #else
+ 

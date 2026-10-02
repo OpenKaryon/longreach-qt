@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Compile the Leopard PAC helper only when its CFNetwork keys exist in the SDK.
+--- a/src/network/kernel/qnetworkproxy_mac.cpp
++++ b/src/network/kernel/qnetworkproxy_mac.cpp
+@@ -148,6 +148,7 @@
+ }
+ 
+ 
++#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+ static QNetworkProxy proxyFromDictionary(CFDictionaryRef dict)
+ {
+     QNetworkProxy::ProxyType proxyType = QNetworkProxy::DefaultProxy;
+@@ -180,6 +181,8 @@
+ 
+     return QNetworkProxy(proxyType, hostName, port, user, password);
+ }
++
++#endif // Leopard PAC dictionary API
+ 
+ const char * cfurlErrorDescription(SInt32 errorCode)
+ {

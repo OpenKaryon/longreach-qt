@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# PowerPC Macs: QElapsedTimer multiplies mach_absolute_time() by numer
+# (1000000000 there) before dividing, which overflows 64 bits after minutes
+# of uptime; the clock jumps back and qt_safe_select times out early.
+# Divide first, keeping the remainder.
+#
+--- a/src/corelib/tools/qelapsedtimer_mac.cpp
++++ b/src/corelib/tools/qelapsedtimer_mac.cpp
+@@ -62,8 +62,12 @@
+ {
+     if (info.denom == 0)
+         mach_timebase_info(&info);
+-    qint64 nsecs = cpuTime * info.numer / info.denom;
+-    return nsecs;
++    // On PowerPC numer is 1000000000 and denom the timebase frequency, so
++    // cpuTime * numer overflows 64 bits after a few minutes of uptime and the
++    // clock jumps back; qt_safe_select then reports a timeout early.
++    const qint64 whole = cpuTime / info.denom;
++    const qint64 rest = cpuTime % info.denom;
++    return whole * info.numer + rest * info.numer / info.denom;
+ }
+ 
+ static qint64 absoluteToMSecs(qint64 cpuTime)

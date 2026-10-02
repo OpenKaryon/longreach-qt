@@ -1,0 +1,1242 @@
+{
+  "schema": 1,
+  "date": "2026-10-02",
+  "qt_version": "4.8.7",
+  "openssl_version": "1.0.2u",
+  "target": "Debian 3.1 Sarge i386 archive packages",
+  "kernel": "2.6.8-4-386",
+  "glibc": "2.3.2.ds1-22sarge6",
+  "x11": "XFree86 4.3.0.dfsg.1-14sarge7",
+  "runtime": "Independent QEMU TCG, pc-i440fx-9.2, Pentium III, 1 CPU, 768 MiB; minimal initramfs with Sarge libraries and Xvfb",
+  "apps": [
+    {
+      "app": "qt-selftest",
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "widgets-gallery",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "qt-selftest-extended",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "app": "widgets-gallery-extended",
+      "passed": 138,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "app": "graphics-gallery-extended",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "painting-lab-extended",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "gl-heavy-gallery-extended",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "app": "quick-qml-gallery-extended",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "app": "multimedia-lab-extended",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "app": "svg-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "xml-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "xmlpatterns-gallery",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "sql-gallery",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "testlib-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "script-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "scripttools-gallery",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "qt3support-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "uitools-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "graphics-gallery",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "quick-qml-gallery",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "gl-heavy-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "painting-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "multimedia-lab",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "app": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "summary": {
+    "apps_passed": 24,
+    "apps_failed": 0,
+    "apps_absent": 0,
+    "checks_passed": 520,
+    "checks_failed": 0,
+    "checks_skipped": 133
+  },
+  "evidence": {
+    "directory": "build/qt4-sarge-public/vm-2cad995e58a042efb6447ca21aebf733",
+    "serial_sha256": "f2c97161f0a072411773512ebe5d5e9ea81ca599a429d6faebc7cca0b66c30db",
+    "initramfs_sha256": "41c6fd9e88baf75731550100e43b09f5f4fe3c0fa4ef8af4a0196914191815ef",
+    "kernel_image_sha256": "aa20fcd781423f38364fb842721af767f7ca8df2b69f1a8b26ddb7f76d626b9c",
+    "report_sha256": "d57ce7af2ab3a30039a95b171eb548035acfa1bf552590269c43b345713a2bc8",
+    "userspace_report_sha256": "ff89a77ded7911cdf482d01ac566f52844334d917fe41305eb461c9328ed0c40",
+    "build_stamp_sha256": "331ced3934d6a7d0b4833205c7f338015e510f1acf49613e32d98da82d03007c",
+    "sysroot_packages_lock_lf_sha256": "5aefb15e6ba7cc53ac2efeb811fe98be92f2ea141ab7a44e7fc700895be90f64"
+  },
+  "elf_audit": {
+    "max_glibc": "2.3.2",
+    "binaries": [
+      {
+        "binary": "gl-heavy-gallery",
+        "sha256": "062430834e33f20518b45e41170fa421d6fa31c1bd677687dff2476008940554",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libGL.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f38000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f28000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f10000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ea3000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e74000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e66000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7d9f000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7d9c000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7d95000)",
+          "\tlibGL.so.1 => /work/sysroot/usr/lib/libGL.so.1 (0xf7d26000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d17000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7cf5000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7bc0000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f3a000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7bae000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7b8d000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "gl-heavy-gallery-extended",
+        "sha256": "b424c87b338f2b87c56926632a7f199df3b835f24018c09202c7c81df11d6040",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libGL.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f8e000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f7e000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f66000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ef9000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7eca000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7ebc000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7df5000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7df2000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7deb000)",
+          "\tlibGL.so.1 => /work/sysroot/usr/lib/libGL.so.1 (0xf7d7c000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d6d000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d4b000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c16000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f90000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c04000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7be3000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "graphics-gallery",
+        "sha256": "1b41bcb4578a8440a28a329d0c351affc1b23eb4cf90a85a85eddd0941054cf0",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fac000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f9c000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f84000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f17000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7ee8000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7eda000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e13000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e10000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e09000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7dfa000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7dd8000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7ca3000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fae000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c91000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c71000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "graphics-gallery-extended",
+        "sha256": "8da998ac2077f1964658f2deff98ddbacadd2e686cac68b90836d1518f1baaa3",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f5f000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f4f000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f37000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7eca000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e9b000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e8d000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7dc6000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7dc3000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7dbc000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7dad000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d8b000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c56000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f61000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c44000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c24000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "multimedia-lab",
+        "sha256": "57f1a05b8d98931324d39fd9c5959d6779532f4d172c6c9fdb6d3c1b34edd997",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fe4000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fd4000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7fbc000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f4f000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7f20000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7f12000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e4b000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e48000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e41000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e32000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7e10000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cdb000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fe6000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7cc9000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7ca9000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "multimedia-lab-extended",
+        "sha256": "980a524a22f20f5c5e57cd96fb8329db38f60da233506a8412c7d45ab0649ba4",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fc1000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fb1000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f99000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f2c000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7efd000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7eef000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e28000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e25000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e1e000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e0f000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7ded000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cb8000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fc3000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7ca6000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c86000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "network-gui",
+        "sha256": "51a85d46bcb0b63298b8035836ae262e41afdcd5d6fad04bc5c56a92af8ca33c",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fdf000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fcf000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7fb7000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f4a000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7f1b000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7f0d000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e46000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e43000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e3c000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e2d000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7e0b000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cd6000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fe1000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7cc4000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7ca4000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "painting-lab",
+        "sha256": "9d301b9d82eb330ef76332004aefa57111fee48d0042d3e04ecd4d1c6ad64881",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7ee6000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7ed6000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7ebe000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7e51000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e22000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e14000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7d4d000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7d4a000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7d43000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d34000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d12000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7bdd000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7ee8000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7bcb000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7bab000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "painting-lab-extended",
+        "sha256": "25f6e00ac7d6a481d3b34673d543f67000413d93410affe6e0df5215de50eadf",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fb4000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fa4000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f8c000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f1f000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7ef0000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7ee2000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e1b000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e18000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e11000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e02000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7de0000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cab000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fb6000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c99000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c79000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "qt-selftest",
+        "sha256": "7bf4c9139b7c5655c690b72716f8fa9dfc691bf5812ad9ef25d6566b42b68c3f",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fe5000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7fdb000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7fd4000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7fc5000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7fa3000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7e6e000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fe7000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "qt-selftest-extended",
+        "sha256": "90f8c5b68e1a8e31e9c85de162567ea3e04dbbd5598084196adc990f61b06f80",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fd2000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fc2000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7faa000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f3d000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7f0e000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7f00000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e39000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e36000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e2f000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e20000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7dfe000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cc9000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fd4000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7cb7000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c97000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.3",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "qt3support-gallery",
+        "sha256": "14448d6c4a7223c398598d0a444330259fbf6edfd895a4dca4296ede8d44295b",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f6a000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f5a000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f42000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ed5000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7ea6000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e98000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7dd1000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7dce000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7dc7000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7db8000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d96000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c61000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f6c000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c4f000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c2f000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "quick-qml-gallery",
+        "sha256": "523792f5fe8d8800c232b331ef393c01f6a4fcffbad67da9ed9b9e3a3e768a94",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f59000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f49000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f31000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ec4000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e95000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e87000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7dc0000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7dbd000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7db6000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7da7000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d85000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c50000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f5b000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c3e000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c1e000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.3",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "quick-qml-gallery-extended",
+        "sha256": "790f8b1ba69b54912803c907f8fb6920adc5642776db1dd611c2f260130afa08",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libGL.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f81000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f71000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f59000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7eec000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7ebd000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7eaf000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7de8000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7de5000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7dde000)",
+          "\tlibGL.so.1 => /work/sysroot/usr/lib/libGL.so.1 (0xf7d6f000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d60000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d3e000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c09000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f83000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7bf7000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7bd6000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.3",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "script-gallery",
+        "sha256": "35eb6b1295e41ab1e1899efc12c30f31e9e2942404fd37215e676fe67eb37c07",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fa0000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7f96000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7f8f000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7f80000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7f5e000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7e29000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fa2000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.3",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "scripttools-gallery",
+        "sha256": "d7585bf3966bf9ddf35e5dcae1eeda1b9ab4c12e648f6a1fe350e45abde6128f",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f58000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f48000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f30000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ec3000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e94000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e86000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7dbf000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7dbc000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7db5000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7da6000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d84000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c4f000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f5a000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c3d000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c1d000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.3",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "smoke-runner",
+        "sha256": "c27aeb6c0f2910219103a67551ee8f6f721a07e2af2f65a5fe37cecfd3822763",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f00000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7ef6000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7eef000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7ee0000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7ebe000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7d89000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f02000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "sql-gallery",
+        "sha256": "5bf3f0724a11efaec8d0e86441d83f1c3c31eefd7fd1fcef053fa0429d002704",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f7c000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7f72000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7f6b000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7f5c000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7f3a000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7e05000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f7e000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "svg-gallery",
+        "sha256": "792006d41ccac958be2b97830261e55ce4e138939276d916ae90c96d82b4c257",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f1b000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f0b000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7ef3000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7e86000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e57000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e49000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7d82000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7d7f000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7d78000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d69000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d47000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c12000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f1d000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c00000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7be0000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "testlib-gallery",
+        "sha256": "871ce9d6582c0a1e7f54dee18f8543d4f582060266a7b824507957f5f79b02cd",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fc0000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7fb0000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f98000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f2b000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7efc000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7eee000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e27000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7e24000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7e1d000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7e0e000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7dec000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7cb7000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fc2000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7ca5000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c85000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "uitools-gallery",
+        "sha256": "2b1edd88503130ab318af641ed13ce95ff36b520fcbf82a3504eeeee661f877e",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f8e000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f7e000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f66000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7ef9000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7eca000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7ebc000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7df5000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7df2000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7deb000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7ddc000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7dba000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c85000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f90000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c73000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c53000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "widgets-gallery",
+        "sha256": "24da0a98a9bd6024a29b70eac9faeb404a527d4dc97f64a9b27fb36caff856da",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f30000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f20000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f08000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7e9b000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7e6c000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7e5e000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7d97000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7d94000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7d8d000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7d7e000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7d5c000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c27000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f32000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c15000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7bf5000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "widgets-gallery-extended",
+        "sha256": "8433a51e01ef89399b9073c311719881cfc6967e3e0f2d2ec728ad72b31f6c33",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f99000)",
+          "\tlibSM.so.6 => /work/sysroot/usr/X11R6/lib/libSM.so.6 (0xf7f89000)",
+          "\tlibICE.so.6 => /work/sysroot/usr/X11R6/lib/libICE.so.6 (0xf7f71000)",
+          "\tlibfreetype.so.6 => /work/sysroot/usr/lib/libfreetype.so.6 (0xf7f04000)",
+          "\tlibfontconfig.so.1 => /work/sysroot/usr/lib/libfontconfig.so.1 (0xf7ed5000)",
+          "\tlibXext.so.6 => /work/sysroot/usr/X11R6/lib/libXext.so.6 (0xf7ec7000)",
+          "\tlibX11.so.6 => /work/sysroot/usr/X11R6/lib/libX11.so.6 (0xf7e00000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7dfd000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7df6000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7de7000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7dc5000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7c90000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f9b000)",
+          "\tlibz.so.1 => /work/sysroot/usr/lib/libz.so.1 (0xf7c7e000)",
+          "\tlibexpat.so.1 => /work/sysroot/usr/lib/libexpat.so.1 (0xf7c5e000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "xml-gallery",
+        "sha256": "699ab095cc0ecc1a269e359d91516e0b3f79cfcd0c9a1511624621f0196cc40d",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7f07000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7efd000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7ef6000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7ee7000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7ec5000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7d90000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7f09000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "xmlpatterns-gallery",
+        "sha256": "e28f9caffbf6b186a907c6200fa1f7637ee26079f9a83adfe5974339ac013a13",
+        "needed": [
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux.so.2"
+        ],
+        "sarge_loader_resolution": [
+          "linux-gate.so.1 =>  (0xf7fd5000)",
+          "\tlibdl.so.2 => /work/sysroot/lib/tls/libdl.so.2 (0xf7fcb000)",
+          "\tlibrt.so.1 => /work/sysroot/lib/tls/librt.so.1 (0xf7fc4000)",
+          "\tlibpthread.so.0 => /work/sysroot/lib/tls/libpthread.so.0 (0xf7fb5000)",
+          "\tlibm.so.6 => /work/sysroot/lib/tls/libm.so.6 (0xf7f93000)",
+          "\tlibc.so.6 => /work/sysroot/lib/tls/libc.so.6 (0xf7e5e000)",
+          "\t/lib/ld-linux.so.2 => /work/sysroot/lib/ld-linux.so.2 (0xf7fd7000)"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.0",
+          "GLIBC_2.1",
+          "GLIBC_2.1.2",
+          "GLIBC_2.1.3",
+          "GLIBC_2.2",
+          "GLIBC_2.2.4",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "Kernel 2.4 and Debian Woody are not tested.",
+    "This is a minimal Sarge runtime, not a test of its full desktop installer or hardware drivers.",
+    "TLS uses an explicit fixture CA; system trust store and Internet HTTPS are not covered.",
+    "WebKit and Phonon are excluded; OpenGL/audio checks obey available device capabilities."
+  ],
+  "artifact": "artifacts/tests-qt4-linux-i386/",
+  "sdk_image": "qt4-linux-i386",
+  "sdk_image_id": "sha256:ea15816e397d3728c2b1c4ff4bb597e2039a8bfc34517c8968a2e506f97fc30e",
+  "examples_input_sha256": "06fb25e846d9b69ce0c6702caca065eaf164e493a5fbf9ede786cbadbc2a04ac"
+}

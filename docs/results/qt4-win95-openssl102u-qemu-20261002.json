@@ -1,0 +1,344 @@
+{
+  "schema": 1,
+  "checkpoint_date": "2026-10-02",
+  "qt_version": "4.8.7",
+  "openssl_version": "1.0.2u",
+  "sdk": {
+    "image": "qt4-win-i386",
+    "image_id": "sha256:913a992fa44f51fd9d61ae46a62f2c6fba20c2bfe890db338466239a18f3b824",
+    "input_sha256": "cfa226f6b26d627973f5f843a28741bb4efd6fab27778b14cced4653e8b8a1ad",
+    "patch_series_through": 29,
+    "compiler": "GCC5, MinGW-w64 win32 thread model"
+  },
+  "build_provenance_git": {
+    "commit": "6e2c02ef390a95ab2943bd8e51b7c38da4b99c6a",
+    "branch": "main",
+    "dirty": true
+  },
+  "configuration": {
+    "os": "Windows 95 OSR2 4.00.1111",
+    "hypervisor": "QEMU TCG",
+    "cpu": "pentium3-v1",
+    "ram_mib": 128,
+    "winsock": 2,
+    "runner_args": [
+      "--timeout=900"
+    ],
+    "guest_dir": "C:/QT/TLS106"
+  },
+  "summary": {
+    "apps_passed": 24,
+    "apps_failed": 0,
+    "apps_absent": 0,
+    "checks_passed": 528,
+    "checks_failed": 0,
+    "checks_skipped": 130,
+    "guest_sha256_verified_exes": 25
+  },
+  "tls": {
+    "protocol": "TLSv1.2",
+    "cipher": "AES128-GCM-SHA256",
+    "checks": [
+      "PASS: net/tls-loopback-handshake",
+      "PASS: net/tls-reject-untrusted-certificate",
+      "PASS: net/tls-reject-wrong-hostname"
+    ],
+    "client_verify_mode": "VerifyPeer",
+    "ignored_certificate_errors": false
+  },
+  "clean_guest_shutdown": true,
+  "smoke_report_sha256": "481570ac642cd80329da11514484ffd04d571fc91eacc9ed73d05e8f8c36c712",
+  "iso_sha256": "2797aee657f5efb921cf2611850e13f8286e93efaa55fd193301de0078fb7cae",
+  "native_copy": {
+    "checks": 25,
+    "failures": 0,
+    "crc32": "table-based",
+    "copy_log_sha256": "1b8f8cfa9fc31b6c63b8f09e30778575dfb94c89b187019e4a52dfb073e95a5f",
+    "bootstrap": {
+      "guest_dir": "C:\\QT\\TLS106",
+      "files": {
+        "QT95AUTO.EXE": {
+          "bytes": 14336,
+          "sha256": "660f82099705a68fb741e7a04f3549560b70af5ee720349c43e1c7da9695a18e"
+        },
+        "RUNTST.BAT": {
+          "bytes": 749,
+          "sha256": "5a972c62a1b949acfea1634e649994daaa390559354fce025a084e63cb4dec70"
+        }
+      }
+    }
+  },
+  "applications": [
+    {
+      "executable": "qt-selftest.exe",
+      "checks_passed": 37,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 2495488,
+      "sha256": "3e6096a281c2bae0eee63b70ea7802650c7b9cacdb2c79e6722a2441de3900d6"
+    },
+    {
+      "executable": "widgets-gallery.exe",
+      "checks_passed": 38,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12657152,
+      "sha256": "1abb910447241252beb63b8b6ecff93a424e19fe9a26f51bc794f79ade76e6e0"
+    },
+    {
+      "executable": "qt-selftest-extended.exe",
+      "checks_passed": 119,
+      "checks_failed": 0,
+      "checks_skipped": 116,
+      "bytes": 24564224,
+      "sha256": "278393bde4d086f7bc8767c93bfdf2dc706770605c11c1c84c1608695413a05d"
+    },
+    {
+      "executable": "widgets-gallery-extended.exe",
+      "checks_passed": 142,
+      "checks_failed": 0,
+      "checks_skipped": 7,
+      "bytes": 19297280,
+      "sha256": "44df192b21109d0e6cba0071afa0c0174ce3a6ff0853b7bb9d9ee6fc2f486ba6"
+    },
+    {
+      "executable": "graphics-gallery-extended.exe",
+      "checks_passed": 32,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 13015040,
+      "sha256": "992bb93de6f7ad79b7efafec6fa82c14d29ffe57278a42090be068db4733a421"
+    },
+    {
+      "executable": "painting-lab-extended.exe",
+      "checks_passed": 19,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 13210112,
+      "sha256": "7358978246480da75c7c819152ce87b64907acc6c03450bba46a93411339a105"
+    },
+    {
+      "executable": "gl-heavy-gallery-extended.exe",
+      "checks_passed": 10,
+      "checks_failed": 0,
+      "checks_skipped": 4,
+      "bytes": 13641216,
+      "sha256": "4cf3561427d220ed5be2005c7ce045164957d384e077e7c3d289bb35bc1bf78a"
+    },
+    {
+      "executable": "quick-qml-gallery-extended.exe",
+      "checks_passed": 29,
+      "checks_failed": 0,
+      "checks_skipped": 1,
+      "bytes": 25268736,
+      "sha256": "34e3243cd6b15c56337d6901ec175302e5bfdb495af7b199dff6edd44ce8039c"
+    },
+    {
+      "executable": "multimedia-lab-extended.exe",
+      "checks_passed": 10,
+      "checks_failed": 0,
+      "checks_skipped": 2,
+      "bytes": 12845056,
+      "sha256": "64067b049b30120fd3959cb54dd8bef2cc502f3346eebf7fe7328617bcb31c4f"
+    },
+    {
+      "executable": "svg-gallery.exe",
+      "checks_passed": 4,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12338176,
+      "sha256": "5ef32a38ec8200ea0afcf802e6db983917c08b39b1f1856826becfbced6b263b"
+    },
+    {
+      "executable": "xml-gallery.exe",
+      "checks_passed": 5,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 2567168,
+      "sha256": "18474c9ddfa901f293166149e6c18ed19d4923caa59915c1c410e6aa2eaf7a10"
+    },
+    {
+      "executable": "xmlpatterns-gallery.exe",
+      "checks_passed": 6,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 9720320,
+      "sha256": "79264939b4f008324f12fd6ff2840fda4e0e69ffdd79e53bc7f71536bc1ad3ed"
+    },
+    {
+      "executable": "sql-gallery.exe",
+      "checks_passed": 8,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 2951168,
+      "sha256": "c215bdd96bd3b8a2efd7b073d11c704803853733b4f3adc22f64d62f9a2bf361"
+    },
+    {
+      "executable": "testlib-gallery.exe",
+      "checks_passed": 4,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12233216,
+      "sha256": "852330b22398903b88776a233df21c479c7764165c8580b6508ed03b9f984329"
+    },
+    {
+      "executable": "script-gallery.exe",
+      "checks_passed": 5,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 4578816,
+      "sha256": "bff9d5f894be087389eb671acd4dfeb22125857b63fcce3b7c976f37dfe8ade2"
+    },
+    {
+      "executable": "scripttools-gallery.exe",
+      "checks_passed": 7,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 15045632,
+      "sha256": "78b955de353c08fccd74d7cad29ba3dfd5ac08ceddea207122fc0d25aea019fa"
+    },
+    {
+      "executable": "qt3support-gallery.exe",
+      "checks_passed": 5,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 13237760,
+      "sha256": "04acfc381e76f3b4f3e3146409e45961e2c44eb07317687531694907d6154910"
+    },
+    {
+      "executable": "uitools-gallery.exe",
+      "checks_passed": 5,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 13140480,
+      "sha256": "c072f9cd92f7995718abb52be2b3f573eb76d66cfa30b15b401c5e3f0fedd4a1"
+    },
+    {
+      "executable": "graphics-gallery.exe",
+      "checks_passed": 8,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12141056,
+      "sha256": "483dface97e3f601502b2035e01fc7a5565441c7f7e471cafe1c92260c0bf8c2"
+    },
+    {
+      "executable": "quick-qml-gallery.exe",
+      "checks_passed": 11,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 23417344,
+      "sha256": "eedcad8f52d16dc34116b3b64177a8bc4f2b6f0e5a1632e7dd148cd0db9c3260"
+    },
+    {
+      "executable": "gl-heavy-gallery.exe",
+      "checks_passed": 4,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12959232,
+      "sha256": "9e2808335d9afed18f447a519278e168e24dde35c9d72d95a33a8f76ec57192d"
+    },
+    {
+      "executable": "painting-lab.exe",
+      "checks_passed": 9,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12157440,
+      "sha256": "0f5b36ce427d4d66feae486ef13cbdcb3809df8c915f7121666f099079f792c3"
+    },
+    {
+      "executable": "multimedia-lab.exe",
+      "checks_passed": 4,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 12210688,
+      "sha256": "318c1ed42baa126f25b60eef27f8b1740c7f05ed09e82edd2d53fbbb16f86ed1"
+    },
+    {
+      "executable": "network-gui.exe",
+      "checks_passed": 7,
+      "checks_failed": 0,
+      "checks_skipped": 0,
+      "bytes": 14659072,
+      "sha256": "f846c754b654f18d16e02f4023b0f8d17bfb8deb976f9c3f47b6f92841da9fca"
+    }
+  ],
+  "runner": {
+    "name": "smoke-runner.exe",
+    "bytes": 2445312,
+    "sha256": "b489c651580a0e90e9dbc1366ad441700ebaf81d477b6cd7293a7d84cae5f77d",
+    "matches": true
+  },
+  "system_files": [
+    {
+      "path": "/WINDOWS/SYSTEM/NDIS.VXD",
+      "sha256": "f65855aa51b19d1ed3c305e351aafa0774e6813e2b6ab3587be83c6ad1e610d6",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/VNBT.386",
+      "sha256": "52682fddee22bb437856bbc65f6acb9358bb5e97deebcd5f772ccc279c56fbea",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/VIP.386",
+      "sha256": "175a4bb7d88a7de3b625aca25d0d61ac1d25f2ab1f6d0716830be2e23d13ca71",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/VTCP.386",
+      "sha256": "9cc86e43887e8e2c3d96b69390ffdfee822cb0774efad24aa991b4bd3ee8cb94",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/VDHCP.386",
+      "sha256": "199ba0905e168d8e9e8e23d3c45228a4ca58d20cd9ebca7a1da2f5321fba8e6e",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/VTDI.386",
+      "sha256": "84d7ce72cbc96b36a8614e3a76ba3289e1bca9c280e87ef732cc546b3dc84758",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/WSOCK32.DLL",
+      "sha256": "a9e0246213dba79d6ca3c2b00c2691903149700510eada68e7ff1fe9af75bca0",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/WS2_32.DLL",
+      "sha256": "a3f2a139587f8f1f69028ebc30ab3fd3a833bb87c6fc3e2a133b3e917953add0",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/WS2HELP.DLL",
+      "sha256": "6844f59273a8cbb0c89476cf5c6c16aaa01ca28bfcac29b23e36d0c241ab86cb",
+      "unchanged": true
+    },
+    {
+      "path": "/WINDOWS/SYSTEM/MSWSOCK.DLL",
+      "sha256": "b1b68bfa24120a6ff10c8cc8132ee93c585e33f95515f269f48b53ffa6cddb9a",
+      "unchanged": true
+    }
+  ],
+  "earlier_tls_control": {
+    "evidence": "build/vm-tcg-tls2-20261002/",
+    "apps_passed": 24,
+    "checks_passed": 528,
+    "checks_failed": 0,
+    "checks_skipped": 130,
+    "exact_package": "artifacts/qt4-win95-openssl102u-i386/"
+  },
+  "build_commands": [
+    "make build-qt4-win-i386",
+    "make build-qt4-win-i386-examples"
+  ],
+  "repeated_build": "SDK fingerprint and all 25 EXE hashes reused without compilation",
+  "limitations": [
+    "Measured QEMU Win95 OSR2 configuration; original VMware full-suite failures unresolved.",
+    "NT4, other Windows and macOS runtime not established.",
+    "Loopback supplies an explicit trusted CA; default OS trust-store loading and Internet HTTPS untested.",
+    "Legacy MSVCRT and Winsock 2 installed; this does not prove an unmodified Win95 RTM installation.",
+    "OpenSSL 1.0.2u is upstream EOL; these loopback checks do not establish modern TLS security.",
+    "No audio device and no GLSL/FBO in this guest; browser engines excluded by agreement."
+  ]
+}

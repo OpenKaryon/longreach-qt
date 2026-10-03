@@ -17,6 +17,7 @@ QT4_WIN_I386_IMAGE := qt4-win-i386
 QT4_WIN_AMD64_IMAGE := qt4-win-amd64
 QT4_LINUX_I386_IMAGE := qt4-linux-i386
 QT4_LINUX_AMD64_IMAGE := qt4-linux-amd64
+QT4_MACOS_I386_IMAGE := qt4-macos-i386
 
 # Qt Mobility, Qt 4's add-on outside the source archive, pinned by commit.
 QT_MOBILITY_COMMIT := fb3e9bc2d941462f1244aaf0ea79425a307f883d
@@ -60,6 +61,28 @@ qt4-linux-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 qt4-linux-amd64: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch amd64
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/amd64/Dockerfile -t $(QT4_LINUX_AMD64_IMAGE) .
+
+.PHONY: qt4-macos-i386
+# Tiger: the Mac OS X 10.4u SDK, and GCC 5.5 for the C++ runtime.
+TIGER_SDK_PATH := $(DOWNLOAD_DIR)/MacOSX10.4u.sdk.tar.xz
+TIGER_SDK_URL ?= https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.4u.sdk.tar.xz
+TIGER_SDK_SHA256 := d28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021
+GCC55_PATH := $(DOWNLOAD_DIR)/gcc-5.5.0.tar.xz
+GCC55_URL ?= https://ftp.gnu.org/gnu/gcc/gcc-5.5.0/gcc-5.5.0.tar.xz
+GCC55_SHA256 := 530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87
+
+qt4-macos-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(GCC55_PATH)
+	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/macos/i386/Dockerfile -t $(QT4_MACOS_I386_IMAGE) .
+
+$(TIGER_SDK_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(TIGER_SDK_URL)" "$@" "$(TIGER_SDK_SHA256)"
+
+$(GCC55_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(GCC55_URL)" "$@" "$(GCC55_SHA256)"
+
+.PHONY: qt4-macos-examples qt4-macos-ppc qt4-macos-ppc-examples
+qt4-macos-examples:
+	$(PYTHON) scripts/build/qt4-macos-examples.py --image "$(QT4_MACOS_I386_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 
 # Windows 95 OSR2 and later: the Win9x backport, one configure.
 qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
@@ -105,8 +128,10 @@ QT4_IMAGE_CONFIG = qt4=$(QT4_VERSION),$(QT4_ARCHIVE_URL);openssl=$(OPENSSL_VERSI
 QT4_WIN95_IMAGE_CONFIG = qt4=4.8.7;platform=win95-i386;openssl=1.0.2u,ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16;download=downloads
 QT4_SARGE_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-i386;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
 QT4_SARGE_AMD64_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-amd64;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
+QT4_TIGER_IMAGE_CONFIG = qt4=4.8.7;platform=macos-tiger-i386;deployment=10.4;carbon=1;openssl=1.0.2u;sdk=d28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021;osxcross=f547d14e6ac6c5bb0ddd7563651eb29057e1d755
 
 $(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_WIN95_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),QT4_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_AMD64_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-examples,QT4_BUILD_LOCK_HELD=1,QT4_TIGER_IMAGE_CONFIG))

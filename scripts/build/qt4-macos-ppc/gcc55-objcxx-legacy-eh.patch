@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+
+--- a/gcc/objc/objc-next-runtime-abi-01.c
++++ b/gcc/objc/objc-next-runtime-abi-01.c
+@@ -397,7 +397,14 @@
+   build_next_objc_exception_stuff ();
+   if (flag_objc_exceptions && !flag_objc_sjlj_exceptions)
+     using_eh_for_cleanups ();
++#ifdef OBJCPLUS
++  /* NeXT ABI 0/1 uses SJLJ for Objective-C exceptions.  C++ catches still
++     need their RTTI expression hook; the ObjC unwinder hook is unimplemented.  */
++  lang_hooks.eh_runtime_type = flag_objc_sjlj_exceptions
++    ? build_eh_type_type : objc_eh_runtime_type;
++#else
+   lang_hooks.eh_runtime_type = objc_eh_runtime_type;
++#endif
+   lang_hooks.eh_personality = objc_eh_personality;
+ }
+ 

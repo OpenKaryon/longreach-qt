@@ -1,0 +1,1019 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-10-03T21:34:53.378129+00:00",
+  "arch": "ppc",
+  "guest": {
+    "ProductName": "Mac OS X",
+    "ProductVersion": "10.4.10",
+    "BuildVersion": "8R3032",
+    "uname": "Darwin qt-kits-power-mac-g4-agp-graphics.local 8.10.2 Darwin Kernel Version 8.10.2: Wed Jun 20 21:54:20 PDT 2007; root:xnu-792.22.6~1/RELEASE_PPC Power Macintosh powerpc"
+  },
+  "qt": "4.8.7 static Carbon",
+  "status": "PASS",
+  "applications_passed": 24,
+  "applications_failed": 0,
+  "checks_passed": 523,
+  "checks_failed": 0,
+  "checks_skipped": 131,
+  "checks_totals_complete": true,
+  "all_25_host_archive_binary_sha256_match_macho_audit": true,
+  "all_25_native_binary_md5_match_host_audit": true,
+  "host_archive": {
+    "path": "artifacts/tests-qt4-macos-ppc/qt4-tiger-ppc-examples.tar.gz",
+    "sha256": "b559e5678e6a5df374f4a7799c206742ed3c939aae61ea46b908cc0cb5d0528a"
+  },
+  "host_macho_audit": {
+    "path": "artifacts/tests-qt4-macos-ppc/macho-audit.json",
+    "sha256": "db999f57b2bdc5b7b6f87a0ac99bef553aad13e18f04cff4f6fc93b997cbcba8"
+  },
+  "shared_project_list": {
+    "path": "scripts/build/qt4-suite-projects.txt",
+    "sha256": "dad3adf0ca7178b46eab17e9b781209ca0c29c8f0ac8b01688ae624e1612be91"
+  },
+  "identity_log": {
+    "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-suite-identity.log",
+    "sha256": "74e1d634cc535a5e2e06771baad5afbb13a4c7ae896f42a881f1d4d39f36179c"
+  },
+  "status_log": {
+    "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-suite-status.tsv",
+    "sha256": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa"
+  },
+  "runner_binary": {
+    "application": "smoke-runner",
+    "host_sha256": "9e4242601a673eb03ef3f6a68681cdbb279e810bdc289c4bdbd8a7b3b05293ae",
+    "host_md5": "382e073aede48c8b3e02aaea7d075b22",
+    "native_md5": "382e073aede48c8b3e02aaea7d075b22",
+    "native_md5_match": true
+  },
+  "results": [
+    {
+      "application": "qt-selftest-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:48",
+      "host_binary_sha256": "78f8dea1f3cacb6f0665f327a6bdbc0431851b1a650f3deee8716f52091c51b9",
+      "host_binary_md5": "2f149be1776a9544d1d2ea872efb22c4",
+      "native_binary_md5": "2f149be1776a9544d1d2ea872efb22c4",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-qt-selftest-extended.log",
+          "sha256": "06e80a1af941e523991400f95013e238e66a2bf5cfbb0e89be4b1b9862260c44"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-qt-selftest-extended.txt",
+          "sha256": "6ab6c2bfd9f4d812c00fe0be82a8699fb6a5843940817b69977cfde92b496ac2"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-qt-selftest-extended.log",
+          "sha256": "9f628ae465933f282554ca4c0dcc8f6c819ffc5d287004147c1a6842fc457b8c"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "widgets-gallery-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 139,
+      "failed": 0,
+      "skipped": 9,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:28:20",
+      "host_binary_sha256": "a03a27f33f340e24b35a51231a8889977b22bc7bc6bdf3722f6ade4cc1e0d1a8",
+      "host_binary_md5": "889a5617b6a344a9d35ef717266449ac",
+      "native_binary_md5": "889a5617b6a344a9d35ef717266449ac",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-widgets-gallery-extended.log",
+          "sha256": "b2885edf4203c706f84e6e9203fd525873431e245ee1bfa413c73f4e7feca3fc"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-widgets-gallery-extended.txt",
+          "sha256": "8834be84d15f6a4d08b22aef04ace1215f3c6511998eab3af29ca30dacab9452"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-widgets-gallery-extended.log",
+          "sha256": "a23f94a83435ca3704abd318513598a603b00ddce6311a6fd00632e2c5dea719"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "graphics-gallery-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:28:59",
+      "host_binary_sha256": "b6a7d2b002e803cff49b29ffdb30a2cc764da4cca569e1732230b074690a97ae",
+      "host_binary_md5": "2ee0ae0804a563ccd2cf21c3452d3bea",
+      "native_binary_md5": "2ee0ae0804a563ccd2cf21c3452d3bea",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-graphics-gallery-extended.log",
+          "sha256": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-graphics-gallery-extended.txt",
+          "sha256": "e245ee5877e4e4d7014b21c371789572ae2acf658b9d9f61aa8058bc36dfc6cf"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-graphics-gallery-extended.log",
+          "sha256": "3d64478bbe78750360003d767fbb58de8dc22197ea01a0885c7c4ddd92f441ff"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "painting-lab-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:29:19",
+      "host_binary_sha256": "98f986579d18c8e0b33fad4f4db22a4ba0d072c84dbae44123bba104dd05b91f",
+      "host_binary_md5": "b7da509f693e7f140c4a798fbfd7c696",
+      "native_binary_md5": "b7da509f693e7f140c4a798fbfd7c696",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-painting-lab-extended.log",
+          "sha256": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-painting-lab-extended.txt",
+          "sha256": "92c4d37b4a9ea5d30f2705dfa235e3096a716688843b69626ba13d85a8c7d5db"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-painting-lab-extended.log",
+          "sha256": "21b4851ba483d79500495bd024127806a5ed10525f93ecf16a0ff87d8118962c"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "multimedia-lab-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:30:16",
+      "host_binary_sha256": "0bb9ee60129d1605dfefafd060ab0d2755ac718fc7b939034b58da185b9f8648",
+      "host_binary_md5": "3363d397f5e6fbcdb188651ed7dae657",
+      "native_binary_md5": "3363d397f5e6fbcdb188651ed7dae657",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-multimedia-lab-extended.log",
+          "sha256": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-multimedia-lab-extended.txt",
+          "sha256": "430d1853ba50208166dda7047ffec468d32012f0ca3f91a89349988dd4ae93f0"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-multimedia-lab-extended.log",
+          "sha256": "5d8eecb1e31a57af14d1740c57e7f4ced32eb458e0c640e7667bfb14b1deea37"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "gl-heavy-gallery-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 2,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:30:37",
+      "host_binary_sha256": "53d19b9b7e6d5209651da4d9ccfcc3651b352807063d10ede4bf4fbb476f0edf",
+      "host_binary_md5": "dc587022b9a7d62f53c3442dc89e3ec7",
+      "native_binary_md5": "dc587022b9a7d62f53c3442dc89e3ec7",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-gl-heavy-gallery-extended.log",
+          "sha256": "0a134b00a177d2fcd7fde899596266a7d10488a566e952eca1cc333e53b737c0"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-gl-heavy-gallery-extended.txt",
+          "sha256": "73e9dd83086d0f42488f1551baba04a0f117c7f3fe77beaf526a34e5b9c07424"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-gl-heavy-gallery-extended.log",
+          "sha256": "0d534e5344fe8c5d0d008333f80b503aafd74818970fe62e294e3feb3414ca77"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "quick-qml-gallery-extended",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:29:45",
+      "host_binary_sha256": "b7b04edb0154b43f583ba2570fc843d1da1c5655e45cfecaeb61d6203d1c9528",
+      "host_binary_md5": "b9cb39f7e846f0e786121a5a75273550",
+      "native_binary_md5": "b9cb39f7e846f0e786121a5a75273550",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-quick-qml-gallery-extended.log",
+          "sha256": "4442240c646e8f63f86aeccb374846f9e528f8d6088555734891093b69ce8a6a"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-quick-qml-gallery-extended.txt",
+          "sha256": "2846acf661502ae16a941278cd0b993a2e913714a85ada1b59a8d58ff3a458ca"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-quick-qml-gallery-extended.log",
+          "sha256": "02a92e1f0283c7cbdf1d9128e88b9ba38c027cfbb8b52d0d46af14735a3ad97b"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "svg-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:26:55",
+      "host_binary_sha256": "7184a47851b1600ecbf88a322a10ca8492e7a2decc468c95ab200bb84f5860e8",
+      "host_binary_md5": "04d34cc9a19737e8a8a4bce77df55de5",
+      "native_binary_md5": "04d34cc9a19737e8a8a4bce77df55de5",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-svg-gallery.log",
+          "sha256": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-svg-gallery.txt",
+          "sha256": "52f41402d910f986549ae2edc3455d640f577747218447920a8e87a7b1932066"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-svg-gallery.log",
+          "sha256": "4c1cdf2535bbe5ecc4e1d9ae1c7401fc25864603e05b427ac2d3efac05f4834d"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "xml-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:26:39",
+      "host_binary_sha256": "9c0062d9436af17c8ea894923e348c603995fa3624afda22468ecc88882e792c",
+      "host_binary_md5": "b4f492d201edb0b1ce5f0ab97c922a29",
+      "native_binary_md5": "b4f492d201edb0b1ce5f0ab97c922a29",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-xml-gallery.log",
+          "sha256": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-xml-gallery.txt",
+          "sha256": "e0b79491f414ca5d961aadf60ac2012b5be118c6eccfa5c91fdc23a833b0047c"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-xml-gallery.log",
+          "sha256": "1f44b70fc1b67665c37b9f38526a906f6b4e38e97e9915dcd4f03c0aa12116a1"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "xmlpatterns-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:26:42",
+      "host_binary_sha256": "99a92a7e9ee038b2237ced1ce9c9957bb1a7dca58ebb23644653c22ddecb0f1c",
+      "host_binary_md5": "a1ee4f484c3bc0a5a24874cdf38e72f1",
+      "native_binary_md5": "a1ee4f484c3bc0a5a24874cdf38e72f1",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-xmlpatterns-gallery.log",
+          "sha256": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-xmlpatterns-gallery.txt",
+          "sha256": "ced7f303ef01b82e3d83f44f21867d235e299f6f9ce49b1e1db65bc9435ccd80"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-xmlpatterns-gallery.log",
+          "sha256": "3d096ca69994cbda70a7f95639ae8bb2604355298568c58752c32d8324a98563"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "sql-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:26:47",
+      "host_binary_sha256": "97044a4a94f777f5081609db79dc2bd7e9fd0967e92a194da931b91b7ad517d7",
+      "host_binary_md5": "6d29f19e7c1f82388242c542688a76b3",
+      "native_binary_md5": "6d29f19e7c1f82388242c542688a76b3",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-sql-gallery.log",
+          "sha256": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-sql-gallery.txt",
+          "sha256": "68e577e1a61d0bb345f06df72f0a97e1d0b20e70f1a83c6b33daaf945fff846a"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-sql-gallery.log",
+          "sha256": "56f91e3aa34b29dee870ff49ad580cbe6df72eeb47b0ecd7af13a23b85e4c26b"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "testlib-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:10",
+      "host_binary_sha256": "d92552ffcb01e0245b055c34e9b883947e1f1edd6969def3bf469686f3171eca",
+      "host_binary_md5": "977bf54a9a5d7525ef4ab60921b3c6f4",
+      "native_binary_md5": "977bf54a9a5d7525ef4ab60921b3c6f4",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-testlib-gallery.log",
+          "sha256": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-testlib-gallery.txt",
+          "sha256": "2c9dae19c453481299f4269d0d5883c2531d3a8b9ad5222810d4b98bc8bb9a33"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-testlib-gallery.log",
+          "sha256": "8365a5abbca0f4b8b701dae7c05160958e09fce5cd578bc56035891c619cf01e"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "script-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:26:51",
+      "host_binary_sha256": "14f130e444cc4dc356d6a5b2143a2c17c719afb5029651ea126526c03d2a44b1",
+      "host_binary_md5": "44cc07e57a0e85e7c722e658dc742426",
+      "native_binary_md5": "44cc07e57a0e85e7c722e658dc742426",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-script-gallery.log",
+          "sha256": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-script-gallery.txt",
+          "sha256": "9de71614f50ee3863f17b03547d7901d7a860d328f4bfda89669d386c6d1faf9"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-script-gallery.log",
+          "sha256": "9a947d445cb926a9ab3b743c774d764c81fdbaac49c475b0e986a908ddcf49dc"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "scripttools-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:25",
+      "host_binary_sha256": "52708c8598bda323974d9c71273899beab3f5445d226f26bad7a04da53b543ad",
+      "host_binary_md5": "e457d577e9eb053ffe5f17e457b7bc59",
+      "native_binary_md5": "e457d577e9eb053ffe5f17e457b7bc59",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-scripttools-gallery.log",
+          "sha256": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-scripttools-gallery.txt",
+          "sha256": "481dcfd6118340000658d9e70b7400a58d27990f1b787c1b2e3bb9c5b81ef3e4"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-scripttools-gallery.log",
+          "sha256": "fa580088f26a1612bfa217768cfeaa90c38acec9a4160047d4b7f17b831ae338"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "qt3support-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:17",
+      "host_binary_sha256": "46a35860220baeaf7bb77424af7d05ffff0853bfb7f53b569e2d626a39b92629",
+      "host_binary_md5": "b02378e39f55430bb85eba2e49dc61fb",
+      "native_binary_md5": "b02378e39f55430bb85eba2e49dc61fb",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-qt3support-gallery.log",
+          "sha256": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-qt3support-gallery.txt",
+          "sha256": "a162a583153620fc42111bd623f57c8748b049789a9dd9317462e55f44e6207c"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-qt3support-gallery.log",
+          "sha256": "b756ba168144c51ab64b4312049d52ae6b6206b45a65d180e889c5a75965c78f"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "uitools-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:03",
+      "host_binary_sha256": "5046b7299857f6db4ab54e4d3f5ad43bb98900b93bbd69ef9d62b5ab66e12524",
+      "host_binary_md5": "5db10548c5e6403f3d688b429f54ae3e",
+      "native_binary_md5": "5db10548c5e6403f3d688b429f54ae3e",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-uitools-gallery.log",
+          "sha256": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-uitools-gallery.txt",
+          "sha256": "afc879e4b6af4a95ddc4ae5f6099e52669bcd4d208a6dd750058c0d52a6b80d6"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-uitools-gallery.log",
+          "sha256": "78494cd25572b49d9125a4b09019dc7c6626bb5e355c653e28a156f762d2b2c8"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "network-gui",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:37",
+      "host_binary_sha256": "729ee91d8fc0b7b4e80d7a2eaf6868e2b3667184cb2a0cd3dd42dc0f78d772e8",
+      "host_binary_md5": "d320bb6942802bab474616ab0c0f853e",
+      "native_binary_md5": "d320bb6942802bab474616ab0c0f853e",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-network-gui.log",
+          "sha256": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-network-gui.txt",
+          "sha256": "544139bdce320968ee88d79c2a89d582791be5033d64a23fd24baccfa471bd2b"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-network-gui.log",
+          "sha256": "b55bc91a4fc66128aba98ecced575871483f69cc6bb2588d3c55ccbce5b5a9a1"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "qt-selftest",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:27:43",
+      "host_binary_sha256": "dc130ea71c98e8a1c5efcdefd1c4f78e21dd0120deaa9b766ff65408011c4529",
+      "host_binary_md5": "aae4bedda89058b4c4aca39054002816",
+      "native_binary_md5": "aae4bedda89058b4c4aca39054002816",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-qt-selftest.log",
+          "sha256": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-qt-selftest.txt",
+          "sha256": "08a93d51f1ef90ff168a014f750e8404cb2d22d795a3c7fdab6402a0e85c2a94"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-qt-selftest.log",
+          "sha256": "3a915e4126462612e4787346d311b6fb4e1fb3995febd8c9e70db857b82f7af0"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "widgets-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:28:04",
+      "host_binary_sha256": "3f04ec52aae6e1fabc5493210692caaa111c559c65363ce80115d9095b5f92e3",
+      "host_binary_md5": "10f424a2438e9c71c8369411a6b28244",
+      "native_binary_md5": "10f424a2438e9c71c8369411a6b28244",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-widgets-gallery.log",
+          "sha256": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-widgets-gallery.txt",
+          "sha256": "2b44fe3b88ea3f6d186dbce134e70fe3f8462d24aa1174691d1d4bbc1902f2ba"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-widgets-gallery.log",
+          "sha256": "f0dd2e36ebc75f4d9e6acd51f8425ae1399c3ec182e5e4ac077ad70fde1172b8"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "graphics-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:28:50",
+      "host_binary_sha256": "a583dd55a0aac948ab8d48b78308080f8b8af43b27b91e8e57092215914705a7",
+      "host_binary_md5": "787450147873292338cc753d39d8143e",
+      "native_binary_md5": "787450147873292338cc753d39d8143e",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-graphics-gallery.log",
+          "sha256": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-graphics-gallery.txt",
+          "sha256": "1a66d99f0aeaf595b46ec82f18d42d935276c8dc3b84f2c178d1d4a805239f83"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-graphics-gallery.log",
+          "sha256": "6e67ca43ca53b4181a281fd920b48fbf6dba3b8ed7f600f6a403e70667a9ba1b"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "painting-lab",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:29:10",
+      "host_binary_sha256": "d74c650130113d8114f3c98448ba67a118441028a2977e6a9143e4a416280de0",
+      "host_binary_md5": "03b43e1f63bc275a17d33a636ee68f18",
+      "native_binary_md5": "03b43e1f63bc275a17d33a636ee68f18",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-painting-lab.log",
+          "sha256": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-painting-lab.txt",
+          "sha256": "14dc2a53328eef520cb180bc17e4f409da4daa7ed009f789503d68e37d4e8194"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-painting-lab.log",
+          "sha256": "e79868999eaabafef1c1851d9527ce05505e596b4e8299147a3774d359d3570e"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "multimedia-lab",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:30:08",
+      "host_binary_sha256": "8c98c2771290a96f2ba46a698d9afd00137b6bfbb5f0bb4c43ba93f9140adeec",
+      "host_binary_md5": "ca62049ceabb7353b410fc09eac2fffd",
+      "native_binary_md5": "ca62049ceabb7353b410fc09eac2fffd",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-multimedia-lab.log",
+          "sha256": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-multimedia-lab.txt",
+          "sha256": "d1fa5314fd75a1d5c39e74384020470752a1b807d0c5ed6f3b22c32fa28f6a15"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-multimedia-lab.log",
+          "sha256": "c6b2acf85037577bc659d0f4efe38a7742743f7177e76a99d8ce2cb131b7038d"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:30:29",
+      "host_binary_sha256": "dcb362d2efee96d5c79990d19e1885c23293cbd0c2300f6fe044c9254995335a",
+      "host_binary_md5": "eeedeb8a11cfd0ec8be8d043bd9ba86b",
+      "native_binary_md5": "eeedeb8a11cfd0ec8be8d043bd9ba86b",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-gl-heavy-gallery.log",
+          "sha256": "e65667f5265dd31eeef135463ff8c9382380565629c963265cde5c83ea2c49ff"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-gl-heavy-gallery.txt",
+          "sha256": "8a8e1711b600c583ba3cbdcd0a92ad4b6bf6a693c42c775080b06b630c19de0a"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-gl-heavy-gallery.log",
+          "sha256": "4b2fed903f8e8150138dfa6376aaeee30d40727ff37628f4c4923cb18d79a083"
+        }
+      ],
+      "failure_evidence": []
+    },
+    {
+      "application": "quick-qml-gallery",
+      "status": "PASS",
+      "runner_exit_code": 0,
+      "report_status": "PASS",
+      "runner_status": "PASS",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "counts_complete": true,
+      "guest_report_started_at_local": "2026-10-03T14:29:36",
+      "host_binary_sha256": "460c9cecddb99dfde5a9a67faf41c2a9b1483fc0317a47fedefaaa7e95710a94",
+      "host_binary_md5": "40e4c896defbd25348583540c09cb921",
+      "native_binary_md5": "40e4c896defbd25348583540c09cb921",
+      "native_binary_md5_match": true,
+      "evidence": [
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-smoke-quick-qml-gallery.log",
+          "sha256": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-report-quick-qml-gallery.txt",
+          "sha256": "6c7a2d0bb1e44bb80c82297e787d825971f723183155bdbc177846b7ac4bbd0a"
+        },
+        {
+          "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-runner-quick-qml-gallery.log",
+          "sha256": "079d7f601f63a817e6305ef73b2e5a637e505ee5a0cd767a2c072105a9765291"
+        }
+      ],
+      "failure_evidence": []
+    }
+  ],
+  "capture_manifest": {
+    "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-capture-manifest.tsv",
+    "sha256": "4f3f26c4151aeca373f0274daf46bd89a0d0e278b0ff68d2b16d37a9b495a59f"
+  },
+  "screenshots_verified_for_this_snapshot": 21,
+  "screenshots": [
+    {
+      "guest_source": "./gl-heavy-gallery-extended.app/Contents/MacOS/gl-gallery-frame.png",
+      "native_md5": "c8f886f9be62f5b04192ba3616e87a18",
+      "native_md5_match": true,
+      "width": 720,
+      "height": 384,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-gl-heavy-gallery-extended.app_Contents_MacOS_gl-gallery-frame.png",
+      "sha256": "ec29c1907876857c3269929a26590020b1fc2cac9623d152357d1249159169d5"
+    },
+    {
+      "guest_source": "./graphics-gallery-extended.app/Contents/MacOS/graphics-gallery-pages.png",
+      "native_md5": "9161701deab6fd88a2c1546b4bfab3e9",
+      "native_md5_match": true,
+      "width": 1140,
+      "height": 340,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-graphics-gallery-extended.app_Contents_MacOS_graphics-gallery-pages.png",
+      "sha256": "a257762180363724dfa1e1a2168fad7c7719ed0adb38c21e0684e63c33115f08"
+    },
+    {
+      "guest_source": "./graphics-gallery-extended.app/Contents/MacOS/graphics-shaped-window.png",
+      "native_md5": "f9a94f707a8866aa185f72716fbc4d9a",
+      "native_md5_match": true,
+      "width": 260,
+      "height": 200,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-graphics-gallery-extended.app_Contents_MacOS_graphics-shaped-window.png",
+      "sha256": "86a14e71bdcac7b5463218016a23641beba16d6ae1499ba0ce87ae2d5916ba4f"
+    },
+    {
+      "guest_source": "./graphics-gallery.app/Contents/MacOS/graphics-animation.png",
+      "native_md5": "d8e55b919dcbc0b8b95b65b199afdf9a",
+      "native_md5_match": true,
+      "width": 544,
+      "height": 273,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-graphics-gallery.app_Contents_MacOS_graphics-animation.png",
+      "sha256": "df494050a50710d3c17a30ca9287c17a978776b22d2f53899f2455f6e06cb856"
+    },
+    {
+      "guest_source": "./graphics-gallery.app/Contents/MacOS/graphics-effects.png",
+      "native_md5": "141cd14315c13feb9f5503eb29a845a6",
+      "native_md5_match": true,
+      "width": 544,
+      "height": 273,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-graphics-gallery.app_Contents_MacOS_graphics-effects.png",
+      "sha256": "6c57bb79532b85b6503174e6caeef1789f235b8fb2fa2c3bfcd31ee82a07343d"
+    },
+    {
+      "guest_source": "./graphics-gallery.app/Contents/MacOS/graphics-painter.png",
+      "native_md5": "7666a6ac5eae3c6a729f5fd868935bd5",
+      "native_md5_match": true,
+      "width": 544,
+      "height": 273,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-graphics-gallery.app_Contents_MacOS_graphics-painter.png",
+      "sha256": "6961164ca603130edf8aef43e421498185b2c179efb678be043405356bdd388c"
+    },
+    {
+      "guest_source": "./multimedia-lab-extended.app/Contents/MacOS/multimedia-lab-pages.png",
+      "native_md5": "028763d4493282862e142bf619e42be2",
+      "native_md5_match": true,
+      "width": 1140,
+      "height": 270,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-multimedia-lab-extended.app_Contents_MacOS_multimedia-lab-pages.png",
+      "sha256": "e81adfd66bd64b10ce4b9b5607828c7db354f8f6cffd32e5e4392f26c4ec2af2"
+    },
+    {
+      "guest_source": "./painting-lab-extended.app/Contents/MacOS/painting-lab-pages.png",
+      "native_md5": "ffbaf9415580bcafb8410dc7056c5a70",
+      "native_md5_match": true,
+      "width": 760,
+      "height": 540,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab-extended.app_Contents_MacOS_painting-lab-pages.png",
+      "sha256": "3fd0ab38f803e9fda644bdc409e12678a9a67075b841759c2930c7e29359de0b"
+    },
+    {
+      "guest_source": "./painting-lab-extended.app/Contents/MacOS/painting-preview-dialog.png",
+      "native_md5": "0fb3d5ace183a6eeea9fa7bb0b489385",
+      "native_md5_match": true,
+      "width": 760,
+      "height": 500,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab-extended.app_Contents_MacOS_painting-preview-dialog.png",
+      "sha256": "532a6a916f7227aee648e78dc48580a64372117ae263e751e794e4edf524fe18"
+    },
+    {
+      "guest_source": "./painting-lab-extended.app/Contents/MacOS/painting-preview.png",
+      "native_md5": "403d83b60803ec4b327833f61cf4b35b",
+      "native_md5_match": true,
+      "width": 760,
+      "height": 500,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab-extended.app_Contents_MacOS_painting-preview.png",
+      "sha256": "60a89edeb4fb241e7357932dea3a8e10e07cca9af707327cfa88265fd0d1426d"
+    },
+    {
+      "guest_source": "./painting-lab.app/Contents/MacOS/painting-images.png",
+      "native_md5": "7d9dceb1b1312ffd76137c65b77c34db",
+      "native_md5_match": true,
+      "width": 180,
+      "height": 120,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab.app_Contents_MacOS_painting-images.png",
+      "sha256": "b930fe6082c8a2ee0cca2e3a3e324fcb3ca7a7bc4091cedc3e2c54cd35e5f30c"
+    },
+    {
+      "guest_source": "./painting-lab.app/Contents/MacOS/painting-painter.png",
+      "native_md5": "fa8c105f105dc8e4958a09e0a9915cdd",
+      "native_md5_match": true,
+      "width": 574,
+      "height": 367,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab.app_Contents_MacOS_painting-painter.png",
+      "sha256": "a6a093a0e2eedcab5214bb36b00b7466af85ffaf722a20a651cab79b12de7b07"
+    },
+    {
+      "guest_source": "./painting-lab.app/Contents/MacOS/painting-text.png",
+      "native_md5": "1c0057739980c76d3db7249a644883a8",
+      "native_md5_match": true,
+      "width": 500,
+      "height": 240,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-painting-lab.app_Contents_MacOS_painting-text.png",
+      "sha256": "350dafbba27d3e311227c596730bf677798770a4a2bfe8b3a81b96d00cb0f630"
+    },
+    {
+      "guest_source": "./quick-qml-gallery-extended.app/Contents/MacOS/qml-gallery-pages.png",
+      "native_md5": "58ce57cd55c3367c914d42712b8249d7",
+      "native_md5_match": true,
+      "width": 1280,
+      "height": 1000,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-quick-qml-gallery-extended.app_Contents_MacOS_qml-gallery-pages.png",
+      "sha256": "8de06ab48463ae233222519c80ab220c1cd239003724166beabf070e1d77e303"
+    },
+    {
+      "guest_source": "./quick-qml-gallery-extended.app/Contents/MacOS/qml-page-00.png",
+      "native_md5": "ed0a08b18fefce0ec9925fa6f7bf3435",
+      "native_md5_match": true,
+      "width": 940,
+      "height": 640,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-00.png",
+      "sha256": "7acfd40c1753181c857ba67e3bb97de822cd8ccad1178d1a47f611f8417aee1a"
+    },
+    {
+      "guest_source": "./quick-qml-gallery-extended.app/Contents/MacOS/qml-page-07.png",
+      "native_md5": "21f527d9650b394a57281673a28227b7",
+      "native_md5_match": true,
+      "width": 940,
+      "height": 640,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-07.png",
+      "sha256": "0ba41a840d614b46fd73dcb0ef767871615ad0e98f862da801c464f0c95267ae"
+    },
+    {
+      "guest_source": "./quick-qml-gallery-extended.app/Contents/MacOS/qml-page-10.png",
+      "native_md5": "1d2991901d6dc2804375c17cbf818129",
+      "native_md5_match": true,
+      "width": 940,
+      "height": 640,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-10.png",
+      "sha256": "1918c2bec2bd2bc8beadb747a2c104fedd8ce4101ca74da4eff6b1cc47308116"
+    },
+    {
+      "guest_source": "./quick-qml-gallery.app/Contents/MacOS/qml-scene.png",
+      "native_md5": "673b0b6ce724645b91a6e850eecf4fd0",
+      "native_md5_match": true,
+      "width": 560,
+      "height": 360,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-quick-qml-gallery.app_Contents_MacOS_qml-scene.png",
+      "sha256": "07507e7b9779c4cf632b007a3ac197ed4de79450b2a6a4e3841b92a2faca697e"
+    },
+    {
+      "guest_source": "./widgets-gallery-extended.app/Contents/MacOS/widgets-gallery-pages.png",
+      "native_md5": "f5a46ca1178223c262ae7baefd6bc351",
+      "native_md5_match": true,
+      "width": 1600,
+      "height": 1280,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-widgets-gallery-extended.app_Contents_MacOS_widgets-gallery-pages.png",
+      "sha256": "87371b228ad29c6da0de13122bebec0a41accfa3e98682978030083381862cfc"
+    },
+    {
+      "guest_source": "./widgets-gallery.app/Contents/MacOS/widgets-file-dialog.png",
+      "native_md5": "ac497d9c0ce6f599925d6833a5e3c15e",
+      "native_md5_match": true,
+      "width": 656,
+      "height": 451,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-widgets-gallery.app_Contents_MacOS_widgets-file-dialog.png",
+      "sha256": "87dd87e3f2c8f575ccdf37b0fb467cfa573a583958a515d25eaedf589c1133e7"
+    },
+    {
+      "guest_source": "./widgets-gallery.app/Contents/MacOS/widgets-gallery.png",
+      "native_md5": "82f6eacfe7ecfd410a20b4b35c35f321",
+      "native_md5_match": true,
+      "width": 760,
+      "height": 560,
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-widgets-gallery.app_Contents_MacOS_widgets-gallery.png",
+      "sha256": "7503096908bf1ce0d5c3249b38219443f15f12f7c2921a9cabe26db0c60b29c0"
+    }
+  ],
+  "screenshots_skipped": [],
+  "evidence_policy": [
+    "Only named per-application logs, status, identity and capture-manifest files are counted.",
+    "Unreferenced historical crash logs and PNGs are not attributed to this snapshot.",
+    "Every native executable MD5 matches its host archive executable; every host executable SHA256 matches the Mach-O audit.",
+    "Crash, timeout, nonzero exit, FAIL line or incomplete footer prevents PASS.",
+    "No input evidence is modified. Mixed-run provenance must be documented separately when assembling the snapshot."
+  ],
+  "guest_cpu": {
+    "qemu": "-M mac99,via=pmu -cpu g3 (alias for 750_v3.1)",
+    "machine": "ppc750",
+    "hw.cputype": 18,
+    "hw.cpusubtype": 9,
+    "hw.model": "PowerMac3,1",
+    "evidence": {
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-g3-cpu.log",
+      "sha256": "9a07d22ad646ae5cf1072d358ec0f8a514b1d2041d37df98c841af5f48669766"
+    }
+  },
+  "binaries_cpu_subtype": "All 25 executables are CPU_SUBTYPE_POWERPC_750 (9); see the host Mach-O audit.",
+  "negative_control": {
+    "description": "The previous G4 build of smoke-runner (CPU_SUBTYPE_POWERPC_7400, md5 3a7412a92c52e19864e03f34acc68e4a, preserved in artifacts/tests-qt4-macos-ppc-g4-20261003) run on the same G3 guest",
+    "result": "dyld: incompatible cpu-subtype; Trace/BPT trap; exit 133",
+    "evidence": {
+      "path": "artifacts/runtime-tiger-suite/ppc-g3-final/ppc-g4-binary-on-g3.log",
+      "sha256": "fc44e20bc535d4543754473513aa03e508c2b9568811c867996314a1785bcb68"
+    }
+  },
+  "disk": "Copy-on-write overlay build/vm-tiger-ppc-g3/tiger-ppc.qcow2 over the installed Tiger 10.4.10 disk build/vm-tiger-ppc-repaired/tiger-ppc.qcow2; the base disk was not written."
+}

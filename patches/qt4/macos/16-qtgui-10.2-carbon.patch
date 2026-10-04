@@ -1,0 +1,2151 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: QtGui's Carbon port. qt_jaguar_mac.cpp resolves the
+# 10.3 and 10.4 HIToolbox and CoreGraphics functions at run time with
+# fallbacks; NS_DURING instead of @try (the Objective-C exception runtime is
+# 10.3); older constant spellings.
+#
+--- a/src/gui/dialogs/qcolordialog_mac.mm
++++ b/src/gui/dialogs/qcolordialog_mac.mm
+@@ -346,17 +346,20 @@
+     QBoolBlocker nativeDialogOnTop(QApplicationPrivate::native_modal_dialog_active);
+     QMacCocoaAutoReleasePool pool;
+     mDialogIsExecuting = true;
+-    bool modalEnded = false;
++    volatile bool modalEnded = false;
+     while (!modalEnded) {
+ #ifndef QT_NO_EXCEPTIONS
+-        @try {
++        // NS_DURING rather than @try: the Objective-C exception runtime
++        // (objc_exception_*) is Mac OS X 10.3, and the handler macros work
++        // on 10.2 as well.
++        NS_DURING
+             [[NSApplication sharedApplication] runModalForWindow:mColorPanel];
+             modalEnded = true;
+-        } @catch (NSException *) {
++        NS_HANDLER
+             // For some reason, NSColorPanel throws an exception when
+             // clicking on 'SelectedMenuItemColor' from the 'Developer'
+             // palette (tab three).
+-        }
++        NS_ENDHANDLER
+ #else
+         [[NSApplication sharedApplication] runModalForWindow:mColorPanel];
+         modalEnded = true;
+--- a/src/gui/kernel/kernel.pri
++++ b/src/gui/kernel/kernel.pri
+@@ -277,6 +277,12 @@
+ 		kernel/qt_mac.cpp \
+ 		kernel/qkeymapper_mac.cpp
+ 
++	# Mac OS X 10.2 fallbacks for the Carbon port; see qt_jaguar_mac_p.h.
++	!cocoa {
++		HEADERS += kernel/qt_jaguar_mac_p.h
++		SOURCES += kernel/qt_jaguar_mac.cpp
++	}
++
+         OBJECTIVE_HEADERS += \
+                 qcocoawindow_mac_p.h \
+                 qcocoapanel_mac_p.h \
+--- a/src/gui/kernel/qt_mac_p.h
++++ b/src/gui/kernel/qt_mac_p.h
+@@ -74,6 +74,7 @@
+ #include "QtGui/qpainter.h"
+ 
+ #include <Carbon/Carbon.h>
++#include "qt_jaguar_mac_p.h"
+ 
+ #if !defined(QT_MAC_USE_COCOA) && defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+     // Some deprecated functions have been removed from the the 10.7 SDK, but the symbols are
+--- a/src/gui/kernel/qwidget_mac.mm
++++ b/src/gui/kernel/qwidget_mac.mm
+@@ -1409,7 +1409,11 @@
+             }
+         } else if(ekind == kEventControlInitialize) {
+             if(HIObjectIsOfClass((HIObjectRef)hiview, kObjectQWidget)) {
+-                UInt32 features = kControlSupportsDragAndDrop | kControlSupportsClickActivation | kControlSupportsFocus;
++                // kControlSupportsEmbedding is kHIViewAllowsSubviews, which the
++                // construct handler sets with HIViewChangeFeatures from 10.3 on;
++                // a 10.2 view only gets it here.
++                UInt32 features = kControlSupportsDragAndDrop | kControlSupportsClickActivation | kControlSupportsFocus
++                                  | kControlSupportsEmbedding;
+                 SetEventParameter(event, kEventParamControlFeatures, typeUInt32, sizeof(features), &features);
+             } else {
+                 handled_event = false;
+@@ -1957,6 +1961,14 @@
+             wclass = tmp_class;
+         }
+     }
++    // Mac OS X 10.2 has no title-less document or floating windows
++    // (kWindowNoTitleBarAttribute); there the borderless class is a plain window.
++    if ((wattr & kWindowNoTitleBarAttribute)
++        && !(GetAvailableWindowAttributes(wclass) & kWindowNoTitleBarAttribute)) {
++        wclass = kPlainWindowClass;
++        wattr &= ~kWindowNoTitleBarAttribute;
++        grp = GetWindowGroupOfClass(wclass);
++    }
+     topData()->wclass = wclass;
+     topData()->wattr = wattr;
+ #else
+--- a/src/gui/painting/qregion_mac.cpp
++++ b/src/gui/painting/qregion_mac.cpp
+@@ -273,6 +273,12 @@
+             QLibrary library(QLatin1String("/System/Library/Frameworks/Carbon.framework/Carbon"));
+             library.setLoadHints(QLibrary::ExportExternalSymbolsHint);
+                     ptrHIShapeGetAsQDRgn = reinterpret_cast<PtrHIShapeGetAsQDRgn>(library.resolve("HIShapeGetAsQDRgn"));
++#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
++            // QLibrary cannot load anything on Mac OS X 10.2 (no dlopen); the
++            // function is there, and declared in the SDKs that target 10.2.
++            if (ptrHIShapeGetAsQDRgn == 0)
++                ptrHIShapeGetAsQDRgn = HIShapeGetAsQDRgn;
++#endif
+         }
+         RgnHandle rgn = qt_mac_get_rgn();
+         ptrHIShapeGetAsQDRgn(shape, rgn);
+--- a/src/gui/styles/qmacstyle_mac.mm
++++ b/src/gui/styles/qmacstyle_mac.mm
+@@ -1434,6 +1434,12 @@
+         QLibrary library(QLatin1String("/System/Library/Frameworks/Carbon.framework/Carbon"));
+         library.setLoadHints(QLibrary::ExportExternalSymbolsHint);
+ 		ptrHIShapeGetBounds = reinterpret_cast<PtrHIShapeGetBounds>(library.resolve("HIShapeGetBounds"));
++#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
++        // QLibrary cannot load anything on Mac OS X 10.2 (no dlopen); the
++        // function is there, and declared in the SDKs that target 10.2.
++        if (ptrHIShapeGetBounds == 0)
++            ptrHIShapeGetBounds = HIShapeGetBounds;
++#endif
+     }
+ 
+ }
+--- a/src/gui/util/qsystemtrayicon_mac.mm
++++ b/src/gui/util/qsystemtrayicon_mac.mm
+@@ -165,7 +165,9 @@
+     }
+     ~QSystemTrayIconSys() {
+         QMacCocoaAutoReleasePool pool;
+-        [[[item item] view] setHidden: YES];
++        // -[NSView setHidden:] is Mac OS X 10.3.
++        if ([[[item item] view] respondsToSelector:@selector(setHidden:)])
++            [[[item item] view] setHidden: YES];
+ #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_8
+         if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_8) {
+             [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:nil];
+@@ -433,7 +435,9 @@
+ }
+ 
+ -(void)drawRect:(NSRect)rect {
+-    [[parent item] drawStatusBarBackgroundInRect:rect withHighlight:down];
++    // Mac OS X 10.3 and later; before, the status bar draws the background.
++    if ([[parent item] respondsToSelector:@selector(drawStatusBarBackgroundInRect:withHighlight:)])
++        [[parent item] drawStatusBarBackgroundInRect:rect withHighlight:down];
+     [super drawRect:rect];
+ }
+ @end
+--- /dev/null
++++ b/src/gui/kernel/qt_jaguar_mac.cpp
+@@ -0,0 +1,1702 @@
++/****************************************************************************
++**
++** Mac OS X 10.2 (Jaguar) support for the Carbon port of QtGui; see
++** qt_jaguar_mac_p.h. A weak import is NULL when the running system does not
++** export it, so each wrapper first checks the address of the real function.
++**
++****************************************************************************/
++
++#include <QtCore/qglobal.h>
++
++#define QT_JAGUAR_MAC_IMPLEMENTATION
++#include "qt_jaguar_mac_p.h"
++
++#include <stdlib.h>
++#include <string.h>
++
++// Private HIToolbox call that Qt declares itself in qwidget_mac.mm.
++extern "C" OSStatus _HIViewScrollRectWithOptions(HIViewRef, const HIRect *, float, float, OptionBits)
++    __attribute__((weak_import));
++// AppKit string constants, both Mac OS X 10.3.
++extern "C" const CFStringRef NSMenuDidEndTrackingNotification __attribute__((weak_import));
++extern "C" const CFStringRef NSStrikethroughStyleAttributeName __attribute__((weak_import));
++
++
++static Rect qt_jaguar_qdRect(const HIRect &r)
++{
++    Rect qd;
++    qd.left = short(floorf(r.origin.x));
++    qd.top = short(floorf(r.origin.y));
++    qd.right = short(ceilf(r.origin.x + r.size.width));
++    qd.bottom = short(ceilf(r.origin.y + r.size.height));
++    return qd;
++}
++
++// ---- CoreGraphics ---------------------------------------------------------
++
++// The byte order flags of CGBitmapInfo are Mac OS X 10.4; 10.2 and 10.3
++// reject a bitmap that sets them. Big endian, the PowerPC host order Qt asks
++// for, is what those systems use anyway.
++static CGBitmapInfo qt_jaguar_bitmapInfo(CGBitmapInfo info)
++{
++    if (&CGBitmapContextCreateImage)
++        return info;
++    const CGBitmapInfo order = info & kCGBitmapByteOrderMask;
++    if (order == kCGBitmapByteOrder32Big || order == kCGBitmapByteOrder16Big)
++        return info & ~kCGBitmapByteOrderMask;
++    return info;
++}
++
++CGContextRef qt_jaguar_CGBitmapContextCreate(void *data, size_t width, size_t height, size_t bitsPerComponent,
++                                             size_t bytesPerRow, CGColorSpaceRef colorspace, CGBitmapInfo bitmapInfo)
++{
++    return CGBitmapContextCreate(data, width, height, bitsPerComponent, bytesPerRow, colorspace,
++                                 qt_jaguar_bitmapInfo(bitmapInfo));
++}
++
++CGImageRef qt_jaguar_CGImageCreate(size_t width, size_t height, size_t bitsPerComponent, size_t bitsPerPixel,
++                                   size_t bytesPerRow, CGColorSpaceRef colorspace, CGBitmapInfo bitmapInfo,
++                                   CGDataProviderRef provider, const float decode[], bool shouldInterpolate,
++                                   CGColorRenderingIntent intent)
++{
++    return CGImageCreate(width, height, bitsPerComponent, bitsPerPixel, bytesPerRow, colorspace,
++                         qt_jaguar_bitmapInfo(bitmapInfo), provider, decode, shouldInterpolate, intent);
++}
++
++static void qt_jaguar_releaseData(void *, const void *data, size_t)
++{
++    free(const_cast<void *>(data));
++}
++
++CGImageRef qt_jaguar_CGBitmapContextCreateImage(CGContextRef c)
++{
++    if (&CGBitmapContextCreateImage)
++        return CGBitmapContextCreateImage(c);
++    // 10.2: copy the pixels into a new image, as the 10.4 call does.
++    void *pixels = CGBitmapContextGetData(c);
++    if (!pixels)
++        return 0;
++    const size_t width = CGBitmapContextGetWidth(c);
++    const size_t height = CGBitmapContextGetHeight(c);
++    const size_t bytesPerRow = CGBitmapContextGetBytesPerRow(c);
++    void *copy = malloc(bytesPerRow * height);
++    if (!copy)
++        return 0;
++    memcpy(copy, pixels, bytesPerRow * height);
++    CGDataProviderRef provider = CGDataProviderCreateWithData(0, copy, bytesPerRow * height,
++                                                              qt_jaguar_releaseData);
++    CGImageRef image = CGImageCreate(width, height, CGBitmapContextGetBitsPerComponent(c),
++                                     CGBitmapContextGetBitsPerPixel(c), bytesPerRow,
++                                     CGBitmapContextGetColorSpace(c), CGBitmapContextGetAlphaInfo(c),
++                                     provider, 0, false, kCGRenderingIntentDefault);
++    CGDataProviderRelease(provider);
++    return image;
++}
++
++void qt_jaguar_CGContextSetBlendMode(CGContextRef c, CGBlendMode mode)
++{
++    // 10.2 composites with source-over only.
++    if (&CGContextSetBlendMode)
++        CGContextSetBlendMode(c, mode);
++}
++
++void qt_jaguar_CGContextSetFillColorWithColor(CGContextRef c, CGColorRef color)
++{
++    if (&CGContextSetFillColorWithColor) {
++        CGContextSetFillColorWithColor(c, color);
++    } else if (color) {
++        CGContextSetFillColorSpace(c, CGColorGetColorSpace(color));
++        CGContextSetFillColor(c, CGColorGetComponents(color));
++    }
++}
++
++void qt_jaguar_CGContextSetStrokeColorWithColor(CGContextRef c, CGColorRef color)
++{
++    if (&CGContextSetStrokeColorWithColor) {
++        CGContextSetStrokeColorWithColor(c, color);
++    } else if (color) {
++        CGContextSetStrokeColorSpace(c, CGColorGetColorSpace(color));
++        CGContextSetStrokeColor(c, CGColorGetComponents(color));
++    }
++}
++
++CGError qt_jaguar_CGDisplayRegisterReconfigurationCallback(CGDisplayReconfigurationCallBack proc, void *userInfo)
++{
++    // 10.2 sends no display reconfiguration notices; Qt then keeps its
++    // desktop geometry until the next QDesktopWidget query.
++    if (&CGDisplayRegisterReconfigurationCallback)
++        return CGDisplayRegisterReconfigurationCallback(proc, userInfo);
++    return kCGErrorSuccess;
++}
++
++CGError qt_jaguar_CGDisplayRemoveReconfigurationCallback(CGDisplayReconfigurationCallBack proc, void *userInfo)
++{
++    if (&CGDisplayRemoveReconfigurationCallback)
++        return CGDisplayRemoveReconfigurationCallback(proc, userInfo);
++    return kCGErrorSuccess;
++}
++
++CGImageRef qt_jaguar_CGImageCreateWithImageInRect(CGImageRef image, CGRect rect)
++{
++    if (&CGImageCreateWithImageInRect)
++        return CGImageCreateWithImageInRect(image, rect);
++    // 10.2: draw the part into a bitmap of its size. The rectangle is in
++    // image pixels with the origin at the top left; CoreGraphics draws with
++    // the origin at the bottom left.
++    if (!image)
++        return 0;
++    const float imageWidth = CGImageGetWidth(image);
++    const float imageHeight = CGImageGetHeight(image);
++    rect = CGRectIntegral(CGRectIntersection(rect, CGRectMake(0, 0, imageWidth, imageHeight)));
++    if (CGRectIsEmpty(rect))
++        return 0;
++    const size_t width = size_t(rect.size.width);
++    const size_t height = size_t(rect.size.height);
++    void *pixels = calloc(height, width * 4);
++    if (!pixels)
++        return 0;
++    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
++    CGContextRef bitmap = CGBitmapContextCreate(pixels, width, height, 8, width * 4, colorSpace,
++                                                kCGImageAlphaPremultipliedFirst);
++    CGColorSpaceRelease(colorSpace);
++    if (!bitmap) {
++        free(pixels);
++        return 0;
++    }
++    CGContextDrawImage(bitmap, CGRectMake(-rect.origin.x,
++                                          rect.origin.y + rect.size.height - imageHeight,
++                                          imageWidth, imageHeight), image);
++    CGImageRef part = qt_jaguar_CGBitmapContextCreateImage(bitmap);
++    CGContextRelease(bitmap);
++    free(pixels);
++    return part;
++}
++
++// ImageIO is Mac OS X 10.4. Without it the clipboard and the wizard fall
++// back to Qt's own image handlers or show no native image.
++void qt_jaguar_CGImageDestinationAddImage(CGImageDestinationRef idst, CGImageRef image, CFDictionaryRef properties)
++{
++    if (&CGImageDestinationAddImage && idst)
++        CGImageDestinationAddImage(idst, image, properties);
++}
++
++CGImageDestinationRef qt_jaguar_CGImageDestinationCreateWithData(CFMutableDataRef data, CFStringRef type, size_t count, CFDictionaryRef options)
++{
++    if (&CGImageDestinationCreateWithData)
++        return CGImageDestinationCreateWithData(data, type, count, options);
++    return 0;
++}
++
++bool qt_jaguar_CGImageDestinationFinalize(CGImageDestinationRef idst)
++{
++    if (&CGImageDestinationFinalize && idst)
++        return CGImageDestinationFinalize(idst);
++    return false;
++}
++
++CGImageRef qt_jaguar_CGImageSourceCreateImageAtIndex(CGImageSourceRef isrc, size_t index, CFDictionaryRef options)
++{
++    if (&CGImageSourceCreateImageAtIndex && isrc)
++        return CGImageSourceCreateImageAtIndex(isrc, index, options);
++    return 0;
++}
++
++CGImageSourceRef qt_jaguar_CGImageSourceCreateWithData(CFDataRef data, CFDictionaryRef options)
++{
++    if (&CGImageSourceCreateWithData)
++        return CGImageSourceCreateWithData(data, options);
++    return 0;
++}
++
++CGImageSourceRef qt_jaguar_CGImageSourceCreateWithURL(CFURLRef url, CFDictionaryRef options)
++{
++    if (&CGImageSourceCreateWithURL)
++        return CGImageSourceCreateWithURL(url, options);
++    return 0;
++}
++
++CFStringRef qt_jaguar_kCGImagePropertyPixelWidth()
++{
++    return &kCGImagePropertyPixelWidth ? kCGImagePropertyPixelWidth : CFSTR("PixelWidth");
++}
++
++CFStringRef qt_jaguar_kCGImagePropertyPixelHeight()
++{
++    return &kCGImagePropertyPixelHeight ? kCGImagePropertyPixelHeight : CFSTR("PixelHeight");
++}
++
++// ---- HIToolbox ------------------------------------------------------------
++
++OSStatus qt_jaguar_CancelMenuTracking(MenuRef inRootMenu, Boolean inImmediate, UInt32 inDismissalReason)
++{
++    if (&CancelMenuTracking)
++        return CancelMenuTracking(inRootMenu, inImmediate, inDismissalReason);
++    return noErr;
++}
++
++OSStatus qt_jaguar_DisableSecureEventInput()
++{
++    if (&DisableSecureEventInput)
++        return DisableSecureEventInput();
++    return noErr;
++}
++
++OSStatus qt_jaguar_EnableSecureEventInput()
++{
++    // 10.2 has no secure event input; password fields work without it.
++    if (&EnableSecureEventInput)
++        return EnableSecureEventInput();
++    return noErr;
++}
++
++EventTargetRef qt_jaguar_GetEventMonitorTarget()
++{
++    // The monitor target (10.3) also sees events for other applications;
++    // on 10.2 Qt hears only its own.
++    if (&GetEventMonitorTarget)
++        return GetEventMonitorTarget();
++    return GetApplicationEventTarget();
++}
++
++OSStatus qt_jaguar_GetWindowGroupLevelOfType(WindowGroupRef inGroup, UInt32 inLevelType, CGWindowLevel *outLevel)
++{
++    if (&GetWindowGroupLevelOfType)
++        return GetWindowGroupLevelOfType(inGroup, inLevelType, outLevel);
++    SInt32 level = 0;
++    const OSStatus err = GetWindowGroupLevel(inGroup, &level);
++    if (outLevel)
++        *outLevel = level;
++    return err;
++}
++
++float qt_jaguar_HIGetScaleFactor()
++{
++    if (&HIGetScaleFactor)
++        return HIGetScaleFactor();
++    return 1.0f;
++}
++
++OSStatus qt_jaguar_HIMenuGetContentView(MenuRef inMenu, ThemeMenuType inMenuType, HIViewRef *outView)
++{
++    if (&HIMenuGetContentView)
++        return HIMenuGetContentView(inMenu, inMenuType, outView);
++    if (outView)
++        *outView = 0;
++    return eventNotHandledErr;
++}
++
++OSStatus qt_jaguar_HIViewChangeFeatures(HIViewRef inView, HIViewFeatures inFeaturesToSet, HIViewFeatures inFeaturesToClear)
++{
++    // 10.2 views keep the features they were created with; opacity is a
++    // drawing hint and Qt handles clicks for transparent widgets itself.
++    if (&HIViewChangeFeatures)
++        return HIViewChangeFeatures(inView, inFeaturesToSet, inFeaturesToClear);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIViewGetFeatures(HIViewRef inView, HIViewFeatures *outFeatures)
++{
++    if (&HIViewGetFeatures)
++        return HIViewGetFeatures(inView, outFeatures);
++    UInt32 features = 0;
++    const OSStatus err = GetControlFeatures(inView, &features);
++    if (outFeatures)
++        *outFeatures = features;
++    return err;
++}
++
++WindowRef qt_jaguar_HIViewGetWindow(HIViewRef inView)
++{
++    if (&HIViewGetWindow)
++        return HIViewGetWindow(inView);
++    return inView ? GetControlOwner(inView) : 0;
++}
++
++OSStatus qt_jaguar_HIViewRender(HIViewRef inView)
++{
++    if (&HIViewRender)
++        return HIViewRender(inView);
++    Draw1Control(inView);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIViewSetNeedsDisplayInRect(HIViewRef inView, const HIRect *inRect, Boolean inNeedsDisplay)
++{
++    if (&HIViewSetNeedsDisplayInRect)
++        return HIViewSetNeedsDisplayInRect(inView, inRect, inNeedsDisplay);
++    if (!inRect)
++        return HIViewSetNeedsDisplay(inView, inNeedsDisplay);
++    const Rect qd = qt_jaguar_qdRect(*inRect);
++    RgnHandle region = NewRgn();
++    RectRgn(region, &qd);
++    const OSStatus err = HIViewSetNeedsDisplayInRegion(inView, region, inNeedsDisplay);
++    DisposeRgn(region);
++    return err;
++}
++
++OSStatus qt_jaguar__HIViewScrollRectWithOptions(HIViewRef inView, const HIRect *inRect, float inDX, float inDY, OptionBits inOptions)
++{
++    if (&_HIViewScrollRectWithOptions)
++        return _HIViewScrollRectWithOptions(inView, inRect, inDX, inDY, inOptions);
++    return HIViewScrollRect(inView, inRect, inDX, inDY);
++}
++
++OSStatus qt_jaguar_HIWindowChangeAvailability(HIWindowRef inWindow, HIWindowAvailability inSet, HIWindowAvailability inClear)
++{
++    // Expose (10.3) does not exist on 10.2.
++    if (&HIWindowChangeAvailability)
++        return HIWindowChangeAvailability(inWindow, inSet, inClear);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIWindowChangeClass(HIWindowRef inWindow, WindowClass inWindowClass)
++{
++    // 10.2 cannot change the class of an existing window; it keeps the one
++    // it was created with.
++    if (&HIWindowChangeClass)
++        return HIWindowChangeClass(inWindow, inWindowClass);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIWindowChangeFeatures(WindowRef inWindow, UInt64 inSetThese, UInt64 inClearThese)
++{
++    if (&HIWindowChangeFeatures)
++        return HIWindowChangeFeatures(inWindow, inSetThese, inClearThese);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIWindowFlush(HIWindowRef inWindow)
++{
++    if (&HIWindowFlush)
++        return HIWindowFlush(inWindow);
++    QDFlushPortBuffer(GetWindowPort(inWindow), 0);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIWindowSetProxyFSRef(WindowRef window, const FSRef *inRef)
++{
++    if (&HIWindowSetProxyFSRef)
++        return HIWindowSetProxyFSRef(window, inRef);
++    FSSpec spec;
++    OSStatus err = FSGetCatalogInfo(inRef, kFSCatInfoNone, 0, 0, &spec, 0);
++    if (err == noErr)
++        err = SetWindowProxyFSSpec(window, &spec);
++    return err;
++}
++
++OSStatus qt_jaguar_TransformProcessType(const ProcessSerialNumber *psn, ProcessApplicationTransformState transformState)
++{
++    // An application outside a bundle stays a background process on 10.2.
++    if (&TransformProcessType)
++        return TransformProcessType(psn, transformState);
++    return unimpErr;
++}
++
++OSStatus qt_jaguar_TransitionWindowWithOptions(WindowRef inWindow, WindowTransitionEffect inEffect, WindowTransitionAction inAction,
++                                               const HIRect *inBounds, Boolean inAsync, TransitionWindowOptions *inOptions)
++{
++    if (&TransitionWindowWithOptions)
++        return TransitionWindowWithOptions(inWindow, inEffect, inAction, inBounds, inAsync, inOptions);
++    Rect qd;
++    if (inBounds)
++        qd = qt_jaguar_qdRect(*inBounds);
++    return TransitionWindow(inWindow, inEffect, inAction, inBounds ? &qd : 0);
++}
++
++// ---- HITheme --------------------------------------------------------------
++//
++// HITheme is Mac OS X 10.3. The 10.2 HIToolbox exports part of it, unannounced
++// and with a different interface: its HIThemeDrawButton crashes when called
++// as documented. Before 10.3 the drawing therefore goes to the Appearance
++// Manager, as in Qt 4.1. That draws into a QuickDraw port, not into a
++// CGContext, so the part is drawn twice into an offscreen GWorld, once over
++// white and once over black; the difference gives the coverage of each
++// pixel, and the result is drawn into the context as an image.
++
++static bool qt_jaguar_hasHITheme();
++
++class QtJaguarAppearance
++{
++public:
++    QtJaguarAppearance() : originX(0), originY(0), height(0), inverted(false) {}
++    virtual ~QtJaguarAppearance() {}
++    // Draws into the current port, in which (0, 0) is the top left of the area.
++    virtual void draw() = 0;
++
++    // Maps a rectangle of the context to QuickDraw coordinates in the area.
++    Rect map(const HIRect &r) const
++    {
++        HIRect local = r;
++        local.origin.x -= originX;
++        local.origin.y = inverted ? (originY + height) - (r.origin.y + r.size.height) : r.origin.y - originY;
++        return qt_jaguar_qdRect(local);
++    }
++
++    float originX;
++    float originY;
++    float height;
++    bool inverted;
++};
++
++static void qt_jaguar_releasePixels(void *, const void *data, size_t)
++{
++    free(const_cast<void *>(data));
++}
++
++static OSStatus qt_jaguar_render(CGContextRef context, HIThemeOrientation orientation, HIRect area,
++                                 QtJaguarAppearance &part)
++{
++    if (!context)
++        return paramErr;
++    area = CGRectIntegral(area);
++    const int width = int(area.size.width);
++    const int height = int(area.size.height);
++    if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
++        return noErr;
++    part.originX = area.origin.x;
++    part.originY = area.origin.y;
++    part.height = height;
++    part.inverted = orientation == kHIThemeOrientationInverted;
++
++    const size_t rowBytes = size_t(width) * 4;
++    const size_t pixelCount = size_t(width) * size_t(height);
++    UInt32 *onWhite = static_cast<UInt32 *>(malloc(pixelCount * 4));
++    UInt32 *onBlack = static_cast<UInt32 *>(malloc(pixelCount * 4));
++    if (!onWhite || !onBlack) {
++        free(onWhite);
++        free(onBlack);
++        return memFullErr;
++    }
++    for (int pass = 0; pass < 2; ++pass) {
++        UInt32 *pixels = pass ? onBlack : onWhite;
++        const UInt32 fill = pass ? 0xff000000u : 0xffffffffu;
++        for (size_t i = 0; i < pixelCount; ++i)
++            pixels[i] = fill;
++        Rect bounds = { 0, 0, short(height), short(width) };
++        GWorldPtr world = 0;
++        if (NewGWorldFromPtr(&world, k32ARGBPixelFormat, &bounds, 0, 0, 0,
++                             reinterpret_cast<Ptr>(pixels), long(rowBytes)) != noErr || !world) {
++            free(onWhite);
++            free(onBlack);
++            return memFullErr;
++        }
++        CGrafPtr oldPort;
++        GDHandle oldDevice;
++        GetGWorld(&oldPort, &oldDevice);
++        SetGWorld(world, 0);
++        RGBColor back;
++        back.red = back.green = back.blue = pass ? 0 : 0xffff;
++        RGBBackColor(&back);
++        part.draw();
++        SetGWorld(oldPort, oldDevice);
++        DisposeGWorld(world);
++    }
++    // Over black a pixel shows its premultiplied color; over white the same
++    // color plus the white that shines through, (1 - alpha) * 255.
++    for (size_t i = 0; i < pixelCount; ++i) {
++        const UInt32 w = onWhite[i];
++        const UInt32 b = onBlack[i];
++        int through = 0;
++        for (int shift = 0; shift <= 16; shift += 8) {
++            const int d = int((w >> shift) & 0xff) - int((b >> shift) & 0xff);
++            if (d > through)
++                through = d;
++        }
++        const UInt32 alpha = UInt32(255 - through);
++        UInt32 out = alpha << 24;
++        for (int shift = 0; shift <= 16; shift += 8) {
++            UInt32 c = (b >> shift) & 0xff;
++            if (c > alpha)
++                c = alpha;
++            out |= c << shift;
++        }
++        onBlack[i] = out;
++    }
++    free(onWhite);
++
++    CGDataProviderRef provider = CGDataProviderCreateWithData(0, onBlack, pixelCount * 4, qt_jaguar_releasePixels);
++    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
++    CGImageRef image = CGImageCreate(width, height, 8, 32, rowBytes, colorSpace, kCGImageAlphaPremultipliedFirst,
++                                     provider, 0, false, kCGRenderingIntentDefault);
++    CGColorSpaceRelease(colorSpace);
++    CGDataProviderRelease(provider);
++    if (!image)
++        return memFullErr;
++    CGContextSaveGState(context);
++    if (part.inverted) {
++        CGContextDrawImage(context, area, image);
++    } else {
++        // A context in the HIView orientation is flipped; draw the image upright.
++        CGContextTranslateCTM(context, area.origin.x, area.origin.y + height);
++        CGContextScaleCTM(context, 1, -1);
++        CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
++    }
++    CGContextRestoreGState(context);
++    CGImageRelease(image);
++    return noErr;
++}
++
++static ThemeTrackDrawInfo qt_jaguar_trackInfo(const HIThemeTrackDrawInfo &info, const Rect &bounds)
++{
++    ThemeTrackDrawInfo track;
++    track.kind = info.kind;
++    track.bounds = bounds;
++    track.min = info.min;
++    track.max = info.max;
++    track.value = info.value;
++    track.reserved = 0;
++    track.attributes = info.attributes;
++    track.enableState = info.enableState;
++    track.filler1 = 0;
++    memcpy(&track.trackInfo, &info.trackInfo, sizeof(track.trackInfo));
++    return track;
++}
++
++static void qt_jaguar_setThemeColor(CGContextRef context, ThemeBrush brush, bool fill)
++{
++    RGBColor color = { 0xeeee, 0xeeee, 0xeeee };
++    GetThemeBrushAsColor(brush, 32, true, &color);
++    const float components[] = { color.red / 65535.0f, color.green / 65535.0f, color.blue / 65535.0f, 1.0f };
++    if (fill)
++        CGContextSetRGBFillColor(context, components[0], components[1], components[2], components[3]);
++    else
++        CGContextSetRGBStrokeColor(context, components[0], components[1], components[2], components[3]);
++}
++
++class QtJaguarButton : public QtJaguarAppearance
++{
++public:
++    QtJaguarButton(const HIRect &r, const HIThemeButtonDrawInfo &i) : rect(r), info(i) {}
++    void draw()
++    {
++        const Rect bounds = map(rect);
++        ThemeButtonDrawInfo state;
++        state.state = info.state;
++        state.value = info.value;
++        state.adornment = info.adornment;
++        DrawThemeButton(&bounds, info.kind, &state, 0, 0, 0, 0);
++    }
++    HIRect rect;
++    HIThemeButtonDrawInfo info;
++};
++
++OSStatus qt_jaguar_HIThemeDrawButton(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, CGContextRef inContext,
++                                     HIThemeOrientation inOrientation, HIRect *outLabelRect)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawButton(inBounds, inDrawInfo, inContext, inOrientation, outLabelRect);
++    if (!inBounds || !inDrawInfo)
++        return paramErr;
++    QtJaguarButton part(*inBounds, *inDrawInfo);
++    const OSStatus err = qt_jaguar_render(inContext, inOrientation, CGRectInset(*inBounds, -6, -6), part);
++    if (outLabelRect)
++        qt_jaguar_HIThemeGetButtonContentBounds(inBounds, inDrawInfo, outLabelRect);
++    return err;
++}
++
++class QtJaguarTrack : public QtJaguarAppearance
++{
++public:
++    QtJaguarTrack(const HIThemeTrackDrawInfo &i, ItemCount t) : info(i), ticks(t) {}
++    void draw()
++    {
++        const ThemeTrackDrawInfo track = qt_jaguar_trackInfo(info, map(info.bounds));
++        if (ticks)
++            DrawThemeTrackTickMarks(&track, ticks, 0, 0);
++        else
++            DrawThemeTrack(&track, 0, 0, 0);
++    }
++    HIThemeTrackDrawInfo info;
++    ItemCount ticks;
++};
++
++OSStatus qt_jaguar_HIThemeDrawTrack(const HIThemeTrackDrawInfo *inDrawInfo, const HIRect *inGhostRect, CGContextRef inContext,
++                                    HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawTrack(inDrawInfo, inGhostRect, inContext, inOrientation);
++    if (!inDrawInfo)
++        return paramErr;
++    QtJaguarTrack part(*inDrawInfo, 0);
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(inDrawInfo->bounds, -2, -2), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawTrackTickMarks(const HIThemeTrackDrawInfo *inDrawInfo, ItemCount inNumTicks, CGContextRef inContext,
++                                             HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawTrackTickMarks(inDrawInfo, inNumTicks, inContext, inOrientation);
++    if (!inDrawInfo || !inNumTicks)
++        return paramErr;
++    QtJaguarTrack part(*inDrawInfo, inNumTicks);
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(inDrawInfo->bounds, -8, -8), part);
++}
++
++class QtJaguarRectPart : public QtJaguarAppearance
++{
++public:
++    enum Kind { Tab, TabPane, PopupArrow, MenuBackground, MenuBarBackground, MenuItem, MenuSeparator,
++                EditTextFrame, ListBoxFrame, PrimaryGroup, SecondaryGroup };
++    QtJaguarRectPart(Kind k, const HIRect &r) : kind(k), rect(r), container(r), a(0), b(0), c(0), d(0) {}
++    void draw()
++    {
++        const Rect bounds = map(rect);
++        switch (kind) {
++        case Tab: DrawThemeTab(&bounds, ThemeTabStyle(a), ThemeTabDirection(b), 0, 0); break;
++        case TabPane: DrawThemeTabPane(&bounds, ThemeDrawState(a)); break;
++        case PopupArrow: DrawThemePopupArrow(&bounds, ThemeArrowOrientation(a), ThemePopupArrowSize(b), ThemeDrawState(c), 0, 0); break;
++        case MenuBackground: DrawThemeMenuBackground(&bounds, ThemeMenuType(a)); break;
++        case MenuBarBackground: DrawThemeMenuBarBackground(&bounds, ThemeMenuBarState(a), UInt32(b)); break;
++        case MenuItem: {
++            const Rect menu = map(container);
++            DrawThemeMenuItem(&menu, &bounds, menu.top, menu.bottom, ThemeMenuState(a), ThemeMenuItemType(b), 0, 0);
++            break; }
++        case MenuSeparator: DrawThemeMenuSeparator(&bounds); break;
++        case EditTextFrame: DrawThemeEditTextFrame(&bounds, ThemeDrawState(a)); break;
++        case ListBoxFrame: DrawThemeListBoxFrame(&bounds, ThemeDrawState(a)); break;
++        case PrimaryGroup: DrawThemePrimaryGroup(&bounds, ThemeDrawState(a)); break;
++        case SecondaryGroup: DrawThemeSecondaryGroup(&bounds, ThemeDrawState(a)); break;
++        }
++    }
++    Kind kind;
++    HIRect rect;
++    HIRect container;
++    UInt32 a, b, c, d;
++};
++
++OSStatus qt_jaguar_HIThemeDrawTab(const HIRect *inRect, const HIThemeTabDrawInfo *inDrawInfo, CGContextRef inContext,
++                                  HIThemeOrientation inOrientation, HIRect *outLabelRect)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawTab(inRect, inDrawInfo, inContext, inOrientation, outLabelRect);
++    if (!inRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::Tab, *inRect);
++    part.a = inDrawInfo->style;
++    part.b = inDrawInfo->direction;
++    if (outLabelRect)
++        *outLabelRect = CGRectInset(*inRect, 8, 2);
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(*inRect, -2, -2), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawTabPane(const HIRect *inRect, const HIThemeTabPaneDrawInfo *inDrawInfo, CGContextRef inContext,
++                                      HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawTabPane(inRect, inDrawInfo, inContext, inOrientation);
++    if (!inRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::TabPane, *inRect);
++    part.a = inDrawInfo->state;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(*inRect, -3, -3), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawPopupArrow(const HIRect *inBounds, const HIThemePopupArrowDrawInfo *inDrawInfo, CGContextRef inContext,
++                                         HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawPopupArrow(inBounds, inDrawInfo, inContext, inOrientation);
++    if (!inBounds || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::PopupArrow, *inBounds);
++    part.a = inDrawInfo->orientation;
++    part.b = inDrawInfo->size;
++    part.c = inDrawInfo->state;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(*inBounds, -1, -1), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawMenuBackground(const HIRect *inMenuRect, const HIThemeMenuDrawInfo *inMenuDrawInfo, CGContextRef inContext,
++                                             HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawMenuBackground(inMenuRect, inMenuDrawInfo, inContext, inOrientation);
++    if (!inMenuRect || !inMenuDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::MenuBackground, *inMenuRect);
++    part.a = inMenuDrawInfo->menuType;
++    return qt_jaguar_render(inContext, inOrientation, *inMenuRect, part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawMenuBarBackground(const HIRect *inBounds, const HIThemeMenuBarDrawInfo *inDrawInfo, CGContextRef inContext,
++                                                HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawMenuBarBackground(inBounds, inDrawInfo, inContext, inOrientation);
++    if (!inBounds || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::MenuBarBackground, *inBounds);
++    part.a = inDrawInfo->state;
++    part.b = inDrawInfo->attributes;
++    return qt_jaguar_render(inContext, inOrientation, *inBounds, part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawMenuItem(const HIRect *inMenuRect, const HIRect *inItemRect, const HIThemeMenuItemDrawInfo *inItemDrawInfo,
++                                       CGContextRef inContext, HIThemeOrientation inOrientation, HIRect *outContentRect)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawMenuItem(inMenuRect, inItemRect, inItemDrawInfo, inContext, inOrientation, outContentRect);
++    if (!inMenuRect || !inItemRect || !inItemDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::MenuItem, *inItemRect);
++    part.container = *inMenuRect;
++    part.a = inItemDrawInfo->state;
++    part.b = inItemDrawInfo->itemType;
++    if (outContentRect)
++        *outContentRect = *inItemRect;
++    return qt_jaguar_render(inContext, inOrientation, *inItemRect, part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawMenuSeparator(const HIRect *inMenuRect, const HIRect *inItemRect, const HIThemeMenuItemDrawInfo *inItemDrawInfo,
++                                            CGContextRef inContext, HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawMenuSeparator(inMenuRect, inItemRect, inItemDrawInfo, inContext, inOrientation);
++    if (!inItemRect)
++        return paramErr;
++    QtJaguarRectPart part(QtJaguarRectPart::MenuSeparator, *inItemRect);
++    return qt_jaguar_render(inContext, inOrientation, *inItemRect, part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawFrame(const HIRect *inRect, const HIThemeFrameDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawFrame(inRect, inDrawInfo, inContext, inOrientation);
++    if (!inRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(inDrawInfo->kind == kHIThemeFrameListBox ? QtJaguarRectPart::ListBoxFrame
++                                                                  : QtJaguarRectPart::EditTextFrame, *inRect);
++    part.a = inDrawInfo->state;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(*inRect, -3, -3), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawGroupBox(const HIRect *inRect, const HIThemeGroupBoxDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawGroupBox(inRect, inDrawInfo, inContext, inOrientation);
++    if (!inRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarRectPart part(inDrawInfo->kind == kHIThemeGroupBoxKindSecondary ? QtJaguarRectPart::SecondaryGroup
++                                                                           : QtJaguarRectPart::PrimaryGroup, *inRect);
++    part.a = inDrawInfo->state;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(*inRect, -2, -2), part);
++}
++
++class QtJaguarGrowBox : public QtJaguarAppearance
++{
++public:
++    QtJaguarGrowBox(const HIPoint &o, const HIThemeGrowBoxDrawInfo &i) : origin(o), info(i) {}
++    void draw()
++    {
++        const Rect at = map(CGRectMake(origin.x, origin.y, 1, 1));
++        Point point;
++        point.h = at.left;
++        point.v = at.top;
++        DrawThemeStandaloneGrowBox(point, info.direction, info.size == kHIThemeGrowBoxSizeSmall, info.state);
++    }
++    HIPoint origin;
++    HIThemeGrowBoxDrawInfo info;
++};
++
++OSStatus qt_jaguar_HIThemeDrawGrowBox(const HIPoint *inOrigin, const HIThemeGrowBoxDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawGrowBox(inOrigin, inDrawInfo, inContext, inOrientation);
++    if (!inOrigin || !inDrawInfo)
++        return paramErr;
++    QtJaguarGrowBox part(*inOrigin, *inDrawInfo);
++    return qt_jaguar_render(inContext, inOrientation, CGRectMake(inOrigin->x - 16, inOrigin->y - 16, 32, 32), part);
++}
++
++class QtJaguarWindowPart : public QtJaguarAppearance
++{
++public:
++    QtJaguarWindowPart(const HIRect &r, ThemeWindowType t, ThemeDrawState s, ThemeWindowAttributes a,
++                       float titleHeight, float titleWidth, int w)
++        : rect(r), type(t), state(s), attributes(a), widget(w)
++    {
++        metrics.metricSize = sizeof(metrics);
++        metrics.titleHeight = SInt16(titleHeight);
++        metrics.titleWidth = SInt16(titleWidth);
++        metrics.popupTabOffset = 0;
++        metrics.popupTabWidth = 0;
++        metrics.popupTabPosition = 0;
++    }
++    void draw()
++    {
++        const Rect bounds = map(rect);
++        if (widget < 0)
++            DrawThemeWindowFrame(type, &bounds, state, &metrics, attributes, 0, 0);
++        else
++            DrawThemeTitleBarWidget(type, &bounds, state, &metrics, attributes, ThemeTitleBarWidget(widget));
++    }
++    HIRect rect;
++    ThemeWindowType type;
++    ThemeDrawState state;
++    ThemeWindowAttributes attributes;
++    ThemeWindowMetrics metrics;
++    int widget;
++};
++
++OSStatus qt_jaguar_HIThemeDrawWindowFrame(const HIRect *inContRect, const HIThemeWindowDrawInfo *inDrawInfo, CGContextRef inContext,
++                                          HIThemeOrientation inOrientation, HIRect *outTitleRect)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawWindowFrame(inContRect, inDrawInfo, inContext, inOrientation, outTitleRect);
++    if (!inContRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarWindowPart part(*inContRect, inDrawInfo->windowType, inDrawInfo->state, inDrawInfo->attributes,
++                            inDrawInfo->titleHeight, inDrawInfo->titleWidth, -1);
++    const float title = inDrawInfo->titleHeight > 0 ? inDrawInfo->titleHeight : 22;
++    if (outTitleRect)
++        *outTitleRect = CGRectMake(inContRect->origin.x, inContRect->origin.y - title, inContRect->size.width, title);
++    HIRect area = *inContRect;
++    area.origin.y -= title;
++    area.size.height += title;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(area, -8, -8), part);
++}
++
++OSStatus qt_jaguar_HIThemeDrawTitleBarWidget(const HIRect *inContRect, const HIThemeWindowWidgetDrawInfo *inDrawInfo, CGContextRef inContext,
++                                             HIThemeOrientation inOrientation)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeDrawTitleBarWidget(inContRect, inDrawInfo, inContext, inOrientation);
++    if (!inContRect || !inDrawInfo)
++        return paramErr;
++    QtJaguarWindowPart part(*inContRect, inDrawInfo->windowType, inDrawInfo->widgetState, inDrawInfo->attributes,
++                            inDrawInfo->titleHeight, inDrawInfo->titleWidth, inDrawInfo->widgetType);
++    const float title = inDrawInfo->titleHeight > 0 ? inDrawInfo->titleHeight : 22;
++    HIRect area = *inContRect;
++    area.origin.y -= title;
++    area.size.height = title;
++    return qt_jaguar_render(inContext, inOrientation, CGRectInset(area, -4, -4), part);
++}
++
++// HITheme came with Mac OS X 10.3. The 10.2 HIToolbox already exports some of
++// it, but HIThemeGetButtonBackgroundBounds, for one, answers an empty
++// rectangle there. Before 10.3 the bounds come from the Appearance Manager,
++// which takes the same button description with QuickDraw rectangles.
++static bool qt_jaguar_hasHITheme()
++{
++    return &HIThemeGetButtonShape != 0;
++}
++
++static OSStatus qt_jaguar_appearanceButtonBounds(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo,
++                                                 HIRect *outBounds, bool background)
++{
++    if (!inBounds || !inDrawInfo || !outBounds)
++        return paramErr;
++    const Rect bounds = qt_jaguar_qdRect(*inBounds);
++    ThemeButtonDrawInfo info;
++    info.state = inDrawInfo->state;
++    info.value = inDrawInfo->value;
++    info.adornment = inDrawInfo->adornment;
++    Rect result;
++    const OSStatus err = background
++        ? GetThemeButtonBackgroundBounds(&bounds, inDrawInfo->kind, &info, &result)
++        : GetThemeButtonContentBounds(&bounds, inDrawInfo->kind, &info, &result);
++    if (err == noErr)
++        *outBounds = CGRectMake(result.left, result.top, result.right - result.left, result.bottom - result.top);
++    return err;
++}
++
++OSStatus qt_jaguar_HIThemeGetButtonBackgroundBounds(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIRect *outBounds)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeGetButtonBackgroundBounds(inBounds, inDrawInfo, outBounds);
++    return qt_jaguar_appearanceButtonBounds(inBounds, inDrawInfo, outBounds, true);
++}
++
++OSStatus qt_jaguar_HIThemeGetButtonContentBounds(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIRect *outBounds)
++{
++    if (qt_jaguar_hasHITheme())
++        return HIThemeGetButtonContentBounds(inBounds, inDrawInfo, outBounds);
++    return qt_jaguar_appearanceButtonBounds(inBounds, inDrawInfo, outBounds, false);
++}
++
++static OSStatus qt_jaguar_rectShape(const HIRect *inRect, HIShapeRef *outShape)
++{
++    if (!inRect || !outShape)
++        return paramErr;
++    *outShape = HIShapeCreateWithRect(inRect);
++    return *outShape ? noErr : memFullErr;
++}
++
++OSStatus qt_jaguar_HIThemeGetButtonShape(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIShapeRef *outShape)
++{
++    if (&HIThemeGetButtonShape)
++        return HIThemeGetButtonShape(inBounds, inDrawInfo, outShape);
++    return qt_jaguar_rectShape(inBounds, outShape);
++}
++
++OSStatus qt_jaguar_HIThemeGetGrowBoxBounds(const HIPoint *inOrigin, const HIThemeGrowBoxDrawInfo *inDrawInfo, HIRect *outBounds)
++{
++    if (&HIThemeGetGrowBoxBounds)
++        return HIThemeGetGrowBoxBounds(inOrigin, inDrawInfo, outBounds);
++    if (!inOrigin || !outBounds)
++        return paramErr;
++    *outBounds = CGRectMake(inOrigin->x, inOrigin->y, 15, 15);
++    return noErr;
++}
++
++OSStatus qt_jaguar_HIThemeGetMenuBackgroundShape(const HIRect *inMenuRect, const HIThemeMenuDrawInfo *inMenuDrawInfo, HIShapeRef *outShape)
++{
++    if (&HIThemeGetMenuBackgroundShape)
++        return HIThemeGetMenuBackgroundShape(inMenuRect, inMenuDrawInfo, outShape);
++    return qt_jaguar_rectShape(inMenuRect, outShape);
++}
++
++OSStatus qt_jaguar_HIThemeGetTrackThumbShape(const HIThemeTrackDrawInfo *inDrawInfo, HIShapeRef *outThumbShape)
++{
++    if (&HIThemeGetTrackThumbShape)
++        return HIThemeGetTrackThumbShape(inDrawInfo, outThumbShape);
++    if (!inDrawInfo || !outThumbShape)
++        return paramErr;
++    // The Appearance Manager track description has the same fields with a
++    // QuickDraw rectangle.
++    ThemeTrackDrawInfo track;
++    track.kind = inDrawInfo->kind;
++    track.bounds = qt_jaguar_qdRect(inDrawInfo->bounds);
++    track.min = inDrawInfo->min;
++    track.max = inDrawInfo->max;
++    track.value = inDrawInfo->value;
++    track.reserved = 0;
++    track.attributes = inDrawInfo->attributes;
++    track.enableState = inDrawInfo->enableState;
++    track.filler1 = 0;
++    memcpy(&track.trackInfo, &inDrawInfo->trackInfo, sizeof(track.trackInfo));
++    RgnHandle region = NewRgn();
++    OSStatus err = GetThemeTrackThumbRgn(&track, region);
++    *outThumbShape = err == noErr ? HIShapeCreateWithQDRgn(region) : 0;
++    DisposeRgn(region);
++    if (err == noErr && !*outThumbShape)
++        err = memFullErr;
++    return err;
++}
++
++OSStatus qt_jaguar_HIThemeGetWindowShape(const HIRect *inContRect, const HIThemeWindowDrawInfo *inDrawInfo, WindowRegionCode inWinRegion, HIShapeRef *outShape)
++{
++    if (&HIThemeGetWindowShape)
++        return HIThemeGetWindowShape(inContRect, inDrawInfo, inWinRegion, outShape);
++    return qt_jaguar_rectShape(inContRect, outShape);
++}
++
++static const int qt_jaguar_tileSize = 16;
++
++static void qt_jaguar_drawTile(void *info, CGContextRef context)
++{
++    CGContextDrawImage(context, CGRectMake(0, 0, qt_jaguar_tileSize, qt_jaguar_tileSize), static_cast<CGImageRef>(info));
++}
++
++static void qt_jaguar_releaseTile(void *info)
++{
++    CGImageRelease(static_cast<CGImageRef>(info));
++}
++
++static CGPatternRef qt_jaguar_brushPattern(ThemeBrush brush)
++{
++    // Theme brushes are small negative or positive numbers; keep the
++    // patterns of the ones Qt asks for for the life of the process.
++    static CGPatternRef patterns[128];
++    const int slot = (brush + 64) & 127;
++    if (patterns[slot])
++        return patterns[slot];
++
++    const int size = qt_jaguar_tileSize;
++    UInt32 *pixels = static_cast<UInt32 *>(malloc(size * size * 4));
++    if (!pixels)
++        return 0;
++    Rect bounds = { 0, 0, short(size), short(size) };
++    GWorldPtr world = 0;
++    if (NewGWorldFromPtr(&world, k32ARGBPixelFormat, &bounds, 0, 0, 0, reinterpret_cast<Ptr>(pixels), size * 4) != noErr) {
++        free(pixels);
++        return 0;
++    }
++    CGrafPtr oldPort;
++    GDHandle oldDevice;
++    GetGWorld(&oldPort, &oldDevice);
++    SetGWorld(world, 0);
++    const OSStatus err = SetThemeBackground(brush, 32, true);
++    if (err == noErr)
++        EraseRect(&bounds);
++    SetGWorld(oldPort, oldDevice);
++    DisposeGWorld(world);
++    if (err != noErr) {
++        free(pixels);
++        return 0;
++    }
++    for (int i = 0; i < size * size; ++i)
++        pixels[i] |= 0xff000000u;
++    CGDataProviderRef provider = CGDataProviderCreateWithData(0, pixels, size * size * 4, qt_jaguar_releasePixels);
++    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
++    CGImageRef tile = CGImageCreate(size, size, 8, 32, size * 4, colorSpace, kCGImageAlphaNoneSkipFirst,
++                                    provider, 0, false, kCGRenderingIntentDefault);
++    CGColorSpaceRelease(colorSpace);
++    CGDataProviderRelease(provider);
++    if (!tile)
++        return 0;
++    const CGPatternCallbacks callbacks = { 0, qt_jaguar_drawTile, qt_jaguar_releaseTile };
++    patterns[slot] = CGPatternCreate(tile, CGRectMake(0, 0, size, size), CGAffineTransformIdentity, size, size,
++                                     kCGPatternTilingConstantSpacing, true, &callbacks);
++    if (!patterns[slot])
++        CGImageRelease(tile);
++    return patterns[slot];
++}
++
++OSStatus qt_jaguar_HIThemeSetFill(ThemeBrush inBrush, void *inInfo, CGContextRef inContext, HIThemeOrientation inOrientation)
++{
++    if (&HIThemeSetFill)
++        return HIThemeSetFill(inBrush, inInfo, inContext, inOrientation);
++    if (!inContext)
++        return paramErr;
++    // A brush can be a pattern, such as the pinstripes of Jaguar dialogs.
++    // Render a tile of it once and fill with that as a CoreGraphics pattern.
++    CGPatternRef pattern = qt_jaguar_brushPattern(inBrush);
++    if (!pattern) {
++        qt_jaguar_setThemeColor(inContext, inBrush, true);
++        return noErr;
++    }
++    CGColorSpaceRef patternSpace = CGColorSpaceCreatePattern(0);
++    CGContextSetFillColorSpace(inContext, patternSpace);
++    CGColorSpaceRelease(patternSpace);
++    const float alpha = 1.0f;
++    CGContextSetFillPattern(inContext, pattern, &alpha);
++    return noErr;
++}
++
++// ---- Uniform Type Identifiers ---------------------------------------------
++//
++// 10.2 has no UTI database. The fallback knows the types Qt's clipboard
++// converters use and otherwise follows the 10.3 convention of
++// "CorePasteboardFlavorType 0x<OSType>" for unknown OSTypes.
++
++struct QtJaguarTypeName { OSType type; const char *uti; const char *extension; };
++static const QtJaguarTypeName qt_jaguar_types[] = {
++    { 'utxt', "public.utf16-plain-text", "txt" },
++    { 'TEXT', "com.apple.traditional-mac-plain-text", 0 },
++    { 'TIFF', "public.tiff", "tiff" },
++    { 'PICT', "com.apple.pict", "pict" },
++    { 'PNGf', "public.png", "png" },
++    { 'JPEG', "public.jpeg", "jpeg" },
++    { 'url ', "public.url", 0 },
++    { 'furl', "public.file-url", 0 },
++    { 'hfs ', "com.apple.hfs", 0 },
++    { 0, 0, 0 }
++};
++
++static const char qt_jaguar_flavorPrefix[] = "CorePasteboardFlavorType 0x";
++
++static CFStringRef qt_jaguar_utiForType(OSType type)
++{
++    for (const QtJaguarTypeName *t = qt_jaguar_types; t->uti; ++t) {
++        if (t->type == type)
++            return CFStringCreateWithCString(0, t->uti, kCFStringEncodingASCII);
++    }
++    return CFStringCreateWithFormat(0, 0, CFSTR("%s%08lX"), qt_jaguar_flavorPrefix, (unsigned long)type);
++}
++
++static OSType qt_jaguar_typeForUti(CFStringRef uti)
++{
++    char name[128];
++    if (!uti || !CFStringGetCString(uti, name, sizeof(name), kCFStringEncodingASCII))
++        return 0;
++    for (const QtJaguarTypeName *t = qt_jaguar_types; t->uti; ++t) {
++        if (!strcmp(t->uti, name))
++            return t->type;
++    }
++    const size_t prefix = sizeof(qt_jaguar_flavorPrefix) - 1;
++    if (!strncmp(name, qt_jaguar_flavorPrefix, prefix))
++        return OSType(strtoul(name + prefix, 0, 16));
++    return 0;
++}
++
++static bool qt_jaguar_isTagClass(CFStringRef tagClass, const char *name)
++{
++    char buffer[64];
++    return tagClass && CFStringGetCString(tagClass, buffer, sizeof(buffer), kCFStringEncodingASCII)
++        && !strcmp(buffer, name);
++}
++
++CFStringRef qt_jaguar_kUTTagClassOSType()
++{
++    return &kUTTagClassOSType ? kUTTagClassOSType : CFSTR("com.apple.ostype");
++}
++
++CFStringRef qt_jaguar_kUTTypeTIFF()
++{
++    return &kUTTypeTIFF ? kUTTypeTIFF : CFSTR("public.tiff");
++}
++
++CFStringRef qt_jaguar_UTCreateStringForOSType(OSType inOSType)
++{
++    if (&UTCreateStringForOSType)
++        return UTCreateStringForOSType(inOSType);
++    const UInt8 bytes[4] = { UInt8(inOSType >> 24), UInt8(inOSType >> 16), UInt8(inOSType >> 8), UInt8(inOSType) };
++    return CFStringCreateWithBytes(0, bytes, 4, kCFStringEncodingMacRoman, false);
++}
++
++OSType qt_jaguar_UTGetOSTypeFromString(CFStringRef inString)
++{
++    if (&UTGetOSTypeFromString)
++        return UTGetOSTypeFromString(inString);
++    UInt8 bytes[4];
++    CFIndex used = 0;
++    if (!inString || CFStringGetLength(inString) != 4
++        || CFStringGetBytes(inString, CFRangeMake(0, 4), kCFStringEncodingMacRoman, 0, false, bytes, 4, &used) != 4)
++        return 0;
++    return (OSType(bytes[0]) << 24) | (OSType(bytes[1]) << 16) | (OSType(bytes[2]) << 8) | OSType(bytes[3]);
++}
++
++CFStringRef qt_jaguar_UTTypeCopyPreferredTagWithClass(CFStringRef inUTI, CFStringRef inTagClass)
++{
++    if (&UTTypeCopyPreferredTagWithClass)
++        return UTTypeCopyPreferredTagWithClass(inUTI, inTagClass);
++    if (qt_jaguar_isTagClass(inTagClass, "com.apple.ostype")) {
++        const OSType type = qt_jaguar_typeForUti(inUTI);
++        return type ? qt_jaguar_UTCreateStringForOSType(type) : 0;
++    }
++    if (qt_jaguar_isTagClass(inTagClass, "public.filename-extension")) {
++        const OSType type = qt_jaguar_typeForUti(inUTI);
++        for (const QtJaguarTypeName *t = qt_jaguar_types; t->uti; ++t) {
++            if (t->type == type && t->extension)
++                return CFStringCreateWithCString(0, t->extension, kCFStringEncodingASCII);
++        }
++    }
++    return 0;
++}
++
++CFStringRef qt_jaguar_UTTypeCreatePreferredIdentifierForTag(CFStringRef inTagClass, CFStringRef inTag, CFStringRef inConformingToUTI)
++{
++    if (&UTTypeCreatePreferredIdentifierForTag)
++        return UTTypeCreatePreferredIdentifierForTag(inTagClass, inTag, inConformingToUTI);
++    if (qt_jaguar_isTagClass(inTagClass, "com.apple.ostype"))
++        return qt_jaguar_utiForType(qt_jaguar_UTGetOSTypeFromString(inTag));
++    char extension[32];
++    if (qt_jaguar_isTagClass(inTagClass, "public.filename-extension")
++        && CFStringGetCString(inTag, extension, sizeof(extension), kCFStringEncodingASCII)) {
++        for (const QtJaguarTypeName *t = qt_jaguar_types; t->uti; ++t) {
++            if (t->extension && !strcasecmp(t->extension, extension))
++                return CFStringCreateWithCString(0, t->uti, kCFStringEncodingASCII);
++        }
++    }
++    return 0;
++}
++
++CFArrayRef qt_jaguar_UTTypeCreateAllIdentifiersForTag(CFStringRef inTagClass, CFStringRef inTag, CFStringRef inConformingToUTI)
++{
++    if (&UTTypeCreateAllIdentifiersForTag)
++        return UTTypeCreateAllIdentifiersForTag(inTagClass, inTag, inConformingToUTI);
++    CFStringRef uti = qt_jaguar_UTTypeCreatePreferredIdentifierForTag(inTagClass, inTag, inConformingToUTI);
++    if (!uti)
++        return CFArrayCreate(0, 0, 0, &kCFTypeArrayCallBacks);
++    const void *values[] = { uti };
++    CFArrayRef result = CFArrayCreate(0, values, 1, &kCFTypeArrayCallBacks);
++    CFRelease(uti);
++    return result;
++}
++
++// ---- Pasteboard and drag --------------------------------------------------
++//
++// The Pasteboard Manager is Mac OS X 10.3; 10.2 has the Scrap Manager. Before
++// 10.3 the pasteboard calls work on a store in the process. The clipboard
++// and find pasteboards mirror it to the scrap of the same purpose, flavor by
++// flavor for the types the scrap knows by OSType (see qt_jaguar_types), so
++// text copied in Qt pastes in other applications and the other way round.
++// Promised flavors are kept at once: the promise keeper is called while the
++// flavor is put. Drags have no pasteboard on 10.2.
++
++struct QtJaguarPasteboard
++{
++    CFStringRef name;            // 0 for a unique pasteboard
++    CFStringRef scrapName;       // the scrap it mirrors, or 0
++    CFMutableArrayRef items;     // CFMutableDictionary per item: flavor -> CFData or kCFNull
++    CFMutableArrayRef itemIds;   // CFNumber per item
++    PasteboardPromiseKeeperProcPtr keeper;
++    void *keeperContext;
++    ScrapRef scrap;              // the scrap as last written or read
++};
++
++// Qt releases a pasteboard with CFRelease, so the emulated one is a CFData
++// that holds the store and frees it through its deallocator.
++static QtJaguarPasteboard *qt_jaguar_pasteboard(PasteboardRef ref)
++{
++    return ref ? reinterpret_cast<QtJaguarPasteboard *>(const_cast<UInt8 *>(
++               CFDataGetBytePtr(reinterpret_cast<CFDataRef>(ref)))) : 0;
++}
++
++static void *qt_jaguar_allocatePasteboard(CFIndex size, CFOptionFlags, void *)
++{
++    return malloc(size);
++}
++
++static void qt_jaguar_freePasteboard(void *pointer, void *)
++{
++    QtJaguarPasteboard *pb = static_cast<QtJaguarPasteboard *>(pointer);
++    if (pb->name)
++        CFRelease(pb->name);
++    CFRelease(pb->items);
++    CFRelease(pb->itemIds);
++    delete pb;
++}
++
++static CFAllocatorRef qt_jaguar_pasteboardDeallocator()
++{
++    static CFAllocatorRef allocator = 0;
++    if (!allocator) {
++        CFAllocatorContext context = { 0, 0, 0, 0, 0, qt_jaguar_allocatePasteboard, 0, qt_jaguar_freePasteboard, 0 };
++        allocator = CFAllocatorCreate(0, &context);
++    }
++    return allocator;
++}
++
++static bool qt_jaguar_hasPasteboard()
++{
++    return &PasteboardCreate != 0;
++}
++
++static CFMutableDictionaryRef qt_jaguar_item(QtJaguarPasteboard *pb, PasteboardItemID id, bool create)
++{
++    const long wanted = long(id);
++    for (CFIndex i = 0; i < CFArrayGetCount(pb->itemIds); ++i) {
++        long value = 0;
++        CFNumberGetValue(static_cast<CFNumberRef>(CFArrayGetValueAtIndex(pb->itemIds, i)), kCFNumberLongType, &value);
++        if (value == wanted)
++            return static_cast<CFMutableDictionaryRef>(const_cast<void *>(CFArrayGetValueAtIndex(pb->items, i)));
++    }
++    if (!create)
++        return 0;
++    CFNumberRef number = CFNumberCreate(0, kCFNumberLongType, &wanted);
++    CFMutableDictionaryRef item = CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks,
++                                                            &kCFTypeDictionaryValueCallBacks);
++    CFArrayAppendValue(pb->itemIds, number);
++    CFArrayAppendValue(pb->items, item);
++    CFRelease(number);
++    CFRelease(item);
++    return item;
++}
++
++static void qt_jaguar_clearStore(QtJaguarPasteboard *pb)
++{
++    CFArrayRemoveAllValues(pb->items);
++    CFArrayRemoveAllValues(pb->itemIds);
++}
++
++// Reads the scrap into the store as one item with id 1.
++static void qt_jaguar_readScrap(QtJaguarPasteboard *pb, ScrapRef scrap)
++{
++    qt_jaguar_clearStore(pb);
++    pb->scrap = scrap;
++    UInt32 count = 0;
++    if (GetScrapFlavorCount(scrap, &count) != noErr || !count)
++        return;
++    ScrapFlavorInfo *infos = static_cast<ScrapFlavorInfo *>(malloc(count * sizeof(ScrapFlavorInfo)));
++    if (!infos)
++        return;
++    if (GetScrapFlavorInfoList(scrap, &count, infos) == noErr) {
++        CFMutableDictionaryRef item = qt_jaguar_item(pb, PasteboardItemID(1), true);
++        for (UInt32 i = 0; i < count; ++i) {
++            Size size = 0;
++            if (GetScrapFlavorSize(scrap, infos[i].flavorType, &size) != noErr || size < 0)
++                continue;
++            CFMutableDataRef data = CFDataCreateMutable(0, size);
++            CFDataSetLength(data, size);
++            if (GetScrapFlavorData(scrap, infos[i].flavorType, &size, CFDataGetMutableBytePtr(data)) == noErr) {
++                CFDataSetLength(data, size);
++                CFStringRef flavor = qt_jaguar_utiForType(infos[i].flavorType);
++                CFDictionarySetValue(item, flavor, data);
++                CFRelease(flavor);
++            }
++            CFRelease(data);
++        }
++    }
++    free(infos);
++}
++
++OSStatus qt_jaguar_PasteboardCreate(CFStringRef inName, PasteboardRef *outPasteboard)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardCreate(inName, outPasteboard);
++    if (!outPasteboard)
++        return paramErr;
++    QtJaguarPasteboard *pb = new QtJaguarPasteboard;
++    pb->name = inName ? CFStringCreateCopy(0, inName) : 0;
++    pb->scrapName = 0;
++    if (inName && CFStringCompare(inName, CFSTR("com.apple.pasteboard.clipboard"), 0) == kCFCompareEqualTo)
++        pb->scrapName = kScrapClipboardScrap;
++    else if (inName && CFStringCompare(inName, CFSTR("com.apple.pasteboard.find"), 0) == kCFCompareEqualTo)
++        pb->scrapName = kScrapFindScrap;
++    pb->items = CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks);
++    pb->itemIds = CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks);
++    pb->keeper = 0;
++    pb->keeperContext = 0;
++    pb->scrap = 0;
++    CFDataRef holder = CFDataCreateWithBytesNoCopy(0, reinterpret_cast<const UInt8 *>(pb), sizeof(*pb),
++                                                   qt_jaguar_pasteboardDeallocator());
++    *outPasteboard = reinterpret_cast<PasteboardRef>(const_cast<__CFData *>(holder));
++    return holder ? noErr : memFullErr;
++}
++
++PasteboardSyncFlags qt_jaguar_PasteboardSynchronize(PasteboardRef inPasteboard)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardSynchronize(inPasteboard);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb || !pb->scrapName)
++        return kPasteboardClientIsOwner;
++    ScrapRef current = 0;
++    if (GetScrapByName(pb->scrapName, kScrapGetNamedScrap, &current) != noErr)
++        return 0;
++    if (current == pb->scrap)
++        return kPasteboardClientIsOwner;
++    // Another application cleared the scrap since this process wrote or
++    // read it; the scrap gets a new reference each time it is cleared.
++    qt_jaguar_readScrap(pb, current);
++    return kPasteboardModified;
++}
++
++OSStatus qt_jaguar_PasteboardClear(PasteboardRef inPasteboard)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardClear(inPasteboard);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb)
++        return paramErr;
++    qt_jaguar_clearStore(pb);
++    if (pb->scrapName)
++        return GetScrapByName(pb->scrapName, kScrapClearNamedScrap, &pb->scrap);
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardPutItemFlavor(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType,
++                                           CFDataRef inData, PasteboardFlavorFlags inFlags)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardPutItemFlavor(inPasteboard, inItem, inFlavorType, inData, inFlags);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb || !inFlavorType)
++        return paramErr;
++    CFMutableDictionaryRef item = qt_jaguar_item(pb, inItem, true);
++    if (!inData) {
++        // A promise: ask for the data now. The keeper puts it with a second
++        // call, which lands in the branch below.
++        CFDictionarySetValue(item, inFlavorType, kCFNull);
++        if (pb->keeper)
++            pb->keeper(inPasteboard, inItem, inFlavorType, pb->keeperContext);
++        return noErr;
++    }
++    CFDictionarySetValue(item, inFlavorType, inData);
++    // Only the first item reaches the scrap, which holds one item.
++    long first = 0;
++    if (pb->scrapName && CFArrayGetCount(pb->itemIds)) {
++        CFNumberGetValue(static_cast<CFNumberRef>(CFArrayGetValueAtIndex(pb->itemIds, 0)), kCFNumberLongType, &first);
++        const OSType type = qt_jaguar_typeForUti(inFlavorType);
++        if (type && long(inItem) == first && pb->scrap)
++            PutScrapFlavor(pb->scrap, type, kScrapFlavorMaskNone, CFDataGetLength(inData), CFDataGetBytePtr(inData));
++    }
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardSetPromiseKeeper(PasteboardRef inPasteboard, PasteboardPromiseKeeperProcPtr inPromiseKeeper, void *inContext)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardSetPromiseKeeper(inPasteboard, inPromiseKeeper, inContext);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb)
++        return paramErr;
++    pb->keeper = inPromiseKeeper;
++    pb->keeperContext = inContext;
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardGetItemCount(PasteboardRef inPasteboard, ItemCount *outItemCount)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardGetItemCount(inPasteboard, outItemCount);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb || !outItemCount)
++        return paramErr;
++    *outItemCount = ItemCount(CFArrayGetCount(pb->items));
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardGetItemIdentifier(PasteboardRef inPasteboard, UInt32 inIndex, PasteboardItemID *outItem)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardGetItemIdentifier(inPasteboard, inIndex, outItem);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    if (!pb || !outItem || inIndex < 1 || CFIndex(inIndex) > CFArrayGetCount(pb->itemIds))
++        return paramErr;
++    long value = 0;
++    CFNumberGetValue(static_cast<CFNumberRef>(CFArrayGetValueAtIndex(pb->itemIds, inIndex - 1)), kCFNumberLongType, &value);
++    *outItem = PasteboardItemID(value);
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardCopyItemFlavors(PasteboardRef inPasteboard, PasteboardItemID inItem, CFArrayRef *outFlavorTypes)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardCopyItemFlavors(inPasteboard, inItem, outFlavorTypes);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    CFMutableDictionaryRef item = pb ? qt_jaguar_item(pb, inItem, false) : 0;
++    if (!item || !outFlavorTypes)
++        return badPasteboardItemErr;
++    const CFIndex count = CFDictionaryGetCount(item);
++    const void **keys = static_cast<const void **>(malloc(sizeof(void *) * (count ? count : 1)));
++    CFDictionaryGetKeysAndValues(item, keys, 0);
++    *outFlavorTypes = CFArrayCreate(0, keys, count, &kCFTypeArrayCallBacks);
++    free(keys);
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardGetItemFlavorFlags(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType,
++                                                PasteboardFlavorFlags *outFlags)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardGetItemFlavorFlags(inPasteboard, inItem, inFlavorType, outFlags);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    CFMutableDictionaryRef item = pb ? qt_jaguar_item(pb, inItem, false) : 0;
++    if (!item || !CFDictionaryContainsKey(item, inFlavorType))
++        return badPasteboardFlavorErr;
++    if (outFlags)
++        *outFlags = kPasteboardFlavorNoFlags;
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardCopyItemFlavorData(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType,
++                                                CFDataRef *outData)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardCopyItemFlavorData(inPasteboard, inItem, inFlavorType, outData);
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(inPasteboard);
++    CFMutableDictionaryRef item = pb ? qt_jaguar_item(pb, inItem, false) : 0;
++    if (!item || !outData)
++        return badPasteboardItemErr;
++    CFTypeRef value = CFDictionaryGetValue(item, inFlavorType);
++    if (!value || value == kCFNull)
++        return badPasteboardFlavorErr;
++    *outData = static_cast<CFDataRef>(CFRetain(value));
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardCopyName(PasteboardRef inPasteboard, CFStringRef *outName)
++{
++    if (&PasteboardCopyName)
++        return PasteboardCopyName(inPasteboard, outName);
++    QtJaguarPasteboard *pb = qt_jaguar_hasPasteboard() ? 0 : qt_jaguar_pasteboard(inPasteboard);
++    if (!pb || !outName)
++        return paramErr;
++    *outName = pb->name ? CFStringCreateCopy(0, pb->name) : CFSTR("");
++    return noErr;
++}
++
++OSStatus qt_jaguar_PasteboardCopyPasteLocation(PasteboardRef inPasteboard, CFURLRef *outPasteLocation)
++{
++    if (qt_jaguar_hasPasteboard())
++        return PasteboardCopyPasteLocation(inPasteboard, outPasteLocation);
++    return paramErr;
++}
++
++// Drags before 10.3 are classic Drag Manager drags. A drag made from a
++// pasteboard carries the pasteboard's flavors that have an OSType, so other
++// applications can take text from it; the drag also remembers the pasteboard,
++// and a drop in this process gets it back with every flavor, Qt's own ones
++// included. A drag from another application is read into a new pasteboard.
++
++static const int qt_jaguar_maxDrags = 8;
++static DragRef qt_jaguar_drags[qt_jaguar_maxDrags];
++static PasteboardRef qt_jaguar_dragBoards[qt_jaguar_maxDrags];
++
++static void qt_jaguar_rememberDrag(DragRef drag, PasteboardRef board)
++{
++    for (int i = 0; i < qt_jaguar_maxDrags; ++i) {
++        if (!qt_jaguar_drags[i]) {
++            qt_jaguar_drags[i] = drag;
++            qt_jaguar_dragBoards[i] = board;
++            CFRetain(board);
++            return;
++        }
++    }
++}
++
++static PasteboardRef qt_jaguar_boardForDrag(DragRef drag)
++{
++    for (int i = 0; i < qt_jaguar_maxDrags; ++i) {
++        if (drag && qt_jaguar_drags[i] == drag)
++            return qt_jaguar_dragBoards[i];
++    }
++    return 0;
++}
++
++static void qt_jaguar_forgetDrag(DragRef drag)
++{
++    for (int i = 0; i < qt_jaguar_maxDrags; ++i) {
++        if (drag && qt_jaguar_drags[i] == drag) {
++            CFRelease(qt_jaguar_dragBoards[i]);
++            qt_jaguar_drags[i] = 0;
++            qt_jaguar_dragBoards[i] = 0;
++        }
++    }
++}
++
++OSStatus qt_jaguar_NewDragWithPasteboard(PasteboardRef inPasteboard, DragRef *outDrag)
++{
++    if (&NewDragWithPasteboard)
++        return NewDragWithPasteboard(inPasteboard, outDrag);
++    const OSStatus err = NewDrag(outDrag);
++    QtJaguarPasteboard *pb = qt_jaguar_hasPasteboard() ? 0 : qt_jaguar_pasteboard(inPasteboard);
++    if (err != noErr || !pb)
++        return err;
++    for (CFIndex i = 0; i < CFArrayGetCount(pb->items); ++i) {
++        long id = 0;
++        CFNumberGetValue(static_cast<CFNumberRef>(CFArrayGetValueAtIndex(pb->itemIds, i)), kCFNumberLongType, &id);
++        CFDictionaryRef item = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(pb->items, i));
++        const CFIndex count = CFDictionaryGetCount(item);
++        const void **keys = static_cast<const void **>(malloc(sizeof(void *) * (count ? count : 1)));
++        const void **values = static_cast<const void **>(malloc(sizeof(void *) * (count ? count : 1)));
++        CFDictionaryGetKeysAndValues(item, keys, values);
++        bool added = false;
++        for (CFIndex f = 0; f < count; ++f) {
++            const OSType type = qt_jaguar_typeForUti(static_cast<CFStringRef>(keys[f]));
++            if (!type || values[f] == kCFNull)
++                continue;
++            CFDataRef data = static_cast<CFDataRef>(values[f]);
++            if (AddDragItemFlavor(*outDrag, DragItemRef(id), type, CFDataGetBytePtr(data),
++                                  CFDataGetLength(data), 0) == noErr)
++                added = true;
++        }
++        if (!added) {
++            // Every item needs a flavor; this one only marks Qt's own data.
++            AddDragItemFlavor(*outDrag, DragItemRef(id), 'QtDd', 0, 0, flavorSenderOnly);
++        }
++        free(keys);
++        free(values);
++    }
++    qt_jaguar_rememberDrag(*outDrag, inPasteboard);
++    return noErr;
++}
++
++OSStatus qt_jaguar_GetDragPasteboard(DragRef inDrag, PasteboardRef *outPasteboard)
++{
++    if (&GetDragPasteboard)
++        return GetDragPasteboard(inDrag, outPasteboard);
++    if (!outPasteboard)
++        return paramErr;
++    *outPasteboard = qt_jaguar_boardForDrag(inDrag);
++    if (*outPasteboard)
++        return noErr;
++    PasteboardRef board = 0;
++    OSStatus err = qt_jaguar_PasteboardCreate(0, &board);
++    if (err != noErr)
++        return err;
++    QtJaguarPasteboard *pb = qt_jaguar_pasteboard(board);
++    UInt16 items = 0;
++    CountDragItems(inDrag, &items);
++    for (UInt16 i = 1; i <= items; ++i) {
++        DragItemRef ref = 0;
++        UInt16 flavors = 0;
++        if (GetDragItemReferenceNumber(inDrag, i, &ref) != noErr
++            || CountDragItemFlavors(inDrag, ref, &flavors) != noErr)
++            continue;
++        CFMutableDictionaryRef item = qt_jaguar_item(pb, PasteboardItemID(ref), true);
++        for (UInt16 f = 1; f <= flavors; ++f) {
++            FlavorType type = 0;
++            Size size = 0;
++            if (GetFlavorType(inDrag, ref, f, &type) != noErr
++                || GetFlavorDataSize(inDrag, ref, type, &size) != noErr || size < 0)
++                continue;
++            CFMutableDataRef data = CFDataCreateMutable(0, size);
++            CFDataSetLength(data, size);
++            if (GetFlavorData(inDrag, ref, type, CFDataGetMutableBytePtr(data), &size, 0) == noErr) {
++                CFDataSetLength(data, size);
++                CFStringRef uti = qt_jaguar_utiForType(type);
++                CFDictionarySetValue(item, uti, data);
++                CFRelease(uti);
++            }
++            CFRelease(data);
++        }
++    }
++    qt_jaguar_rememberDrag(inDrag, board);
++    CFRelease(board);
++    *outPasteboard = board;
++    return noErr;
++}
++
++OSErr qt_jaguar_DisposeDrag(DragRef theDrag)
++{
++    qt_jaguar_forgetDrag(theDrag);
++    return DisposeDrag(theDrag);
++}
++
++// ---- Printing -------------------------------------------------------------
++//
++// Qt prints through the 10.3 and 10.4 Print Manager calls; on 10.2 they
++// report kPMNotImplemented and QPrinter does not start a job.
++
++OSStatus qt_jaguar_PMCreatePageFormatWithPMPaper(PMPageFormat *pageFormat, PMPaper paper)
++{
++    return &PMCreatePageFormatWithPMPaper ? PMCreatePageFormatWithPMPaper(pageFormat, paper) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMGetPageFormatPaper(PMPageFormat format, PMPaper *paper)
++{
++    return &PMGetPageFormatPaper ? PMGetPageFormatPaper(format, paper) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMPaperGetHeight(PMPaper paper, double *paperHeight)
++{
++    return &PMPaperGetHeight ? PMPaperGetHeight(paper, paperHeight) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMPaperGetMargins(PMPaper paper, PMPaperMargins *paperMargins)
++{
++    return &PMPaperGetMargins ? PMPaperGetMargins(paper, paperMargins) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMPaperGetWidth(PMPaper paper, double *paperWidth)
++{
++    return &PMPaperGetWidth ? PMPaperGetWidth(paper, paperWidth) : OSStatus(kPMNotImplemented);
++}
++
++PMPrinter qt_jaguar_PMPrinterCreateFromPrinterID(CFStringRef printerID)
++{
++    return &PMPrinterCreateFromPrinterID ? PMPrinterCreateFromPrinterID(printerID) : PMPrinter(0);
++}
++
++OSStatus qt_jaguar_PMPrinterGetPaperList(PMPrinter printer, CFArrayRef *paperList)
++{
++    return &PMPrinterGetPaperList ? PMPrinterGetPaperList(printer, paperList) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMSessionBeginCGDocument(PMPrintSession printSession, PMPrintSettings printSettings, PMPageFormat pageFormat)
++{
++    return &PMSessionBeginCGDocument ? PMSessionBeginCGDocument(printSession, printSettings, pageFormat) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMSessionBeginCGDocumentNoDialog(PMPrintSession printSession, PMPrintSettings printSettings, PMPageFormat pageFormat)
++{
++    return &PMSessionBeginCGDocumentNoDialog ? PMSessionBeginCGDocumentNoDialog(printSession, printSettings, pageFormat) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMSessionGetCGGraphicsContext(PMPrintSession printSession, CGContextRef *context)
++{
++    return &PMSessionGetCGGraphicsContext ? PMSessionGetCGGraphicsContext(printSession, context) : OSStatus(kPMNotImplemented);
++}
++
++OSStatus qt_jaguar_PMSessionSetCurrentPMPrinter(PMPrintSession session, PMPrinter printer)
++{
++    return &PMSessionSetCurrentPMPrinter ? PMSessionSetCurrentPMPrinter(session, printer) : OSStatus(kPMNotImplemented);
++}
++
++// ---- AppKit string constants ----------------------------------------------
++
++CFStringRef qt_jaguar_NSMenuDidEndTrackingNotification()
++{
++    return &NSMenuDidEndTrackingNotification ? NSMenuDidEndTrackingNotification
++                                             : CFSTR("NSMenuDidEndTrackingNotification");
++}
++
++CFStringRef qt_jaguar_NSStrikethroughStyleAttributeName()
++{
++    return &NSStrikethroughStyleAttributeName ? NSStrikethroughStyleAttributeName
++                                              : CFSTR("NSStrikethrough");
++}
++
+--- /dev/null
++++ b/src/gui/kernel/qt_jaguar_mac_p.h
+@@ -0,0 +1,299 @@
++/****************************************************************************
++**
++** Mac OS X 10.2 (Jaguar) support for the Carbon port of QtGui.
++**
++** Qt 4.8 calls Carbon, CoreGraphics, ImageIO, Pasteboard and UTI functions
++** that Mac OS X 10.3 or 10.4 introduced. Built with a 10.2 deployment target
++** against the 10.4 headers, those are weak imports: NULL on 10.2. Each one
++** used by QtGui is wrapped here by a qt_jaguar_ function that calls the real
++** function when it exists and otherwise does the 10.2 equivalent, or fails
++** the way the API reports failure. The macros below route Qt's calls to the
++** wrappers, so no call site changes and nothing changes on 10.3 and later.
++**
++****************************************************************************/
++
++#ifndef QT_JAGUAR_MAC_P_H
++#define QT_JAGUAR_MAC_P_H
++
++//
++//  W A R N I N G
++//  -------------
++//
++// This file is not part of the Qt API. It exists purely as an
++// implementation detail. This header file may change from version to
++// version without notice, or even be removed.
++//
++// We mean it.
++//
++
++#include <Carbon/Carbon.h>
++#include <ApplicationServices/ApplicationServices.h>
++
++#if defined(Q_WS_MAC) && !defined(QT_MAC_USE_COCOA)
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++// CoreGraphics and ImageIO
++CGContextRef qt_jaguar_CGBitmapContextCreate(void *data, size_t width, size_t height, size_t bitsPerComponent,
++                                             size_t bytesPerRow, CGColorSpaceRef colorspace, CGBitmapInfo bitmapInfo);
++CGImageRef qt_jaguar_CGImageCreate(size_t width, size_t height, size_t bitsPerComponent, size_t bitsPerPixel,
++                                   size_t bytesPerRow, CGColorSpaceRef colorspace, CGBitmapInfo bitmapInfo,
++                                   CGDataProviderRef provider, const float decode[], bool shouldInterpolate,
++                                   CGColorRenderingIntent intent);
++CGImageRef qt_jaguar_CGBitmapContextCreateImage(CGContextRef c);
++void qt_jaguar_CGContextSetBlendMode(CGContextRef c, CGBlendMode mode);
++void qt_jaguar_CGContextSetFillColorWithColor(CGContextRef c, CGColorRef color);
++void qt_jaguar_CGContextSetStrokeColorWithColor(CGContextRef c, CGColorRef color);
++CGError qt_jaguar_CGDisplayRegisterReconfigurationCallback(CGDisplayReconfigurationCallBack proc, void *userInfo);
++CGError qt_jaguar_CGDisplayRemoveReconfigurationCallback(CGDisplayReconfigurationCallBack proc, void *userInfo);
++CGImageRef qt_jaguar_CGImageCreateWithImageInRect(CGImageRef image, CGRect rect);
++void qt_jaguar_CGImageDestinationAddImage(CGImageDestinationRef idst, CGImageRef image, CFDictionaryRef properties);
++CGImageDestinationRef qt_jaguar_CGImageDestinationCreateWithData(CFMutableDataRef data, CFStringRef type, size_t count, CFDictionaryRef options);
++bool qt_jaguar_CGImageDestinationFinalize(CGImageDestinationRef idst);
++CGImageRef qt_jaguar_CGImageSourceCreateImageAtIndex(CGImageSourceRef isrc, size_t index, CFDictionaryRef options);
++CGImageSourceRef qt_jaguar_CGImageSourceCreateWithData(CFDataRef data, CFDictionaryRef options);
++CGImageSourceRef qt_jaguar_CGImageSourceCreateWithURL(CFURLRef url, CFDictionaryRef options);
++CFStringRef qt_jaguar_kCGImagePropertyPixelWidth();
++CFStringRef qt_jaguar_kCGImagePropertyPixelHeight();
++
++// HIToolbox: views, windows, menus, events
++OSStatus qt_jaguar_CancelMenuTracking(MenuRef inRootMenu, Boolean inImmediate, UInt32 inDismissalReason);
++OSStatus qt_jaguar_DisableSecureEventInput();
++OSStatus qt_jaguar_EnableSecureEventInput();
++EventTargetRef qt_jaguar_GetEventMonitorTarget();
++OSStatus qt_jaguar_GetWindowGroupLevelOfType(WindowGroupRef inGroup, UInt32 inLevelType, CGWindowLevel *outLevel);
++float qt_jaguar_HIGetScaleFactor();
++OSStatus qt_jaguar_HIMenuGetContentView(MenuRef inMenu, ThemeMenuType inMenuType, HIViewRef *outView);
++OSStatus qt_jaguar_HIViewChangeFeatures(HIViewRef inView, HIViewFeatures inFeaturesToSet, HIViewFeatures inFeaturesToClear);
++OSStatus qt_jaguar_HIViewGetFeatures(HIViewRef inView, HIViewFeatures *outFeatures);
++WindowRef qt_jaguar_HIViewGetWindow(HIViewRef inView);
++OSStatus qt_jaguar_HIViewRender(HIViewRef inView);
++OSStatus qt_jaguar_HIViewSetNeedsDisplayInRect(HIViewRef inView, const HIRect *inRect, Boolean inNeedsDisplay);
++OSStatus qt_jaguar__HIViewScrollRectWithOptions(HIViewRef inView, const HIRect *inRect, float inDX, float inDY, OptionBits inOptions);
++OSStatus qt_jaguar_HIWindowChangeAvailability(HIWindowRef inWindow, HIWindowAvailability inSet, HIWindowAvailability inClear);
++OSStatus qt_jaguar_HIWindowChangeClass(HIWindowRef inWindow, WindowClass inWindowClass);
++OSStatus qt_jaguar_HIWindowChangeFeatures(WindowRef inWindow, UInt64 inSetThese, UInt64 inClearThese);
++OSStatus qt_jaguar_HIWindowFlush(HIWindowRef inWindow);
++OSStatus qt_jaguar_HIWindowSetProxyFSRef(WindowRef window, const FSRef *inRef);
++OSStatus qt_jaguar_TransformProcessType(const ProcessSerialNumber *psn, ProcessApplicationTransformState transformState);
++OSStatus qt_jaguar_TransitionWindowWithOptions(WindowRef inWindow, WindowTransitionEffect inEffect, WindowTransitionAction inAction,
++                                               const HIRect *inBounds, Boolean inAsync, TransitionWindowOptions *inOptions);
++
++// HITheme functions that 10.2 exports, unannounced, with another interface;
++// before 10.3 the Appearance Manager does their work
++OSStatus qt_jaguar_HIThemeGetButtonBackgroundBounds(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIRect *outBounds);
++OSStatus qt_jaguar_HIThemeGetButtonContentBounds(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIRect *outBounds);
++OSStatus qt_jaguar_HIThemeDrawButton(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation, HIRect *outLabelRect);
++OSStatus qt_jaguar_HIThemeDrawTrack(const HIThemeTrackDrawInfo *inDrawInfo, const HIRect *inGhostRect, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawTrackTickMarks(const HIThemeTrackDrawInfo *inDrawInfo, ItemCount inNumTicks, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawTab(const HIRect *inRect, const HIThemeTabDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation, HIRect *outLabelRect);
++OSStatus qt_jaguar_HIThemeDrawTabPane(const HIRect *inRect, const HIThemeTabPaneDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawPopupArrow(const HIRect *inBounds, const HIThemePopupArrowDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawMenuBackground(const HIRect *inMenuRect, const HIThemeMenuDrawInfo *inMenuDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawMenuBarBackground(const HIRect *inBounds, const HIThemeMenuBarDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawMenuItem(const HIRect *inMenuRect, const HIRect *inItemRect, const HIThemeMenuItemDrawInfo *inItemDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation, HIRect *outContentRect);
++OSStatus qt_jaguar_HIThemeDrawMenuSeparator(const HIRect *inMenuRect, const HIRect *inItemRect, const HIThemeMenuItemDrawInfo *inItemDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawWindowFrame(const HIRect *inContRect, const HIThemeWindowDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation, HIRect *outTitleRect);
++OSStatus qt_jaguar_HIThemeDrawTitleBarWidget(const HIRect *inContRect, const HIThemeWindowWidgetDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++
++// HITheme functions that 10.2 does not export
++OSStatus qt_jaguar_HIThemeDrawFrame(const HIRect *inRect, const HIThemeFrameDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawGroupBox(const HIRect *inRect, const HIThemeGroupBoxDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeDrawGrowBox(const HIPoint *inOrigin, const HIThemeGrowBoxDrawInfo *inDrawInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++OSStatus qt_jaguar_HIThemeGetButtonShape(const HIRect *inBounds, const HIThemeButtonDrawInfo *inDrawInfo, HIShapeRef *outShape);
++OSStatus qt_jaguar_HIThemeGetGrowBoxBounds(const HIPoint *inOrigin, const HIThemeGrowBoxDrawInfo *inDrawInfo, HIRect *outBounds);
++OSStatus qt_jaguar_HIThemeGetMenuBackgroundShape(const HIRect *inMenuRect, const HIThemeMenuDrawInfo *inMenuDrawInfo, HIShapeRef *outShape);
++OSStatus qt_jaguar_HIThemeGetTrackThumbShape(const HIThemeTrackDrawInfo *inDrawInfo, HIShapeRef *outThumbShape);
++OSStatus qt_jaguar_HIThemeGetWindowShape(const HIRect *inContRect, const HIThemeWindowDrawInfo *inDrawInfo, WindowRegionCode inWinRegion, HIShapeRef *outShape);
++OSStatus qt_jaguar_HIThemeSetFill(ThemeBrush inBrush, void *inInfo, CGContextRef inContext, HIThemeOrientation inOrientation);
++
++// Pasteboard and drag
++OSStatus qt_jaguar_GetDragPasteboard(DragRef inDrag, PasteboardRef *outPasteboard);
++OSStatus qt_jaguar_NewDragWithPasteboard(PasteboardRef inPasteboard, DragRef *outDrag);
++OSErr qt_jaguar_DisposeDrag(DragRef theDrag);
++OSStatus qt_jaguar_PasteboardClear(PasteboardRef inPasteboard);
++OSStatus qt_jaguar_PasteboardCopyItemFlavorData(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType, CFDataRef *outData);
++OSStatus qt_jaguar_PasteboardCopyItemFlavors(PasteboardRef inPasteboard, PasteboardItemID inItem, CFArrayRef *outFlavorTypes);
++OSStatus qt_jaguar_PasteboardCopyName(PasteboardRef inPasteboard, CFStringRef *outName);
++OSStatus qt_jaguar_PasteboardCopyPasteLocation(PasteboardRef inPasteboard, CFURLRef *outPasteLocation);
++OSStatus qt_jaguar_PasteboardCreate(CFStringRef inName, PasteboardRef *outPasteboard);
++OSStatus qt_jaguar_PasteboardGetItemCount(PasteboardRef inPasteboard, ItemCount *outItemCount);
++OSStatus qt_jaguar_PasteboardGetItemFlavorFlags(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType, PasteboardFlavorFlags *outFlags);
++OSStatus qt_jaguar_PasteboardGetItemIdentifier(PasteboardRef inPasteboard, UInt32 inIndex, PasteboardItemID *outItem);
++OSStatus qt_jaguar_PasteboardPutItemFlavor(PasteboardRef inPasteboard, PasteboardItemID inItem, CFStringRef inFlavorType, CFDataRef inData, PasteboardFlavorFlags inFlags);
++OSStatus qt_jaguar_PasteboardSetPromiseKeeper(PasteboardRef inPasteboard, PasteboardPromiseKeeperProcPtr inPromiseKeeper, void *inContext);
++PasteboardSyncFlags qt_jaguar_PasteboardSynchronize(PasteboardRef inPasteboard);
++
++// Uniform Type Identifiers
++CFStringRef qt_jaguar_UTCreateStringForOSType(OSType inOSType);
++OSType qt_jaguar_UTGetOSTypeFromString(CFStringRef inString);
++CFStringRef qt_jaguar_UTTypeCopyPreferredTagWithClass(CFStringRef inUTI, CFStringRef inTagClass);
++CFArrayRef qt_jaguar_UTTypeCreateAllIdentifiersForTag(CFStringRef inTagClass, CFStringRef inTag, CFStringRef inConformingToUTI);
++CFStringRef qt_jaguar_UTTypeCreatePreferredIdentifierForTag(CFStringRef inTagClass, CFStringRef inTag, CFStringRef inConformingToUTI);
++CFStringRef qt_jaguar_kUTTagClassOSType();
++CFStringRef qt_jaguar_kUTTypeTIFF();
++
++// Printing: the 10.3 and 10.4 Print Manager calls report kPMNotImplemented
++OSStatus qt_jaguar_PMCreatePageFormatWithPMPaper(PMPageFormat *pageFormat, PMPaper paper);
++OSStatus qt_jaguar_PMGetPageFormatPaper(PMPageFormat format, PMPaper *paper);
++OSStatus qt_jaguar_PMPaperGetHeight(PMPaper paper, double *paperHeight);
++OSStatus qt_jaguar_PMPaperGetMargins(PMPaper paper, PMPaperMargins *paperMargins);
++OSStatus qt_jaguar_PMPaperGetWidth(PMPaper paper, double *paperWidth);
++PMPrinter qt_jaguar_PMPrinterCreateFromPrinterID(CFStringRef printerID);
++OSStatus qt_jaguar_PMPrinterGetPaperList(PMPrinter printer, CFArrayRef *paperList);
++OSStatus qt_jaguar_PMSessionBeginCGDocument(PMPrintSession printSession, PMPrintSettings printSettings, PMPageFormat pageFormat);
++OSStatus qt_jaguar_PMSessionBeginCGDocumentNoDialog(PMPrintSession printSession, PMPrintSettings printSettings, PMPageFormat pageFormat);
++OSStatus qt_jaguar_PMSessionGetCGGraphicsContext(PMPrintSession printSession, CGContextRef *context);
++OSStatus qt_jaguar_PMSessionSetCurrentPMPrinter(PMPrintSession session, PMPrinter printer);
++
++// AppKit string constants (Objective-C++ only)
++CFStringRef qt_jaguar_NSMenuDidEndTrackingNotification();
++CFStringRef qt_jaguar_NSStrikethroughStyleAttributeName();
++
++#ifdef __cplusplus
++}
++#endif
++
++#ifndef QT_JAGUAR_MAC_IMPLEMENTATION
++#define CGBitmapContextCreate qt_jaguar_CGBitmapContextCreate
++#define CGImageCreate qt_jaguar_CGImageCreate
++#define CGBitmapContextCreateImage qt_jaguar_CGBitmapContextCreateImage
++#define CGContextSetBlendMode qt_jaguar_CGContextSetBlendMode
++#define CGContextSetFillColorWithColor qt_jaguar_CGContextSetFillColorWithColor
++#define CGContextSetStrokeColorWithColor qt_jaguar_CGContextSetStrokeColorWithColor
++#define CGDisplayRegisterReconfigurationCallback qt_jaguar_CGDisplayRegisterReconfigurationCallback
++#define CGDisplayRemoveReconfigurationCallback qt_jaguar_CGDisplayRemoveReconfigurationCallback
++#define CGImageCreateWithImageInRect qt_jaguar_CGImageCreateWithImageInRect
++#define CGImageDestinationAddImage qt_jaguar_CGImageDestinationAddImage
++#define CGImageDestinationCreateWithData qt_jaguar_CGImageDestinationCreateWithData
++#define CGImageDestinationFinalize qt_jaguar_CGImageDestinationFinalize
++#define CGImageSourceCreateImageAtIndex qt_jaguar_CGImageSourceCreateImageAtIndex
++#define CGImageSourceCreateWithData qt_jaguar_CGImageSourceCreateWithData
++#define CGImageSourceCreateWithURL qt_jaguar_CGImageSourceCreateWithURL
++#define kCGImagePropertyPixelWidth qt_jaguar_kCGImagePropertyPixelWidth()
++#define kCGImagePropertyPixelHeight qt_jaguar_kCGImagePropertyPixelHeight()
++#define CancelMenuTracking qt_jaguar_CancelMenuTracking
++#define DisableSecureEventInput qt_jaguar_DisableSecureEventInput
++#define EnableSecureEventInput qt_jaguar_EnableSecureEventInput
++#define GetEventMonitorTarget qt_jaguar_GetEventMonitorTarget
++#define GetWindowGroupLevelOfType qt_jaguar_GetWindowGroupLevelOfType
++#define HIGetScaleFactor qt_jaguar_HIGetScaleFactor
++#define HIMenuGetContentView qt_jaguar_HIMenuGetContentView
++#define HIViewChangeFeatures qt_jaguar_HIViewChangeFeatures
++#define HIViewGetFeatures qt_jaguar_HIViewGetFeatures
++#define HIViewGetWindow qt_jaguar_HIViewGetWindow
++#define HIViewRender qt_jaguar_HIViewRender
++#define HIViewSetNeedsDisplayInRect qt_jaguar_HIViewSetNeedsDisplayInRect
++#define _HIViewScrollRectWithOptions qt_jaguar__HIViewScrollRectWithOptions
++#define HIWindowChangeAvailability qt_jaguar_HIWindowChangeAvailability
++#define HIWindowChangeClass qt_jaguar_HIWindowChangeClass
++#define HIWindowChangeFeatures qt_jaguar_HIWindowChangeFeatures
++#define HIWindowFlush qt_jaguar_HIWindowFlush
++#define HIWindowSetProxyFSRef qt_jaguar_HIWindowSetProxyFSRef
++#define TransformProcessType qt_jaguar_TransformProcessType
++#define TransitionWindowWithOptions qt_jaguar_TransitionWindowWithOptions
++#define HIThemeGetButtonBackgroundBounds qt_jaguar_HIThemeGetButtonBackgroundBounds
++#define HIThemeGetButtonContentBounds qt_jaguar_HIThemeGetButtonContentBounds
++#define HIThemeDrawButton qt_jaguar_HIThemeDrawButton
++#define HIThemeDrawTrack qt_jaguar_HIThemeDrawTrack
++#define HIThemeDrawTrackTickMarks qt_jaguar_HIThemeDrawTrackTickMarks
++#define HIThemeDrawTab qt_jaguar_HIThemeDrawTab
++#define HIThemeDrawTabPane qt_jaguar_HIThemeDrawTabPane
++#define HIThemeDrawPopupArrow qt_jaguar_HIThemeDrawPopupArrow
++#define HIThemeDrawMenuBackground qt_jaguar_HIThemeDrawMenuBackground
++#define HIThemeDrawMenuBarBackground qt_jaguar_HIThemeDrawMenuBarBackground
++#define HIThemeDrawMenuItem qt_jaguar_HIThemeDrawMenuItem
++#define HIThemeDrawMenuSeparator qt_jaguar_HIThemeDrawMenuSeparator
++#define HIThemeDrawWindowFrame qt_jaguar_HIThemeDrawWindowFrame
++#define HIThemeDrawTitleBarWidget qt_jaguar_HIThemeDrawTitleBarWidget
++#define HIThemeDrawFrame qt_jaguar_HIThemeDrawFrame
++#define HIThemeDrawGroupBox qt_jaguar_HIThemeDrawGroupBox
++#define HIThemeDrawGrowBox qt_jaguar_HIThemeDrawGrowBox
++#define HIThemeGetButtonShape qt_jaguar_HIThemeGetButtonShape
++#define HIThemeGetGrowBoxBounds qt_jaguar_HIThemeGetGrowBoxBounds
++#define HIThemeGetMenuBackgroundShape qt_jaguar_HIThemeGetMenuBackgroundShape
++#define HIThemeGetTrackThumbShape qt_jaguar_HIThemeGetTrackThumbShape
++#define HIThemeGetWindowShape qt_jaguar_HIThemeGetWindowShape
++#define HIThemeSetFill qt_jaguar_HIThemeSetFill
++#define GetDragPasteboard qt_jaguar_GetDragPasteboard
++#define NewDragWithPasteboard qt_jaguar_NewDragWithPasteboard
++#define DisposeDrag qt_jaguar_DisposeDrag
++#define PasteboardClear qt_jaguar_PasteboardClear
++#define PasteboardCopyItemFlavorData qt_jaguar_PasteboardCopyItemFlavorData
++#define PasteboardCopyItemFlavors qt_jaguar_PasteboardCopyItemFlavors
++#define PasteboardCopyName qt_jaguar_PasteboardCopyName
++#define PasteboardCopyPasteLocation qt_jaguar_PasteboardCopyPasteLocation
++#define PasteboardCreate qt_jaguar_PasteboardCreate
++#define PasteboardGetItemCount qt_jaguar_PasteboardGetItemCount
++#define PasteboardGetItemFlavorFlags qt_jaguar_PasteboardGetItemFlavorFlags
++#define PasteboardGetItemIdentifier qt_jaguar_PasteboardGetItemIdentifier
++#define PasteboardPutItemFlavor qt_jaguar_PasteboardPutItemFlavor
++#define PasteboardSetPromiseKeeper qt_jaguar_PasteboardSetPromiseKeeper
++#define PasteboardSynchronize qt_jaguar_PasteboardSynchronize
++#define UTCreateStringForOSType qt_jaguar_UTCreateStringForOSType
++#define UTGetOSTypeFromString qt_jaguar_UTGetOSTypeFromString
++#define UTTypeCopyPreferredTagWithClass qt_jaguar_UTTypeCopyPreferredTagWithClass
++#define UTTypeCreateAllIdentifiersForTag qt_jaguar_UTTypeCreateAllIdentifiersForTag
++#define UTTypeCreatePreferredIdentifierForTag qt_jaguar_UTTypeCreatePreferredIdentifierForTag
++#define kUTTagClassOSType qt_jaguar_kUTTagClassOSType()
++#define kUTTypeTIFF qt_jaguar_kUTTypeTIFF()
++#define PMCreatePageFormatWithPMPaper qt_jaguar_PMCreatePageFormatWithPMPaper
++#define PMGetPageFormatPaper qt_jaguar_PMGetPageFormatPaper
++#define PMPaperGetHeight qt_jaguar_PMPaperGetHeight
++#define PMPaperGetMargins qt_jaguar_PMPaperGetMargins
++#define PMPaperGetWidth qt_jaguar_PMPaperGetWidth
++#define PMPrinterCreateFromPrinterID qt_jaguar_PMPrinterCreateFromPrinterID
++#define PMPrinterGetPaperList qt_jaguar_PMPrinterGetPaperList
++#define PMSessionBeginCGDocument qt_jaguar_PMSessionBeginCGDocument
++#define PMSessionBeginCGDocumentNoDialog qt_jaguar_PMSessionBeginCGDocumentNoDialog
++#define PMSessionGetCGGraphicsContext qt_jaguar_PMSessionGetCGGraphicsContext
++#define PMSessionSetCurrentPMPrinter qt_jaguar_PMSessionSetCurrentPMPrinter
++#ifdef __OBJC__
++#define NSMenuDidEndTrackingNotification ((NSString *)qt_jaguar_NSMenuDidEndTrackingNotification())
++#define NSStrikethroughStyleAttributeName ((NSString *)qt_jaguar_NSStrikethroughStyleAttributeName())
++#endif
++#endif // QT_JAGUAR_MAC_IMPLEMENTATION
++
++#ifdef __cplusplus
++#include "private/qcore_mac_p.h"
++
++QT_BEGIN_NAMESPACE
++// CGColor became a Core Foundation type in Mac OS X 10.3. On 10.2 CFRetain
++// and CFRelease treat a CGColor as an Objective-C object and crash, so the
++// color wrapper uses CGColorRetain and CGColorRelease, which work on all.
++template <>
++class QCFType<CGColorRef>
++{
++public:
++    inline QCFType(const CGColorRef &t = 0) : type(t) {}
++    inline QCFType(const QCFType &helper) : type(helper.type) { if (type) CGColorRetain(type); }
++    inline ~QCFType() { if (type) CGColorRelease(type); }
++    inline operator CGColorRef() { return type; }
++    inline QCFType operator =(const QCFType &helper)
++    {
++        if (helper.type)
++            CGColorRetain(helper.type);
++        CGColorRef type2 = type;
++        type = helper.type;
++        if (type2)
++            CGColorRelease(type2);
++        return *this;
++    }
++    inline CGColorRef *operator&() { return &type; }
++    template <typename X> X as() const { return reinterpret_cast<X>(type); }
++    static QCFType constructFromGet(const CGColorRef &t)
++    {
++        CGColorRetain(t);
++        return QCFType<CGColorRef>(t);
++    }
++protected:
++    CGColorRef type;
++};
++QT_END_NAMESPACE
++#endif // __cplusplus
++
++#endif // Q_WS_MAC && !QT_MAC_USE_COCOA
++
++#endif // QT_JAGUAR_MAC_P_H

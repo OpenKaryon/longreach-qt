@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: QSysInfo::MacintoshVersion from the BCD
+# gestaltSystemVersion when gestaltSystemVersionMinor (10.4) is missing.
+#
+--- a/src/corelib/global/qglobal.cpp
++++ b/src/corelib/global/qglobal.cpp
+@@ -1691,6 +1691,10 @@
+         // add 2 because OS X 10.0 is 0x02 in the enum
+         return QSysInfo::MacVersion(gestalt_version + 2);
+     }
++    // gestaltSystemVersionMinor is Mac OS X 10.4. Before that the BCD
++    // gestaltSystemVersion (0x1028 for 10.2.8) carries the minor version.
++    if (Gestalt(gestaltSystemVersion, &gestalt_version) == noErr)
++        return QSysInfo::MacVersion(((gestalt_version >> 4) & 0xf) + 2);
+ #endif
+     return QSysInfo::MV_Unknown;
+ }

@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: let Qt 4.8.7 target a 10.2 floor.
+#
+# qglobal.h raises MAC_OS_X_VERSION_MIN_REQUIRED to 10.4 whatever the
+# deployment target. Lower that floor to 10.2, the Mac minimum of Qt 3.3, so
+# Qt's own version checks see the real target. Part of the Jaguar port, see
+# docs/targets/qt4-macos.md. Applies to pristine Qt 4.8.7 with patch -p1.
+diff --git a/src/corelib/global/qglobal.h b/src/corelib/global/qglobal.h
+index 20d8832..1add8b0 100644
+--- a/src/corelib/global/qglobal.h
++++ b/src/corelib/global/qglobal.h
+@@ -313,16 +313,27 @@ namespace QT_NAMESPACE {}
+ #  endif
+ #
+ #  ifdef Q_OS_MACX
+-#    if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED < 1040
++     // Mac OS X 10.2 Jaguar backport: the floor is 10.2, the minimum of Qt 3.3.
++     // Raising MAC_OS_X_VERSION_MIN_REQUIRED to 10.4 here made Qt take its
++     // 10.4-only branches without run-time checks. The Carbon headers decide
++     // weak imports from the compiler's -mmacosx-version-min before this point.
++#    if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || __MAC_OS_X_VERSION_MIN_REQUIRED < 1020
+ #       undef __MAC_OS_X_VERSION_MIN_REQUIRED
+-#       define __MAC_OS_X_VERSION_MIN_REQUIRED 1040
++#       define __MAC_OS_X_VERSION_MIN_REQUIRED 1020
+ #    endif
+-#    if !defined(MAC_OS_X_VERSION_MIN_REQUIRED) || MAC_OS_X_VERSION_MIN_REQUIRED < 1040
++#    if !defined(MAC_OS_X_VERSION_MIN_REQUIRED) || MAC_OS_X_VERSION_MIN_REQUIRED < 1020
+ #       undef MAC_OS_X_VERSION_MIN_REQUIRED
+-#       define MAC_OS_X_VERSION_MIN_REQUIRED 1040
++#       define MAC_OS_X_VERSION_MIN_REQUIRED 1020
+ #    endif
+ #  endif
+ #
++#  if !defined(MAC_OS_X_VERSION_10_2)
++#       define MAC_OS_X_VERSION_10_2 1020
++#  endif
++#  if !defined(MAC_OS_X_VERSION_10_3)
++#       define MAC_OS_X_VERSION_10_3 1030
++#  endif
++#
+ #  // Numerical checks are preferred to named checks, but to be safe
+ #  // we define the missing version names in case Qt uses them.
+ #

@@ -1,0 +1,234 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: QtCore without the libSystem functions of 10.3.
+#
+# The first QtCore run on Jaguar stopped in dyld: "undefined reference to
+# _dlopen expected to be defined in /usr/lib/libSystem.B.dylib". The 10.4u
+# headers do not mark dlopen, dlsym, dlclose, dlerror, kqueue, kevent,
+# nl_langinfo or strerror_r as 10.3 APIs, so they were strong imports. Each
+# is now declared weak where Qt uses it, with a fallback: QLibrary reports
+# that run-time loading needs 10.3, QFileSystemWatcher polls, the locale
+# codec comes from the environment and strerror() replaces strerror_r().
+# The Jaguar build is configured with -no-iconv (libiconv arrived in 10.3
+# and Qt loads it through QLibrary); the locale codec then defaults to UTF-8
+# on the Mac instead of ISO 8859-1.
+# Part of the Jaguar port, docs/targets/qt4-macos.md. Applies to pristine
+# Qt 4.8.7 with patch -p1.
+diff --git a/src/corelib/plugin/qlibrary_unix.cpp b/src/corelib/plugin/qlibrary_unix.cpp
+index 90797a4..d0d1f06 100644
+--- a/src/corelib/plugin/qlibrary_unix.cpp
++++ b/src/corelib/plugin/qlibrary_unix.cpp
+@@ -65,6 +65,17 @@ QT_BEGIN_NAMESPACE
+ #if !defined(QT_HPUX_LD) && !defined(QT_NO_DYNAMIC_LIBRARY)
+ QT_BEGIN_INCLUDE_NAMESPACE
+ #include <dlfcn.h>
++#ifdef Q_OS_MAC
++// Mac OS X 10.2 Jaguar: dlopen() and its companions arrived in libSystem with
++// 10.3. Weak references keep the image loadable on 10.2, where loading a
++// library at run time then fails with an explanation.
++extern "C" {
++void *dlopen(const char *, int) __attribute__((weak_import));
++void *dlsym(void *, const char *) __attribute__((weak_import));
++int dlclose(void *) __attribute__((weak_import));
++char *dlerror(void) __attribute__((weak_import));
++}
++#endif
+ QT_END_INCLUDE_NAMESPACE
+ #endif
+ 
+@@ -73,6 +84,10 @@ static QString qdlerror()
+ #if defined(QT_NO_DYNAMIC_LIBRARY)
+     const char *err = "This platform does not support dynamic libraries.";
+ #elif !defined(QT_HPUX_LD)
++#  ifdef Q_OS_MAC
++    if (!&dlerror)
++        return QString();
++#  endif
+     const char *err = dlerror();
+ #else
+     const char *err = strerror(errno);
+@@ -83,6 +98,13 @@ static QString qdlerror()
+ bool QLibraryPrivate::load_sys()
+ {
+     QString attempt;
++#if defined(Q_OS_MAC) && !defined(QT_NO_DYNAMIC_LIBRARY)
++    if (!&dlopen) {
++        errorString = QLibrary::tr("Cannot load library %1: %2").arg(fileName)
++                .arg(QLatin1String("(loading libraries at run time needs Mac OS X 10.3 or later)"));
++        return false;
++    }
++#endif
+ #if !defined(QT_NO_DYNAMIC_LIBRARY)
+     QFileSystemEntry fsEntry(fileName);
+ 
+@@ -286,6 +308,8 @@ bool QLibraryPrivate::unload_sys()
+ #ifdef Q_OS_MAC
+ Q_CORE_EXPORT void *qt_mac_resolve_sys(void *handle, const char *symbol)
+ {
++    if (!&dlsym) // Mac OS X 10.2
++        return 0;
+     return dlsym(handle, symbol);
+ }
+ #endif
+diff --git a/src/corelib/io/qfilesystemwatcher_kqueue.cpp b/src/corelib/io/qfilesystemwatcher_kqueue.cpp
+index cabeb44..be36130 100644
+--- a/src/corelib/io/qfilesystemwatcher_kqueue.cpp
++++ b/src/corelib/io/qfilesystemwatcher_kqueue.cpp
+@@ -54,6 +54,15 @@
+ 
+ #include <sys/types.h>
+ #include <sys/event.h>
++#ifdef Q_OS_MAC
++// Mac OS X 10.2 Jaguar: libSystem gained kqueue() and kevent() in 10.3. With
++// weak references create() fails on 10.2 and QFileSystemWatcher polls.
++extern "C" {
++int kqueue(void) __attribute__((weak_import));
++int kevent(int, const struct kevent *, int, struct kevent *, int, const struct timespec *)
++    __attribute__((weak_import));
++}
++#endif
+ #include <sys/stat.h>
+ #include <sys/time.h>
+ #include <fcntl.h>
+@@ -69,6 +78,10 @@ QT_BEGIN_NAMESPACE
+ 
+ QKqueueFileSystemWatcherEngine *QKqueueFileSystemWatcherEngine::create()
+ {
++#ifdef Q_OS_MAC
++    if (!&kqueue)
++        return 0;
++#endif
+     int kqfd = kqueue();
+     if (kqfd == -1)
+         return 0;
+diff --git a/src/corelib/codecs/qtextcodec.cpp b/src/corelib/codecs/qtextcodec.cpp
+index dacf5e4..20a4a5d 100644
+--- a/src/corelib/codecs/qtextcodec.cpp
++++ b/src/corelib/codecs/qtextcodec.cpp
+@@ -90,6 +90,10 @@
+ #include <locale.h>
+ #if defined (_XOPEN_UNIX) && !defined(Q_OS_QNX) && !defined(Q_OS_OSF)
+ #include <langinfo.h>
++#ifdef Q_OS_MAC
++// Mac OS X 10.2 Jaguar: libSystem gained nl_langinfo() in 10.3.
++extern "C" char *nl_langinfo(nl_item) __attribute__((weak_import));
++#endif
+ #endif
+ 
+ #if defined(Q_OS_WINCE)
+@@ -595,13 +599,25 @@ static void setupLocaleMapper()
+ #endif
+ 
+ #if defined (_XOPEN_UNIX) && !defined(Q_OS_QNX) && !defined(Q_OS_OSF)
+-    if (!localeMapper) {
++    if (!localeMapper
++#ifdef Q_OS_MAC
++            && &nl_langinfo
++#endif
++            ) {
+         char *charset = nl_langinfo (CODESET);
+         if (charset)
+             localeMapper = QTextCodec::codecForName(charset);
+     }
+ #endif
+ 
++#ifdef Q_OS_MAC
++    // Mac OS X names files and talks to the Terminal in UTF-8. Without iconv
++    // and nl_langinfo (Mac OS X 10.2) nothing above has said so, and the
++    // guesses below would end with ISO 8859-1.
++    if (!localeMapper)
++        localeMapper = QTextCodec::codecForName("UTF-8");
++#endif
++
+     if (!localeMapper) {
+         // Very poorly defined and followed standards causes lots of
+         // code to try to get all the cases... This logic is
+diff --git a/src/corelib/codecs/qiconvcodec.cpp b/src/corelib/codecs/qiconvcodec.cpp
+index e53ffa1..770c0e4 100644
+--- a/src/corelib/codecs/qiconvcodec.cpp
++++ b/src/corelib/codecs/qiconvcodec.cpp
+@@ -54,6 +54,10 @@
+ #include <unistd.h>
+ #if defined(_XOPEN_UNIX) && !defined(Q_OS_QNX) && !defined(Q_OS_OSF)
+ #  include <langinfo.h>
++#  ifdef Q_OS_MAC
++// Mac OS X 10.2 Jaguar: libSystem gained nl_langinfo() in 10.3.
++extern "C" char *nl_langinfo(nl_item) __attribute__((weak_import));
++#  endif
+ #endif
+ 
+ #if defined(Q_OS_HPUX)
+@@ -480,7 +484,11 @@ iconv_t QIconvCodec::createIconv_t(const char *to, const char *from)
+ #endif
+ 
+ #if defined(_XOPEN_UNIX) && !defined(Q_OS_QNX) && !defined(Q_OS_OSF)
+-    if (cd == (iconv_t) -1) {
++    if (cd == (iconv_t) -1
++#ifdef Q_OS_MAC
++            && &nl_langinfo
++#endif
++            ) {
+         codeset = nl_langinfo(CODESET);
+         if (codeset)
+             cd = iconv_open(to ? to : codeset, from ? from : codeset);
+diff --git a/src/corelib/global/qglobal.cpp b/src/corelib/global/qglobal.cpp
+index 5b63952..a9a8a4d 100644
+--- a/src/corelib/global/qglobal.cpp
++++ b/src/corelib/global/qglobal.cpp
+@@ -96,6 +96,13 @@ _LIT(qt_S60Filter, "Series60v?.*.sis");
+ _LIT(qt_symbianSystemInstallDir, "z:\\system\\install\\");
+ #endif
+ 
++#if defined(Q_OS_MAC) && !defined(QT_NO_THREAD)
++// Mac OS X 10.2 Jaguar: libSystem gained strerror_r in 10.3. A weak reference
++// keeps the image loadable on 10.2, where strerror() is used instead.
++#  include <string.h>
++extern "C" int strerror_r(int, char *, size_t) __attribute__((weak_import));
++#endif
++
+ QT_BEGIN_NAMESPACE
+ 
+ 
+@@ -2297,6 +2304,11 @@ QString qt_error_string(int errorCode)
+             ret = QString::fromLatin1("The specified module could not be found.");
+ #elif !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && _POSIX_VERSION >= 200112L && !defined(Q_OS_INTEGRITY) && !defined(Q_OS_QNX)
+         QByteArray buf(1024, '\0');
++#  ifdef Q_OS_MAC
++        if (!&strerror_r)
++            ret = QString::fromLocal8Bit(strerror(errorCode));
++        else
++#  endif
+         ret = fromstrerror_helper(strerror_r(errorCode, buf.data(), buf.size()), buf);
+ #else
+         ret = QString::fromLocal8Bit(strerror(errorCode));
+diff --git a/src/corelib/kernel/qsystemerror.cpp b/src/corelib/kernel/qsystemerror.cpp
+index 44c2da8..fef3b9c 100644
+--- a/src/corelib/kernel/qsystemerror.cpp
++++ b/src/corelib/kernel/qsystemerror.cpp
+@@ -55,6 +55,13 @@
+ #include <windows.h>
+ #endif
+ 
++#if defined(Q_OS_MAC) && !defined(QT_NO_THREAD)
++// Mac OS X 10.2 Jaguar: libSystem gained strerror_r in 10.3. A weak reference
++// keeps the image loadable on 10.2, where strerror() is used instead.
++#  include <string.h>
++extern "C" int strerror_r(int, char *, size_t) __attribute__((weak_import));
++#endif
++
+ QT_BEGIN_NAMESPACE
+ 
+ #if !defined(Q_OS_WIN) && !defined(QT_NO_THREAD) && !defined(Q_OS_INTEGRITY) && !defined(Q_OS_QNX) && \
+@@ -126,6 +133,11 @@ static QString standardLibraryErrorString(int errorCode)
+     #else
+         #if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && _POSIX_VERSION >= 200112L && !defined(Q_OS_INTEGRITY) && !defined(Q_OS_QNX)
+             QByteArray buf(1024, '\0');
++            #ifdef Q_OS_MAC
++            if (!&strerror_r)
++                ret = QString::fromLocal8Bit(strerror(errorCode));
++            else
++            #endif
+             ret = fromstrerror_helper(strerror_r(errorCode, buf.data(), buf.size()), buf);
+         #else
+             ret = QString::fromLocal8Bit(strerror(errorCode));

@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: the other modules - GCC atomic builtins instead of
+# OSAtomic (10.4) in JavaScriptCore, a checked aglCreatePBuffer in QtOpenGL,
+# and Qt3Support's resolver and file dialog without 10.3 APIs.
+#
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Threading.h
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Threading.h
+@@ -69,9 +69,15 @@
+ #include <wtf/Locker.h>
+ #include <wtf/Noncopyable.h>
+ 
++#if OS(DARWIN)
++#include <AvailabilityMacros.h>
++#endif
++
++// OSAtomic is Mac OS X 10.4; for an older deployment target the GCC
++// builtins below do the same.
+ #if OS(WINDOWS) && !OS(WINCE)
+ #include <windows.h>
+-#elif OS(DARWIN)
++#elif OS(DARWIN) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1040
+ #include <libkern/OSAtomic.h>
+ #elif OS(ANDROID)
+ #include <cutils/atomic.h>
+@@ -224,7 +230,7 @@
+ inline int atomicDecrement(int volatile* addend) { return InterlockedDecrement(reinterpret_cast<long volatile*>(addend)); }
+ #endif
+ 
+-#elif OS(DARWIN)
++#elif OS(DARWIN) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1040
+ #define WTF_USE_LOCKFREE_THREADSAFESHARED 1
+ 
+ inline int atomicIncrement(int volatile* addend) { return OSAtomicIncrement32Barrier(const_cast<int*>(addend)); }
+--- a/src/qt3support/network/network.pri
++++ b/src/qt3support/network/network.pri
+@@ -26,5 +26,6 @@
+ 
+ win32:SOURCES +=  network/q3socketdevice_win.cpp
+ unix:SOURCES += network/q3socketdevice_unix.cpp
+-mac:LIBS_PRIVATE += -lresolv
++# A Mac OS X 10.2 target uses the BIND 8 resolver in libSystem; see q3dns.cpp.
++mac:!isEqual(QMAKE_MACOSX_DEPLOYMENT_TARGET, 10.2):LIBS_PRIVATE += -lresolv
+ 
+--- a/src/qt3support/network/q3dns.cpp
++++ b/src/qt3support/network/q3dns.cpp
+@@ -45,6 +45,11 @@
+ #if defined(Q_OS_WIN32) || defined(Q_OS_WINCE) || defined(Q_OS_CYGWIN)
+ # include "qt_windows.h"
+ #else
++# if defined(Q_OS_MAC) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
++// The BIND 9 resolver (libresolv, res_9_init) is Mac OS X 10.3; 10.2 has the
++// BIND 8 one in libSystem, which later systems keep.
++#  define BIND_8_COMPAT
++# endif
+ # include <sys/types.h>
+ # include <netinet/in.h>
+ # include <arpa/nameser.h>
+--- a/src/qt3support/dialogs/q3filedialog.cpp
++++ b/src/qt3support/dialogs/q3filedialog.cpp
+@@ -3049,7 +3049,8 @@
+             i++;
+         Q3CString user;
+         if (i == 1) {
+-#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS)
++#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) \
++    && !(defined(Q_OS_MAC) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3) // getlogin_r: 10.3
+ 
+ #  ifndef _POSIX_LOGIN_NAME_MAX
+ #    define _POSIX_LOGIN_NAME_MAX 9
+--- a/src/opengl/qglpixelbuffer_mac.mm
++++ b/src/opengl/qglpixelbuffer_mac.mm
+@@ -230,6 +230,11 @@
+         target = GL_TEXTURE_RECTANGLE_EXT;
+     }
+ 
++    // AGL pixel buffers are Mac OS X 10.3; the functions are NULL on 10.2.
++    if (!QGLPixelBuffer::hasOpenGLPbuffers()) {
++        qWarning("QGLPixelBuffer: OpenGL pixel buffers need Mac OS X 10.3 or later.");
++        return false;
++    }
+     if (!aglCreatePBuffer(size.width(), size.height(), target, GL_RGBA, 0, &pbuf)) {
+ 	qWarning("QGLPixelBuffer: Unable to create a pbuffer (AGL error %d).",
+ 		 (int) aglGetError());
+@@ -256,7 +261,8 @@
+     [static_cast<NSOpenGLContext *>(ctx) release];
+     ctx = 0;
+ #else
+-    aglDestroyPBuffer(pbuf);
++    if (pbuf && QGLPixelBuffer::hasOpenGLPbuffers())
++        aglDestroyPBuffer(pbuf);
+ #endif
+     return true;
+ }
+@@ -279,6 +285,8 @@
+         [oldContext makeCurrentContext];
+     return true;
+ #else
++    if (!d->pbuf)
++        return false;
+     aglSetCurrentContext(d->share_ctx);
+     glBindTexture(GL_TEXTURE_2D, texture_id);
+     aglTexImagePBuffer(d->share_ctx, d->pbuf, GL_FRONT);
+@@ -325,7 +333,11 @@
+ 
+ bool QGLPixelBuffer::hasOpenGLPbuffers()
+ {
++#ifdef QT_MAC_USE_COCOA
+     return true;
++#else
++    return &aglCreatePBuffer != 0;
++#endif
+ }
+ 
+ QT_END_NAMESPACE

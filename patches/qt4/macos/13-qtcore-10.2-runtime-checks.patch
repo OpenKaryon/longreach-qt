@@ -1,0 +1,124 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Mac OS X 10.2 Jaguar: run-time checks for QtCore's 10.3 and 10.4 APIs.
+#
+# Built against the 10.4u SDK with a 10.2 deployment target, QtCore imports
+# 30 symbols that Jaguar lacks as weak references: CFLocale with the CF date
+# and number formatters (10.3), CFCalendar, the formatter symbol keys and
+# CFLocaleCopyDisplayNameForPropertyValue (10.4), the Uniform Type Identifier
+# functions (10.3/10.4) and FSPathMakeRefWithOptions (10.4). Each use now
+# checks the symbol first. Without CFLocale the system locale answers
+# nothing and QLocale falls back to its own data. Part of the Jaguar port,
+# docs/targets/qt4-macos.md. Applies to pristine Qt 4.8.7 with patch -p1.
+diff --git a/src/corelib/tools/qlocale_mac.mm b/src/corelib/tools/qlocale_mac.mm
+index d1ce2c3..a8b67e2 100644
+--- a/src/corelib/tools/qlocale_mac.mm
++++ b/src/corelib/tools/qlocale_mac.mm
+@@ -76,6 +76,9 @@ static QByteArray getMacLocaleName()
+     QString lang, script, cntry;
+     if (result.isEmpty() || result != "C"
+             && !qt_splitLocaleName(QString::fromLocal8Bit(result), lang, script, cntry)) {
++        // Mac OS X 10.2: CFLocale arrived in 10.3 and is a weak import.
++        if (!&CFLocaleCopyCurrent)
++            return QByteArray("C");
+         QCFType<CFLocaleRef> l = CFLocaleCopyCurrent();
+         CFStringRef locale = CFLocaleGetIdentifier(l);
+         result = QCFString::toQString(locale).toUtf8();
+@@ -343,6 +346,8 @@ static QString macCurrencySymbol(QLocale::CurrencySymbolFormat format)
+     case QLocale::CurrencySymbol:
+         return QCFString::toQString(static_cast<CFStringRef>(CFLocaleGetValue(locale, kCFLocaleCurrencySymbol)));
+     case QLocale::CurrencyDisplayName: {
++        if (!&CFLocaleCopyDisplayNameForPropertyValue) // 10.4
++            return QString();
+         CFStringRef code = static_cast<CFStringRef>(CFLocaleGetValue(locale, kCFLocaleCurrencyCode));
+         QCFType<CFStringRef> value = CFLocaleCopyDisplayNameForPropertyValue(locale, kCFLocaleCurrencyCode, code);
+         return QCFString::toQString(value);
+@@ -424,6 +429,13 @@ QLocale QSystemLocale::fallbackLocale() const
+ 
+ QVariant QSystemLocale::query(QueryType type, QVariant in = QVariant()) const
+ {
++    // Mac OS X 10.2 Jaguar backport: CFLocale and the CF date and number
++    // formatters arrived in 10.3, and CFCalendar, the formatter symbol keys and
++    // display names in 10.4. They are weak imports; where they are missing,
++    // answer nothing and let QLocale use its own data for the fallback locale.
++    if (!&CFLocaleCopyCurrent || !&CFDateFormatterCreate || !&CFNumberFormatterCreate)
++        return QVariant();
++    const bool hasFormatterSymbols = &kCFDateFormatterMonthSymbols && &kCFDateFormatterAMSymbol;
+     switch(type) {
+ //     case Name:
+ //         return getMacLocaleName();
+@@ -447,11 +459,15 @@ QVariant QSystemLocale::query(QueryType type, QVariant in = QVariant()) const
+                                 : kCFDateFormatterLongStyle);
+     case DayNameLong:
+     case DayNameShort:
++        if (!hasFormatterSymbols)
++            return QVariant();
+         return macDayName(in.toInt(), (type == DayNameShort));
+     case MonthNameLong:
+     case MonthNameShort:
+     case StandaloneMonthNameLong:
+     case StandaloneMonthNameShort:
++        if (!hasFormatterSymbols)
++            return QVariant();
+         return macMonthName(in.toInt(), (type == MonthNameShort || type == StandaloneMonthNameShort));
+     case DateToStringShort:
+     case DateToStringLong:
+@@ -470,6 +486,8 @@ QVariant QSystemLocale::query(QueryType type, QVariant in = QVariant()) const
+ 
+     case AMText:
+     case PMText: {
++        if (!hasFormatterSymbols)
++            return QVariant();
+         QCFType<CFLocaleRef> locale = CFLocaleCopyCurrent();
+         QCFType<CFDateFormatterRef> formatter = CFDateFormatterCreate(NULL, locale, kCFDateFormatterLongStyle, kCFDateFormatterLongStyle);
+         QCFType<CFStringRef> value = static_cast<CFStringRef>(CFDateFormatterCopyProperty(formatter,
+@@ -477,6 +495,8 @@ QVariant QSystemLocale::query(QueryType type, QVariant in = QVariant()) const
+         return QCFString::toQString(value);
+     }
+     case FirstDayOfWeek:
++        if (!&CFCalendarCopyCurrent) // 10.4
++            return QVariant();
+         return QVariant(macFirstDayOfWeek());
+     case CurrencySymbol:
+         return QVariant(macCurrencySymbol(QLocale::CurrencySymbolFormat(in.toUInt())));
+diff --git a/src/corelib/io/qfilesystemengine_unix.cpp b/src/corelib/io/qfilesystemengine_unix.cpp
+index 4a9049b..4d7ce85 100644
+--- a/src/corelib/io/qfilesystemengine_unix.cpp
++++ b/src/corelib/io/qfilesystemengine_unix.cpp
+@@ -69,8 +69,14 @@ static inline bool _q_isMacHidden(const char *nativePath)
+     OSErr err;
+ 
+     FSRef fsRef;
+-    err = FSPathMakeRefWithOptions(reinterpret_cast<const UInt8 *>(nativePath),
+-            kFSPathMakeRefDoNotFollowLeafSymlink, &fsRef, 0);
++    // Mac OS X 10.2 and 10.3: FSPathMakeRefWithOptions is a 10.4 weak import.
++    // FSPathMakeRef follows a final symbolic link, so a hidden link to a
++    // visible file reads as visible there.
++    if (&FSPathMakeRefWithOptions)
++        err = FSPathMakeRefWithOptions(reinterpret_cast<const UInt8 *>(nativePath),
++                kFSPathMakeRefDoNotFollowLeafSymlink, &fsRef, 0);
++    else
++        err = FSPathMakeRef(reinterpret_cast<const UInt8 *>(nativePath), &fsRef, 0);
+     if (err != noErr)
+         return false;
+ 
+@@ -93,10 +99,14 @@ static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &e
+ 
+     if (suffix.length() > 0) {
+         // First step: is the extension known ?
+-        CFStringRef extensionRef = QCFString::toCFStringRef(suffix);
+-        CFStringRef uniformTypeIdentifier = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, extensionRef, NULL);
+-        if (UTTypeConformsTo(uniformTypeIdentifier, kUTTypeBundle))
+-            return true;
++        // Mac OS X 10.2: Uniform Type Identifiers arrived in 10.3 (kUTTypeBundle
++        // in 10.4); without them only the PkgInfo and application checks below run.
++        if (&UTTypeCreatePreferredIdentifierForTag && &UTTypeConformsTo && &kUTTypeBundle) {
++            CFStringRef extensionRef = QCFString::toCFStringRef(suffix);
++            CFStringRef uniformTypeIdentifier = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, extensionRef, NULL);
++            if (UTTypeConformsTo(uniformTypeIdentifier, kUTTypeBundle))
++                return true;
++        }
+ 
+         // Second step: check if an application knows the package type
+         CFStringRef path = QCFString::toCFStringRef(entry.filePath());

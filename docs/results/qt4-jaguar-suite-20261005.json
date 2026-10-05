@@ -1,0 +1,1097 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-05",
+  "target": "Qt 4.8.7 (Carbon, all modules) with OpenSSL 1.0.2u on Mac OS X 10.2 Jaguar / PowerPC: shared application suite (milestone 4)",
+  "status": "PASS",
+  "build": {
+    "recipe": "scripts/build/qt4-macos-jaguar/Dockerfile.qt (image qt4-jaguar-qt-probe), rebuilt from scratch; build-openssl.sh, build-qt.sh, then build-suite.sh",
+    "openssl": "OpenSSL 1.0.2u, static, no-asm, no-dso (build-openssl.sh); its command line tool passes check-imports.py (openssl-jaguar-imports.txt)",
+    "configure": "the module set of the Tiger build with -openssl-linked: QtCore, QtGui, QtNetwork, QtSql (static SQLite plugin), QtXml, QtXmlPatterns, QtSvg, QtScript, QtScriptTools, QtDeclarative, QtOpenGL, QtMultimedia, Qt3Support, QtTest, QtUiTools; -no-iconv",
+    "patches": [
+      "patches/qt4/all/* (except 01-openssl)",
+      "patches/qt4/macos/all/* (including 11-ppc-timebase-overflow)",
+      "patches/qt4/macos/jaguar/01..06"
+    ],
+    "import_checks": "check-imports.py passes for all 25 executables (24 applications and smoke-runner)",
+    "weak_references": "direct-weak-references.txt and qtgui-direct-weak-references.txt are empty: outside the reviewed QtCore guards, the QtGui shim and QGLPixelBuffer, no Qt object references a weak import",
+    "archive": "qt4-jaguar-ppc-examples.tar.gz"
+  },
+  "runs": [
+    {
+      "os": "Mac OS X 10.2 (6C115)",
+      "cpu": "emulated G4 (ppc7400)",
+      "evidence": "artifacts/runtime-jaguar/suite-20261005/6C115",
+      "apps_passed": 24,
+      "apps_total": 24,
+      "checks_passed": 521,
+      "checks_failed": 0,
+      "checks_skipped": 133,
+      "probes": {
+        "qtcore_probe_failed": 0,
+        "qtgui_probe_failed": 0,
+        "macintosh_version": "0x4"
+      },
+      "archive_md5": "63679cba8d462b701a5c8e7619514ab4",
+      "applications": [
+        {
+          "app": "gl-heavy-gallery-extended",
+          "result": "PASS",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "app": "gl-heavy-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery-extended",
+          "result": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "multimedia-lab-extended",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "app": "multimedia-lab",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "network-gui",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab-extended",
+          "result": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt-selftest-extended",
+          "result": "PASS",
+          "passed": 119,
+          "failed": 0,
+          "skipped": 116
+        },
+        {
+          "app": "qt-selftest",
+          "result": "PASS",
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt3support-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "quick-qml-gallery-extended",
+          "result": "PASS",
+          "passed": 29,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "app": "quick-qml-gallery",
+          "result": "PASS",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "script-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "scripttools-gallery",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "sql-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "svg-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "testlib-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "uitools-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "widgets-gallery-extended",
+          "result": "PASS",
+          "passed": 139,
+          "failed": 0,
+          "skipped": 9
+        },
+        {
+          "app": "widgets-gallery",
+          "result": "PASS",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xml-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xmlpatterns-gallery",
+          "result": "PASS",
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "evidence_sha256": {
+        "jaguar-6C115-report-gl-heavy-gallery-extended.txt": "95167106daed5230c394ba89366913df501590f5f333c4744a36498ffc4f70e4",
+        "jaguar-6C115-report-gl-heavy-gallery.txt": "01803860b10d44f3f51dade97d4380861919a88e6739cc07c6f000994ef8f491",
+        "jaguar-6C115-report-graphics-gallery-extended.txt": "3a2f1f4aa6bfc84b24119d07f9ed64c803ce5ec4dd6bf60995dac4905a74d05a",
+        "jaguar-6C115-report-graphics-gallery.txt": "f5e4076b3d0608c91abef88c78abf946c86776da0fac962b1a8c5e09143a0858",
+        "jaguar-6C115-report-multimedia-lab-extended.txt": "adb8a349bdf5951fe637a84df8394bf0c7f26e6542d0019e434d1050fcaa9db2",
+        "jaguar-6C115-report-multimedia-lab.txt": "9f4f1d2a4aac8e33d28db406f7b0d5eaa72c4f0846116be52c0e0111a8518593",
+        "jaguar-6C115-report-network-gui.txt": "a026d008096948c8ea0673fd4ff95b3671832c5381a3718342dfc3e073c56b66",
+        "jaguar-6C115-report-painting-lab-extended.txt": "b1517ccdf72e726dc1552fb7bfd399feb3da56e037e933512136366af0e043cd",
+        "jaguar-6C115-report-painting-lab.txt": "b467c97e23526b25402deea8a016f7abd5ab37afe6f0ef870e2cd8d87cfea5c7",
+        "jaguar-6C115-report-qt-selftest-extended.txt": "a120fd2a7515b3c7367cae9221ec1f4648660db6bd9d6415e79cc9a8477d9ba9",
+        "jaguar-6C115-report-qt-selftest.txt": "55606f0bacc7a96b98e650b72754561b5bb6b43ad22afba08729550955cd8128",
+        "jaguar-6C115-report-qt3support-gallery.txt": "f53797147e5b786af7e718406948e8232a45e7d6bb1d86504e29da748e671cf6",
+        "jaguar-6C115-report-quick-qml-gallery-extended.txt": "eff37868a4e91c992284dabc27849190b9a1257b34ac9981050a9589835dccc5",
+        "jaguar-6C115-report-quick-qml-gallery.txt": "0374879d8a3c5135b032501d14e9c1bb49a4cc826b4a221399df178cefbb2a5e",
+        "jaguar-6C115-report-script-gallery.txt": "c746a64328ddc52050c55a9700015c585029185e358a88e08fffe20b43b37dda",
+        "jaguar-6C115-report-scripttools-gallery.txt": "30c16a133a74730550c3211e416bb1c7957d59498c3b6e54e00a24abba9a5b8f",
+        "jaguar-6C115-report-sql-gallery.txt": "49f8ced7d207587271eccfade03b282cfb8f85abd04bcf922c016c02ef192885",
+        "jaguar-6C115-report-svg-gallery.txt": "0e093fa31050a2447ffddccb7503783d959acba876b0857363be5228776bc63c",
+        "jaguar-6C115-report-testlib-gallery.txt": "c48902dd0871cd50f59321546b160b4c39cb02bc5e73fa8bfc64679abe427c3a",
+        "jaguar-6C115-report-uitools-gallery.txt": "c6cab3bf33e0304668d552c9db705de9f99b15ffad2563733d0dcf2e64f2dcd9",
+        "jaguar-6C115-report-widgets-gallery-extended.txt": "c19f8c78ffa4fc88d6691be9a6fb38c72240392cd123cc3f5c79ebd9b9a067d1",
+        "jaguar-6C115-report-widgets-gallery.txt": "354dc5cc420ba5378180b200c8f745d0cffd4d3873da5e95ad2c0d0eab7b02f7",
+        "jaguar-6C115-report-xml-gallery.txt": "5241b19aee413211baf0a8a7077e6b97b3a4057b101c2c651de6aac2f912f68b",
+        "jaguar-6C115-report-xmlpatterns-gallery.txt": "52619a11d0f601c317fcc47a25d203d3c903eb46c72bdeb9b638c0767d1302e4",
+        "jaguar-6C115-runner-gl-heavy-gallery-extended.log": "34c3798b7b6f82fcb9d7a1c8c426c766a97de828aefa708bb4161744534b69b7",
+        "jaguar-6C115-runner-gl-heavy-gallery.log": "b131789aad9a9a0bb7187a61ebb79b6442503fa188a3acd10bdccff34f8d0c82",
+        "jaguar-6C115-runner-graphics-gallery-extended.log": "d45a32da2df626a71efecc83192d283406ef8bb24223e14d1844e0e627918a29",
+        "jaguar-6C115-runner-graphics-gallery.log": "477099e132c3eed1120cc66fac61815ecf8ddc5c51967feaa94e1dd82ec5a81a",
+        "jaguar-6C115-runner-multimedia-lab-extended.log": "b7ea8030fdf479b9afac2ffb6ff1d2b908f05e8080dc2295c5aa98e98124c8ca",
+        "jaguar-6C115-runner-multimedia-lab.log": "dfd4869e900a07ee91b2c70d226a5d76bd42b2ca4ff3d8f3c8808266ecb86f15",
+        "jaguar-6C115-runner-network-gui.log": "18d9bd3a9ab8df5ef37726d77d52f38df254cc7d0d109b8e4d89ffe54eb982eb",
+        "jaguar-6C115-runner-painting-lab-extended.log": "37111a100f505ea035fb6e6f86732c220b4fd4a707a58fed01812e3abcc0ff2e",
+        "jaguar-6C115-runner-painting-lab.log": "5ce84043e47c214e172c3801a746f6c151a9dfff7a1b1e1afd384b6602c411b3",
+        "jaguar-6C115-runner-qt-selftest-extended.log": "0b37f10c37fe6931f0aff51ef4e27a1f1b2a6b314c64f4611dbd3cb493dfd441",
+        "jaguar-6C115-runner-qt-selftest.log": "ed9266bd468020588e8eb467f4d74597d8fab0077713280182174042e46a9eb8",
+        "jaguar-6C115-runner-qt3support-gallery.log": "830b916813b4776de86301a8213ae805123b1a914bbbf8a1dda988a414042f23",
+        "jaguar-6C115-runner-quick-qml-gallery-extended.log": "50dcf02e75ebff1cd44bf74a9ae27251b84a1e11016bdfdb2233ec7d983b8913",
+        "jaguar-6C115-runner-quick-qml-gallery.log": "c8b9a8f8ae886b40392c3c922e387ca7007706055511ca77887a4d62fc6f9ae7",
+        "jaguar-6C115-runner-script-gallery.log": "133f880059efa06a326f623686f8a07857840a57146e554199b5b9ab59a552b8",
+        "jaguar-6C115-runner-scripttools-gallery.log": "04539f289feda88dfae5ba845fd8697346af4aef3cb9cae9faeddfac24ad35a1",
+        "jaguar-6C115-runner-sql-gallery.log": "774aab5bd16b46d3db72597e5773560b3848ed21161815dac7a71378ff4858ae",
+        "jaguar-6C115-runner-svg-gallery.log": "7cfa296e8ae2728650f3b7dcd3732ff239c106dba8585f557af4fc0cde62eb3a",
+        "jaguar-6C115-runner-testlib-gallery.log": "e67f2ca777e7b236a1636fb33af6205093a49a211ea76c6fa331029e7866b5a2",
+        "jaguar-6C115-runner-uitools-gallery.log": "dc97073ea80b7ebe2a945c0553b15498762699c347a869f1b8d752a4456edb80",
+        "jaguar-6C115-runner-widgets-gallery-extended.log": "2fa3f6fa9b2082d87772269935ea87ce16c8d6eb535626e58104d68041f858c6",
+        "jaguar-6C115-runner-widgets-gallery.log": "08abc349c7a64cda048112bba19dac5454c5528683ef4b9b62e88a0697b08306",
+        "jaguar-6C115-runner-xml-gallery.log": "d672e49074b6ac6217b52c2a835717f849623c4fc9e013bce29bbf1c43b742f8",
+        "jaguar-6C115-runner-xmlpatterns-gallery.log": "88a00f8d6841abbba9fb13106de14586f057b5356ace281d582a9b99f353eda6",
+        "jaguar-6C115-smoke-gl-heavy-gallery-extended.log": "5ee0544dcd22a56db652aae6bfc975ede4b6d127693726cb024ee4f6957b9bf9",
+        "jaguar-6C115-smoke-gl-heavy-gallery.log": "e65667f5265dd31eeef135463ff8c9382380565629c963265cde5c83ea2c49ff",
+        "jaguar-6C115-smoke-graphics-gallery-extended.log": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb",
+        "jaguar-6C115-smoke-graphics-gallery.log": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f",
+        "jaguar-6C115-smoke-multimedia-lab-extended.log": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+        "jaguar-6C115-smoke-multimedia-lab.log": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a",
+        "jaguar-6C115-smoke-network-gui.log": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161",
+        "jaguar-6C115-smoke-painting-lab-extended.log": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08",
+        "jaguar-6C115-smoke-painting-lab.log": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0",
+        "jaguar-6C115-smoke-qt-selftest-extended.log": "e66ef448f760322d50b59b0a3e1013ce794c6b8c5ee23c4b1479b56872c86321",
+        "jaguar-6C115-smoke-qt-selftest.log": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24",
+        "jaguar-6C115-smoke-qt3support-gallery.log": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530",
+        "jaguar-6C115-smoke-quick-qml-gallery-extended.log": "da3cd92f57636136a353cab7b4edfb66ad001a6baee0f7081b2f25cd59831eaa",
+        "jaguar-6C115-smoke-quick-qml-gallery.log": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea",
+        "jaguar-6C115-smoke-script-gallery.log": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e",
+        "jaguar-6C115-smoke-scripttools-gallery.log": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2",
+        "jaguar-6C115-smoke-sql-gallery.log": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4",
+        "jaguar-6C115-smoke-svg-gallery.log": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab",
+        "jaguar-6C115-smoke-testlib-gallery.log": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49",
+        "jaguar-6C115-smoke-uitools-gallery.log": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b",
+        "jaguar-6C115-smoke-widgets-gallery-extended.log": "b2885edf4203c706f84e6e9203fd525873431e245ee1bfa413c73f4e7feca3fc",
+        "jaguar-6C115-smoke-widgets-gallery.log": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba",
+        "jaguar-6C115-smoke-xml-gallery.log": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184",
+        "jaguar-6C115-smoke-xmlpatterns-gallery.log": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76",
+        "jaguar-6C115-suite-install.log": "7da872694d7dd2355d9b28f8593604755b2f253fe4e9dfafbaaf648679961418",
+        "jaguar-6C115-suite-progress.log": "6ebd50baf412984c615b9391136d8e59a88d20793f2cc4142f2529dcdd99a936",
+        "jaguar-6C115-suite-status.tsv": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa",
+        "jaguar-qt-6C115-grab.png": "482c4f87a7bea9c3e5cffd6a14c45839f1f89c6ee7c529164b23287d0276c952",
+        "jaguar-qt-6C115-screen.png": "d3284521d7b6fc67fe0966c0d0910bc993e063bb865c5e21041daf2dbdecc36a",
+        "jaguar-qt-6C115.log": "35fcab736fd883f80af2a23a4b5728d468e6f6c4637157605e71accec5f411e5"
+      }
+    },
+    {
+      "os": "Mac OS X 10.2.8 (6R73)",
+      "cpu": "emulated G4 (ppc7400)",
+      "evidence": "artifacts/runtime-jaguar/suite-20261005/6R73",
+      "apps_passed": 24,
+      "apps_total": 24,
+      "checks_passed": 521,
+      "checks_failed": 0,
+      "checks_skipped": 133,
+      "probes": {
+        "qtcore_probe_failed": 0,
+        "qtgui_probe_failed": 0,
+        "macintosh_version": "0x4"
+      },
+      "archive_md5": "63679cba8d462b701a5c8e7619514ab4",
+      "applications": [
+        {
+          "app": "gl-heavy-gallery-extended",
+          "result": "PASS",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "app": "gl-heavy-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery-extended",
+          "result": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "multimedia-lab-extended",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "app": "multimedia-lab",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "network-gui",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab-extended",
+          "result": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt-selftest-extended",
+          "result": "PASS",
+          "passed": 119,
+          "failed": 0,
+          "skipped": 116
+        },
+        {
+          "app": "qt-selftest",
+          "result": "PASS",
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt3support-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "quick-qml-gallery-extended",
+          "result": "PASS",
+          "passed": 29,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "app": "quick-qml-gallery",
+          "result": "PASS",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "script-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "scripttools-gallery",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "sql-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "svg-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "testlib-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "uitools-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "widgets-gallery-extended",
+          "result": "PASS",
+          "passed": 139,
+          "failed": 0,
+          "skipped": 9
+        },
+        {
+          "app": "widgets-gallery",
+          "result": "PASS",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xml-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xmlpatterns-gallery",
+          "result": "PASS",
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "evidence_sha256": {
+        "jaguar-6R73-report-gl-heavy-gallery-extended.txt": "6467c8daafc6abfc754f721cfb8db042d27dcf7c3fbfbcdacda209a18c10b6b8",
+        "jaguar-6R73-report-gl-heavy-gallery.txt": "4e0a2469b5f975ab8e69216fd3f4019ea56cd2305fd348906baad240571a0f42",
+        "jaguar-6R73-report-graphics-gallery-extended.txt": "47b8f1c17ec441461bb0d1f6648c99873d877e0cb7ace14b5309e1a49b13b548",
+        "jaguar-6R73-report-graphics-gallery.txt": "2bb5dd8212f54078ee51125cc20a2ff97ff12bfe3a2bf05ab48b492ef0b27ae5",
+        "jaguar-6R73-report-multimedia-lab-extended.txt": "0d61bef5e697a73aa068f643b80f43d727080f67e761fc81f07ef393c34ef320",
+        "jaguar-6R73-report-multimedia-lab.txt": "88063ec2b81c6941dd94248a4e098ccdbd1f6c407c3983992f4a11e3e5fbc040",
+        "jaguar-6R73-report-network-gui.txt": "d5563b593b614b1703c7ca590933ecfc766f92f297fd057b80670a746a6ad5d6",
+        "jaguar-6R73-report-painting-lab-extended.txt": "fc184094840bc59e16dddc70db7ef75305121c6285537f3c9bb8183aa49bd325",
+        "jaguar-6R73-report-painting-lab.txt": "775dd09ce517ab4833b86354c0f83f1331e059bab95d8cd83d1da22d55c03139",
+        "jaguar-6R73-report-qt-selftest-extended.txt": "37bb66b6798f2c5c71b1b0ac5848d0384bd24491c4fc9a6ab894aa9c1dc70605",
+        "jaguar-6R73-report-qt-selftest.txt": "e05c7c224ea2dc71196eb6fe606c8050ac46b58cac444f7f29b2105ebdec7b69",
+        "jaguar-6R73-report-qt3support-gallery.txt": "ace9bc24d51423dd1a93bdce77f9b8649cf0afee80e0564c0c06959b811d0948",
+        "jaguar-6R73-report-quick-qml-gallery-extended.txt": "be0a2c383e30065ccffe54b04b21f24da3120ea38562724c21090e5a68dc366d",
+        "jaguar-6R73-report-quick-qml-gallery.txt": "90c44d73e76f144c6f7c84d12c827db4282448a7c7d9dbfe93c79cf1e3cb1165",
+        "jaguar-6R73-report-script-gallery.txt": "25fef0f51ee4ba5e1d25e0e61dbccf644e3602ad86b857cc71f7bc362d598546",
+        "jaguar-6R73-report-scripttools-gallery.txt": "b718bdd06cbb69c65a012b610708e7732a6b4d58c9bf7260e553082e1e2db2ec",
+        "jaguar-6R73-report-sql-gallery.txt": "647dc5f8755a47c0f03daf44367019f8fe4a8afa409c04cc68c4841935b82005",
+        "jaguar-6R73-report-svg-gallery.txt": "479d29bfd70bad593914d1553cebdb54f2c5c694270679e103a9488342520b21",
+        "jaguar-6R73-report-testlib-gallery.txt": "30708606a2d7c810cf72ec5d325b0c302d8cecb3581354a360ddd5f0b8c196fe",
+        "jaguar-6R73-report-uitools-gallery.txt": "97235758183383043b605b98ca9647ed95ac4699bb882596f4004c6ab9c850f2",
+        "jaguar-6R73-report-widgets-gallery-extended.txt": "773585df94ff6d9f09fb9dc916ba58518c04441d934e67fd26ad54534d43b54e",
+        "jaguar-6R73-report-widgets-gallery.txt": "72571a185e80ccbe5e482417f7927237e4c176e3c833d12940897680b027ac76",
+        "jaguar-6R73-report-xml-gallery.txt": "db9418fd9d1c9519a62ebc3f4333d2a9623047a5b00d2d3803f2c1a01dd07077",
+        "jaguar-6R73-report-xmlpatterns-gallery.txt": "137712506a629a88d5bb910b87c3dc1dedbc1e9dbd935a0ec827a6c522bed5c7",
+        "jaguar-6R73-runner-gl-heavy-gallery-extended.log": "34c3798b7b6f82fcb9d7a1c8c426c766a97de828aefa708bb4161744534b69b7",
+        "jaguar-6R73-runner-gl-heavy-gallery.log": "b131789aad9a9a0bb7187a61ebb79b6442503fa188a3acd10bdccff34f8d0c82",
+        "jaguar-6R73-runner-graphics-gallery-extended.log": "d45a32da2df626a71efecc83192d283406ef8bb24223e14d1844e0e627918a29",
+        "jaguar-6R73-runner-graphics-gallery.log": "477099e132c3eed1120cc66fac61815ecf8ddc5c51967feaa94e1dd82ec5a81a",
+        "jaguar-6R73-runner-multimedia-lab-extended.log": "b7ea8030fdf479b9afac2ffb6ff1d2b908f05e8080dc2295c5aa98e98124c8ca",
+        "jaguar-6R73-runner-multimedia-lab.log": "dfd4869e900a07ee91b2c70d226a5d76bd42b2ca4ff3d8f3c8808266ecb86f15",
+        "jaguar-6R73-runner-network-gui.log": "18d9bd3a9ab8df5ef37726d77d52f38df254cc7d0d109b8e4d89ffe54eb982eb",
+        "jaguar-6R73-runner-painting-lab-extended.log": "37111a100f505ea035fb6e6f86732c220b4fd4a707a58fed01812e3abcc0ff2e",
+        "jaguar-6R73-runner-painting-lab.log": "5ce84043e47c214e172c3801a746f6c151a9dfff7a1b1e1afd384b6602c411b3",
+        "jaguar-6R73-runner-qt-selftest-extended.log": "0b37f10c37fe6931f0aff51ef4e27a1f1b2a6b314c64f4611dbd3cb493dfd441",
+        "jaguar-6R73-runner-qt-selftest.log": "ed9266bd468020588e8eb467f4d74597d8fab0077713280182174042e46a9eb8",
+        "jaguar-6R73-runner-qt3support-gallery.log": "830b916813b4776de86301a8213ae805123b1a914bbbf8a1dda988a414042f23",
+        "jaguar-6R73-runner-quick-qml-gallery-extended.log": "50dcf02e75ebff1cd44bf74a9ae27251b84a1e11016bdfdb2233ec7d983b8913",
+        "jaguar-6R73-runner-quick-qml-gallery.log": "c8b9a8f8ae886b40392c3c922e387ca7007706055511ca77887a4d62fc6f9ae7",
+        "jaguar-6R73-runner-script-gallery.log": "133f880059efa06a326f623686f8a07857840a57146e554199b5b9ab59a552b8",
+        "jaguar-6R73-runner-scripttools-gallery.log": "04539f289feda88dfae5ba845fd8697346af4aef3cb9cae9faeddfac24ad35a1",
+        "jaguar-6R73-runner-sql-gallery.log": "774aab5bd16b46d3db72597e5773560b3848ed21161815dac7a71378ff4858ae",
+        "jaguar-6R73-runner-svg-gallery.log": "7cfa296e8ae2728650f3b7dcd3732ff239c106dba8585f557af4fc0cde62eb3a",
+        "jaguar-6R73-runner-testlib-gallery.log": "e67f2ca777e7b236a1636fb33af6205093a49a211ea76c6fa331029e7866b5a2",
+        "jaguar-6R73-runner-uitools-gallery.log": "dc97073ea80b7ebe2a945c0553b15498762699c347a869f1b8d752a4456edb80",
+        "jaguar-6R73-runner-widgets-gallery-extended.log": "2fa3f6fa9b2082d87772269935ea87ce16c8d6eb535626e58104d68041f858c6",
+        "jaguar-6R73-runner-widgets-gallery.log": "08abc349c7a64cda048112bba19dac5454c5528683ef4b9b62e88a0697b08306",
+        "jaguar-6R73-runner-xml-gallery.log": "d672e49074b6ac6217b52c2a835717f849623c4fc9e013bce29bbf1c43b742f8",
+        "jaguar-6R73-runner-xmlpatterns-gallery.log": "88a00f8d6841abbba9fb13106de14586f057b5356ace281d582a9b99f353eda6",
+        "jaguar-6R73-smoke-gl-heavy-gallery-extended.log": "5ee0544dcd22a56db652aae6bfc975ede4b6d127693726cb024ee4f6957b9bf9",
+        "jaguar-6R73-smoke-gl-heavy-gallery.log": "e65667f5265dd31eeef135463ff8c9382380565629c963265cde5c83ea2c49ff",
+        "jaguar-6R73-smoke-graphics-gallery-extended.log": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb",
+        "jaguar-6R73-smoke-graphics-gallery.log": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f",
+        "jaguar-6R73-smoke-multimedia-lab-extended.log": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+        "jaguar-6R73-smoke-multimedia-lab.log": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a",
+        "jaguar-6R73-smoke-network-gui.log": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161",
+        "jaguar-6R73-smoke-painting-lab-extended.log": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08",
+        "jaguar-6R73-smoke-painting-lab.log": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0",
+        "jaguar-6R73-smoke-qt-selftest-extended.log": "e66ef448f760322d50b59b0a3e1013ce794c6b8c5ee23c4b1479b56872c86321",
+        "jaguar-6R73-smoke-qt-selftest.log": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24",
+        "jaguar-6R73-smoke-qt3support-gallery.log": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530",
+        "jaguar-6R73-smoke-quick-qml-gallery-extended.log": "da3cd92f57636136a353cab7b4edfb66ad001a6baee0f7081b2f25cd59831eaa",
+        "jaguar-6R73-smoke-quick-qml-gallery.log": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea",
+        "jaguar-6R73-smoke-script-gallery.log": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e",
+        "jaguar-6R73-smoke-scripttools-gallery.log": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2",
+        "jaguar-6R73-smoke-sql-gallery.log": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4",
+        "jaguar-6R73-smoke-svg-gallery.log": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab",
+        "jaguar-6R73-smoke-testlib-gallery.log": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49",
+        "jaguar-6R73-smoke-uitools-gallery.log": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b",
+        "jaguar-6R73-smoke-widgets-gallery-extended.log": "b2885edf4203c706f84e6e9203fd525873431e245ee1bfa413c73f4e7feca3fc",
+        "jaguar-6R73-smoke-widgets-gallery.log": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba",
+        "jaguar-6R73-smoke-xml-gallery.log": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184",
+        "jaguar-6R73-smoke-xmlpatterns-gallery.log": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76",
+        "jaguar-6R73-suite-install.log": "a4eed0923421fe753617b1dbcc9055dbb67bd15db14b31d19682124d40aac2be",
+        "jaguar-6R73-suite-progress.log": "6ebd50baf412984c615b9391136d8e59a88d20793f2cc4142f2529dcdd99a936",
+        "jaguar-6R73-suite-status.tsv": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa",
+        "jaguar-qt-6R73-grab.png": "482c4f87a7bea9c3e5cffd6a14c45839f1f89c6ee7c529164b23287d0276c952",
+        "jaguar-qt-6R73-screen.png": "08f7285b5259adeaa251f611642a05a9eea89d640281b43c186a202ea08c8057",
+        "jaguar-qt-6R73.log": "673eb8a3262d44a91df4c3d25f0bd4102fea800e21aa42a722a8451bfca9d575"
+      }
+    },
+    {
+      "os": "Mac OS X 10.4.10 (8R3032)",
+      "cpu": "emulated G4 (ppc7400)",
+      "evidence": "artifacts/runtime-jaguar/suite-20261005/8R3032",
+      "apps_passed": 24,
+      "apps_total": 24,
+      "checks_passed": 523,
+      "checks_failed": 0,
+      "checks_skipped": 131,
+      "probes": {
+        "qtcore_probe_failed": 0,
+        "qtgui_probe_failed": 0,
+        "macintosh_version": "0x6"
+      },
+      "archive_md5": "63679cba8d462b701a5c8e7619514ab4",
+      "applications": [
+        {
+          "app": "gl-heavy-gallery-extended",
+          "result": "PASS",
+          "passed": 12,
+          "failed": 0,
+          "skipped": 2
+        },
+        {
+          "app": "gl-heavy-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery-extended",
+          "result": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "multimedia-lab-extended",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "app": "multimedia-lab",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "network-gui",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab-extended",
+          "result": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt-selftest-extended",
+          "result": "PASS",
+          "passed": 119,
+          "failed": 0,
+          "skipped": 116
+        },
+        {
+          "app": "qt-selftest",
+          "result": "PASS",
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt3support-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "quick-qml-gallery-extended",
+          "result": "PASS",
+          "passed": 29,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "app": "quick-qml-gallery",
+          "result": "PASS",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "script-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "scripttools-gallery",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "sql-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "svg-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "testlib-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "uitools-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "widgets-gallery-extended",
+          "result": "PASS",
+          "passed": 139,
+          "failed": 0,
+          "skipped": 9
+        },
+        {
+          "app": "widgets-gallery",
+          "result": "PASS",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xml-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xmlpatterns-gallery",
+          "result": "PASS",
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "evidence_sha256": {
+        "jaguar-8R3032-report-gl-heavy-gallery-extended.txt": "f3fd7ea036016a0f2d1f1d27073d240ce557e96729b9954b7079fe652110f8b0",
+        "jaguar-8R3032-report-gl-heavy-gallery.txt": "7e1dcc619ecf6055b6a5867d8ddb4133a6ea8e31a726c64837b9b1cdd552958b",
+        "jaguar-8R3032-report-graphics-gallery-extended.txt": "aba1d45c17988d9310bfc58743ec1b1b344059f7e5f2e82f638080eb7a0f298a",
+        "jaguar-8R3032-report-graphics-gallery.txt": "9e5fd2e0d8b45576bf82b5bb6521bceb83b618a84087b4882ccaff8cd6f13641",
+        "jaguar-8R3032-report-multimedia-lab-extended.txt": "6161db40baa3c03d432f2fac4cc8d7dd914bc01c4caac9ef93746ee67e3d154d",
+        "jaguar-8R3032-report-multimedia-lab.txt": "6005910dc9036c5e665e2c1b469aeceb84c7be771e8e4dfe8b2ec5b7f0f44a08",
+        "jaguar-8R3032-report-network-gui.txt": "1cb323410ccb0046d15bf2c6ffd3934d4f3eace2df68b2740cec5cbfd09fc058",
+        "jaguar-8R3032-report-painting-lab-extended.txt": "4f53c0657550a2c1aaeeea0315212871a7c978f138b226afa3bf9831656ab80a",
+        "jaguar-8R3032-report-painting-lab.txt": "973c87db7f85b8dcfcaddb9a609223328bfdb2d2b5c8c91b49dc4f8f0ee31751",
+        "jaguar-8R3032-report-qt-selftest-extended.txt": "6ad797860bc190b5d723c97472db8b7f6308b03b676f106a00e975b222f4674b",
+        "jaguar-8R3032-report-qt-selftest.txt": "945a8f94b9d32f4bd4f89e4c16e549da7f31c7774f1d91375f31515c43fc337f",
+        "jaguar-8R3032-report-qt3support-gallery.txt": "d974b91252919ced75628e70755b87420042eaf4bad5673fbfc4f28b17845c89",
+        "jaguar-8R3032-report-quick-qml-gallery-extended.txt": "5c61b8b383d776c59587b6512aa81670f11a7819dc9cfc26da9096fc3f89c3b7",
+        "jaguar-8R3032-report-quick-qml-gallery.txt": "987374ffae5eee321d54fcc33fa369baf5a8682850a2268cb977d82d0be64635",
+        "jaguar-8R3032-report-script-gallery.txt": "a0bf5cfcadf416d4b3c06672305d7353909f75fd8bd57dd4686f38b7e559ffd9",
+        "jaguar-8R3032-report-scripttools-gallery.txt": "53ba9683232d25d50073d07aa50dafd829cc6d0b34d8e1f1353e7678a96be2ae",
+        "jaguar-8R3032-report-sql-gallery.txt": "25213993ba4eaf96ba165deafb894c00812b1cdefc0dc71c9a54e17f5356708b",
+        "jaguar-8R3032-report-svg-gallery.txt": "b71bafb36ef2a392266979f5de53323a29a46408393dc54bcfd734fb91903376",
+        "jaguar-8R3032-report-testlib-gallery.txt": "cb6610efce51b590ccfd14c86f0576dc0e86f479a6234d36f651f1e4d1864a23",
+        "jaguar-8R3032-report-uitools-gallery.txt": "80cec588d13a7a1820680e536a12570b1d0d62d9b9442c05fadd08a3c2814526",
+        "jaguar-8R3032-report-widgets-gallery-extended.txt": "5f455ebe011a3976483e54403bf47c3a5820437ae7efc48acaf071d8cfc54478",
+        "jaguar-8R3032-report-widgets-gallery.txt": "3eea89f2f6c609e88f7fa27c50d14cb32aceb644168fdad5b27a1206a71aef6d",
+        "jaguar-8R3032-report-xml-gallery.txt": "c277b1482e0633d4d4e430b6500b5fdc57c03cafc2f5a6e170d656c4cd1933cb",
+        "jaguar-8R3032-report-xmlpatterns-gallery.txt": "8082ca02a07c42555a2986ac48eb34bc18245fa8e1a24866ae9d5caa1b3af283",
+        "jaguar-8R3032-runner-gl-heavy-gallery-extended.log": "e90a35b7d7548272d65ef67d5d529d162aa6691f8c2f0a882d4e7c687bd08977",
+        "jaguar-8R3032-runner-gl-heavy-gallery.log": "12442dc96e822f6924c193305e24ca75e3b40837ce4007baffe44d64eca7688d",
+        "jaguar-8R3032-runner-graphics-gallery-extended.log": "f5ca5ef6dc13fc7ad05dbc29720eff1fef25f89c50a61e9421e15a87aad6aa6f",
+        "jaguar-8R3032-runner-graphics-gallery.log": "c9627e2c9334f298d4650061bbf33b9b1c9725fb973f1c25044f00070140562f",
+        "jaguar-8R3032-runner-multimedia-lab-extended.log": "6e879d3101038e98c1cb6ae7077f5441d720c522e177a9f9cc06b0ecdaf45819",
+        "jaguar-8R3032-runner-multimedia-lab.log": "cc53ce67cb0deaf457657baf7b9c085865f277888b37946a40fbc0a74fcb2ca2",
+        "jaguar-8R3032-runner-network-gui.log": "654facb7f2bd30980b9d120e003fcdcea0aa1a8edce313a496a4445163b8f976",
+        "jaguar-8R3032-runner-painting-lab-extended.log": "eca19f96901eee12985cd8588d2850ce96f79d3d70f5e96c314b505975240078",
+        "jaguar-8R3032-runner-painting-lab.log": "d72e0df19d2b1d8eac052fc1db31ae66d96ab85cfb164138c6b7582573032b2a",
+        "jaguar-8R3032-runner-qt-selftest-extended.log": "5b1d18a4dcad08b3baa6291ce53aa60d7fb879b135e363ecf963d1dcd3f28bbd",
+        "jaguar-8R3032-runner-qt-selftest.log": "604d6af20d72047c82e4cd703215c6d55d7e48268dcd9eee850736d43da78d33",
+        "jaguar-8R3032-runner-qt3support-gallery.log": "faaf5d13a1b1624a0557a6ceaec84cf2e0a0bdf5703f0c24a667b965bbade74a",
+        "jaguar-8R3032-runner-quick-qml-gallery-extended.log": "0e017938a9027042e55bc4f8645461239bca59e01f3fd97a9fe67795c8ba6074",
+        "jaguar-8R3032-runner-quick-qml-gallery.log": "a4b9f2990f448953296940207b947d89dc98fc08a18d2519a5f912695b898b5a",
+        "jaguar-8R3032-runner-script-gallery.log": "30c4bc24131bdbd77b2f1bb487494167def3d3ee75f60ddac08a26401da4db86",
+        "jaguar-8R3032-runner-scripttools-gallery.log": "8c9e6c8bee112bea17c45bd79e1900364a37a0b844a9d90910d808d31fcc3835",
+        "jaguar-8R3032-runner-sql-gallery.log": "eef8a8fa09c99d2af63f16835e918c8a52882e410aaa5b9976f094b9f79ace4f",
+        "jaguar-8R3032-runner-svg-gallery.log": "2b982b8f44f3e3f405867efc740fa072f52ed6c28edc07ae92f56769d62e3b19",
+        "jaguar-8R3032-runner-testlib-gallery.log": "ff28a9b7a69e7886504aa6e32a8bad39ac321daf0965871f19f1aa7c508c3722",
+        "jaguar-8R3032-runner-uitools-gallery.log": "61742ec9054c670d29c4300ae05d674dcff3abe7dda396814f0a3896d625273d",
+        "jaguar-8R3032-runner-widgets-gallery-extended.log": "fb068a57f0021928f584d4039220498d09f348fb1c2ee6a05eeb51c124c4e18a",
+        "jaguar-8R3032-runner-widgets-gallery.log": "d11e44e8164b21af343b01c0df580439b5765bbaccc881d4e5cefee0bf19ccd5",
+        "jaguar-8R3032-runner-xml-gallery.log": "8a4bb698c0e3701bdbabdc121cb3b50af9b3a1ae0cd828d2a746c91090ece2c2",
+        "jaguar-8R3032-runner-xmlpatterns-gallery.log": "6c85748236e8ba37458fc308ba0fc2ebe995ea5cc2b57e88765bf3128d34729a",
+        "jaguar-8R3032-smoke-gl-heavy-gallery-extended.log": "0a134b00a177d2fcd7fde899596266a7d10488a566e952eca1cc333e53b737c0",
+        "jaguar-8R3032-smoke-gl-heavy-gallery.log": "e65667f5265dd31eeef135463ff8c9382380565629c963265cde5c83ea2c49ff",
+        "jaguar-8R3032-smoke-graphics-gallery-extended.log": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb",
+        "jaguar-8R3032-smoke-graphics-gallery.log": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f",
+        "jaguar-8R3032-smoke-multimedia-lab-extended.log": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+        "jaguar-8R3032-smoke-multimedia-lab.log": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a",
+        "jaguar-8R3032-smoke-network-gui.log": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161",
+        "jaguar-8R3032-smoke-painting-lab-extended.log": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08",
+        "jaguar-8R3032-smoke-painting-lab.log": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0",
+        "jaguar-8R3032-smoke-qt-selftest-extended.log": "06e80a1af941e523991400f95013e238e66a2bf5cfbb0e89be4b1b9862260c44",
+        "jaguar-8R3032-smoke-qt-selftest.log": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24",
+        "jaguar-8R3032-smoke-qt3support-gallery.log": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530",
+        "jaguar-8R3032-smoke-quick-qml-gallery-extended.log": "da3cd92f57636136a353cab7b4edfb66ad001a6baee0f7081b2f25cd59831eaa",
+        "jaguar-8R3032-smoke-quick-qml-gallery.log": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea",
+        "jaguar-8R3032-smoke-script-gallery.log": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e",
+        "jaguar-8R3032-smoke-scripttools-gallery.log": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2",
+        "jaguar-8R3032-smoke-sql-gallery.log": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4",
+        "jaguar-8R3032-smoke-svg-gallery.log": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab",
+        "jaguar-8R3032-smoke-testlib-gallery.log": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49",
+        "jaguar-8R3032-smoke-uitools-gallery.log": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b",
+        "jaguar-8R3032-smoke-widgets-gallery-extended.log": "b2885edf4203c706f84e6e9203fd525873431e245ee1bfa413c73f4e7feca3fc",
+        "jaguar-8R3032-smoke-widgets-gallery.log": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba",
+        "jaguar-8R3032-smoke-xml-gallery.log": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184",
+        "jaguar-8R3032-smoke-xmlpatterns-gallery.log": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76",
+        "jaguar-8R3032-suite-install.log": "703b8ee16b8e974b6d0042e37b6b49d24896544d6b6d983b967baf2676da38d9",
+        "jaguar-8R3032-suite-progress.log": "6ebd50baf412984c615b9391136d8e59a88d20793f2cc4142f2529dcdd99a936",
+        "jaguar-8R3032-suite-status.tsv": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa",
+        "jaguar-qt-8R3032-grab.png": "76a5fbee424cc254447602869f5a72d74f67f785d7f3f40f123c69448b99b038",
+        "jaguar-qt-8R3032-screen.png": "f242b04a887799074394cb0af4e688cc81086fddd4c0a0c564434e55da6326fe",
+        "jaguar-qt-8R3032.log": "dbefd71bed1fd4c5d723168fd9776943e52feba3ff09c9ec2813b802486b0aae"
+      }
+    },
+    {
+      "os": "Mac OS X 10.2.8 (6R73)",
+      "cpu": "emulated G3 (ppc750)",
+      "evidence": "artifacts/runtime-jaguar/suite-20261005/6R73-g3",
+      "apps_passed": 24,
+      "apps_total": 24,
+      "checks_passed": 521,
+      "checks_failed": 0,
+      "checks_skipped": 133,
+      "probes": {
+        "qtcore_probe_failed": 0,
+        "qtgui_probe_failed": 0,
+        "macintosh_version": "0x4"
+      },
+      "archive_md5": "e7af341e312fee03309aa46b3395f16d",
+      "applications": [
+        {
+          "app": "gl-heavy-gallery-extended",
+          "result": "PASS",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "app": "gl-heavy-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery-extended",
+          "result": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "graphics-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "multimedia-lab-extended",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "app": "multimedia-lab",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "network-gui",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab-extended",
+          "result": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "painting-lab",
+          "result": "PASS",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt-selftest-extended",
+          "result": "PASS",
+          "passed": 119,
+          "failed": 0,
+          "skipped": 116
+        },
+        {
+          "app": "qt-selftest",
+          "result": "PASS",
+          "passed": 37,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "qt3support-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "quick-qml-gallery-extended",
+          "result": "PASS",
+          "passed": 29,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "app": "quick-qml-gallery",
+          "result": "PASS",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "script-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "scripttools-gallery",
+          "result": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "sql-gallery",
+          "result": "PASS",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "svg-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "testlib-gallery",
+          "result": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "uitools-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "widgets-gallery-extended",
+          "result": "PASS",
+          "passed": 139,
+          "failed": 0,
+          "skipped": 9
+        },
+        {
+          "app": "widgets-gallery",
+          "result": "PASS",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xml-gallery",
+          "result": "PASS",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "app": "xmlpatterns-gallery",
+          "result": "PASS",
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "evidence_sha256": {
+        "jaguar-6R73-report-gl-heavy-gallery-extended.txt": "3e80202743f80b68884aaa1c2545eb38f243f8d0fd77e58720bf2ae036295f8b",
+        "jaguar-6R73-report-gl-heavy-gallery.txt": "2578ba439204982270e906ea25bf8e264f67b357d86a1ff56124d38e7f927e94",
+        "jaguar-6R73-report-graphics-gallery-extended.txt": "45e954c2b5e50f5a2acdf7722158f9e8c19ed8262d9e91f43fda52f501d5c7f2",
+        "jaguar-6R73-report-graphics-gallery.txt": "6517776953fb10b6851797d80ad9f8564028ebb50029a9beb230255fee9777aa",
+        "jaguar-6R73-report-multimedia-lab-extended.txt": "beb2d180d5b9a3ad1488f064f8ceaece42ba2a7be4cddba4ffc7c8c11be4ea66",
+        "jaguar-6R73-report-multimedia-lab.txt": "3da8bfad9785916b17c175e1c6bc6de71b02a371e9d786c63b56f6ad29687632",
+        "jaguar-6R73-report-network-gui.txt": "6a37709bbf4c307e55ee05bb20682cd1cccabc2983d508e54ab22e00b46b185c",
+        "jaguar-6R73-report-painting-lab-extended.txt": "e2701e93cb792fe4ff82a32f9412cf852c456f69f976fd7013b8d501ff342e34",
+        "jaguar-6R73-report-painting-lab.txt": "348412f0cf47f1848446e11ba125b1409d74acfe8bf17858d466163598607ea2",
+        "jaguar-6R73-report-qt-selftest-extended.txt": "ef94f28ed437d492906d2d7c89e7220fcd1cea9e5e6a98a717fd3765ca440564",
+        "jaguar-6R73-report-qt-selftest.txt": "2329d13261334823c9aaa3443440454884f2b1087f3f968da12e62e2f0037eeb",
+        "jaguar-6R73-report-qt3support-gallery.txt": "3de0929a2bde8324bf38a4aa2bcfacddb58fae6da627deb94c09d38b6f4bfade",
+        "jaguar-6R73-report-quick-qml-gallery-extended.txt": "123a9e6d117ac4f6996caeb76efb236234caf936072a253c8661fb900cd8fbec",
+        "jaguar-6R73-report-quick-qml-gallery.txt": "f70670e2b019b88c0921aaef8400683bdba94bdcbe32782f7fd84dd9e0646ddd",
+        "jaguar-6R73-report-script-gallery.txt": "5fb43ece9ca1c477e3583bff9f6e1e05bfd3c5dae01c7306a3bea1c84aebf909",
+        "jaguar-6R73-report-scripttools-gallery.txt": "ae2687b80765ce79b3a1009deb6aa9aa977732c6741185c2bfd3d195dad2e18a",
+        "jaguar-6R73-report-sql-gallery.txt": "3ef08edba657a8a904b7f82bdd0f4c414d5eefc7b9ea7bde1b9b2a2b31a445d9",
+        "jaguar-6R73-report-svg-gallery.txt": "b029d8b92dd53da53f48f29cf46a9a43eefa05af16d6d0380568fa0f715afe71",
+        "jaguar-6R73-report-testlib-gallery.txt": "b972373790a8e0000a9993e7a5871d9d82fa3bf161fcf56676345f39c88dfa5a",
+        "jaguar-6R73-report-uitools-gallery.txt": "d9ccc914402911d01a745bd4d7d0d504110a30758a77ddfd474a49c1288191f9",
+        "jaguar-6R73-report-widgets-gallery-extended.txt": "83fc724b3c5af9fb17547f18787ac5653ad7689b792b9491406eac8b5e662d78",
+        "jaguar-6R73-report-widgets-gallery.txt": "d215dc3b9eaeab1d34641ed23059795e758ac2ae27d8078192054e4d3f933089",
+        "jaguar-6R73-report-xml-gallery.txt": "08bbac0dc7929b98a87e4b981a236d698d3421319b5c499018426cfa903a3ba3",
+        "jaguar-6R73-report-xmlpatterns-gallery.txt": "692770f5176b71d24de6eb8067ebf147e3367f4286f0bfa915332d2f398d8444",
+        "jaguar-6R73-runner-gl-heavy-gallery-extended.log": "34c3798b7b6f82fcb9d7a1c8c426c766a97de828aefa708bb4161744534b69b7",
+        "jaguar-6R73-runner-gl-heavy-gallery.log": "b131789aad9a9a0bb7187a61ebb79b6442503fa188a3acd10bdccff34f8d0c82",
+        "jaguar-6R73-runner-graphics-gallery-extended.log": "d45a32da2df626a71efecc83192d283406ef8bb24223e14d1844e0e627918a29",
+        "jaguar-6R73-runner-graphics-gallery.log": "477099e132c3eed1120cc66fac61815ecf8ddc5c51967feaa94e1dd82ec5a81a",
+        "jaguar-6R73-runner-multimedia-lab-extended.log": "b7ea8030fdf479b9afac2ffb6ff1d2b908f05e8080dc2295c5aa98e98124c8ca",
+        "jaguar-6R73-runner-multimedia-lab.log": "dfd4869e900a07ee91b2c70d226a5d76bd42b2ca4ff3d8f3c8808266ecb86f15",
+        "jaguar-6R73-runner-network-gui.log": "18d9bd3a9ab8df5ef37726d77d52f38df254cc7d0d109b8e4d89ffe54eb982eb",
+        "jaguar-6R73-runner-painting-lab-extended.log": "37111a100f505ea035fb6e6f86732c220b4fd4a707a58fed01812e3abcc0ff2e",
+        "jaguar-6R73-runner-painting-lab.log": "5ce84043e47c214e172c3801a746f6c151a9dfff7a1b1e1afd384b6602c411b3",
+        "jaguar-6R73-runner-qt-selftest-extended.log": "0b37f10c37fe6931f0aff51ef4e27a1f1b2a6b314c64f4611dbd3cb493dfd441",
+        "jaguar-6R73-runner-qt-selftest.log": "ed9266bd468020588e8eb467f4d74597d8fab0077713280182174042e46a9eb8",
+        "jaguar-6R73-runner-qt3support-gallery.log": "830b916813b4776de86301a8213ae805123b1a914bbbf8a1dda988a414042f23",
+        "jaguar-6R73-runner-quick-qml-gallery-extended.log": "50dcf02e75ebff1cd44bf74a9ae27251b84a1e11016bdfdb2233ec7d983b8913",
+        "jaguar-6R73-runner-quick-qml-gallery.log": "c8b9a8f8ae886b40392c3c922e387ca7007706055511ca77887a4d62fc6f9ae7",
+        "jaguar-6R73-runner-script-gallery.log": "133f880059efa06a326f623686f8a07857840a57146e554199b5b9ab59a552b8",
+        "jaguar-6R73-runner-scripttools-gallery.log": "04539f289feda88dfae5ba845fd8697346af4aef3cb9cae9faeddfac24ad35a1",
+        "jaguar-6R73-runner-sql-gallery.log": "774aab5bd16b46d3db72597e5773560b3848ed21161815dac7a71378ff4858ae",
+        "jaguar-6R73-runner-svg-gallery.log": "7cfa296e8ae2728650f3b7dcd3732ff239c106dba8585f557af4fc0cde62eb3a",
+        "jaguar-6R73-runner-testlib-gallery.log": "e67f2ca777e7b236a1636fb33af6205093a49a211ea76c6fa331029e7866b5a2",
+        "jaguar-6R73-runner-uitools-gallery.log": "dc97073ea80b7ebe2a945c0553b15498762699c347a869f1b8d752a4456edb80",
+        "jaguar-6R73-runner-widgets-gallery-extended.log": "2fa3f6fa9b2082d87772269935ea87ce16c8d6eb535626e58104d68041f858c6",
+        "jaguar-6R73-runner-widgets-gallery.log": "08abc349c7a64cda048112bba19dac5454c5528683ef4b9b62e88a0697b08306",
+        "jaguar-6R73-runner-xml-gallery.log": "d672e49074b6ac6217b52c2a835717f849623c4fc9e013bce29bbf1c43b742f8",
+        "jaguar-6R73-runner-xmlpatterns-gallery.log": "88a00f8d6841abbba9fb13106de14586f057b5356ace281d582a9b99f353eda6",
+        "jaguar-6R73-smoke-gl-heavy-gallery-extended.log": "5ee0544dcd22a56db652aae6bfc975ede4b6d127693726cb024ee4f6957b9bf9",
+        "jaguar-6R73-smoke-gl-heavy-gallery.log": "e65667f5265dd31eeef135463ff8c9382380565629c963265cde5c83ea2c49ff",
+        "jaguar-6R73-smoke-graphics-gallery-extended.log": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb",
+        "jaguar-6R73-smoke-graphics-gallery.log": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f",
+        "jaguar-6R73-smoke-multimedia-lab-extended.log": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+        "jaguar-6R73-smoke-multimedia-lab.log": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a",
+        "jaguar-6R73-smoke-network-gui.log": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161",
+        "jaguar-6R73-smoke-painting-lab-extended.log": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08",
+        "jaguar-6R73-smoke-painting-lab.log": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0",
+        "jaguar-6R73-smoke-qt-selftest-extended.log": "e66ef448f760322d50b59b0a3e1013ce794c6b8c5ee23c4b1479b56872c86321",
+        "jaguar-6R73-smoke-qt-selftest.log": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24",
+        "jaguar-6R73-smoke-qt3support-gallery.log": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530",
+        "jaguar-6R73-smoke-quick-qml-gallery-extended.log": "da3cd92f57636136a353cab7b4edfb66ad001a6baee0f7081b2f25cd59831eaa",
+        "jaguar-6R73-smoke-quick-qml-gallery.log": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea",
+        "jaguar-6R73-smoke-script-gallery.log": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e",
+        "jaguar-6R73-smoke-scripttools-gallery.log": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2",
+        "jaguar-6R73-smoke-sql-gallery.log": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4",
+        "jaguar-6R73-smoke-svg-gallery.log": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab",
+        "jaguar-6R73-smoke-testlib-gallery.log": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49",
+        "jaguar-6R73-smoke-uitools-gallery.log": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b",
+        "jaguar-6R73-smoke-widgets-gallery-extended.log": "b2885edf4203c706f84e6e9203fd525873431e245ee1bfa413c73f4e7feca3fc",
+        "jaguar-6R73-smoke-widgets-gallery.log": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba",
+        "jaguar-6R73-smoke-xml-gallery.log": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184",
+        "jaguar-6R73-smoke-xmlpatterns-gallery.log": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76",
+        "jaguar-6R73-suite-install.log": "b541311284fcf128442b4164674ab4b6457b34d34e2922f98f57ece56193d6b5",
+        "jaguar-6R73-suite-progress.log": "6ebd50baf412984c615b9391136d8e59a88d20793f2cc4142f2529dcdd99a936",
+        "jaguar-6R73-suite-status.tsv": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa",
+        "jaguar-qt-6R73-grab.png": "482c4f87a7bea9c3e5cffd6a14c45839f1f89c6ee7c529164b23287d0276c952",
+        "jaguar-qt-6R73-screen.png": "0894907403a508cab0bc76e7a1429286e9b9c176961ce69ac8f5c5f73c1dcc12",
+        "jaguar-qt-6R73.log": "c35c658a66c03a89a9cadca6a502dde6269d4b79ddd67d50b9311e99f502e833"
+      }
+    }
+  ],
+  "findings": [
+    "Every application links against the 10.2.8 SDK after: SQLite without its AFP locking style (fsctl, srandomdev), WTF atomics through GCC builtins below a 10.4 target (OSAtomic), Q3Dns on the BIND 8 resolver in libSystem (libresolv is 10.3), and getlogin() for getlogin_r in Q3FileDialog.",
+    "QGLPixelBuffer reports no pixel buffers on 10.2 (AGL pbuffers are 10.3) instead of calling NULL.",
+    "QRegion::fromHIShapeRef and QMacStyle resolved HIShapeGetAsQDRgn and HIShapeGetBounds through QLibrary, which cannot load anything on 10.2; they fall back to the functions themselves, which 10.2 has.",
+    "A frameless window used a document window without title bar, which 10.2 rejects (-5601); it is a plain window there.",
+    "QSystemTrayIcon called -[NSStatusItem drawStatusBarBackgroundInRect:withHighlight:] and -[NSView setHidden:], both 10.3; the calls are skipped where the method does not exist.",
+    "Qt's monotonic clock on the Mac computed mach_absolute_time() * numer / denom in 64 bits. On PowerPC numer is 10^9, so the product overflows after minutes of uptime and the clock jumps back; qt_safe_select then reported a timeout to QProcess::waitForFinished seconds after the start. This also affects Tiger on PowerPC (patches/qt4/macos/all/11-ppc-timebase-overflow.patch).",
+    "The guest display must stay awake during the run; the host sent a key every 90 s.",
+    "Skipped on 10.2 but not on Tiger: GLSL shader programs and vertex buffers (the emulated OpenGL renderer of 10.2 has neither).",
+    "Drag and drop: the QtGui probe check dnd/drag-pasteboard passes on 10.2, 10.2.8 and 10.4; the G3 run used the previous build of the same day, which did not yet have the drag bridge.",
+    "TLS: the loopback handshake negotiates TLS 1.2 with the selected AES128-GCM-SHA256 on all three systems; OpenSSL needs no-dso because its DSO layer calls dlopen."
+  ]
+}

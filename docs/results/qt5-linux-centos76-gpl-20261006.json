@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-06",
+  "target": "Qt 5.15.19 Linux x86_64, glibc 2.17 floor (RHEL 7.6), gpl-enabled profile with the QtHttpServer and QtMqtt add-ons",
+  "status": "PASS",
+  "build": {
+    "image": "qt5-linux-amd64-centos7-gpl-enabled (make linux-amd64-centos7 LICENSE_PROFILE=gpl-enabled)",
+    "base": "centos:7.9.2009, devtoolset-11 GCC 11, static OpenSSL 3.5.7",
+    "addons": "qthttpserver 52bce52413763ead7759f8c2e374a40bb82f058f (patches/qt5-addons/qthttpserver-01-rename-sslserver.patch), qtmqtt 0b4955ce8b692409c3deded57892eb61e75be428",
+    "highest_imports": "GLIBC_2.17; no GLIBCXX versions"
+  },
+  "runs": [
+    {
+      "where": "inside the build image (CentOS 7.9), no display",
+      "method": "docker run --rm qt5-linux-amd64-centos7-gpl-enabled 'cd /opt/qt-smoke-bin && QT_QPA_PLATFORM=offscreen ./smoke-runner'",
+      "apps_passed": 8,
+      "apps_failed": 0,
+      "checks_passed": 478,
+      "checks_failed": 0,
+      "checks_skipped": 90
+    },
+    {
+      "where": "stock CentOS 7.6 (centos:7.6.1810, packages from 7.6 base only), Xvfb 24-bit",
+      "method": "make linux-amd64-centos7-runtime-proof LICENSE_PROFILE=gpl-enabled",
+      "apps_passed": 8,
+      "apps_failed": 0,
+      "checks_passed": 480,
+      "checks_failed": 0,
+      "checks_skipped": 88
+    }
+  ],
+  "applications_stock_centos76": [
+    { "application": "qt-selftest", "passed": 269, "failed": 0, "skipped": 61 },
+    { "application": "widgets-gallery", "passed": 90, "failed": 0, "skipped": 5 },
+    { "application": "graphics-gallery", "passed": 32, "failed": 0, "skipped": 0 },
+    { "application": "quick-qml-gallery", "passed": 25, "failed": 0, "skipped": 13 },
+    { "application": "gl-heavy-gallery", "passed": 39, "failed": 0, "skipped": 7 },
+    { "application": "painting-lab", "passed": 16, "failed": 0, "skipped": 0 },
+    { "application": "multimedia-lab", "passed": 2, "failed": 0, "skipped": 2 },
+    { "application": "network-gui", "passed": 7, "failed": 0, "skipped": 0 }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "a6aa4793f311f9fe5dcde89290200e6b5e2d36ebb440515064475b064635ba8f",
+    "graphics-gallery": "a3a4bf3a3cc6cb62331d99955b9705004fb14baf5996335befd30fa4549c426a",
+    "multimedia-lab": "7281617ea1acd743b91f8c30ae9610956855cdba2ac6166835d0ee2622b5469c",
+    "network-gui": "e461f1f6f1b3cebd1a1f841bef03bad576d65f07f42d6c47fd715a28f94c881f",
+    "painting-lab": "3adf42274b294b61c54687e1c4a36300318cf792ac82ef3b7a1f95598ca898ad",
+    "qt-selftest": "0f6eac531bdbb951666ad3bdbe1122d17bc86a0a7069f9b2caad800d66662cce",
+    "quick-qml-gallery": "a46ee57f6baec3efefd59321a9ba9f168f9cfa0a6deb9934777d3d8691a923e1",
+    "smoke-runner": "9cf2cd46aa079d1c6e192c3407e7e47c3a4f977ccb332ead195e85fcf439351b",
+    "widgets-gallery": "b9c6f5c864a70099f7acac1888e5e2fb77bb1d8f656b07b6bb487d9a3286d48e"
+  },
+  "notes": [
+    "mqtt/topic-name-and-filter, mqtt/message-and-properties, mqtt/client-configuration and httpserver/routing-without-listening pass; the coap checks skip (no Qt 5 QtCoap).",
+    "gl-heavy-gallery skips datavis/graphs under the offscreen plugin on 7.6: Qt 5's offscreen GLX context reports OpenGL 2.0 (Mesa 18.0.5 llvmpipe says 2.1) and QtDataVisualization qFatal()s below 2.1. Before the guard in tests/gl-heavy/datavis_selftest.cpp the app aborted. The same binary with QT_QPA_PLATFORM=xcb on the same Xvfb gets a 2.1 context: 53 passed, 0 failed, 6 skipped, all 14 datavis checks passing."
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-06",
+  "target": "Qt 6.8.4 Linux x86_64, glibc 2.17 floor (RHEL 7.6 in Qt 5.15's platform list)",
+  "status": "PASS",
+  "commit": "771a54ace380f969b2ae8899e591855a7feef9b7",
+  "build": {
+    "image": "qt6-linux-amd64-centos7-gpl-enabled (make qt6-linux-amd64-centos7)",
+    "base": "centos:7.9.2009, devtoolset-11 GCC 11, static OpenSSL 3.5.7, static xcb-util-cursor 0.1.5",
+    "highest_imports": "GLIBC_2.17; no GLIBCXX or CXXABI versions",
+    "opengl": "legacy libGL.so.1 (patches/qt6/all/04-opengl-legacy-libgl.patch)"
+  },
+  "runtime": {
+    "image": "centos:7.6.1810 with packages from its own 7.6 base repository only (no updates, EPEL or Developer Toolset)",
+    "packages": "mesa-libGL mesa-libEGL mesa-dri-drivers dbus libX11 libX11-xcb libxcb xcb-util xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm libxkbcommon libxkbcommon-x11 fontconfig freetype dejavu-sans-fonts xorg-x11-server-Xvfb xorg-x11-xauth",
+    "method": "xvfb-run -a -s \"-screen 0 1280x1024x24\" env QT_QPA_PLATFORM=offscreen ./smoke-runner (make qt6-linux-amd64-centos7-runtime-proof)"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 508,
+    "checks_failed": 0,
+    "checks_skipped": 54
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 269,
+      "failed": 0,
+      "skipped": 40
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 91,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 35,
+      "failed": 0,
+      "skipped": 5
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "5e61d91b0bb152c4d0dcf488df4252b253ea60b4f9c07fb3442c741de9de4525",
+    "graphics-gallery": "b09e4c251211fa9b4dfb493a6636fbbef9f6993a7545f5ac32d2f5f29ad9aa17",
+    "multimedia-lab": "5535fdaf066c91d03f14bea411af823a53e390c116e2c495044c7eb73aa362a9",
+    "network-gui": "6b9bfb8eab77e24283ed997cd30692564d78ccf83afae4723ebce7f1a136a726",
+    "painting-lab": "099de5b0da8ef78445cabfab765421a5e4b803948f11b7e1c1647a04f97b3cb1",
+    "qt-selftest": "877817e95de2f6180ea76289811b3b91fd7e60ede743c1ddc38f2dca3518a0a6",
+    "quick-qml-gallery": "eb957608cf32c52e3ba81f3e76cf76b766930a73529db4a30340bc4407cd0760",
+    "smoke-runner": "e49fb0026f02f35dad2fc42b23a0f4d601cc6c0352aaead61067ce6278862ad1",
+    "widgets-gallery": "1b09b3769d8cfd328cd6f51dd093696bb93893c5c08c6bbae108a9cd2611694d"
+  },
+  "notes": [
+    "Linked libraries: libGL, libEGL, libX11, libX11-xcb, libxcb and xcb-util (icccm, image, keysyms, render-util), libxkbcommon(-x11); xcb-util-cursor and OpenSSL are static.",
+    "An earlier build linked GLVND libOpenGL.so.0 and needed libglvnd-opengl, which 7.6 does not install with mesa-libGL; fixed by linking libGL.so.1.",
+    "Container setup a real RHEL 7 desktop already has: Mesa swrast DRI driver and a non-empty /etc/machine-id (libdbus aborts on an empty one)."
+  ]
+}

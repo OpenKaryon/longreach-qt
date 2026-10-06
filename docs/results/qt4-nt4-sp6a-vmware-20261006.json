@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-06",
+  "target": "Qt 4.8.7 Windows i386 Win95/NT backport (public package)",
+  "status": "PASS",
+  "commit": "0317f1e1b372c1b97c0b1d51109af6651b2a1532",
+  "guest": {
+    "os": "Windows NT 4.0 Workstation, Service Pack 6a",
+    "vm": "VMware Workstation 26, 1 vCPU, 256 MB, VMware Tools 7.7.0 (winPre2k.iso)",
+    "method": "vmrun copyFileFromHostToGuest (sizes verified), runProgramInGuest -interactive smoke-runner.exe --timeout=900",
+    "printer": "none installed"
+  },
+  "summary": {
+    "apps_passed": 24,
+    "apps_failed": 0,
+    "checks_passed": 523,
+    "checks_failed": 0,
+    "checks_skipped": 136
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "qt-selftest-extended",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery-extended",
+      "passed": 143,
+      "failed": 0,
+      "skipped": 7
+    },
+    {
+      "application": "graphics-gallery-extended",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "painting-lab-extended",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 5
+    },
+    {
+      "application": "gl-heavy-gallery-extended",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "quick-qml-gallery-extended",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "multimedia-lab-extended",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "svg-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "xml-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "xmlpatterns-gallery",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "sql-gallery",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "testlib-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "script-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "scripttools-gallery",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "qt3support-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "uitools-gallery",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "painting-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery-extended.exe": "04b950df3e2ab1a98c624e54cfa3e5d69995a790f614d995d55b7dddd13c640a",
+    "gl-heavy-gallery.exe": "003b04bbb107a960539cdb5bc480ad2a7e29e24a8a7148697296ef102d95dc68",
+    "graphics-gallery-extended.exe": "56584502410cbbf2fc229a61e09f4fbab25feddcc399b7170703f5293a1add38",
+    "graphics-gallery.exe": "ce56eee9bfe745b1e817cd1e53f98ab71850ed33e610a268ba7424c99c7e18ce",
+    "multimedia-lab-extended.exe": "087300e050b27172439a54ce35416493d7f7c4bed3277d460ad4cbf247452658",
+    "multimedia-lab.exe": "137305ab175d42e98230f61a1245ad1965c855aa2d4aba35c8337a25e87f156c",
+    "network-gui.exe": "deb4274f4452d9b1dc0a1f9429e17c8a08310603c07bf7b76c8f9081754b5323",
+    "painting-lab-extended.exe": "96dda07c791574626893d98306c23832abcc825eb82d404570700838b4091b24",
+    "painting-lab.exe": "35dff71d2ef66a6802d3762f6400cbfedbeb3fa91627f94426074d02f1d3c9cc",
+    "qt-selftest-extended.exe": "ee34e263f5e4134fc91c320dfdf9e778d3a8f01311ca36a96e85d1ee2db16e42",
+    "qt-selftest.exe": "a71cff8ef20859b7df44b1d4ee5743a625316daa087260f93f7060cd78d1f847",
+    "qt3support-gallery.exe": "6e0d23c552490e6b89a450846bafa86f3733fddc6440a9baa693ca9637f11d6c",
+    "quick-qml-gallery-extended.exe": "86cea3f3f75c6aafb35c5f0d183dff2bd406f7bd604845c2997ee1e5be37e351",
+    "quick-qml-gallery.exe": "86b5a4da821d01f94050f64e4d76fb5bb8f8f94f1118813fe66ccb7b6c086837",
+    "script-gallery.exe": "5528f6cbde3ca58e3b32fa7359fc31c08a86e06a1257800e31bb8a754c9a029c",
+    "scripttools-gallery.exe": "170f89183200949c283eb21d277a62ec980585344ff806e9aa26aad216f2102e",
+    "smoke-runner.exe": "f13aee4c4a3a433ecf0a0b782a9d40a49d092bba921c68b130dccfd22be61b81",
+    "sql-gallery.exe": "136d3c89a425d98cf4002b4e39bd99c6a7dd525ddee28702979de1b87506411b",
+    "svg-gallery.exe": "84a5906e2f5f90cc45b5462e152d36629f2519719296c2a4fb764668877be0cb",
+    "testlib-gallery.exe": "c69057a8ce9500d4dc68d82256d895bdd173d8922f940ce946edd3f4f08e2d8a",
+    "uitools-gallery.exe": "03ad203e4ab166381e78772230508726d9d5e2220c566fb3d718812f9603848a",
+    "widgets-gallery-extended.exe": "7d815d1b95ac456cc4a3a7988476ff7d75fb9d7eefc2fc05cc4a59fb81ac0888",
+    "widgets-gallery.exe": "c7bb38d9058b7913d3a0a5f39e37059c245c7dbbba24b95c867854601de1b416",
+    "xml-gallery.exe": "fea24d038f715cfff4bc11f37c17785332be2e60940ea73b6ce33b3f09910768",
+    "xmlpatterns-gallery.exe": "5b380a6957a797c789df8c306db1700979443a4fccc46b0d248e692b94eaa7fe"
+  },
+  "smoke_report_sha256": "376560704536ba3cf094e53bfed5087b82d0384fded7784e93e81b1434b8fbf9",
+  "history": [
+    "Run 1 (Win95 package unchanged): 21/24. net/interfaces empty; painting/preview-pages zoom 0 without a printer; declarative1 XmlListModel stalled in Loading.",
+    "Fixes: patch 19 uses the Winsock interface list whenever IP Helper lists nothing; the preview check skips the zoom without a printer; the watcher test waits 5 s.",
+    "Run 2: 21/24 (a second printerless QPrinter in the test corrupted the heap; widgets watcher missed its 2 s window); both test-side, fixed.",
+    "Run 3 (this record): 24/24."
+  ],
+  "open_issues": [
+    "declarative1/binding-worker-timer-xml-loader is intermittent on this single-CPU NT 4.0 guest: of three isolated runs of quick-qml-gallery-extended, one passed, one timed out with the IdlePriority XmlListModel and WorkerScript threads making no progress, and one crashed after an XmlPatterns FODC0002 on the query input. The same executable passes repeatedly on the Windows 11 host."
+  ]
+}

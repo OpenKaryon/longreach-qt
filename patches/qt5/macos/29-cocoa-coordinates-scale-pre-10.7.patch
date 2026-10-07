@@ -1,0 +1,225 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the Cocoa plugin's coordinates and scale factor below 10.7 (the OS X
+# 10.6 port).
+#
+#   -[NSWindow convertRectToScreen:/FromScreen:]   10.7
+#   backingScaleFactor, convertSizeToBacking:      10.7
+#   CALayer contentsScale                          10.7
+#   NSWindowDidChangeBackingPropertiesNotification 10.7
+#
+# 10.6 has no backing scale factor. Window and screen coordinates then differ
+# only by the window's frame origin: qt_mac_convertRectToScreen() and
+# qt_mac_convertRectFromScreen() in qcocoahelpers.h do that below 10.7 and
+# replace the seven direct calls. The device pixel ratio is 1, layers are not
+# scaled, and nothing observes backing-property changes.
+#
+# qcocoahelpers.h also gets qt_mac_hasFullScreenStyle(), used by the next
+# patch.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoabackingstore.mm b/qtbase/src/plugins/platforms/cocoa/qcocoabackingstore.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoabackingstore.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoabackingstore.mm
+@@ -351,10 +351,13 @@
+ {
+     Q_ASSERT(window()->handle());
+     NSView *view = static_cast<QCocoaWindow *>(window()->handle())->view();
+-    m_backingPropertiesObserver = QMacNotificationObserver(view.window,
+-        NSWindowDidChangeBackingPropertiesNotification, [this]() {
+-            backingPropertiesChanged();
+-        });
++    // Backing properties (the scale factor) can change from 10.7 on only.
++    if (@available(macOS 10.7, *)) {
++        m_backingPropertiesObserver = QMacNotificationObserver(view.window,
++            NSWindowDidChangeBackingPropertiesNotification, [this]() {
++                backingPropertiesChanged();
++            });
++    }
+ }
+ 
+ bool QCALayerBackingStore::eventFilter(QObject *watched, QEvent *event)
+@@ -546,11 +549,13 @@
+     // we at least cover the whole layer. This is necessary since we set the view's
+     // contents placement policy to NSViewLayerContentsPlacementTopLeft, which means
+     // AppKit will not do any scaling on our behalf.
+-    if (m_buffers.back()->devicePixelRatio() != flushedView.layer.contentsScale) {
+-        qCWarning(lcQpaBackingStore) << "Back buffer dpr of" << m_buffers.back()->devicePixelRatio()
+-            << "doesn't match" << flushedView.layer << "contents scale of" << flushedView.layer.contentsScale
+-            << "- updating layer to match.";
+-        flushedView.layer.contentsScale = m_buffers.back()->devicePixelRatio();
++    if (@available(macOS 10.7, *)) {
++        if (m_buffers.back()->devicePixelRatio() != flushedView.layer.contentsScale) {
++            qCWarning(lcQpaBackingStore) << "Back buffer dpr of" << m_buffers.back()->devicePixelRatio()
++                << "doesn't match" << flushedView.layer << "contents scale of" << flushedView.layer.contentsScale
++                << "- updating layer to match.";
++            flushedView.layer.contentsScale = m_buffers.back()->devicePixelRatio();
++        }
+     }
+ 
+     const bool isSingleBuffered = window()->format().swapBehavior() == QSurfaceFormat::SingleBuffer;
+@@ -619,7 +624,9 @@
+     NSView *backingStoreView = static_cast<QCocoaWindow *>(window()->handle())->view();
+     NSView *flushedView = static_cast<QCocoaWindow *>(subWindow->handle())->view();
+     auto subviewRect = [flushedView convertRect:flushedView.bounds toView:backingStoreView];
+-    auto scale = flushedView.layer.contentsScale;
++    CGFloat scale = 1;
++    if (@available(macOS 10.7, *))
++        scale = flushedView.layer.contentsScale;
+     subviewRect = CGRectApplyAffineTransform(subviewRect, CGAffineTransformMakeScale(scale, scale));
+ 
+     m_buffers.back()->lock(QPlatformGraphicsBuffer::SWReadAccess);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
+@@ -61,6 +61,31 @@
+ 
+ #include <objc/runtime.h>
+ #include <objc/message.h>
++
++// OS X 10.6: AppKit calls that are 10.7 and have a 10.6 equivalent. 10.6 has
++// no backing scale factor, so window and screen coordinates differ only by
++// the window's frame origin.
++inline NSRect qt_mac_convertRectToScreen(NSWindow *window, NSRect rect)
++{
++    if (@available(macOS 10.7, *))
++        return [window convertRectToScreen:rect];
++    return NSOffsetRect(rect, window.frame.origin.x, window.frame.origin.y);
++}
++
++inline NSRect qt_mac_convertRectFromScreen(NSWindow *window, NSRect rect)
++{
++    if (@available(macOS 10.7, *))
++        return [window convertRectFromScreen:rect];
++    return NSOffsetRect(rect, -window.frame.origin.x, -window.frame.origin.y);
++}
++
++// Native full screen (the window style and toggleFullScreen:) is 10.7.
++inline bool qt_mac_hasFullScreenStyle(NSWindow *window)
++{
++    if (@available(macOS 10.7, *))
++        return window.styleMask & NSWindowStyleMaskFullScreen;
++    return false;
++}
+ 
+ Q_FORWARD_DECLARE_OBJC_CLASS(QT_MANGLE_NAMESPACE(QNSView));
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoascreen.mm
+@@ -286,7 +286,9 @@
+     m_geometry = qt_mac_flip(QRectF::fromCGRect(nsScreen.frame), primaryScreenGeometry).toRect();
+     m_availableGeometry = qt_mac_flip(QRectF::fromCGRect(nsScreen.visibleFrame), primaryScreenGeometry).toRect();
+ 
+-    m_devicePixelRatio = nsScreen.backingScaleFactor;
++    m_devicePixelRatio = 1;
++    if (@available(macOS 10.7, *))
++        m_devicePixelRatio = nsScreen.backingScaleFactor;
+ 
+     m_format = QImage::Format_RGB32;
+     m_depth = NSBitsPerPixelFromDepth(nsScreen.depth);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -257,7 +257,7 @@
+     // of view. Embedded QWindows get global (screen) geometry.
+     if (isEmbedded()) {
+         NSPoint windowPoint = [m_view convertPoint:NSMakePoint(0, 0) toView:nil];
+-        NSRect screenRect = [[m_view window] convertRectToScreen:NSMakeRect(windowPoint.x, windowPoint.y, 1, 1)];
++        NSRect screenRect = qt_mac_convertRectToScreen([m_view window], NSMakeRect(windowPoint.x, windowPoint.y, 1, 1));
+         NSPoint screenPoint = screenRect.origin;
+         QPoint position = QCocoaScreen::mapFromNative(screenPoint).toPoint();
+         QSize size = QRectF::fromCGRect(NSRectToCGRect([m_view bounds])).toRect().size();
+@@ -1938,8 +1938,11 @@
+     // methods such as [NSWindow backingScaleFacor] might not give the correct
+     // result, for example if setWantsBestResolutionOpenGLSurface is not set or
+     // or ignored by the OpenGL driver.
+-    NSSize backingSize = [m_view convertSizeToBacking:NSMakeSize(1.0, 1.0)];
+-    return backingSize.height;
++    if (@available(macOS 10.7, *)) {
++        NSSize backingSize = [m_view convertSizeToBacking:NSMakeSize(1.0, 1.0)];
++        return backingSize.height;
++    }
++    return 1.0; // 10.6 has no backing scale
+ }
+ 
+ QWindow *QCocoaWindow::childWindowAt(QPoint windowPoint)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview.mm b/qtbase/src/plugins/platforms/cocoa/qnsview.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview.mm
+@@ -358,7 +358,7 @@
+ 
+     NSWindow *window = [self window];
+     NSPoint nsWindowPoint;
+-    NSRect windowRect = [window convertRectFromScreen:NSMakeRect(mouseLocation.x, mouseLocation.y, 1, 1)];
++    NSRect windowRect = qt_mac_convertRectFromScreen(window, NSMakeRect(mouseLocation.x, mouseLocation.y, 1, 1));
+     nsWindowPoint = windowRect.origin;                    // NSWindow coordinates
+     NSPoint nsViewPoint = [self convertPoint: nsWindowPoint fromView: nil]; // NSView/QWindow coordinates
+     *qtWindowPoint = QPointF(nsViewPoint.x, nsViewPoint.y);                     // NSView/QWindow coordinates
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
+@@ -307,7 +307,7 @@
+     m_buttons = currentlyPressedMouseButtons();
+     const auto modifiers = [QNSView convertKeyModifiers:NSApp.currentEvent.modifierFlags];
+ 
+-    NSPoint windowPoint = [self.window convertRectFromScreen:NSMakeRect(screenPoint.x, screenPoint.y, 1, 1)].origin;
++    NSPoint windowPoint = qt_mac_convertRectFromScreen(self.window, NSMakeRect(screenPoint.x, screenPoint.y, 1, 1)).origin;
+     NSPoint nsViewPoint = [self convertPoint: windowPoint fromView: nil];
+ 
+     QPoint qtWindowPoint(nsViewPoint.x, nsViewPoint.y);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+@@ -227,7 +227,8 @@
+     // but the QWindow will have a devicePixelRatio of 1.
+     auto devicePixelRatio = m_platformWindow->devicePixelRatio();
+     qCDebug(lcQpaDrawing) << "Updating" << self.layer << "content scale to" << devicePixelRatio;
+-    self.layer.contentsScale = devicePixelRatio;
++    if (@available(macOS 10.7, *))
++        self.layer.contentsScale = devicePixelRatio; // 10.6 layers are unscaled
+ }
+ 
+ /*
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+@@ -146,12 +146,12 @@
+ 
+     int windowScreenY = [window frame].origin.y + [window frame].size.height;
+     NSPoint windowCoord = [self convertPoint:[self frame].origin toView:nil];
+-    int viewScreenY = [window convertRectToScreen:NSMakeRect(windowCoord.x, windowCoord.y, 0, 0)].origin.y;
++    int viewScreenY = qt_mac_convertRectToScreen(window, NSMakeRect(windowCoord.x, windowCoord.y, 0, 0)).origin.y;
+     int titleBarHeight = windowScreenY - viewScreenY;
+ 
+     NSPoint nsViewPoint = [self convertPoint: windowPoint fromView: nil];
+     QPoint qtWindowPoint = QPoint(nsViewPoint.x, titleBarHeight + nsViewPoint.y);
+-    NSPoint screenPoint = [window convertRectToScreen:NSMakeRect(windowPoint.x, windowPoint.y, 0, 0)].origin;
++    NSPoint screenPoint = qt_mac_convertRectToScreen(window, NSMakeRect(windowPoint.x, windowPoint.y, 0, 0)).origin;
+     QPoint qtScreenPoint = QCocoaScreen::mapFromNative(screenPoint).toPoint();
+ 
+     ulong timestamp = [theEvent timestamp] * 1000;
+@@ -280,7 +280,7 @@
+         if (qIsNaN(windowPoint.x) || qIsNaN(windowPoint.y)) {
+             screenPoint = [NSEvent mouseLocation];
+         } else {
+-            NSRect screenRect = [[theEvent window] convertRectToScreen:NSMakeRect(windowPoint.x, windowPoint.y, 1, 1)];
++            NSRect screenRect = qt_mac_convertRectToScreen([theEvent window], NSMakeRect(windowPoint.x, windowPoint.y, 1, 1));
+             screenPoint = screenRect.origin;
+         }
+     } else {
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+@@ -375,7 +375,7 @@
+     const bool mouseEventInFrameStrut = [theEvent, self]{
+         if (isMouseEvent(theEvent)) {
+             const NSPoint loc = theEvent.locationInWindow;
+-            const NSRect windowFrame = [self convertRectFromScreen:self.frame];
++            const NSRect windowFrame = qt_mac_convertRectFromScreen(self, self.frame);
+             const NSRect contentFrame = self.contentView.frame;
+             if (NSMouseInRect(loc, windowFrame, NO) && !NSMouseInRect(loc, contentFrame, NO))
+                 return true;

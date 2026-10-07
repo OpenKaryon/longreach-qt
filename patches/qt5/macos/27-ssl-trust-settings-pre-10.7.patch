@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: system CA certificates below 10.7 (the OS X 10.6 port).
+#
+# Qt reads the user's trust settings to pick root certificates. To keep only
+# SSL-server policies it reads each policy's OID with SecPolicyCopyProperties,
+# which is 10.7; 10.6 offers the OID only through the removed CSSM API. Below
+# 10.7 a certificate therefore counts by its trust setting alone (trusted as
+# root, or no setting, which the documentation defines as full trust).
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/network/ssl/qsslsocket_mac_shared.cpp b/qtbase/src/network/ssl/qsslsocket_mac_shared.cpp
+--- a/qtbase/src/network/ssl/qsslsocket_mac_shared.cpp
++++ b/qtbase/src/network/ssl/qsslsocket_mac_shared.cpp
+@@ -68,14 +68,22 @@
+ namespace {
+ 
+ bool hasTrustedSslServerPolicy(SecPolicyRef policy, CFDictionaryRef props) {
+-    QCFType<CFDictionaryRef> policyProps = SecPolicyCopyProperties(policy);
+-    // only accept certificates with policies for SSL server validation for now
+-    if (CFEqual(CFDictionaryGetValue(policyProps, kSecPolicyOid), kSecPolicyAppleSSL)) {
++    // only accept certificates with policies for SSL server validation for now.
++    // SecPolicyCopyProperties is 10.7; 10.6 can read a policy's OID only
++    // through the old CSSM API, so there a certificate counts by its trust
++    // setting alone.
++    bool sslServerPolicy = true;
++    if (__builtin_available(macOS 10.7, *)) {
++        QCFType<CFDictionaryRef> policyProps = SecPolicyCopyProperties(policy);
++        sslServerPolicy = CFEqual(CFDictionaryGetValue(policyProps, kSecPolicyOid), kSecPolicyAppleSSL);
+         CFBooleanRef policyClient;
+-        if (CFDictionaryGetValueIfPresent(policyProps, kSecPolicyClient, reinterpret_cast<const void**>(&policyClient)) &&
+-            CFEqual(policyClient, kCFBooleanTrue)) {
++        if (sslServerPolicy
++            && CFDictionaryGetValueIfPresent(policyProps, kSecPolicyClient, reinterpret_cast<const void**>(&policyClient))
++            && CFEqual(policyClient, kCFBooleanTrue)) {
+             return false; // no client certs
+         }
++    }
++    if (sslServerPolicy) {
+         if (!CFDictionaryContainsKey(props, kSecTrustSettingsResult)) {
+             // as per the docs, no trust settings result implies full trust
+             return true;

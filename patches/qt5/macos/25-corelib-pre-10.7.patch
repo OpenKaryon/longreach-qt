@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtCore below a 10.7 deployment target (the OS X 10.6 port).
+#
+#   thread_local                       10.7 dyld   qthread_unix.cpp
+#   arc4random_buf                     10.7        qrandom.cpp
+#   CFRunLoopTimerCreateWithHandler    10.7        qeventdispatcher_cf.mm
+#   kFSEventStreamEventFlagItem*       10.7        qfilesystemwatcher_fsevents.mm
+#
+#   thread_local    the current-thread pointer moves to a pthread key of its
+#                   own, without destructor, so destroy_current_thread_data()
+#                   can still set it while the thread-data key is torn down.
+#                   This is a compile-time choice (thread-local variables
+#                   need dyld support), taken only below 10.7.
+#   arc4random_buf  a loop over arc4random(), which every macOS has.
+#   timer           CFRunLoopTimerCreate with a callback and the dispatcher
+#                   as context, the form 10.6 has.
+#   FSEvents        the item-level flags exist only with file events, which
+#                   the stream does not request; 10.6 never reports them.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/corelib/global/qrandom.cpp b/qtbase/src/corelib/global/qrandom.cpp
+--- a/qtbase/src/corelib/global/qrandom.cpp
++++ b/qtbase/src/corelib/global/qrandom.cpp
+@@ -228,7 +228,17 @@
+ static void fallback_fill(quint32 *ptr, qsizetype left) noexcept
+ {
+     // BSDs have arc4random(4) and these work even in chroot(2)
++#ifdef Q_OS_MACOS
++    if (__builtin_available(macOS 10.7, *)) {
++        arc4random_buf(ptr, left * sizeof(*ptr));
++    } else {
++        // arc4random_buf is 10.7; arc4random is in every macOS
++        for (qsizetype i = 0; i < left; ++i)
++            ptr[i] = arc4random();
++    }
++#else
+     arc4random_buf(ptr, left * sizeof(*ptr));
++#endif
+ }
+ #else
+ static QBasicAtomicInteger<unsigned> seed = Q_BASIC_ATOMIC_INITIALIZER(0U);
+diff --git a/qtbase/src/corelib/io/qfilesystemwatcher_fsevents.mm b/qtbase/src/corelib/io/qfilesystemwatcher_fsevents.mm
+--- a/qtbase/src/corelib/io/qfilesystemwatcher_fsevents.mm
++++ b/qtbase/src/corelib/io/qfilesystemwatcher_fsevents.mm
+@@ -240,8 +240,12 @@
+             continue;
+         }
+ 
+-        if ((eFlags & kFSEventStreamEventFlagItemIsDir) && (eFlags & kFSEventStreamEventFlagItemRemoved))
+-            needsRestart |= rescanDirs(path);
++        // Item-level flags are 10.7; the stream is created without file
++        // events, so 10.6 never reports them.
++        if (__builtin_available(macOS 10.7, *)) {
++            if ((eFlags & kFSEventStreamEventFlagItemIsDir) && (eFlags & kFSEventStreamEventFlagItemRemoved))
++                needsRestart |= rescanDirs(path);
++        }
+ 
+         // check watched directories:
+         DirsByName::iterator dirIt = watchingState.watchedDirectories.find(path);
+diff --git a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+--- a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
++++ b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+@@ -631,10 +631,20 @@
+             : kCFTimeIntervalDistantFuture;
+ 
+         if (!m_runLoopTimer) {
+-            m_runLoopTimer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault,
+-                timeToFire, kCFTimeIntervalDistantFuture, 0, 0, ^(CFRunLoopTimerRef timer) {
+-                processTimers(timer);
+-            });
++            if (__builtin_available(macOS 10.7, *)) {
++                m_runLoopTimer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault,
++                    timeToFire, kCFTimeIntervalDistantFuture, 0, 0, ^(CFRunLoopTimerRef timer) {
++                    processTimers(timer);
++                });
++            } else {
++                // 10.6 has only the callback form of CFRunLoopTimerCreate
++                CFRunLoopTimerContext context = { 0, this, nullptr, nullptr, nullptr };
++                m_runLoopTimer = CFRunLoopTimerCreate(kCFAllocatorDefault,
++                    timeToFire, kCFTimeIntervalDistantFuture, 0, 0,
++                    [](CFRunLoopTimerRef timer, void *info) {
++                        static_cast<QEventDispatcherCoreFoundation *>(info)->processTimers(timer);
++                    }, &context);
++            }
+ 
+             CFRunLoopAddTimer(m_runLoop, m_runLoopTimer, kCFRunLoopCommonModes);
+             qCDebug(lcEventDispatcherTimers) << "Created new CFRunLoopTimer" << m_runLoopTimer;
+diff --git a/qtbase/src/corelib/thread/qthread_unix.cpp b/qtbase/src/corelib/thread/qthread_unix.cpp
+--- a/qtbase/src/corelib/thread/qthread_unix.cpp
++++ b/qtbase/src/corelib/thread/qthread_unix.cpp
+@@ -109,7 +109,31 @@
+ enum { ThreadPriorityResetFlag = 0x80000000 };
+ 
+ 
++#if defined(Q_OS_MACOS) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1070
++// thread_local needs the thread-local variable support of the 10.7 dyld. Below
++// that the pointer lives in a pthread key of its own, with no destructor, so
++// destroy_current_thread_data() can set it while current_thread_data_key is
++// being torn down, exactly as it does with the thread_local.
++namespace {
++struct ThreadDataSlot
++{
++    static pthread_key_t key()
++    {
++        static pthread_key_t k;
++        static pthread_once_t once = PTHREAD_ONCE_INIT;
++        pthread_once(&once, [] { pthread_key_create(&k, nullptr); });
++        return k;
++    }
++    operator QThreadData *() const
++    { return static_cast<QThreadData *>(pthread_getspecific(key())); }
++    ThreadDataSlot &operator=(QThreadData *data)
++    { pthread_setspecific(key(), data); return *this; }
++};
++}
++static ThreadDataSlot currentThreadData;
++#else
+ static thread_local QThreadData *currentThreadData = nullptr;
++#endif
+ 
+ static pthread_once_t current_thread_data_once = PTHREAD_ONCE_INIT;
+ static pthread_key_t current_thread_data_key;

@@ -1,0 +1,120 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: CoreText below 10.7 (the OS X 10.6 port).
+#
+#   CTFontDrawGlyphs                          10.7
+#   CTFontManagerCreateFontDescriptorFromData 10.7
+#
+#   drawing         qt_drawGlyphs(): below 10.7 the glyphs go through the
+#                   font's CGFont and CGContextShowGlyphsAtPositions, which
+#                   take the same text matrix, text position and positions.
+#                   All five call sites use it.
+#   font data       QFontDatabase::addApplicationFontFromData builds the
+#                   descriptor from a CGFont made from the data. The engine
+#                   is created from the data Qt attaches to the descriptor,
+#                   so the font does not need to be registered.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm b/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
+--- a/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
++++ b/qtbase/src/platformsupport/fontdatabases/mac/qcoretextfontdatabase.mm
+@@ -768,7 +768,21 @@
+ 
+     if (!fontData.isEmpty()) {
+         QCFType<CFDataRef> fontDataReference = fontData.toRawCFData();
+-        if (QCFType<CTFontDescriptorRef> descriptor = CTFontManagerCreateFontDescriptorFromData(fontDataReference)) {
++        QCFType<CTFontDescriptorRef> descriptor;
++        if (__builtin_available(macOS 10.7, *)) {
++            descriptor = CTFontManagerCreateFontDescriptorFromData(fontDataReference);
++        } else {
++            // 10.6: describe the font through a CGFont made from the data.
++            // The engine is created from the data attached below, not from
++            // the descriptor, so the font need not be registered.
++            QCFType<CGDataProviderRef> provider = CGDataProviderCreateWithCFData(fontDataReference);
++            QCFType<CGFontRef> cgFont = CGFontCreateWithDataProvider(provider);
++            if (cgFont) {
++                QCFType<CTFontRef> ctFont = CTFontCreateWithGraphicsFont(cgFont, 0, nullptr, nullptr);
++                descriptor = CTFontCopyFontDescriptor(ctFont);
++            }
++        }
++        if (descriptor) {
+             // There's no way to get the data back out of a font descriptor created with
+             // CTFontManagerCreateFontDescriptorFromData, so we attach the data manually.
+             NSDictionary *attributes = @{ kQtFontDataAttribute : [NSValue valueWithPointer:new QByteArray(fontData)] };
+diff --git a/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm b/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
+--- a/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
++++ b/qtbase/src/platformsupport/fontdatabases/mac/qfontengine_coretext.mm
+@@ -484,6 +484,23 @@
+     return glyphFormat == QFontEngine::Format_ARGB;
+ }
+ 
++// CTFontDrawGlyphs is 10.7. Before it, glyphs were drawn through the font's
++// CGFont, which takes the same text matrix, text position and positions.
++static void qt_drawGlyphs(CTFontRef font, const CGGlyph *glyphs, const CGPoint *positions,
++                          size_t count, CGContextRef ctx)
++{
++    if (__builtin_available(macOS 10.7, *)) {
++        CTFontDrawGlyphs(font, glyphs, positions, count, ctx);
++    } else {
++#if defined(Q_OS_MACOS)
++        QCFType<CGFontRef> cgFont = CTFontCopyGraphicsFont(font, nullptr);
++        CGContextSetFont(ctx, cgFont);
++        CGContextSetFontSize(ctx, CTFontGetSize(font));
++        CGContextShowGlyphsAtPositions(ctx, glyphs, positions, count);
++#endif
++    }
++}
++
+ void QCoreTextFontEngine::draw(CGContextRef ctx, qreal x, qreal y, const QTextItemInt &ti, int paintDeviceHeight)
+ {
+     QVarLengthArray<QFixedPoint> positions;
+@@ -524,12 +541,12 @@
+     //NSLog(@"Font inDraw %@  ctfont %@", CGFontCopyFullName(cgFont), CTFontCopyFamilyName(ctfont));
+ 
+     CGContextSetTextPosition(ctx, positions[0].x.toReal(), positions[0].y.toReal());
+-    CTFontDrawGlyphs(ctfont, cgGlyphs.data(), cgPositions.data(), glyphs.size(), ctx);
++    qt_drawGlyphs(ctfont, cgGlyphs.data(), cgPositions.data(), glyphs.size(), ctx);
+ 
+     if (synthesisFlags & QFontEngine::SynthesizedBold) {
+         CGContextSetTextPosition(ctx, positions[0].x.toReal() + 0.5 * lineThickness().toReal(),
+                                  positions[0].y.toReal());
+-        CTFontDrawGlyphs(ctfont, cgGlyphs.data(), cgPositions.data(), glyphs.size(), ctx);
++        qt_drawGlyphs(ctfont, cgGlyphs.data(), cgPositions.data(), glyphs.size(), ctx);
+     }
+ 
+     CGContextSetTextMatrix(ctx, oldTextMatrix);
+@@ -725,7 +742,7 @@
+             // set to false by CoreGraphics based on user defaults.
+             CGContextSetShouldSmoothFonts(ctx, smooth);
+ 
+-            CTFontDrawGlyphs(font, &glyph, &CGPointZero, 1, ctx);
++            qt_drawGlyphs(font, &glyph, &CGPointZero, 1, ctx);
+             return image;
+         };
+ 
+@@ -866,11 +883,11 @@
+         CGContextSetTextDrawingMode(ctx, kCGTextFill);
+         CGContextSetTextPosition(ctx, pos_x, pos_y);
+ 
+-        CTFontDrawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
++        qt_drawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
+ 
+         if (synthesisFlags & QFontEngine::SynthesizedBold) {
+             CGContextSetTextPosition(ctx, pos_x + 0.5 * lineThickness().toReal(), pos_y);
+-            CTFontDrawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
++            qt_drawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
+         }
+     } else {
+         CGContextSetRGBFillColor(ctx, color.redF(), color.greenF(), color.blueF(), color.alphaF());
+@@ -883,7 +900,7 @@
+ 
+         // CGContextShowGlyphsWithAdvances does not support the 'sbix' color-bitmap
+         // glyphs in the Apple Color Emoji font, so we use CTFontDrawGlyphs instead.
+-        CTFontDrawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
++        qt_drawGlyphs(ctfont, &cgGlyph, &CGPointZero, 1, ctx);
+     }
+ 
+     if (expectsGammaCorrectedBlending())

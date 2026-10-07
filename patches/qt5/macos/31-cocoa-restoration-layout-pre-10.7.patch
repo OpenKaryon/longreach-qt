@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: window restoration and view layout below 10.7 (the OS X 10.6 port).
+#
+#   -[NSWindow setRestorable:]   10.7   10.6 has no window restoration, so
+#                                       there is nothing to opt out of
+#   -[NSView layout]             10.7   the dialog button box's override
+#                                       calls super only where it exists
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+@@ -82,7 +82,8 @@
+     mResultSet = false;
+     mClosingDueToKnownButton = false;
+ 
+-    [mColorPanel setRestorable:NO];
++    if (@available(macOS 10.7, *))
++        [mColorPanel setRestorable:NO];
+ 
+     [[NSNotificationCenter defaultCenter] addObserver:self
+         selector:@selector(colorChanged:)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
+@@ -105,7 +105,8 @@
+         mDialogIsExecuting = false;
+         mResultSet = false;
+ 
+-        [mFontPanel setRestorable:NO];
++        if (@available(macOS 10.7, *))
++            [mFontPanel setRestorable:NO];
+         [mFontPanel setDelegate:self];
+ 
+         [mFontPanel retain];
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
+@@ -489,7 +489,8 @@
+     self.panelContents.needsDisplay = YES;
+ 
+     self.needsDisplay = YES;
+-    [super layout];
++    if (@available(macOS 10.7, *))
++        [super layout]; // NSView layout is 10.7
+ }
+ 
+ // -------------------------------------------------------------------------
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -1728,7 +1728,8 @@
+         });
+     }
+ 
+-    nsWindow.restorable = NO;
++    if (@available(macOS 10.7, *))
++        nsWindow.restorable = NO; // 10.6 has no window restoration
+     nsWindow.level = windowLevel(flags);
+     // Tabbed windows are 10.12; below that there is nothing to opt out of.
+     if (@available(macOS 10.12, *))

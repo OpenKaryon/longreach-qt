@@ -1,0 +1,195 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: mouse wheel, gestures, touches and drag-and-drop below 10.7 (the OS X
+# 10.6 port).
+#
+#   wheel       precise deltas, scroll phases and natural scrolling are 10.7.
+#               Below that every event is a wheel notch: angle delta from
+#               deltaX/deltaY as Qt 5.3 computed it, no phase, not inverted.
+#   gestures    the begin/end handling already runs on 10.11 and newer only;
+#               the check becomes an @available so the compiler sees it.
+#   touches     NSTouch is 10.6 API, but the SDK marks the phase constants
+#               10.7. They are plain values; the file is exempted.
+#   drag source dragging sessions are 10.7. AppKit calls the session methods
+#               only there; 10.6 asks the informal NSDraggingSource methods,
+#               which QNSView now implements too, and both end through
+#               -qt_dragEndedAtPoint:operation:. The multi-item drag
+#               (NSDraggingItem) runs on 10.14 and newer only, as before.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
+@@ -173,6 +173,10 @@
+     return m_executed_drop_action;
+ }
+ 
++// NSDraggingItem and dragging sessions are 10.7; this runs on 10.14 and
++// later only, checked at its top.
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+ bool QCocoaDrag::maybeDragMultipleItems()
+ {
+     Q_ASSERT(m_drag && m_drag->mimeData());
+@@ -260,6 +264,7 @@
+     internalDragLoop.exec();
+     return true;
+ }
++#pragma clang diagnostic pop
+ 
+ void QCocoaDrag::setAcceptedAction(Qt::DropAction act)
+ {
+diff --git a/qtbase/src/plugins/platforms/cocoa/qmultitouch_mac.mm b/qtbase/src/plugins/platforms/cocoa/qmultitouch_mac.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qmultitouch_mac.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qmultitouch_mac.mm
+@@ -41,6 +41,11 @@
+ #include "qcocoahelpers.h"
+ #include "qcocoascreen.h"
+ #include <private/qtouchdevice_p.h>
++
++// NSTouch and its phases are 10.6 API; the SDK marks the phase constants 10.7.
++// They are plain values, so using them on 10.6 is safe.
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+ 
+ QT_BEGIN_NAMESPACE
+ 
+@@ -233,3 +238,5 @@
+ }
+ 
+ QT_END_NAMESPACE
++
++#pragma clang diagnostic pop
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
+@@ -79,6 +79,10 @@
+     return target->mapFromGlobal(source->mapToGlobal(point));
+ }
+ 
++// The dragging-session source methods are 10.7; AppKit calls them only there.
++// 10.6 asks the informal NSDraggingSource methods further below instead.
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+ - (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
+ {
+     Q_UNUSED(session);
+@@ -99,6 +103,19 @@
+     // Since Qt already takes care of tracking the keyboard modifiers, we
+     // don't need (or want) Cocoa to filter anything. Instead, we'll let
+     // the application do the actual filtering.
++    return YES;
++}
++#pragma clang diagnostic pop
++
++- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
++{
++    Q_UNUSED(isLocal);
++    QCocoaDrag* nativeDrag = QCocoaIntegration::instance()->drag();
++    return qt_mac_mapDropActions(nativeDrag->currentDrag()->supportedActions());
++}
++
++- (BOOL)ignoreModifierKeysWhileDragging
++{
+     return YES;
+ }
+ 
+@@ -281,12 +298,24 @@
+     return response.isAccepted();
+ }
+ 
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+ - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation
+ {
+-    Q_UNUSED(session);
+-    Q_UNUSED(screenPoint);
+-    Q_UNUSED(operation);
+-
++    [self qt_dragEndedAtPoint:screenPoint operation:operation];
++    qCDebug(lcQpaMouse) << "Drag session" << session << "ended";
++}
++#pragma clang diagnostic pop
++
++// OS X 10.6 ends a -dragImage: drag here.
++- (void)draggedImage:(NSImage *)image endedAt:(NSPoint)screenPoint operation:(NSDragOperation)operation
++{
++    Q_UNUSED(image);
++    [self qt_dragEndedAtPoint:screenPoint operation:operation];
++}
++
++- (void)qt_dragEndedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation
++{
+     if (!m_platformWindow)
+         return;
+ 
+@@ -322,7 +351,7 @@
+         QEvent::MouseButtonRelease,
+         modifiers);
+ 
+-    qCDebug(lcQpaMouse) << "Drag session" << session << "ended, with" << m_buttons;
++    qCDebug(lcQpaMouse) << "Drag ended, with" << m_buttons;
+ }
+ 
+ @end
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_gestures.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_gestures.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_gestures.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_gestures.mm
+@@ -47,8 +47,13 @@
+ 
+ - (bool)handleGestureAsBeginEnd:(NSEvent *)event
+ {
+-    if (QOperatingSystemVersion::current() < QOperatingSystemVersion::OSXElCapitan)
++    if (@available(macOS 10.11, *)) {
++    } else {
+         return false;
++    }
++// Event phases are 10.7; this runs on 10.11 and later only, see above.
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+ 
+     if ([event phase] == NSEventPhaseBegan) {
+         [self beginGestureWithEvent:event];
+@@ -62,6 +67,7 @@
+ 
+     return false;
+ }
++#pragma clang diagnostic pop
+ - (void)magnifyWithEvent:(NSEvent *)event
+ {
+     if (!m_platformWindow)
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+@@ -618,6 +618,7 @@
+     if ([self isTransparentForUserInput])
+         return [super scrollWheel:theEvent];
+ 
++    if (@available(macOS 10.7, *)) {
+     QPoint angleDelta;
+     Qt::MouseEventSource source = Qt::MouseEventNotSynthesized;
+     if ([theEvent hasPreciseScrollingDeltas]) {
+@@ -723,6 +724,20 @@
+ 
+     QWindowSystemInterface::handleWheelEvent(m_platformWindow->window(), qt_timestamp, qt_windowPoint,
+             qt_screenPoint, pixelDelta, angleDelta, m_currentWheelModifiers, phase, source, isInverted);
++    } else {
++        // OS X 10.6 has no precise deltas, scroll phases or natural scrolling:
++        // every event is a wheel notch, sent the way Qt 5.3 sent it.
++        const QPoint angleDelta(qBound(-120, int([theEvent deltaX] * 10000), 120),
++                                qBound(-120, int([theEvent deltaY] * 10000), 120));
++        const QPoint pixelDelta(angleDelta / 6);
++        QPointF qt_windowPoint;
++        QPointF qt_screenPoint;
++        [self convertFromScreen:[self screenMousePoint:theEvent] toWindowPoint:&qt_windowPoint andScreenPoint:&qt_screenPoint];
++        m_currentWheelModifiers = [QNSView convertKeyModifiers:[theEvent modifierFlags]];
++        QWindowSystemInterface::handleWheelEvent(m_platformWindow->window(), ulong([theEvent timestamp] * 1000),
++                qt_windowPoint, qt_screenPoint, pixelDelta, angleDelta, m_currentWheelModifiers,
++                Qt::NoScrollPhase, Qt::MouseEventNotSynthesized, false);
++    }
+ }
+ #endif // QT_CONFIG(wheelevent)
+ 

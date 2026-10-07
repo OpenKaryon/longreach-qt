@@ -1,0 +1,178 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: full screen below 10.7 (the OS X 10.6 port).
+#
+# Native full screen (toggleFullScreen:, NSWindowStyleMaskFullScreen, the
+# full-screen collection behaviours and notifications) is 10.7. On 10.6
+# QCocoaWindow::toggleFullScreen() covers the screen with the window, hides
+# the menu bar and the Dock (presentation options of 10.6), and runs the same
+# enter/exit steps the 10.7 notifications drive, keeping the window's
+# qt_fullScreen property itself. The normal frame is restored on exit.
+#
+# The full-screen style test goes through qt_mac_hasFullScreenStyle(), the
+# collection behaviours and the utility-window animation behaviour are set
+# only where they exist, and the theme hint for full-screen popup menus is
+# false.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoatheme.mm
+@@ -553,7 +553,9 @@
+     case QPlatformTheme::SpellCheckUnderlineStyle:
+         return QVariant(int(QTextCharFormat::DotLine));
+     case QPlatformTheme::UseFullScreenForPopupMenu:
+-        return QVariant(bool([[NSApplication sharedApplication] presentationOptions] & NSApplicationPresentationFullScreen));
++        if (@available(macOS 10.7, *))
++            return QVariant(bool([[NSApplication sharedApplication] presentationOptions] & NSApplicationPresentationFullScreen));
++        return QVariant(false);
+     default:
+         break;
+     }
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
+@@ -355,7 +355,7 @@
+                 NSWindow *nativeParentWindow = parentCocoaWindow->nativeWindow();
+                 NSUInteger parentStyleMask = nativeParentWindow.styleMask;
+                 if ((m_resizableTransientParent = (parentStyleMask & NSWindowStyleMaskResizable))
+-                    && !(nativeParentWindow.styleMask & NSWindowStyleMaskFullScreen))
++                    && !qt_mac_hasFullScreenStyle(nativeParentWindow))
+                     nativeParentWindow.styleMask &= ~NSWindowStyleMaskResizable;
+             }
+ 
+@@ -477,7 +477,7 @@
+         if (parentCocoaWindow && window()->type() == Qt::Popup) {
+             NSWindow *nativeParentWindow = parentCocoaWindow->nativeWindow();
+             if (m_resizableTransientParent
+-                && !(nativeParentWindow.styleMask & NSWindowStyleMaskFullScreen))
++                && !qt_mac_hasFullScreenStyle(nativeParentWindow))
+                 // A window should not be resizable while a transient popup is open
+                 nativeParentWindow.styleMask |= NSWindowStyleMaskResizable;
+         }
+@@ -576,8 +576,10 @@
+         styleMask |= NSWindowStyleMaskTexturedBackground;
+ 
+     // Don't wipe existing states
+-    if (m_view.window.styleMask & NSWindowStyleMaskFullScreen)
+-        styleMask |= NSWindowStyleMaskFullScreen;
++    if (qt_mac_hasFullScreenStyle(m_view.window)) {
++        if (@available(macOS 10.7, *))
++            styleMask |= NSWindowStyleMaskFullScreen;
++    }
+     if (@available(macOS 10.10, *)) {
+         if (m_view.window.styleMask & NSWindowStyleMaskFullSizeContentView)
+             styleMask |= NSWindowStyleMaskFullSizeContentView;
+@@ -620,6 +622,7 @@
+     m_inSetStyleMask = false;
+ 
+     Qt::WindowType type = static_cast<Qt::WindowType>(int(flags & Qt::WindowType_Mask));
++    if (@available(macOS 10.7, *))
+     if ((type & Qt::Popup) != Qt::Popup && (type & Qt::Dialog) != Qt::Dialog) {
+         NSWindowCollectionBehavior behavior = m_view.window.collectionBehavior;
+         const bool enableFullScreen = m_view.window.qt_fullScreen
+@@ -784,15 +787,41 @@
+ 
+ void QCocoaWindow::toggleFullScreen()
+ {
+-    const NSWindow *window = m_view.window;
+-
+-    // The window needs to have the correct collection behavior for the
+-    // toggleFullScreen call to have an effect. The collection behavior
+-    // will be reset in windowDidEnterFullScreen/windowDidLeaveFullScreen.
+-    window.collectionBehavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+-
+-    const id sender = window;
+-    [window toggleFullScreen:sender];
++    NSWindow *window = m_view.window;
++
++    if (@available(macOS 10.7, *)) {
++        // The window needs to have the correct collection behavior for the
++        // toggleFullScreen call to have an effect. The collection behavior
++        // will be reset in windowDidEnterFullScreen/windowDidLeaveFullScreen.
++        window.collectionBehavior |= NSWindowCollectionBehaviorFullScreenPrimary;
++
++        const id sender = window;
++        [window toggleFullScreen:sender];
++        return;
++    }
++
++    // OS X 10.6 has no native full screen. Cover the screen with the window,
++    // hide the menu bar and Dock, and go through the same enter/exit steps
++    // the 10.7 notifications drive.
++    static const char normalFrameKey = 0;
++    if (!window.qt_fullScreen) {
++        windowWillEnterFullScreen();
++        objc_setAssociatedObject(window, &normalFrameKey, [NSValue valueWithRect:window.frame],
++                                 OBJC_ASSOCIATION_RETAIN);
++        objc_setAssociatedObject(window, @selector(qt_fullScreen), @(YES), OBJC_ASSOCIATION_RETAIN);
++        NSApp.presentationOptions = NSApplicationPresentationAutoHideMenuBar
++                                    | NSApplicationPresentationAutoHideDock;
++        [window setFrame:window.screen.frame display:YES];
++        windowDidEnterFullScreen();
++    } else {
++        windowWillExitFullScreen();
++        NSValue *normalFrame = objc_getAssociatedObject(window, &normalFrameKey);
++        objc_setAssociatedObject(window, @selector(qt_fullScreen), nil, OBJC_ASSOCIATION_RETAIN);
++        NSApp.presentationOptions = NSApplicationPresentationDefault;
++        if (normalFrame)
++            [window setFrame:normalFrame.rectValue display:YES];
++        windowDidExitFullScreen();
++    }
+ }
+ 
+ void QCocoaWindow::windowWillEnterFullScreen()
+@@ -809,7 +838,7 @@
+ bool QCocoaWindow::isTransitioningToFullScreen() const
+ {
+     NSWindow *window = m_view.window;
+-    return window.styleMask & NSWindowStyleMaskFullScreen && !window.qt_fullScreen;
++    return qt_mac_hasFullScreenStyle(window) && !window.qt_fullScreen;
+ }
+ 
+ void QCocoaWindow::windowDidEnterFullScreen()
+@@ -1710,11 +1739,13 @@
+         nsWindow.hidesOnDeactivate = ((type & Qt::Tool) == Qt::Tool) && !alwaysShowToolWindow();
+ 
+         // Make popup windows show on the same desktop as the parent full-screen window
+-        nsWindow.collectionBehavior = NSWindowCollectionBehaviorFullScreenAuxiliary;
++        if (@available(macOS 10.7, *))
++            nsWindow.collectionBehavior = NSWindowCollectionBehaviorFullScreenAuxiliary;
+ 
+         if ((type & Qt::Popup) == Qt::Popup) {
+             nsWindow.hasShadow = YES;
+-            nsWindow.animationBehavior = NSWindowAnimationBehaviorUtilityWindow;
++            if (@available(macOS 10.7, *))
++                nsWindow.animationBehavior = NSWindowAnimationBehaviorUtilityWindow;
+         }
+     }
+ 
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+@@ -69,6 +69,14 @@
+ 
+ + (void)load
+ {
++    // Native full screen is 10.7; on 10.6 QCocoaWindow::toggleFullScreen
++    // sets the property itself.
++    if (@available(macOS 10.7, *)) {
++    } else {
++        return;
++    }
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunguarded-availability"
+     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+     [center addObserverForName:NSWindowDidEnterFullScreenNotification object:nil queue:nil
+         usingBlock:^(NSNotification *notification) {
+@@ -82,6 +90,7 @@
+                 nil, OBJC_ASSOCIATION_RETAIN);
+         }
+     ];
++#pragma clang diagnostic pop
+ }
+ 
+ - (BOOL)qt_fullScreen

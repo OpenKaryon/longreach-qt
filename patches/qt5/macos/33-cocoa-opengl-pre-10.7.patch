@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: OpenGL contexts below 10.7 (the OS X 10.6 port).
+#
+# OpenGL profiles (NSOpenGLPFAOpenGLProfile and the 3.2 Core profile) and
+# -setWantsBestResolutionOpenGLSurface: are 10.7. Below that the pixel format
+# carries no profile attribute, which gives the only profile 10.6 has, the
+# legacy one; a shared context is never Core; and there is no high-resolution
+# surface to ask for.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaglcontext.mm
+@@ -118,13 +118,17 @@
+         // context was requested. Due to the semantics of QSurfaceFormat
+         // this 4.1 version can find its way onto the format for the new
+         // context, even though it was at no point requested by the user.
+-        GLint shareContextRequestedProfile;
+-        [qt_pixelFormatOf(m_shareContext) getValues:&shareContextRequestedProfile
+-            forAttribute:NSOpenGLPFAOpenGLProfile forVirtualScreen:0];
++        // OpenGL profiles are 10.7; 10.6 has only the legacy one.
++        GLint shareContextRequestedProfile = 0;
++        bool shareContextIsCore = false;
++        if (@available(macOS 10.7, *)) {
++            [qt_pixelFormatOf(m_shareContext) getValues:&shareContextRequestedProfile
++                forAttribute:NSOpenGLPFAOpenGLProfile forVirtualScreen:0];
++            shareContextIsCore = shareContextRequestedProfile == NSOpenGLProfileVersion3_2Core;
++        }
+         auto shareContextActualProfile = shareContext->format().version();
+ 
+-        if (shareContextRequestedProfile == NSOpenGLProfileVersion3_2Core
+-            && shareContextActualProfile >= qMakePair(4, 1)) {
++        if (shareContextIsCore && shareContextActualProfile >= qMakePair(4, 1)) {
+             // There is a mismatch. Downgrade requested format to make the
+             // NSOpenGLPFAOpenGLProfile attributes match. (NSOpenGLContext
+             // will fail to create a new context if there is a mismatch).
+@@ -177,6 +181,9 @@
+ {
+     QVector<NSOpenGLPixelFormatAttribute> attrs;
+ 
++    // OpenGL profiles are 10.7; without the attribute 10.6 gives its only,
++    // legacy, profile.
++    if (@available(macOS 10.7, *)) {
+     attrs << NSOpenGLPFAOpenGLProfile;
+     if (format.profile() == QSurfaceFormat::CoreProfile) {
+         if (format.version() >= qMakePair(4, 1)) {
+@@ -193,6 +200,7 @@
+     } else {
+         attrs << NSOpenGLProfileVersionLegacy;
+     }
++    }
+ 
+     switch (format.swapBehavior()) {
+     case QSurfaceFormat::SingleBuffer:
+@@ -485,7 +493,8 @@
+         }
+     }
+ 
+-    view.wantsBestResolutionOpenGLSurface = prefersBestResolutionOpenGLSurface;
++    if (@available(macOS 10.7, *))
++        view.wantsBestResolutionOpenGLSurface = prefersBestResolutionOpenGLSurface;
+ }
+ 
+ // NSOpenGLContext is not re-entrant. Even when using separate contexts per thread,

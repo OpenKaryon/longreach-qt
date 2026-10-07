@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-07",
+  "target": "Qt 6.8.4 macOS x86_64, 10.13 backport (pre-10.14 patches 01-10, with the QML JIT fix), native run on macOS 10.13",
+  "status": "PASS",
+  "commit": "6b8458da3b93915fdd4b74e97c3cbcea27ae123d",
+  "build": {
+    "image": "qt6-macos-amd64-10.13-jit-gpl-enabled",
+    "suite": "artifacts/qt6-macos-amd64-10.13-jit"
+  },
+  "runtime": {
+    "machine": "virtual machine (VMware)",
+    "method": "suite copied over SSH, smoke-runner over SSH as the auto-logged-in user admin; qt-selftest not built (the image lacks QtTextToSpeech and other console modules)"
+  },
+  "summary": {
+    "apps_passed": 7,
+    "apps_failed": 0,
+    "checks_passed": 240,
+    "checks_failed": 0,
+    "checks_skipped": 13
+  },
+  "applications": [
+    {
+      "application": "widgets-gallery",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 35,
+      "failed": 0,
+      "skipped": 5
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "logs": "build/vm-runs/hs-qt6-1013-rel2/ (not committed)"
+}

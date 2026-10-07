@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-07",
+  "target": "Qt 5.15.19 Linux i386 gpl-enabled (Ubuntu 16.04 build)",
+  "status": "PASS",
+  "commit": "a38ebe5d19de09de186e70c020a3f0214eb32295",
+  "build": {
+    "image": "qt5-linux-i386-gpl-enabled",
+    "suite": "artifacts/tests-qt5-linux-i386-gpl-enabled"
+  },
+  "runtime": {
+    "machine": "Ubuntu 16.04.7 i686 desktop (kernel 4.15) in VMware Workstation",
+    "method": "tar.gz with SHA256SUMS, smoke-runner on the logged-in X session"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 512,
+    "checks_failed": 0,
+    "checks_skipped": 86
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 280,
+      "failed": 0,
+      "skipped": 62
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 91,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 31,
+      "failed": 0,
+      "skipped": 12
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "logs": "build/vm-runs/u16-qt5-i386-rel3/ (not committed)"
+}

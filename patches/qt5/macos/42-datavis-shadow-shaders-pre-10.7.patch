@@ -1,0 +1,346 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtDataVisualization: shadow shaders without GLSL array constructors (the OS X
+# 10.6 port).
+#
+# Seven fragment shaders initialise their 16-entry Poisson disk with a global
+# array constructor, vec2[16](...). OS X 10.6's GLSL compiler rejects array
+# constructors ("constructor not supported for type array of 2-component
+# vector of float"), the shader fails to compile, and ShaderHelper::initialize()
+# stops the program with qFatal as soon as a graph with shadows is shown.
+#
+# The array is declared without an initialiser and filled element by element
+# at the top of main(). The values and the shading are the same; every GLSL
+# version this module targets on desktop accepts it.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/shadow.frag b/qtdatavis3d/src/datavisualization/engine/shaders/shadow.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/shadow.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/shadow.frag
+@@ -14,24 +14,27 @@
+ varying highp vec3 eyeDirection_cmr;
+ varying highp vec3 lightDirection_cmr;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, UV).rgb;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+     highp vec3 materialSpecularColor = lightColor.rgb * 0.2;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTex.frag b/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTex.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTex.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTex.frag
+@@ -13,24 +13,27 @@
+ varying highp vec3 eyeDirection_cmr;
+ varying highp vec3 lightDirection_cmr;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec3 materialDiffuseColor = color_mdl.rgb;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+     highp vec3 materialSpecularColor = lightColor.rgb;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTexColorOnY.frag b/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTexColorOnY.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTexColorOnY.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/shadowNoTexColorOnY.frag
+@@ -16,24 +16,27 @@
+ varying highp vec3 lightDirection_cmr;
+ varying highp vec2 coords_mdl;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec2 gradientUV = vec2(0.0, gradMin + ((coords_mdl.y + 1.0) * gradHeight));
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, gradientUV).xyz;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowFlat.frag b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowFlat.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowFlat.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowFlat.frag
+@@ -19,24 +19,27 @@
+ uniform highp float gradMin;
+ uniform highp float gradHeight;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec2 gradientUV = vec2(0.0, gradMin + coords_mdl.y * gradHeight);
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, gradientUV).xyz;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowNoTex.frag b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowNoTex.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowNoTex.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceShadowNoTex.frag
+@@ -17,24 +17,27 @@
+ uniform highp float gradMin;
+ uniform highp float gradHeight;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec2 gradientUV = vec2(0.0, gradMin + coords_mdl.y * gradHeight);
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, gradientUV).xyz;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadow.frag b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadow.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadow.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadow.frag
+@@ -14,24 +14,27 @@
+ varying highp vec3 eyeDirection_cmr;
+ varying highp vec3 lightDirection_cmr;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, UV).rgb;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+     highp vec3 materialSpecularColor = lightColor.rgb * 0.2;
+diff --git a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadowFlat.frag b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadowFlat.frag
+--- a/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadowFlat.frag
++++ b/qtdatavis3d/src/datavisualization/engine/shaders/surfaceTexturedShadowFlat.frag
+@@ -18,24 +18,27 @@
+ uniform highp float shadowQuality;
+ uniform highp vec4 lightColor;
+ 
+-highp vec2 poissonDisk[16] = vec2[16](vec2(-0.94201624, -0.39906216),
+-                                      vec2(0.94558609, -0.76890725),
+-                                      vec2(-0.094184101, -0.92938870),
+-                                      vec2(0.34495938, 0.29387760),
+-                                      vec2(-0.91588581, 0.45771432),
+-                                      vec2(-0.81544232, -0.87912464),
+-                                      vec2(-0.38277543, 0.27676845),
+-                                      vec2(0.97484398, 0.75648379),
+-                                      vec2(0.44323325, -0.97511554),
+-                                      vec2(0.53742981, -0.47373420),
+-                                      vec2(-0.26496911, -0.41893023),
+-                                      vec2(0.79197514, 0.19090188),
+-                                      vec2(-0.24188840, 0.99706507),
+-                                      vec2(-0.81409955, 0.91437590),
+-                                      vec2(0.19984126, 0.78641367),
+-                                      vec2(0.14383161, -0.14100790));
++// Filled at the top of main(): OS X 10.6's GLSL compiler has no array
++// constructors.
++highp vec2 poissonDisk[16];
+ 
+ void main() {
++    poissonDisk[0] = vec2(-0.94201624, -0.39906216);
++    poissonDisk[1] = vec2(0.94558609, -0.76890725);
++    poissonDisk[2] = vec2(-0.094184101, -0.92938870);
++    poissonDisk[3] = vec2(0.34495938, 0.29387760);
++    poissonDisk[4] = vec2(-0.91588581, 0.45771432);
++    poissonDisk[5] = vec2(-0.81544232, -0.87912464);
++    poissonDisk[6] = vec2(-0.38277543, 0.27676845);
++    poissonDisk[7] = vec2(0.97484398, 0.75648379);
++    poissonDisk[8] = vec2(0.44323325, -0.97511554);
++    poissonDisk[9] = vec2(0.53742981, -0.47373420);
++    poissonDisk[10] = vec2(-0.26496911, -0.41893023);
++    poissonDisk[11] = vec2(0.79197514, 0.19090188);
++    poissonDisk[12] = vec2(-0.24188840, 0.99706507);
++    poissonDisk[13] = vec2(-0.81409955, 0.91437590);
++    poissonDisk[14] = vec2(0.19984126, 0.78641367);
++    poissonDisk[15] = vec2(0.14383161, -0.14100790);
+     highp vec3 materialDiffuseColor = texture2D(textureSampler, UV).xyz;
+     highp vec3 materialAmbientColor = lightColor.rgb * ambientStrength * materialDiffuseColor;
+     highp vec3 materialSpecularColor = lightColor.rgb;

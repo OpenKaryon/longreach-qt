@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the QtMultimedia AVFoundation plugins below 10.7 (the OS X 10.6
+# port).
+#
+# AVFoundation and CoreMedia are 10.7. Below that the camera and media-player
+# service plugins return no service from create(), and the camera list is
+# empty, so QtMultimedia reports no camera and no media-player backend;
+# QAudioOutput and QAudioInput (CoreAudio) are not affected. Since nothing
+# else in the plugins runs on 10.6, they use qt_no_availability_errors, and
+# both frameworks end up weak-linked.
+#
+# The camera list needs its own check: QCameraInfo::availableCameras() asks
+# the plugin directly, not through a service, and AVMediaTypeVideo is a data
+# symbol - weak-linked, it sits at address 0 on 10.6 and reading it crashed
+# every application that listed cameras.
+#
+# So does the media player plugin's list of MIME types, which its constructor
+# builds from +[AVURLAsset audiovisualMIMETypes]. On x86_64 a message to the
+# missing class goes to nil and the list stays empty; on i386 the 32-bit
+# runtime leaves a missing class's reference unresolved, and the message
+# crashed every application that loaded the plugin.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfcameraserviceplugin.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfcameraserviceplugin.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfcameraserviceplugin.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfcameraserviceplugin.mm
+@@ -54,6 +54,10 @@
+ 
+ QMediaService* AVFServicePlugin::create(QString const& key)
+ {
++    if (@available(macOS 10.7, *)) {
++    } else {
++        return nullptr; // AVFoundation is 10.7
++    }
+     if (key == QLatin1String(Q_MEDIASERVICE_CAMERA))
+         return new AVFCameraService;
+     else
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/camera.pro b/qtmultimedia/src/plugins/avfoundation/camera/camera.pro
+--- a/qtmultimedia/src/plugins/avfoundation/camera/camera.pro
++++ b/qtmultimedia/src/plugins/avfoundation/camera/camera.pro
+@@ -17,6 +17,11 @@
+             -framework CoreVideo
+ 
+ QMAKE_USE += avfoundation
++
++# AVFoundation is 10.7. Below that create() returns no service, so nothing
++# here runs on 10.6 and the per-call availability check is not needed.
++CONFIG += qt_no_availability_errors
++QMAKE_CXXFLAGS += -Wno-unguarded-availability
+ 
+ OTHER_FILES += avfcamera.json
+ 
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayerserviceplugin.mm b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayerserviceplugin.mm
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayerserviceplugin.mm
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayerserviceplugin.mm
+@@ -56,6 +56,10 @@
+ #ifdef QT_DEBUG_AVF
+     qDebug() << "AVFMediaPlayerServicePlugin::create" << key;
+ #endif
++    if (@available(macOS 10.7, *)) {
++    } else {
++        return nullptr; // AVFoundation is 10.7
++    }
+     if (key == QLatin1String(Q_MEDIASERVICE_MEDIAPLAYER))
+         return new AVFMediaPlayerService;
+ 
+@@ -93,6 +97,13 @@
+ 
+ void AVFMediaPlayerServicePlugin::buildSupportedTypes()
+ {
++    // AVFoundation is 10.7. Below it there is nothing to list; and on i386 a
++    // message to the missing class does not go to nil, it crashes.
++    if (@available(macOS 10.7, *)) {
++    } else {
++        return;
++    }
++
+     //Populate m_supportedMimeTypes with mimetypes AVAsset supports
+     NSArray *mimeTypes = [AVURLAsset audiovisualMIMETypes];
+     for (NSString *mimeType in mimeTypes)
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/mediaplayer.pro b/qtmultimedia/src/plugins/avfoundation/mediaplayer/mediaplayer.pro
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/mediaplayer.pro
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/mediaplayer.pro
+@@ -9,6 +9,11 @@
+ LIBS += -framework CoreMedia -framework CoreVideo -framework QuartzCore
+ 
+ QMAKE_USE += avfoundation
++
++# AVFoundation is 10.7. Below that create() returns no service, so nothing
++# here runs on 10.6 and the per-call availability check is not needed.
++CONFIG += qt_no_availability_errors
++QMAKE_CXXFLAGS += -Wno-unguarded-availability
+ 
+ HEADERS += \
+     avfmediaplayercontrol.h \
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
+@@ -216,6 +216,13 @@
+     m_defaultCameraIndex = -1;
+     m_cameraDevices.clear();
+ 
++    // AVFoundation is 10.7. Below it there are no capture devices to list,
++    // and AVMediaTypeVideo, a weak data import, sits at address 0.
++    if (@available(macOS 10.7, *)) {
++    } else {
++        return;
++    }
++
+     AVCaptureDevice *defaultDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+     NSArray *videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+     for (AVCaptureDevice *device in videoDevices) {

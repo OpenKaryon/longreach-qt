@@ -1,0 +1,197 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the macOS style below 10.7 (the OS X 10.6 port).
+#
+#   overlay scrollers, scroller and knob styles   10.7
+#   -[NSView alignmentRectForFrame:]               10.7
+#   +[NSColor colorWithSRGBRed:green:blue:alpha:]  10.7
+#   -[NSView layoutSubtreeIfNeeded]                10.7
+#
+# Small helpers at the top of the file: 10.6 scrollers are always legacy, and
+# their width comes from the pre-10.7 scrollerWidthForControlSize:; a
+# control's alignment rect is its frame; sRGB colours are made with the sRGB
+# colour space and components (10.5). The scroller-style observer is set up
+# only where the style can change, and the slider is laid out when drawn.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+--- a/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
++++ b/qtbase/src/plugins/styles/mac/qmacstyle_mac.mm
+@@ -47,6 +47,38 @@
+ #include "qmacstyle_mac_p.h"
+ #include "qmacstyle_mac_p_p.h"
+ 
++// OS X 10.6: overlay scrollers, alignment rects and sRGB colours are 10.7.
++// 10.6 has only legacy scrollers, and a control's alignment rect is its frame.
++static bool qt_mac_overlayScrollers()
++{
++    if (@available(macOS 10.7, *))
++        return [NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay;
++    return false;
++}
++
++static CGFloat qt_mac_scrollerWidth(NSControlSize size, bool overlay)
++{
++    if (@available(macOS 10.7, *))
++        return [NSScroller scrollerWidthForControlSize:size
++                                         scrollerStyle:overlay ? NSScrollerStyleOverlay : NSScrollerStyleLegacy];
++    return [NSScroller scrollerWidthForControlSize:size];
++}
++
++static NSRect qt_mac_alignmentRectForFrame(NSView *view, NSRect frame)
++{
++    if (@available(macOS 10.7, *))
++        return [view alignmentRectForFrame:frame];
++    return frame;
++}
++
++static NSColor *qt_mac_colorWithSRGB(CGFloat red, CGFloat green, CGFloat blue, CGFloat alpha)
++{
++    if (@available(macOS 10.7, *))
++        return [NSColor colorWithSRGBRed:red green:green blue:blue alpha:alpha];
++    const CGFloat components[] = { red, green, blue, alpha };
++    return [NSColor colorWithColorSpace:[NSColorSpace sRGBColorSpace] components:components count:4];
++}
++
+ #define QMAC_QAQUASTYLE_SIZE_CONSTRAIN
+ //#define DEBUG_SIZE_CONSTRAINT
+ 
+@@ -539,7 +571,8 @@
+ 
+     // Ensure the values set above are reflected when asking
+     // the cell for its metrics and to draw itself.
+-    [slider layoutSubtreeIfNeeded];
++    if (@available(macOS 10.7, *))
++        [slider layoutSubtreeIfNeeded]; // 10.6 lays the cell out when drawing
+ 
+     return true;
+ }
+@@ -1261,7 +1294,7 @@
+         auto *pb = static_cast<NSButton *>(cocoaControl(cw));
+         const QRectF frameRect = cw.adjustedControlFrame(targetRect.adjusted(hMargin, vMargin, -hMargin, -vMargin));
+         pb.frame = frameRect.toCGRect();
+-        focusRect = QRectF::fromCGRect([pb alignmentRectForFrame:pb.frame]);
++        focusRect = QRectF::fromCGRect(qt_mac_alignmentRectForFrame(pb, pb.frame));
+         if (cw.type == QMacStylePrivate::Button_PushButton) {
+             focusRect -= pushButtonShadowMargins[cw.size];
+         }
+@@ -2135,6 +2168,8 @@
+ {
+     QMacAutoReleasePool pool;
+ 
++    // The preferred scroller style can change from 10.7 on only.
++    if (@available(macOS 10.7, *)) {
+     static QMacNotificationObserver scrollbarStyleObserver(nil,
+         NSPreferredScrollerStyleDidChangeNotification, []() {
+             // Purge destroyed scroll bars
+@@ -2144,6 +2179,7 @@
+             for (const auto &o : QMacStylePrivate::scrollBars)
+                 QCoreApplication::sendEvent(o, &event);
+     });
++    }
+ 
+ #if QT_MACOS_PLATFORM_SDK_EQUAL_OR_ABOVE(__MAC_10_14)
+     Q_D(QMacStyle);
+@@ -2477,9 +2513,8 @@
+         break;
+     case PM_ScrollBarExtent: {
+         const QStyleHelper::WidgetSizePolicy size = d->effectiveAquaSizeConstrain(opt, widget);
+-        ret = static_cast<int>([NSScroller
+-            scrollerWidthForControlSize:static_cast<NSControlSize>(size)
+-                          scrollerStyle:[NSScroller preferredScrollerStyle]]);
++        ret = static_cast<int>(qt_mac_scrollerWidth(static_cast<NSControlSize>(size),
++                                                    qt_mac_overlayScrollers()));
+         break; }
+     case PM_IndicatorHeight: {
+         switch (d->aquaSizeConstrain(opt, widget)) {
+@@ -2635,8 +2670,7 @@
+         ret = 1;
+         break;
+     case PM_ScrollView_ScrollBarOverlap:
+-        ret = [NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay ?
+-               pixelMetric(PM_ScrollBarExtent, opt, widget) : 0;
++        ret = qt_mac_overlayScrollers() ? pixelMetric(PM_ScrollBarExtent, opt, widget) : 0;
+         break;
+     default:
+         ret = QCommonStyle::pixelMetric(metric, opt, widget);
+@@ -2951,7 +2985,7 @@
+                 || (opt && QStyleHelper::hasAncestor(opt->styleObject, QAccessible::ScrollBar))
+ #endif
+         ) {
+-            ret = [NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay;
++            ret = qt_mac_overlayScrollers();
+         }
+         break;
+ #if QT_CONFIG(itemviews)
+@@ -3422,10 +3456,8 @@
+                         if (cgContext ? bool(CGBitmapContextGetColorSpace(cgContext)) : false) {
+                             tf.drawsBackground = YES;
+                             const QColor bgColor = frame->palette.brush(QPalette::Base).color();
+-                            tf.backgroundColor = [NSColor colorWithSRGBRed:bgColor.redF()
+-                                                                     green:bgColor.greenF()
+-                                                                      blue:bgColor.blueF()
+-                                                                     alpha:bgColor.alphaF()];
++                            tf.backgroundColor = qt_mac_colorWithSRGB(bgColor.redF(), bgColor.greenF(),
++                                                                      bgColor.blueF(), bgColor.alphaF());
+                             if (bgColor.alpha() != 255) {
+                                 // No way we can have it bezeled and transparent ...
+                                 tf.bordered = YES;
+@@ -4446,10 +4478,7 @@
+ 
+                     // Respect the menu item palette as set in the style option.
+                     const auto pc = p->pen().color();
+-                    NSColor *c = [NSColor colorWithSRGBRed:pc.redF()
+-                                                     green:pc.greenF()
+-                                                      blue:pc.blueF()
+-                                                     alpha:pc.alphaF()];
++                    NSColor *c = qt_mac_colorWithSRGB(pc.redF(), pc.greenF(), pc.blueF(), pc.alphaF());
+ 
+                     s = qt_mac_removeMnemonics(s);
+ 
+@@ -4767,7 +4796,7 @@
+                 frameRect -= cw.titleMargins();
+             } else if (cw.type != QMacStylePrivate::Button_SquareButton) {
+                 auto *pb = static_cast<NSButton *>(d->cocoaControl(cw));
+-                frameRect = QRectF::fromCGRect([pb alignmentRectForFrame:frameRect.toCGRect()]);
++                frameRect = QRectF::fromCGRect(qt_mac_alignmentRectForFrame(pb, frameRect.toCGRect()));
+                 if (cw.type == QMacStylePrivate::Button_PushButton)
+                     frameRect -= pushButtonShadowMargins[cw.size];
+                 else if (cw.type == QMacStylePrivate::Button_PullDown)
+@@ -5373,6 +5402,8 @@
+ 
+             const QColor bgColor = QStyleHelper::backgroundColor(opt->palette, widget);
+             const bool hasDarkBg = bgColor.red() < 128 && bgColor.green() < 128 && bgColor.blue() < 128;
++            // Knob and scroller styles are 10.7; 10.6 scrollers are always legacy.
++            if (@available(macOS 10.7, *)) {
+             if (isTransient) {
+                 // macOS behavior: as soon as one color channel is >= 128,
+                 // the background is considered bright, scroller is dark.
+@@ -5382,6 +5413,7 @@
+             }
+ 
+             scroller.scrollerStyle = isTransient ? NSScrollerStyleOverlay : NSScrollerStyleLegacy;
++            }
+ 
+             if (!setupScroller(scroller, sb))
+                 break;
+@@ -5409,7 +5441,7 @@
+                     // will only be used to draw the hi-DPI artwork. And even if did scale,
+                     // the stretched knob would look wrong, actually. So we need to draw the
+                     // scroller manually when it's being hovered.
+-                    const CGFloat scrollerWidth = [NSScroller scrollerWidthForControlSize:scroller.controlSize scrollerStyle:scroller.scrollerStyle];
++                    const CGFloat scrollerWidth = qt_mac_scrollerWidth(scroller.controlSize, isTransient);
+                     const CGFloat knobWidth = knobWidths[cocoaSize] * expandScale;
+                     // Cocoa can help get the exact knob length in the current orientation
+                     const CGRect scrollerKnobRect = CGRectInset([scroller rectForPart:NSScrollerKnob], 1, 1);
+@@ -5687,7 +5719,7 @@
+                 const int vMargin = proxy()->pixelMetric(QStyle::PM_FocusFrameVMargin, combo, widget);
+                 QRectF focusRect;
+                 if (cw.type == QMacStylePrivate::Button_PopupButton) {
+-                    focusRect = QRectF::fromCGRect([cc alignmentRectForFrame:cc.frame]);
++                    focusRect = QRectF::fromCGRect(qt_mac_alignmentRectForFrame(cc, cc.frame));
+                     focusRect -= pullDownButtonShadowMargins[cw.size];
+                     if (cw.size == QStyleHelper::SizeSmall)
+                         focusRect = focusRect.translated(0, 1);

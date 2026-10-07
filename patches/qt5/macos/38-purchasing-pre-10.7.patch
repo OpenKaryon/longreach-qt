@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtPurchasing below 10.7 (the OS X 10.6 port).
+#
+# StoreKit is 10.7 on macOS. Below that the backend factory returns the
+# generic backend (no store), the macOS backend uses
+# qt_no_availability_errors, and StoreKit is weak-linked.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtpurchasing/src/purchasing/inapppurchase/mac/mac.pri b/qtpurchasing/src/purchasing/inapppurchase/mac/mac.pri
+--- a/qtpurchasing/src/purchasing/inapppurchase/mac/mac.pri
++++ b/qtpurchasing/src/purchasing/inapppurchase/mac/mac.pri
+@@ -1,4 +1,8 @@
+ LIBS += -framework StoreKit -framework Foundation
++# StoreKit is 10.7 on macOS. Below that the backend factory falls back to the
++# generic backend, so this code does not run on 10.6.
++CONFIG += qt_no_availability_errors
++QMAKE_CXXFLAGS += -Wno-unguarded-availability
+ INCLUDEPATH += $$PWD
+ HEADERS += \
+     $$PWD/qmacinapppurchasebackend_p.h \
+diff --git a/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp b/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp
+--- a/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp
++++ b/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp
+@@ -45,7 +45,9 @@
+ #if defined(Q_OS_ANDROID)
+     return new QAndroidInAppPurchaseBackend;
+ #elif defined(Q_OS_DARWIN) && !defined(Q_OS_WATCHOS)
+-    return new QMacInAppPurchaseBackend;
++    if (__builtin_available(macOS 10.7, *)) // StoreKit is 10.7 on macOS
++        return new QMacInAppPurchaseBackend;
++    return new QInAppPurchaseBackend;
+ #elif defined (Q_OS_WINRT)
+     return new QWinRTInAppPurchaseBackend;
+ #else

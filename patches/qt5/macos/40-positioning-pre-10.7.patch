@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtPositioning's CoreLocation plugin below 10.7 (the OS X 10.6 port).
+#
+# CLLocation's course and speed are 10.7 on macOS. Below that positions carry
+# no direction and no ground speed; coordinates and accuracies are unchanged.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+--- a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
++++ b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+@@ -87,10 +87,12 @@
+     if (newLocation.verticalAccuracy >= 0)
+         location.setAttribute(QGeoPositionInfo::VerticalAccuracy, newLocation.verticalAccuracy);
+ #ifndef Q_OS_TVOS
+-    if (newLocation.course >= 0)
+-        location.setAttribute(QGeoPositionInfo::Direction, newLocation.course);
+-    if (newLocation.speed >= 0)
+-        location.setAttribute(QGeoPositionInfo::GroundSpeed, newLocation.speed);
++    if (@available(macOS 10.7, *)) { // course and speed are 10.7 on macOS
++        if (newLocation.course >= 0)
++            location.setAttribute(QGeoPositionInfo::Direction, newLocation.course);
++        if (newLocation.speed >= 0)
++            location.setAttribute(QGeoPositionInfo::GroundSpeed, newLocation.speed);
++    }
+ #endif
+ 
+     m_positionInfoSource->locationDataAvailable(location);

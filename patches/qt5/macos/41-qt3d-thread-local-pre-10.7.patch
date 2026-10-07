@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: Qt3D's shader generator below 10.7 (the OS X 10.6 port).
+#
+# Three thread_local QRegularExpression objects need the thread-local
+# variable support of the 10.7 dyld. Below that they are function-local
+# statics: they are const, and a const QRegularExpression may be used from
+# several threads at once.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qt3d/src/render/shadergraph/qshadergenerator.cpp b/qt3d/src/render/shadergraph/qshadergenerator.cpp
+--- a/qt3d/src/render/shadergraph/qshadergenerator.cpp
++++ b/qt3d/src/render/shadergraph/qshadergenerator.cpp
+@@ -44,6 +44,14 @@
+ 
+ #include <cctype>
+ #include <qshaderprogram_p.h>
++
++#if defined(Q_OS_MACOS) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1070
++// thread_local needs the 10.7 dyld. The expressions are const, and a const
++// QRegularExpression can be shared between threads.
++#  define QT_SHADERGEN_THREAD_LOCAL static
++#else
++#  define QT_SHADERGEN_THREAD_LOCAL thread_local
++#endif
+ 
+ QT_BEGIN_NAMESPACE
+ namespace Qt3DRender {
+@@ -423,7 +431,7 @@
+ 
+             // 1. Handle uniforms
+             {
+-                thread_local const QRegularExpression bindings(
++                QT_SHADERGEN_THREAD_LOCAL const QRegularExpression bindings(
+                         QStringLiteral("binding\\s?+=\\s?+auto"));
+ 
+                 replaceAndIncrement(bindings, currentBinding, QStringLiteral("binding = %1"));
+@@ -431,7 +439,7 @@
+ 
+             // 2. Handle inputs
+             {
+-                thread_local const QRegularExpression inLocations(
++                QT_SHADERGEN_THREAD_LOCAL const QRegularExpression inLocations(
+                         QStringLiteral("location\\s?+=\\s?+auto\\s?+\\)\\s?+in\\s+"));
+ 
+                 replaceAndIncrement(inLocations, currentInputLocation,
+@@ -440,7 +448,7 @@
+ 
+             // 3. Handle outputs
+             {
+-                thread_local const QRegularExpression outLocations(
++                QT_SHADERGEN_THREAD_LOCAL const QRegularExpression outLocations(
+                         QStringLiteral("location\\s?+=\\s?+auto\\s?+\\)\\s?+out\\s+"));
+ 
+                 replaceAndIncrement(outLocations, currentOutputLocation,

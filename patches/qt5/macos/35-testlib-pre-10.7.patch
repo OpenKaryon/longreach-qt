@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtTest below 10.7 (the OS X 10.6 port).
+#
+# QtTest keeps the display awake during GUI tests with a power assertion; the
+# SDK marks IOPMAssertionRelease 10.7. Below that no assertion is taken.
+#
+# Nothing changes on 10.7 and newer.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/testlib/qtestcase.cpp b/qtbase/src/testlib/qtestcase.cpp
+--- a/qtbase/src/testlib/qtestcase.cpp
++++ b/qtbase/src/testlib/qtestcase.cpp
+@@ -1886,9 +1886,11 @@
+     QTestPrivate::AppNapDisabler appNapDisabler;
+ 
+     if (qApp && (qstrcmp(qApp->metaObject()->className(), "QApplication") == 0)) {
+-        IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep,
+-            kIOPMAssertionLevelOn, CFSTR("QtTest running tests"),
+-            &macPowerSavingDisabled);
++        if (__builtin_available(macOS 10.7, *)) {
++            IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep,
++                kIOPMAssertionLevelOn, CFSTR("QtTest running tests"),
++                &macPowerSavingDisabled);
++        }
+     }
+ #endif
+ 
+@@ -2001,7 +2003,8 @@
+     QSignalDumper::endDump();
+ 
+ #if defined(Q_OS_MACOS)
+-    IOPMAssertionRelease(macPowerSavingDisabled);
++    if (__builtin_available(macOS 10.7, *))
++        IOPMAssertionRelease(macPowerSavingDisabled);
+ #endif
+ }
+ 

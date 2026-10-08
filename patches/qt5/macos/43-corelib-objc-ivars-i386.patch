@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtCore's Objective-C classes on the 32-bit runtime (the i386 port).
+#
+# The 32-bit (fragile) Objective-C runtime fixes each instance variable's
+# offset when the class is compiled, from its @interface, and so accepts
+# instance variables only there - not in the @implementation, not in a class
+# extension - and synthesizes no property by itself. Qt 5.15 was written for
+# the 64-bit runtime only.
+#
+# The autorelease-pool tracker and the run-loop mode tracker declare their
+# variables in the @interface.
+#
+# Nothing changes in behaviour, on any architecture.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/corelib/kernel/qcore_mac.mm b/qtbase/src/corelib/kernel/qcore_mac.mm
+--- a/qtbase/src/corelib/kernel/qcore_mac.mm
++++ b/qtbase/src/corelib/kernel/qcore_mac.mm
+@@ -209,12 +209,12 @@
+ QT_END_NAMESPACE
+ QT_USE_NAMESPACE
+ @interface QT_MANGLE_NAMESPACE(QMacAutoReleasePoolTracker) : NSObject
+-@end
+-
+-@implementation QT_MANGLE_NAMESPACE(QMacAutoReleasePoolTracker) {
++{
+     NSAutoreleasePool **m_pool;
+ }
++@end
+ 
++@implementation QT_MANGLE_NAMESPACE(QMacAutoReleasePoolTracker)
+ - (instancetype)initWithPool:(NSAutoreleasePool **)pool
+ {
+     if ((self = [self init]))
+diff --git a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+--- a/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
++++ b/qtbase/src/corelib/kernel/qeventdispatcher_cf.mm
+@@ -85,14 +85,14 @@
+     emoji keyboard.
+ */
+ @interface QT_MANGLE_NAMESPACE(RunLoopModeTracker) : NSObject
++{
++    QStack<CFStringRef> m_runLoopModes;
++}
+ @end
+ 
+ QT_NAMESPACE_ALIAS_OBJC_CLASS(RunLoopModeTracker);
+ 
+-@implementation QT_MANGLE_NAMESPACE(RunLoopModeTracker) {
+-    QStack<CFStringRef> m_runLoopModes;
+-}
+-
++@implementation QT_MANGLE_NAMESPACE(RunLoopModeTracker)
+ - (instancetype)init
+ {
+     if ((self = [super init])) {

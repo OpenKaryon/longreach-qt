@@ -1,0 +1,543 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the Cocoa plugin's Objective-C classes on the 32-bit runtime (the
+# i386 port).
+#
+# The 32-bit (fragile) Objective-C runtime fixes each instance variable's
+# offset when the class is compiled, from its @interface, and so accepts
+# instance variables only there - not in the @implementation, not in a class
+# extension - and synthesizes no property by itself. Qt 5.15 was written for
+# the 64-bit runtime only.
+#
+#   - every class's variables move into its @interface, which for QNSView,
+#     the application delegate, the file dialog delegate, the menus and the
+#     accessibility element is in the header; the headers include or forward-
+#     declare what those variables need;
+#   - QNSWindow and QNSPanel share their member through the QNSWindowProtocol
+#     mix-in in qnswindow.mm; it is declared in both @interfaces instead;
+#   - the properties that relied on automatic synthesis (QNSView's cursor and
+#     its previous superview and window, the dock menu, the tray delegate's
+#     platform icon) get a variable and an @synthesize;
+#   - a Metal layer is never offered on i386: Metal has no 32-bit slice, and
+#     the i386 build does not link it.
+#
+# Nothing else changes in behaviour, on any architecture.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.h b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.h
+@@ -51,6 +51,9 @@
+ #import <qaccessible.h>
+ 
+ @interface QT_MANGLE_NAMESPACE(QMacAccessibilityElement) : NSObject <NSAccessibilityElement>
++{
++    QAccessible::Id axid;
++}
+ 
+ - (instancetype)initWithId:(QAccessible::Id)anId;
+ + (instancetype)elementWithId:(QAccessible::Id)anId;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaaccessibilityelement.mm
+@@ -113,10 +113,7 @@
+         *end = curEnd;
+ }
+ 
+-@implementation QMacAccessibilityElement {
+-    QAccessible::Id axid;
+-}
+-
++@implementation QMacAccessibilityElement
+ - (instancetype)initWithId:(QAccessible::Id)anId
+ {
+     Q_ASSERT((int)anId < 0);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.h b/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.h
+@@ -92,6 +92,11 @@
+ #include "qcocoansmenu.h"
+ 
+ @interface QT_MANGLE_NAMESPACE(QCocoaApplicationDelegate) : NSObject <NSApplicationDelegate>
++{
++    NSObject <NSApplicationDelegate> *reflectionDelegate;
++    bool inLaunch;
++    NSMenu *_dockMenu;
++}
+ @property (nonatomic, retain) NSMenu *dockMenu;
+ + (instancetype)sharedDelegate;
+ - (void)setReflectionDelegate:(NSObject<NSApplicationDelegate> *)oldDelegate;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.mm b/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoaapplicationdelegate.mm
+@@ -96,11 +96,9 @@
+ 
+ QT_USE_NAMESPACE
+ 
+-@implementation QCocoaApplicationDelegate {
+-    NSObject <NSApplicationDelegate> *reflectionDelegate;
+-    bool inLaunch;
+-}
++@implementation QCocoaApplicationDelegate
+ 
++@synthesize dockMenu = _dockMenu;
+ + (instancetype)sharedDelegate
+ {
+     static QCocoaApplicationDelegate *shared = nil;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoacolordialoghelper.mm
+@@ -50,14 +50,7 @@
+ QT_USE_NAMESPACE
+ 
+ @interface QT_MANGLE_NAMESPACE(QNSColorPanelDelegate) : NSObject<NSWindowDelegate, QNSPanelDelegate>
+-- (void)restoreOriginalContentView;
+-- (void)updateQtColor;
+-- (void)finishOffWithCode:(NSInteger)code;
+-@end
+-
+-QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSColorPanelDelegate);
+-
+-@implementation QNSColorPanelDelegate {
++{
+     @public
+     NSColorPanel *mColorPanel;
+     QCocoaColorDialogHelper *mHelper;
+@@ -69,7 +62,14 @@
+     BOOL mResultSet;
+     BOOL mClosingDueToKnownButton;
+ }
++- (void)restoreOriginalContentView;
++- (void)updateQtColor;
++- (void)finishOffWithCode:(NSInteger)code;
++@end
++
++QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSColorPanelDelegate);
+ 
++@implementation QNSColorPanelDelegate
+ - (instancetype)init
+ {
+     self = [super init];
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.h b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.h
+@@ -45,11 +45,35 @@
+ #include <qpa/qplatformdialoghelper.h>
+ #include <QtCore/private/qcore_mac_p.h>
+ 
+-#import <AppKit/NSSavePanel.h>
++#include <QtCore/qsharedpointer.h>
++#include <QtCore/qstringlist.h>
++
++#import <AppKit/AppKit.h>
+ 
+ QT_REQUIRE_CONFIG(filedialog);
+ 
++QT_BEGIN_NAMESPACE
++class QCocoaFileDialogHelper;
++QT_END_NAMESPACE
++
+ @interface QT_MANGLE_NAMESPACE(QNSOpenSavePanelDelegate) : NSObject<NSOpenSavePanelDelegate>
++{
++    @public
++    NSOpenPanel *mOpenPanel;
++    NSSavePanel *mSavePanel;
++    NSView *mAccessoryView;
++    NSPopUpButton *mPopUpButton;
++    NSTextField *mTextField;
++    QCocoaFileDialogHelper *mHelper;
++    NSString *mCurrentDir;
++
++    int mReturnCode;
++
++    QSharedPointer<QFileDialogOptions> mOptions;
++    QString *mCurrentSelection;
++    QStringList *mNameFilterDropDownList;
++    QStringList *mSelectedNameFilter;
++}
+ @end
+ 
+ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSOpenSavePanelDelegate);
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+@@ -75,24 +75,7 @@
+ 
+ typedef QSharedPointer<QFileDialogOptions> SharedPointerFileDialogOptions;
+ 
+-@implementation QNSOpenSavePanelDelegate {
+-    @public
+-    NSOpenPanel *mOpenPanel;
+-    NSSavePanel *mSavePanel;
+-    NSView *mAccessoryView;
+-    NSPopUpButton *mPopUpButton;
+-    NSTextField *mTextField;
+-    QCocoaFileDialogHelper *mHelper;
+-    NSString *mCurrentDir;
+-
+-    int mReturnCode;
+-
+-    SharedPointerFileDialogOptions mOptions;
+-    QString *mCurrentSelection;
+-    QStringList *mNameFilterDropDownList;
+-    QStringList *mSelectedNameFilter;
+-}
+-
++@implementation QNSOpenSavePanelDelegate
+ - (instancetype)initWithAcceptMode:(const QString &)selectFile
+                            options:(SharedPointerFileDialogOptions)options
+                             helper:(QCocoaFileDialogHelper *)helper
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafontdialoghelper.mm
+@@ -74,15 +74,7 @@
+ }
+ 
+ @interface QT_MANGLE_NAMESPACE(QNSFontPanelDelegate) : NSObject<NSWindowDelegate, QNSPanelDelegate>
+-- (void)restoreOriginalContentView;
+-- (void)updateQtFont;
+-- (void)changeFont:(id)sender;
+-- (void)finishOffWithCode:(NSInteger)code;
+-@end
+-
+-QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSFontPanelDelegate);
+-
+-@implementation QNSFontPanelDelegate {
++{
+     @public
+     NSFontPanel *mFontPanel;
+     QCocoaFontDialogHelper *mHelper;
+@@ -93,7 +85,15 @@
+     BOOL mDialogIsExecuting;
+     BOOL mResultSet;
+ }
++- (void)restoreOriginalContentView;
++- (void)updateQtFont;
++- (void)changeFont:(id)sender;
++- (void)finishOffWithCode:(NSInteger)code;
++@end
++
++QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSFontPanelDelegate);
+ 
++@implementation QNSFontPanelDelegate
+ - (instancetype)init
+ {
+     if ((self = [super init])) {
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.h
+@@ -228,6 +228,12 @@
+ @end
+ 
+ @interface QT_MANGLE_NAMESPACE(QNSPanelContentsWrapper) : NSView
++{
++    NSButton *_okButton;
++    NSButton *_cancelButton;
++    NSView *_panelContents;
++    NSEdgeInsets _panelContentsMargins;
++}
+ 
+ @property (nonatomic, readonly) NSButton *okButton;
+ @property (nonatomic, readonly) NSButton *cancelButton;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoahelpers.mm
+@@ -378,13 +378,7 @@
+     the target-action for the OK/Cancel buttons and making
+     sure the layout is consistent.
+  */
+-@implementation QNSPanelContentsWrapper {
+-    NSButton *_okButton;
+-    NSButton *_cancelButton;
+-    NSView *_panelContents;
+-    NSEdgeInsets _panelContentsMargins;
+-}
+-
++@implementation QNSPanelContentsWrapper
+ @synthesize okButton = _okButton;
+ @synthesize cancelButton = _cancelButton;
+ @synthesize panelContents = _panelContents;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.h b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.h
+@@ -57,6 +57,18 @@
+ QT_FORWARD_DECLARE_CLASS(QCocoaMenuItem);
+ 
+ @interface QT_MANGLE_NAMESPACE(QCocoaMenuLoader) : NSObject
++{
++    NSMenu *theMenu;
++    NSMenu *appMenu;
++    NSMenuItem *quitItem;
++    NSMenuItem *preferencesItem;
++    NSMenuItem *aboutItem;
++    NSMenuItem *aboutQtItem;
++    NSMenuItem *hideItem;
++    NSMenuItem *servicesItem;
++    NSMenuItem *hideAllOthersItem;
++    NSMenuItem *showAllItem;
++}
+ + (instancetype)sharedMenuLoader;
+ - (NSMenu *)menu;
+ - (void)ensureAppMenuInMenu:(NSMenu *)menu;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoamenuloader.mm
+@@ -50,19 +50,7 @@
+ #include <QtCore/qcoreapplication.h>
+ #include <QtGui/private/qguiapplication_p.h>
+ 
+-@implementation QCocoaMenuLoader {
+-    NSMenu *theMenu;
+-    NSMenu *appMenu;
+-    NSMenuItem *quitItem;
+-    NSMenuItem *preferencesItem;
+-    NSMenuItem *aboutItem;
+-    NSMenuItem *aboutQtItem;
+-    NSMenuItem *hideItem;
+-    NSMenuItem *servicesItem;
+-    NSMenuItem *hideAllOthersItem;
+-    NSMenuItem *showAllItem;
+-}
+-
++@implementation QCocoaMenuLoader
+ + (instancetype)sharedMenuLoader
+ {
+     static QCocoaMenuLoader *shared = nil;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.h b/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.h
+@@ -64,11 +64,17 @@
+ @end
+ 
+ @interface QT_MANGLE_NAMESPACE(QCocoaNSMenu) : NSMenu
++{
++    QPointer<QCocoaMenu> _platformMenu;
++}
+ @property (readonly, nonatomic) QCocoaMenu *platformMenu;
+ - (instancetype)initWithPlatformMenu:(QCocoaMenu *)menu;
+ @end
+ 
+ @interface QT_MANGLE_NAMESPACE(QCocoaNSMenuItem) : NSMenuItem
++{
++    QPointer<QCocoaMenuItem> _platformMenuItem;
++}
+ @property (nonatomic) QCocoaMenuItem *platformMenuItem;
+ + (instancetype)separatorItemWithPlatformMenuItem:(QCocoaMenuItem *)menuItem;
+ - (instancetype)initWithPlatformMenuItem:(QCocoaMenuItem *)menuItem;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.mm b/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoansmenu.mm
+@@ -68,10 +68,6 @@
+ }
+ 
+ @implementation QCocoaNSMenu
+-{
+-    QPointer<QCocoaMenu> _platformMenu;
+-}
+-
+ - (instancetype)initWithPlatformMenu:(QCocoaMenu *)menu
+ {
+     if ((self = [super initWithTitle:@"Untitled"])) {
+@@ -91,10 +87,6 @@
+ @end
+ 
+ @implementation QCocoaNSMenuItem
+-{
+-    QPointer<QCocoaMenuItem> _platformMenuItem;
+-}
+-
+ + (instancetype)separatorItemWithPlatformMenuItem:(QCocoaMenuItem *)menuItem
+ {
+     // Safe because +[NSMenuItem separatorItem] invokes [[self alloc] init]
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.h b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.h
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.h
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.h
+@@ -54,6 +54,9 @@
+ QT_FORWARD_DECLARE_CLASS(QCocoaSystemTrayIcon);
+ 
+ @interface QT_MANGLE_NAMESPACE(QStatusItemDelegate) : NSObject <NSUserNotificationCenterDelegate>
++{
++    QCocoaSystemTrayIcon *_platformSystemTray;
++}
+ - (instancetype)initWithSysTray:(QCocoaSystemTrayIcon *)platformSystemTray;
+ @property (nonatomic, assign) QCocoaSystemTrayIcon *platformSystemTray;
+ @end
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
+@@ -329,6 +329,8 @@
+ 
+ @implementation QStatusItemDelegate
+ 
++@synthesize platformSystemTray = _platformSystemTray;
++
+ - (instancetype)initWithSysTray:(QCocoaSystemTrayIcon *)platformSystemTray
+ {
+     if ((self = [super init]))
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview.h b/qtbase/src/plugins/platforms/cocoa/qnsview.h
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview.h
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview.h
+@@ -44,6 +44,9 @@
+ #include <MetalKit/MetalKit.h>
+ 
+ #include <QtCore/private/qcore_mac_p.h>
++#include <QtCore/qpointer.h>
++#include <QtCore/qset.h>
++#include <QtCore/qstring.h>
+ 
+ QT_BEGIN_NAMESPACE
+ class QCocoaWindow;
+@@ -51,7 +54,34 @@
+ class QPointF;
+ QT_END_NAMESPACE
+ 
++Q_FORWARD_DECLARE_OBJC_CLASS(QT_MANGLE_NAMESPACE(QNSViewMouseMoveHelper));
++
++// The member variables are declared here, not in the @implementation: the
++// 32-bit Objective-C runtime takes them only in the class interface.
+ @interface QT_MANGLE_NAMESPACE(QNSView) : NSView
++{
++    QPointer<QCocoaWindow> m_platformWindow;
++    Qt::MouseButtons m_buttons;
++    Qt::MouseButtons m_acceptedMouseDowns;
++    Qt::MouseButtons m_frameStrutButtons;
++    QString m_composingText;
++    QPointer<QObject> m_composingFocusObject;
++    bool m_sendKeyEvent;
++    bool m_dontOverrideCtrlLMB;
++    bool m_sendUpAsRightButton;
++    Qt::KeyboardModifiers m_currentWheelModifiers;
++    NSString *m_inputSource;
++    QT_MANGLE_NAMESPACE(QNSViewMouseMoveHelper) *m_mouseMoveHelper;
++    bool m_resendKeyEvent;
++    bool m_scrolling;
++    bool m_updatingDrag;
++    NSEvent *m_currentlyInterpretedKeyEvent;
++    QSet<quint32> m_acceptedKeyDowns;
++    // Backing variables of the properties (no automatic synthesis on 32-bit)
++    NSCursor *_cursor;
++    NSView *_previousSuperview;
++    NSWindow *_previousWindow;
++}
+ @property (nonatomic, retain) NSCursor *cursor;
+ - (instancetype)initWithCocoaWindow:(QCocoaWindow *)platformWindow;
+ - (void)convertFromScreen:(NSPoint)mouseLocation toWindowPoint:(QPointF *)qtWindowPoint andScreenPoint:(QPointF *)qtScreenPoint;
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview.mm b/qtbase/src/plugins/platforms/cocoa/qnsview.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview.mm
+@@ -77,6 +77,9 @@
+ @end
+ 
+ @interface QT_MANGLE_NAMESPACE(QNSViewMouseMoveHelper) : NSObject
++{
++    QNSView *view;
++}
+ - (instancetype)initWithView:(QNSView *)theView;
+ - (void)mouseMoved:(NSEvent *)theEvent;
+ - (void)mouseEntered:(NSEvent *)theEvent;
+@@ -116,25 +119,11 @@
+ @property (readonly) QObject* focusObject;
+ @end
+ 
+-@implementation QNSView {
+-    QPointer<QCocoaWindow> m_platformWindow;
+-    Qt::MouseButtons m_buttons;
+-    Qt::MouseButtons m_acceptedMouseDowns;
+-    Qt::MouseButtons m_frameStrutButtons;
+-    QString m_composingText;
+-    QPointer<QObject> m_composingFocusObject;
+-    bool m_sendKeyEvent;
+-    bool m_dontOverrideCtrlLMB;
+-    bool m_sendUpAsRightButton;
+-    Qt::KeyboardModifiers m_currentWheelModifiers;
+-    NSString *m_inputSource;
+-    QNSViewMouseMoveHelper *m_mouseMoveHelper;
+-    bool m_resendKeyEvent;
+-    bool m_scrolling;
+-    bool m_updatingDrag;
+-    NSEvent *m_currentlyInterpretedKeyEvent;
+-    QSet<quint32> m_acceptedKeyDowns;
+-}
++@implementation QNSView
++
++@synthesize cursor = _cursor;
++@synthesize previousSuperview = _previousSuperview;
++@synthesize previousWindow = _previousWindow;
+ 
+ - (instancetype)initWithCocoaWindow:(QCocoaWindow *)platformWindow
+ {
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_drawing.mm
+@@ -131,10 +131,12 @@
+         // Check if Metal is supported. If it isn't then it's most likely
+         // too late at this point and the QWindow will be non-functional,
+         // but we can at least print a warning. Metal itself is 10.11.
++#if !defined(__i386__) // Metal has no 32-bit slice on any macOS
+         if (@available(macOS 10.11, *)) {
+             if ([MTLCreateSystemDefaultDevice() autorelease])
+                 return [CAMetalLayer layer];
+         }
++#endif
+         {
+             qCWarning(lcQpaDrawing) << "Failed to create QWindow::MetalSurface."
+                 << "Metal is not supported by any of the GPUs in this system.";
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnsview_mouse.mm
+@@ -55,10 +55,7 @@
+     interact with the responder chain by e.g. calling super if Qt does not
+     accept the mouse event
+ */
+-@implementation QNSViewMouseMoveHelper {
+-    QNSView *view;
+-}
+-
++@implementation QNSViewMouseMoveHelper
+ - (instancetype)initWithView:(QNSView *)theView
+ {
+     if ((self = [super init]))
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnswindow.h b/qtbase/src/plugins/platforms/cocoa/qnswindow.h
+--- a/qtbase/src/plugins/platforms/cocoa/qnswindow.h
++++ b/qtbase/src/plugins/platforms/cocoa/qnswindow.h
+@@ -69,10 +69,21 @@
+ 
+ typedef NSWindow<QNSWindowProtocol> QCocoaNSWindow;
+ 
+-@interface QT_MANGLE_NAMESPACE(QNSWindow) : NSWindow<QNSWindowProtocol> @end
++// The members of the QNSWindowProtocol mix-in (qnswindow.mm) are declared
++// here: the 32-bit Objective-C runtime takes instance variables only in the
++// class interface.
++@interface QT_MANGLE_NAMESPACE(QNSWindow) : NSWindow<QNSWindowProtocol>
++{
++    QPointer<QCocoaWindow> m_platformWindow;
++}
++@end
+ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSWindow);
+ 
+-@interface QT_MANGLE_NAMESPACE(QNSPanel) : NSPanel<QNSWindowProtocol> @end
++@interface QT_MANGLE_NAMESPACE(QNSPanel) : NSPanel<QNSWindowProtocol>
++{
++    QPointer<QCocoaWindow> m_platformWindow;
++}
++@end
+ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSPanel);
+ 
+ #endif // QNSWINDOW_H
+diff --git a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qnswindow.mm
+@@ -266,11 +266,7 @@
+ #else // QNSWINDOW_PROTOCOL_IMPLMENTATION
+ 
+ // The following content is mixed in to the QNSWindow and QNSPanel classes via includes
+-
+-{
+-    // Member variables
+-    QPointer<QCocoaWindow> m_platformWindow;
+-}
++// (their member variables are declared in qnswindow.h)
+ 
+ - (instancetype)initWithContentRect:(NSRect)contentRect styleMask:(NSWindowStyleMask)style
+     backing:(NSBackingStoreType)backingStoreType defer:(BOOL)defer screen:(NSScreen *)screen

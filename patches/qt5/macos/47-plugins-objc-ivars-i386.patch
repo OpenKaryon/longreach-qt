@@ -1,0 +1,311 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: the Objective-C classes of the multimedia, positioning, gamepad and
+# speech plugins on the 32-bit runtime (the i386 port).
+#
+# The 32-bit (fragile) Objective-C runtime fixes each instance variable's
+# offset when the class is compiled, from its @interface, and so accepts
+# instance variables only there - not in the @implementation, not in a class
+# extension - and synthesizes no property by itself. Qt 5.15 was written for
+# the 64-bit runtime only.
+#
+# The AVFoundation camera and player observers, the asset writer, the display
+# link observer, the CoreLocation delegate, the gamepad manager and the speech
+# state delegate declare their variables in the @interface; the gamepad
+# manager's two observer properties get variables and @synthesize. On i386
+# the gamepad backend does not start: GameController has no 32-bit slice,
+# and the i386 build does not link it.
+#
+# Nothing else changes in behaviour, on any architecture.
+#
+# Apply: git apply, from the Qt source root
+diff --git a/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm b/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
+--- a/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
++++ b/qtgamepad/src/plugins/gamepads/darwin/qdarwingamepadbackend.mm
+@@ -40,6 +40,13 @@
+ #import <GameController/GameController.h>
+ 
+ @interface QT_MANGLE_NAMESPACE(DarwinGamepadManager) : NSObject
++{
++    QDarwinGamepadBackend *backend;
++    NSMutableArray *connectedControllers;
++    // Backing variables of the properties (no automatic synthesis on 32-bit)
++    id _connectObserver;
++    id _disconnectObserver;
++}
+ 
+ @property (nonatomic, strong) id connectObserver;
+ @property (nonatomic, strong) id disconnectObserver;
+@@ -51,11 +58,9 @@
+ QT_WARNING_PUSH
+ QT_WARNING_DISABLE_CLANG("-Wunguarded-availability")
+ @implementation QT_MANGLE_NAMESPACE(DarwinGamepadManager)
+-{
+-    QDarwinGamepadBackend *backend;
+-    NSMutableArray *connectedControllers;
+-}
+ 
++@synthesize connectObserver = _connectObserver;
++@synthesize disconnectObserver = _disconnectObserver;
+ -(instancetype)initWithBackend:(QDarwinGamepadBackend *)gamepadBackend
+ {
+     if ((self = [self init])) {
+@@ -506,8 +511,10 @@
+     , m_darwinGamepadManager(nullptr)
+     , m_isMonitoringActive(false)
+ {
++#if !defined(__i386__) // GameController has no 32-bit slice on any macOS
+     if (@available(macOS 10.9, *)) // no GameController before 10.9: no gamepads
+         m_darwinGamepadManager = [[QT_MANGLE_NAMESPACE(DarwinGamepadManager) alloc] initWithBackend:this];
++#endif
+ }
+ 
+ QDarwinGamepadBackend::~QDarwinGamepadBackend()
+diff --git a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+--- a/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
++++ b/qtlocation/src/plugins/position/corelocation/qgeopositioninfosource_cl.mm
+@@ -48,13 +48,12 @@
+ #define MINIMUM_UPDATE_INTERVAL 1000
+ 
+ @interface PositionLocationDelegate : NSObject <CLLocationManagerDelegate>
+-@end
+-
+-@implementation PositionLocationDelegate
+ {
+     QGeoPositionInfoSourceCL *m_positionInfoSource;
+ }
++@end
+ 
++@implementation PositionLocationDelegate
+ - (instancetype)initWithInfoSource:(QGeoPositionInfoSourceCL*) positionInfoSource
+ {
+     if ((self = [self init])) {
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerarenderercontrol.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerarenderercontrol.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerarenderercontrol.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerarenderercontrol.mm
+@@ -211,6 +211,10 @@
+ 
+ 
+ @interface AVFCaptureFramesDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
++{
++@private
++    AVFCameraRendererControl *m_renderer;
++}
+ 
+ - (AVFCaptureFramesDelegate *) initWithRenderer:(AVFCameraRendererControl*)renderer;
+ 
+@@ -221,11 +225,6 @@
+ @end
+ 
+ @implementation AVFCaptureFramesDelegate
+-{
+-@private
+-    AVFCameraRendererControl *m_renderer;
+-}
+-
+ - (AVFCaptureFramesDelegate *) initWithRenderer:(AVFCameraRendererControl*)renderer
+ {
+     if (!(self = [super init]))
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfcamerasession.mm
+@@ -65,6 +65,11 @@
+ QList<AVFCameraInfo> AVFCameraSession::m_cameraDevices;
+ 
+ @interface AVFCameraSessionObserver : NSObject
++{
++@private
++    AVFCameraSession *m_session;
++    AVCaptureSession *m_captureSession;
++}
+ 
+ - (AVFCameraSessionObserver *) initWithCameraSession:(AVFCameraSession*)session;
+ - (void) processRuntimeError:(NSNotification *)notification;
+@@ -74,12 +79,6 @@
+ @end
+ 
+ @implementation AVFCameraSessionObserver
+-{
+-@private
+-    AVFCameraSession *m_session;
+-    AVCaptureSession *m_captureSession;
+-}
+-
+ - (AVFCameraSessionObserver *) initWithCameraSession:(AVFCameraSession*)session
+ {
+     if (!(self = [super init]))
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.h b/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.h
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.h
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.h
+@@ -55,6 +55,40 @@
+ 
+ @interface QT_MANGLE_NAMESPACE(AVFMediaAssetWriter) : NSObject<AVCaptureVideoDataOutputSampleBufferDelegate,
+                                                                AVCaptureAudioDataOutputSampleBufferDelegate>
++{
++@private
++    AVFCameraService *m_service;
++
++    AVFScopedPointer<AVAssetWriterInput> m_cameraWriterInput;
++    AVFScopedPointer<AVCaptureDeviceInput> m_audioInput;
++    AVFScopedPointer<AVCaptureAudioDataOutput> m_audioOutput;
++    AVFScopedPointer<AVAssetWriterInput> m_audioWriterInput;
++
++    AVCaptureDevice *m_audioCaptureDevice;
++
++    // Queue to write sample buffers:
++    AVFScopedPointer<dispatch_queue_t> m_writerQueue;
++    // High priority serial queue for video output:
++    AVFScopedPointer<dispatch_queue_t> m_videoQueue;
++    // Serial queue for audio output:
++    AVFScopedPointer<dispatch_queue_t> m_audioQueue;
++
++    AVFScopedPointer<AVAssetWriter> m_assetWriter;
++
++    AVFMediaRecorderControlIOS *m_delegate;
++
++    bool m_setStartTime;
++
++    QAtomicInt m_state;
++
++    CMTime m_startTime;
++    CMTime m_lastTimeStamp;
++
++    NSDictionary *m_audioSettings;
++    NSDictionary *m_videoSettings;
++
++    AVFAtomicInt64 m_durationInMs;
++}
+ - (id)initWithDelegate:(QT_PREPEND_NAMESPACE(AVFMediaRecorderControlIOS) *)delegate;
+ 
+ - (bool)setupWithFileURL:(NSURL *)fileURL
+diff --git a/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.mm b/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.mm
+--- a/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.mm
++++ b/qtmultimedia/src/plugins/avfoundation/camera/avfmediaassetwriter.mm
+@@ -92,41 +92,6 @@
+ @end
+ 
+ @implementation QT_MANGLE_NAMESPACE(AVFMediaAssetWriter)
+-{
+-@private
+-    AVFCameraService *m_service;
+-
+-    AVFScopedPointer<AVAssetWriterInput> m_cameraWriterInput;
+-    AVFScopedPointer<AVCaptureDeviceInput> m_audioInput;
+-    AVFScopedPointer<AVCaptureAudioDataOutput> m_audioOutput;
+-    AVFScopedPointer<AVAssetWriterInput> m_audioWriterInput;
+-
+-    AVCaptureDevice *m_audioCaptureDevice;
+-
+-    // Queue to write sample buffers:
+-    AVFScopedPointer<dispatch_queue_t> m_writerQueue;
+-    // High priority serial queue for video output:
+-    AVFScopedPointer<dispatch_queue_t> m_videoQueue;
+-    // Serial queue for audio output:
+-    AVFScopedPointer<dispatch_queue_t> m_audioQueue;
+-
+-    AVFScopedPointer<AVAssetWriter> m_assetWriter;
+-
+-    AVFMediaRecorderControlIOS *m_delegate;
+-
+-    bool m_setStartTime;
+-
+-    QAtomicInt m_state;
+-
+-    CMTime m_startTime;
+-    CMTime m_lastTimeStamp;
+-
+-    NSDictionary *m_audioSettings;
+-    NSDictionary *m_videoSettings;
+-
+-    AVFAtomicInt64 m_durationInMs;
+-}
+-
+ - (id)initWithDelegate:(AVFMediaRecorderControlIOS *)delegate
+ {
+     Q_ASSERT(delegate);
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfdisplaylink.mm b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfdisplaylink.mm
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfdisplaylink.mm
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfdisplaylink.mm
+@@ -55,6 +55,10 @@
+ 
+ #if defined(Q_OS_IOS) || defined(Q_OS_TVOS)
+ @interface DisplayLinkObserver : NSObject
++{
++    AVFDisplayLink *m_avfDisplayLink;
++    CADisplayLink *m_displayLink;
++}
+ 
+ - (void)start;
+ - (void)stop;
+@@ -63,11 +67,6 @@
+ @end
+ 
+ @implementation DisplayLinkObserver
+-{
+-    AVFDisplayLink *m_avfDisplayLink;
+-    CADisplayLink *m_displayLink;
+-}
+-
+ - (id)initWithAVFDisplayLink:(AVFDisplayLink *)link
+ {
+     self = [super init];
+diff --git a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
+--- a/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
++++ b/qtmultimedia/src/plugins/avfoundation/mediaplayer/avfmediaplayersession.mm
+@@ -68,6 +68,17 @@
+ static void *AVFMediaPlayerSessionObserverCurrentItemDurationObservationContext = &AVFMediaPlayerSessionObserverCurrentItemDurationObservationContext;
+ 
+ @interface AVFMediaPlayerSessionObserver : NSObject<AVAssetResourceLoaderDelegate>
++{
++@private
++    AVFMediaPlayerSession *m_session;
++    AVPlayer *m_player;
++    AVPlayerItem *m_playerItem;
++    AVPlayerLayer *m_playerLayer;
++    NSURL *m_URL;
++    BOOL m_bufferIsLikelyToKeepUp;
++    NSData *m_data;
++    NSString *m_mimeType;
++}
+ 
+ @property (readonly, getter=player) AVPlayer* m_player;
+ @property (readonly, getter=playerItem) AVPlayerItem* m_playerItem;
+@@ -93,18 +104,6 @@
+ @end
+ 
+ @implementation AVFMediaPlayerSessionObserver
+-{
+-@private
+-    AVFMediaPlayerSession *m_session;
+-    AVPlayer *m_player;
+-    AVPlayerItem *m_playerItem;
+-    AVPlayerLayer *m_playerLayer;
+-    NSURL *m_URL;
+-    BOOL m_bufferIsLikelyToKeepUp;
+-    NSData *m_data;
+-    NSString *m_mimeType;
+-}
+-
+ @synthesize m_player, m_playerItem, m_playerLayer, m_session;
+ 
+ - (AVFMediaPlayerSessionObserver *) initWithMediaPlayerSession:(AVFMediaPlayerSession *)session
+diff --git a/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm b/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
+--- a/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
++++ b/qtspeech/src/plugins/tts/osx/qtexttospeech_osx.mm
+@@ -39,13 +39,12 @@
+ #include <qdebug.h>
+ 
+ @interface QT_MANGLE_NAMESPACE(StateDelegate) : NSObject <NSSpeechSynthesizerDelegate>
+-@end
+-
+-@implementation QT_MANGLE_NAMESPACE(StateDelegate)
+ {
+     QT_PREPEND_NAMESPACE(QTextToSpeechEngineOsx) *speechPrivate;
+ }
++@end
+ 
++@implementation QT_MANGLE_NAMESPACE(StateDelegate)
+ - (instancetype)initWithSpeechPrivate:(QTextToSpeechEngineOsx *) priv
+ {
+     if ((self = [self init])) {

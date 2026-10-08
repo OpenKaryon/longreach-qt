@@ -15,6 +15,7 @@ QT5_LINUX_AMD64_IMAGE := qt5-linux-amd64$(LICENSE_SUFFIX)
 QT5_LINUX_ARM64_IMAGE := qt5-linux-arm64$(LICENSE_SUFFIX)
 QT5_MACOS_AMD64_IMAGE := qt5-macos-amd64$(LICENSE_SUFFIX)
 QT5_MACOS_ARM64_IMAGE := qt5-macos-arm64$(LICENSE_SUFFIX)
+QT5_MACOS_I386_IMAGE := qt5-macos-i386$(LICENSE_SUFFIX)
 
 # One source archive for every image. Another version needs its SHA256 too.
 QT5_ARCHIVE := qt-everywhere-opensource-src-$(QT5_VERSION).tar.xz
@@ -51,6 +52,16 @@ QT5_LLVM_SRC_PATH := $(DOWNLOAD_DIR)/$(QT5_LLVM_SRC_ARCHIVE)
 QT5_LLVM_SRC_URL ?= https://github.com/llvm/llvm-project/releases/download/llvmorg-$(QT5_LLVM_SRC_VERSION)/$(QT5_LLVM_SRC_ARCHIVE)
 QT5_LLVM_SRC_SHA256 ?= 8b3cfd7bc695bd6cea0f37f53f0981f34f87496e79e2529874fd03a2f9dd3a8a
 
+# The i386 target links against the i386 libraries of the 10.7 SDK, which
+# Apple ships only inside Xcode 4.3 to 4.6; this is the copy osxcross users
+# take, pinned by SHA256.
+QT5_MACOS_I386_LINK_SDK ?= MacOSX10.7.sdk.tar.xz
+QT5_MACOS_I386_LINK_SDK_PATH := $(DOWNLOAD_DIR)/$(QT5_MACOS_I386_LINK_SDK)
+QT5_MACOS_I386_LINK_SDK_URL ?= https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.7.sdk.tar.xz
+QT5_MACOS_I386_LINK_SDK_SHA256 ?= e5cf1c4026fa2b538201268d1b057854eb6e47676ff31a336d19b981c6fd4d2a
+# The amd64 toolchain stage at 10.6, which the i386 image builds on.
+QT5_MACOS_TOOLCHAIN_106_IMAGE := qt5-macos-toolchain-10.6
+
 QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg OSXCROSS_REPO="$(OSXCROSS_REPO)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
 
 QT5_BUILD_ARGS = --build-arg QT_FULL_VERSION=$(QT5_VERSION) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg LICENSE_PROFILE=$(LICENSE_PROFILE)
@@ -84,6 +95,11 @@ $(QT5_LLVM_SRC_PATH):
 
 download-qt5-llvm-src: $(QT5_LLVM_SRC_PATH)
 
+$(QT5_MACOS_I386_LINK_SDK_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT5_MACOS_I386_LINK_SDK_URL)" "$@" "$(QT5_MACOS_I386_LINK_SDK_SHA256)"
+
+download-qt5-macos-i386-link-sdk: $(QT5_MACOS_I386_LINK_SDK_PATH)
+
 # Linux amd64 and i386 from Ubuntu 10.04 Lucid (glibc 2.11, libxcb 1.5): see
 # docs/targets/qt5-linux.md.
 qt5-linux-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
@@ -100,6 +116,11 @@ qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH)
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_AMD64)"
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
+
+# 32-bit Intel from 10.6: the amd64 toolchain stage, then docker/qt5/macos/i386.
+qt5-macos-i386: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH) $(QT5_MACOS_I386_LINK_SDK_PATH)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET=10.6 --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --target toolchain -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_TOOLCHAIN_106_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg BASE_IMAGE=$(QT5_MACOS_TOOLCHAIN_106_IMAGE) --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)" -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_I386_IMAGE) .
 
 qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_ARM64)"
@@ -146,3 +167,4 @@ $(eval $(call simple-build-targets,qt5-linux-amd64,qt5-linux-amd64,QT5_LINUX_AMD
 $(eval $(call simple-build-targets,qt5-linux-arm64,qt5-linux-arm64,QT5_LINUX_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_ARM64_IMAGE),QT5_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_AMD64_IMAGE),QT5_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt5-macos-arm64,qt5-macos-arm64,QT5_MACOS_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_ARM64_IMAGE),QT5_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt5-macos-i386,qt5-macos-i386,QT5_MACOS_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_I386_IMAGE),QT5_IMAGE_CONFIG))

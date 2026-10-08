@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# Symbols newer than the 10.7 SDK whose i386 stubs the target links against.
+# The 11.3 SDK headers declare them weak (newer than the 10.6 deployment
+# target), and the code calls them only where they exist; but the linker
+# needs to find each one somewhere. clang-wrapper.sh passes every name here
+# as -U (dynamic lookup): dyld binds it at load, to NULL where it is missing.
+# One symbol per line, as the linker spells it.
+___darwin_check_fd_set_overflow
+_renameatx_np
+_clonefile
+_LSCopyDefaultApplicationURLForURL
+.objc_class_name_NSUUID
+.objc_class_name_NSUserNotification
+.objc_class_name_NSUserNotificationCenter
+.objc_class_name_NSAppearance
+.objc_class_name_CAMetalLayer
+.objc_class_name_AVPlayerItemVideoOutput
+_MTLCreateSystemDefaultDevice
+_CTFontManagerCreateFontDescriptorsFromData
+_CTFontCopyDefaultCascadeListForLanguages
+_CGEventTapCreateForPid
+_LSCopyApplicationURLsForBundleIdentifier
+_NSWindowDidChangeBackingPropertiesNotification
+.objc_class_name_GCController
+_GCControllerDidConnectNotification
+_GCControllerDidDisconnectNotification
+.objc_class_name_CBPeripheralManager
+.objc_class_name_CBMutableService
+.objc_class_name_CBMutableCharacteristic
+.objc_class_name_CBMutableDescriptor

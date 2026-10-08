@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 5.15.19: Windows from XP SP3, Linux from Ubuntu 10.04, macOS from 10.7.
+# Qt 5.15.19: Windows from XP SP3, Linux from Ubuntu 10.04, macOS from 10.6.
 # Images are qt5-<os>-<arch>-<licence profile>.
 
 QT5_VERSION ?= 5.15.19
@@ -38,9 +38,18 @@ QT5_MACOS_SDK_DIR := $(basename $(basename $(QT5_MACOS_SDK)))
 QT5_MACOS_SDK_PKG_URL ?= https://swcdn.apple.com/content/downloads/52/17/002-41708-A_E8MFK7B2PK/6p55tbmh0qttgbt4cy94uuvnacy6tkw435/CLTools_macOSLMOS_SDK.pkg
 QT5_MACOS_SDK_PKG_SHA256 ?= b075d3d2f3b066607209a5bbf7cf727a40b98fe65629c5b6abc17f156897af4a
 
-# Oldest macOS the binaries load on.
-QT5_MACOS_TARGET_AMD64 ?= 10.7
+# Oldest macOS the binaries load on: Qt 4.8's 10.6 on Intel, 11.0 on Apple
+# silicon.
+QT5_MACOS_TARGET_AMD64 ?= 10.6
 QT5_MACOS_TARGET_ARM64 ?= 11.0
+
+# libc++ and libc++abi for 10.6, which has none: built from this LLVM release
+# and linked statically (scripts/build/qt5-macos/build-libcxx.sh).
+QT5_LLVM_SRC_VERSION ?= 14.0.6
+QT5_LLVM_SRC_ARCHIVE := llvm-project-$(QT5_LLVM_SRC_VERSION).src.tar.xz
+QT5_LLVM_SRC_PATH := $(DOWNLOAD_DIR)/$(QT5_LLVM_SRC_ARCHIVE)
+QT5_LLVM_SRC_URL ?= https://github.com/llvm/llvm-project/releases/download/llvmorg-$(QT5_LLVM_SRC_VERSION)/$(QT5_LLVM_SRC_ARCHIVE)
+QT5_LLVM_SRC_SHA256 ?= 8b3cfd7bc695bd6cea0f37f53f0981f34f87496e79e2529874fd03a2f9dd3a8a
 
 QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg OSXCROSS_REPO="$(OSXCROSS_REPO)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
 
@@ -70,6 +79,11 @@ qt5-win-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
 qt5-win-arm64: $(QT5_INPUTS) $(LLVM_MINGW_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) --build-arg QT_OPENGL_CONFIG="$(QT5_OPENGL_CONFIG)" --build-arg LLVM_MINGW_ARCHIVE="$(LLVM_MINGW_ARCHIVE)" --build-arg LLVM_MINGW_SHA256="$(LLVM_MINGW_SHA256)" -f docker/qt5/windows/arm64/Dockerfile -t $(QT5_WIN_ARM64_IMAGE) .
 
+$(QT5_LLVM_SRC_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT5_LLVM_SRC_URL)" "$@" "$(QT5_LLVM_SRC_SHA256)"
+
+download-qt5-llvm-src: $(QT5_LLVM_SRC_PATH)
+
 # Linux amd64 and i386 from Ubuntu 10.04 Lucid (glibc 2.11, libxcb 1.5): see
 # docs/targets/qt5-linux.md.
 qt5-linux-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
@@ -83,9 +97,9 @@ qt5-linux-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
 qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE) .
 
-qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH)
+qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_AMD64)"
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
 
 qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_ARM64)"

@@ -1,0 +1,41 @@
+{
+  "lucid": {
+    "backend": "ssh",
+    "os": "linux",
+    "target": "user@example.com",
+    "ssh_options": ["-i", "path/to/id_rsa", "-o", "HostKeyAlgorithms=+ssh-rsa"],
+    "description": "Ubuntu 10.04.4 amd64 in a virtual machine"
+  },
+  "snow-leopard": {
+    "backend": "ssh",
+    "os": "macos",
+    "target": "user@example.org",
+    "ssh_options": ["-i", "path/to/id_rsa"],
+    "dir": "/Users/Shared/qtkit-run",
+    "description": "Mac OS X 10.6.3 in a virtual machine"
+  },
+  "mint": {
+    "backend": "vmware",
+    "os": "linux",
+    "vmx": "path/to/Linux Mint.vmx",
+    "user": "user",
+    "password_env": "QTKIT_MINT_PASSWORD",
+    "description": "Linux Mint 22.3 in VMware"
+  },
+  "windows-xp": {
+    "backend": "vmware",
+    "os": "windows",
+    "vmx": "path/to/Windows XP.vmx",
+    "user": "user",
+    "password_env": "QTKIT_XP_PASSWORD",
+    "dir": "C:\\qtkit-run",
+    "description": "Windows XP SP3 in VMware"
+  },
+  "debian-vbox": {
+    "backend": "virtualbox",
+    "os": "linux",
+    "vm": "Debian 12",
+    "user": "user",
+    "password_env": "QTKIT_DEBIAN_PASSWORD"
+  }
+}

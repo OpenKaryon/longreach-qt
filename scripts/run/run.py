@@ -17,13 +17,15 @@ hosts.example.json). Built in, without any configuration:
                         arch-latest, and ubuntu-16.04-i386, debian-12-i386
                         for i386 suites (Xvfb inside; the runtime libraries
                         a desktop has are installed first)
+    local               this machine, in the current session
 
 Backends in hosts.local.json:
 
     ssh       {"backend": "ssh", "os": "linux"|"macos", "target": "user@host",
                "ssh_options": ["-i", "key", ...]}
     vmware    {"backend": "vmware", "os": "linux"|"windows", "vmx": "...",
-               "user": "...", "password_env": "VAR"}
+               "user": "...", "password_env": "VAR"}; "direct": true on
+               Windows 9x and NT 4 starts smoke-runner.exe without a shell
     virtualbox{"backend": "virtualbox", "os": "linux"|"windows", "vm": "name",
                "user": "...", "password_env": "VAR"}
 
@@ -37,9 +39,11 @@ import hashlib
 import io
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -203,8 +207,15 @@ def run_vmware(host, suite, out, runner_args):
         for path in suite_files(suite):
             if path.is_file():
                 vmrun(host, 'copyFileFromHostToGuest', vmx, str(path), f'{directory}\\{path.name}')
-        vmrun(host, 'runProgramInGuest', vmx, cmd,
-              f'/c cd /d {directory} && smoke-runner.exe {runner_args} > runner.log 2>&1')
+        if host.get('direct'):
+            # Windows 9x has COMMAND.COM (no && or cd /d), and NT 4's Tools
+            # return early from cmd /c: start the runner itself, which writes
+            # smoke-report.txt next to its executable.
+            vmrun(host, 'runProgramInGuest', vmx, f'{directory}\\smoke-runner.exe', *runner_args.split(),
+                  check=False)  # a failed application is a non-zero exit, not a vmrun error
+        else:
+            vmrun(host, 'runProgramInGuest', vmx, '-interactive', cmd,
+                  f'/c cd /d {directory} && smoke-runner.exe {runner_args} > runner.log 2>&1', check=False)
         for name in ('smoke-report.txt', 'runner.log'):
             vmrun(host, 'copyFileFromGuestToHost', vmx, f'{directory}\\{name}', str(out / name), check=False)
         return host.get('description', vmx), 'suite copied with vmrun; smoke-runner.exe run in the logged-in session'
@@ -250,7 +261,29 @@ def run_virtualbox(host, suite, out, runner_args):
     return host.get('description', host['vm']), 'suite copied with VBoxManage guestcontrol; smoke-runner on the X session'
 
 
-BACKENDS = {'docker': run_docker, 'ssh': run_ssh, 'vmware': run_vmware, 'virtualbox': run_virtualbox}
+def run_local(host, suite, out, runner_args):
+    """The suite on this machine, in a copy under the log directory."""
+    data, _ = pack(suite)
+    work = out / 'suite'
+    work.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as tar:
+        tar.extractall(work, filter='data')
+    runner = work / ('smoke-runner.exe' if os.name == 'nt' else 'smoke-runner')
+    with open(out / 'runner.log', 'w', encoding='utf-8', errors='replace') as log:
+        subprocess.run([str(runner), *runner_args.split()], cwd=work, stdout=log, stderr=subprocess.STDOUT)
+    for path in work.glob('smoke-*'):
+        if path.suffix in ('.txt', '.log'):
+            shutil.copy2(path, out / path.name)
+    if os.name == 'nt':
+        info = subprocess.run(['cmd', '/c', 'ver'], capture_output=True, text=True).stdout.strip()
+    else:
+        info = subprocess.run(['uname', '-a'], capture_output=True, text=True).stdout.strip()
+    (out / 'system.txt').write_text(info + '\n', encoding='utf-8')
+    return f'this machine ({platform.platform()})', 'suite unpacked locally and smoke-runner run in the current session'
+
+
+BACKENDS = {'docker': run_docker, 'ssh': run_ssh, 'vmware': run_vmware, 'virtualbox': run_virtualbox,
+            'local': run_local}
 
 
 def result(out, suite, sums, target, guest, method):
@@ -286,7 +319,9 @@ def main():
     parser.add_argument('--target', default='', help='what was run, for the result (default: the suite name)')
     parser.add_argument('--runner-args', default='--timeout=900')
     args = parser.parse_args()
-    if args.host.startswith('docker:'):
+    if args.host == 'local':
+        host = {'backend': 'local'}
+    elif args.host.startswith('docker:'):
         host = {'backend': 'docker', 'distro': args.host.split(':', 1)[1]}
         if host['distro'] not in DOCKER:
             parser.error('docker hosts: ' + ', '.join(sorted(DOCKER)))

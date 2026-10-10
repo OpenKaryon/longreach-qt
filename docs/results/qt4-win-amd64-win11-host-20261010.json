@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-10",
+  "target": "tests-qt4-win-amd64",
+  "status": "PASS",
+  "image": "qt4-win-amd64",
+  "commit": "acb6d689779eee5906ab788d62ecc32cb0dfd256",
+  "guest": {
+    "os": "Microsoft Windows [Version 10.0.26200.9457]",
+    "system": "Microsoft Windows [Version 10.0.26200.9457]",
+    "vm": "this machine (Windows-11-10.0.26200-SP0)",
+    "method": "suite unpacked locally and smoke-runner run in the current session"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 371,
+    "checks_failed": 0,
+    "checks_skipped": 126
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 141,
+      "failed": 0,
+      "skipped": 7
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "painting-lab",
+      "passed": 17,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery.exe": "db880be3f504c6eade2f07b0ca80d0bcce986815f6b49027764d623e250613e8",
+    "graphics-gallery.exe": "faaf79d766c36ef073485740aedb9d6ee19935059fa13306732d0848ed0fe5b0",
+    "multimedia-lab.exe": "2e076fb8704cb7da582ed92fe247bf18923f33b18692686547740ff2ae7bc2ba",
+    "network-gui.exe": "b7f3fc76041758a1e37f4ef774255fcf060b9405a353f0fcd27f1ba7bfc88767",
+    "painting-lab.exe": "16031d46abe9a5361a9f0030b4aab96ee9bafc347d8230ebc39f5cc25a1175f9",
+    "qt-selftest.exe": "e0655385396b90ddc1d4c7452751709f653e6bb5fe9c7e30f28860ef994d4424",
+    "quick-qml-gallery.exe": "d9944fcd399a69301bba3f0c995a4dc72587d5ebb74acbd01ec7f4ba2ff3793b",
+    "smoke-runner.exe": "84a2fd5381e9a14da7b716a74151ae049e15fd9b3acad4a3500c1482e1ac36f7",
+    "widgets-gallery.exe": "5728addb1784042d22331eadacec7d7c42316f645b06ce67fd0b67cd4caf2c49"
+  }
+}

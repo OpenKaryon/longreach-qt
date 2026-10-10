@@ -21,7 +21,11 @@ exists($$[QT_INSTALL_LIBS]/libQtXmlPatterns.a) {
     DEFINES += SMOKE_HAVE_XMLPATTERNS
 }
 contains(WIN95_CROSS, 1) {
-    DEFINES += SMOKE_STATIC_QSQLITE
-    LIBS += -L$$[QT_INSTALL_PLUGINS]/sqldrivers -lqsqlite
+    # -qt-sql-sqlite builds the driver into QtSql; only a plugin build of it
+    # needs importing.
+    exists($$[QT_INSTALL_PLUGINS]/sqldrivers/libqsqlite.a) {
+        DEFINES += SMOKE_STATIC_QSQLITE
+        LIBS += -L$$[QT_INSTALL_PLUGINS]/sqldrivers -lqsqlite
+    }
     QMAKE_LFLAGS += -static -Wl,-subsystem,console
 }

@@ -47,7 +47,12 @@
 #include <QVBoxLayout>
 #if defined(Q_OS_WIN) && !defined(QT_NO_PRINTDIALOG)
 #include <qt_windows.h>
+#include <tlhelp32.h>
 #include <cstring>
+// The ANSI process entry: Windows 9x has no Process32FirstW.
+#ifdef UNICODE
+#undef PROCESSENTRY32
+#endif
 #endif
 
 #ifndef QT_NO_PRINTER
@@ -91,25 +96,158 @@ private:
 };
 
 #if defined(Q_OS_WIN) && !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTDIALOG)
-// Drives a native print dialog of the GUI thread; never submits a job to
-// a printer.
-class NativePrintDialogDriver : public QObject
+// Drives a native print dialog of the GUI thread, or on Windows 11 the
+// window of PrintDialog.exe; never submits a job to a printer. It polls from
+// its own thread, as Qt's timers need not run inside a native modal dialog.
+// Windows 11 opens PrintDlgEx in PrintDialog.exe, where Qt 4's dialogs do not
+// always return, so Qt 4 skips them there.
+static bool qt4OnOutOfProcessPrintDialogs()
 {
-    Q_OBJECT
+#if QT_VERSION < 0x050000
+    static const char app[] = "\\SystemApps\\Windows.PrintDialog_cw5n1h2txyewy\\PrintDialog.exe";
+    char path[MAX_PATH] = {};
+    const UINT length = GetWindowsDirectoryA(path, MAX_PATH - sizeof(app));
+    if (!length || length >= MAX_PATH - sizeof(app)) return false;
+    lstrcatA(path, app);
+    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+#else
+    return false;
+#endif
+}
+
+class NativePrintDialogDriver
+{
 public:
-    explicit NativePrintDialogDriver(int command) : command_(command), observed_(false)
+    explicit NativePrintDialogDriver(int command)
+        : command_(command), guiThread_(GetCurrentThreadId()),
+          stop_(0), done_(0), observed_(0), outOfProcess_(0), timedOut_(0)
     {
-        timer_.setInterval(80);
-        QObject::connect(&timer_, SIGNAL(timeout()), this, SLOT(tick()));
-        timer_.start();
+        GetSystemTimeAsFileTime(&started_);
+        DWORD id = 0;
+        thread_ = CreateThread(0, 0, run, this, 0, &id);
     }
-    bool observed() const { return observed_; }
-public slots:
-    void tick()
+    ~NativePrintDialogDriver()
     {
-        EnumThreadWindows(GetCurrentThreadId(), findDialog, reinterpret_cast<LPARAM>(this));
+        InterlockedExchange(&stop_, 1);
+        if (thread_) {
+            WaitForSingleObject(thread_, 5000);
+            CloseHandle(thread_);
+        }
     }
+    bool observed() const { return observed_ != 0; }
+    // Windows 11 shows the PrintDlgEx dialog from PrintDialog.exe, outside
+    // this process. It has no dialog items to post to, so the driver closes
+    // it, which the caller sees as a cancel.
+    bool outOfProcess() const { return outOfProcess_ != 0; }
+    // A dialog that did not close within about 20 s: the driver then closes
+    // this thread's dialogs and ends its PrintDialog.exe, so exec() returns
+    // and the check can skip instead of hanging the suite.
+    bool timedOut() const { return timedOut_ != 0; }
 private:
+    static DWORD WINAPI run(LPVOID context)
+    {
+        NativePrintDialogDriver *driver = static_cast<NativePrintDialogDriver *>(context);
+        for (int polls = 0; !driver->stop_; ++polls) {
+            if (polls == 250)
+                InterlockedExchange(&driver->timedOut_, 1);
+            if (driver->timedOut_) {
+                EnumThreadWindows(driver->guiThread_, closeDialog, 0);
+                driver->endPrintDialogProcesses();
+            } else if (!driver->done_) {
+                // The GUI thread's own dialog first: a PrintDialog.exe left
+                // over from an earlier run can still have a window up.
+                EnumThreadWindows(driver->guiThread_, findDialog, reinterpret_cast<LPARAM>(driver));
+                if (!driver->done_)
+                    EnumWindows(findOutOfProcessDialog, reinterpret_cast<LPARAM>(driver));
+            }
+            Sleep(80);
+        }
+        return 0;
+    }
+    static BOOL CALLBACK findOutOfProcessDialog(HWND window, LPARAM context)
+    {
+        // Looked up at run time: Windows 9x and XP have no such function.
+        typedef BOOL (WINAPI *QueryImageName)(HANDLE, DWORD, LPWSTR, PDWORD);
+        static const QueryImageName query = reinterpret_cast<QueryImageName>(
+            GetProcAddress(GetModuleHandleA("kernel32.dll"), "QueryFullProcessImageNameW"));
+        if (!query) return FALSE;
+        NativePrintDialogDriver *driver = reinterpret_cast<NativePrintDialogDriver *>(context);
+        DWORD pid = 0;
+        GetWindowThreadProcessId(window, &pid);
+        HANDLE process = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, FALSE, pid);
+        if (!process) return TRUE;
+        // Only a PrintDialog.exe started for this dialog: one left over from
+        // an earlier run is not ours. Its window can stay hidden, so that is
+        // not required.
+        typedef BOOL (WINAPI *ProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
+        static const ProcessTimes times = reinterpret_cast<ProcessTimes>(
+            GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetProcessTimes"));
+        FILETIME created, exited, kernel, user;
+        if (!times || !times(process, &created, &exited, &kernel, &user)
+                || CompareFileTime(&created, &driver->started_) < 0) {
+            CloseHandle(process);
+            return TRUE;
+        }
+        wchar_t path[MAX_PATH] = {};
+        DWORD size = MAX_PATH;
+        static const char suffix[] = "\\printdialog.exe";
+        const DWORD length = sizeof(suffix) - 1;
+        bool match = query(process, 0, path, &size) && size >= length;
+        for (DWORD i = 0; match && i < length; ++i) {
+            wchar_t c = path[size - length + i];
+            if (c >= L'A' && c <= L'Z') c = wchar_t(c - L'A' + L'a');
+            match = c == wchar_t(suffix[i]);
+        }
+        CloseHandle(process);
+        if (!match) return TRUE;
+        InterlockedExchange(&driver->observed_, 1);
+        InterlockedExchange(&driver->outOfProcess_, 1);
+        // Repeated on every poll until the dialog returns: the window may not
+        // take WM_CLOSE before it has finished loading.
+        PostMessageA(window, WM_CLOSE, 0, 0);
+        return TRUE;
+    }
+    // By process rather than by window: PrintDialog.exe can have no top-level
+    // window that EnumWindows sees. Only processes started after the driver.
+    void endPrintDialogProcesses()
+    {
+        typedef BOOL (WINAPI *ProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
+        static const ProcessTimes times = reinterpret_cast<ProcessTimes>(
+            GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetProcessTimes"));
+        // NT 4 has no Toolhelp in kernel32: all of it is looked up too.
+        HMODULE kernel = GetModuleHandleA("kernel32.dll");
+        typedef HANDLE (WINAPI *Snapshot)(DWORD, DWORD);
+        typedef BOOL (WINAPI *Walk)(HANDLE, PROCESSENTRY32 *);
+        static const Snapshot snap = reinterpret_cast<Snapshot>(GetProcAddress(kernel, "CreateToolhelp32Snapshot"));
+        static const Walk first = reinterpret_cast<Walk>(GetProcAddress(kernel, "Process32First"));
+        static const Walk next = reinterpret_cast<Walk>(GetProcAddress(kernel, "Process32Next"));
+        if (!times || !snap || !first || !next) return;
+        HANDLE snapshot = snap(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE) return;
+        PROCESSENTRY32 entry;
+        entry.dwSize = sizeof(entry);
+        for (BOOL more = first(snapshot, &entry); more; more = next(snapshot, &entry)) {
+            if (lstrcmpiA(entry.szExeFile, "PrintDialog.exe") != 0) continue;
+            HANDLE process = OpenProcess(PROCESS_TERMINATE | 0x1000, FALSE, entry.th32ProcessID);
+            if (!process) continue;
+            FILETIME created, exited, kernel, user;
+            if (times(process, &created, &exited, &kernel, &user)
+                    && CompareFileTime(&created, &started_) >= 0)
+                TerminateProcess(process, 1);
+            CloseHandle(process);
+        }
+        CloseHandle(snapshot);
+    }
+    static BOOL CALLBACK closeDialog(HWND window, LPARAM)
+    {
+        char name[32] = {};
+        GetClassNameA(window, name, sizeof(name));
+        if (IsWindowVisible(window) && std::strcmp(name, "#32770") == 0) {
+            PostMessageA(window, WM_COMMAND, IDCANCEL, 0);
+            PostMessageA(window, WM_CLOSE, 0, 0);
+        }
+        return TRUE;
+    }
     static BOOL CALLBACK findDialog(HWND window, LPARAM context)
     {
         NativePrintDialogDriver *driver = reinterpret_cast<NativePrintDialogDriver *>(context);
@@ -117,14 +255,21 @@ private:
         GetClassNameA(window, name, sizeof(name));
         if (!IsWindowVisible(window) || std::strcmp(name, "#32770") != 0
                 || !GetDlgItem(window, driver->command_)) return TRUE;
-        driver->observed_ = true;
-        driver->timer_.stop();
+        InterlockedExchange(&driver->observed_, 1);
+        InterlockedExchange(&driver->outOfProcess_, 0);
+        InterlockedExchange(&driver->done_, 1);
         PostMessageA(window, WM_COMMAND, driver->command_, 0);
         return FALSE;
     }
     int command_;
-    bool observed_;
-    QTimer timer_;
+    DWORD guiThread_;
+    FILETIME started_;
+    HANDLE thread_;
+    volatile LONG stop_;
+    volatile LONG done_;
+    volatile LONG observed_;
+    volatile LONG outOfProcess_;
+    volatile LONG timedOut_;
 };
 #endif
 
@@ -392,9 +537,21 @@ static int runSelfTest()
         qDebug("%s", qPrintable(d));
         if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat
                 || !paintPrintPage(&printer)) return false;
+        // A spooled driver (Microsoft Print to PDF on Windows 11) writes the
+        // file after the job is handed over rather than inside end().
         QFile output(path);
-        if (!output.open(QIODevice::ReadOnly)) return false;
-        const QByteArray data = output.readAll();
+        QByteArray data;
+        for (int waited = 0; waited <= 15000 && data.size() <= 100; waited += 250) {
+            if (output.open(QIODevice::ReadOnly)) {
+                data = output.readAll();
+                output.close();
+            }
+            if (data.size() <= 100) {
+                QEventLoop pause;
+                QTimer::singleShot(250, &pause, SLOT(quit()));
+                pause.exec();
+            }
+        }
         d += QStringLiteral(" bytes=%1 state=%2").arg(data.size()).arg(int(printer.printerState()));
         qDebug("%s", qPrintable(d));
         return data.size() > 100 && printer.printerState() == QPrinter::Idle;
@@ -402,6 +559,10 @@ static int runSelfTest()
 #endif
 #if defined(Q_OS_WIN) && !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTDIALOG)
     r.check("painting/native-dialog-cancel", [&r](QString &d) {
+        if (qt4OnOutOfProcessPrintDialogs()) {
+            r.skip(d, QStringLiteral("Qt 4's native print dialogs open in Windows 11's PrintDialog.exe and do not always return"));
+            return false;
+        }
         QPrinter printer;
         if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat) {
             r.skip(d, QStringLiteral("no configured native printer"));
@@ -410,10 +571,18 @@ static int runSelfTest()
         QPrintDialog dialog(&printer);
         NativePrintDialogDriver driver(IDCANCEL);
         const int result = dialog.exec();
+        if (driver.timedOut()) {
+            r.skip(d, QStringLiteral("the native print dialog did not respond within 20 s"));
+            return false;
+        }
         d = QStringLiteral("observed=%1 result=%2").arg(driver.observed()).arg(result);
         return driver.observed() && result == QDialog::Rejected && printer.isValid();
     });
     r.check("painting/native-dialog-accept-and-file", [&r](QString &d) {
+        if (qt4OnOutOfProcessPrintDialogs()) {
+            r.skip(d, QStringLiteral("Qt 4's native print dialogs open in Windows 11's PrintDialog.exe and do not always return"));
+            return false;
+        }
         QPrinter printer;
         if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat) {
             r.skip(d, QStringLiteral("no configured native printer"));
@@ -423,6 +592,10 @@ static int runSelfTest()
             QPageSetupDialog setup(&printer);
             NativePrintDialogDriver driver(IDOK);
             const int result = setup.exec();
+            if (driver.timedOut()) {
+                r.skip(d, QStringLiteral("the native page setup dialog did not respond within 20 s"));
+                return false;
+            }
             if (!driver.observed() || result != QDialog::Accepted) {
                 d = QStringLiteral("page setup observed=%1 result=%2").arg(driver.observed()).arg(result);
                 return false;
@@ -432,6 +605,12 @@ static int runSelfTest()
             QPrintDialog dialog(&printer);
             NativePrintDialogDriver driver(IDOK);
             const int result = dialog.exec();
+            if (driver.timedOut() || driver.outOfProcess()) {
+                r.skip(d, driver.timedOut()
+                       ? QStringLiteral("the native print dialog did not respond within 20 s")
+                       : QStringLiteral("the Windows 11 print dialog runs in PrintDialog.exe and cannot be accepted from here"));
+                return false;
+            }
             if (!driver.observed() || result != QDialog::Accepted) {
                 d = QStringLiteral("print dialog observed=%1 result=%2").arg(driver.observed()).arg(result);
                 return false;

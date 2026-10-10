@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-10",
+  "target": "tests-qt5-macos-amd64-gpl-enabled",
+  "status": "PASS",
+  "image": "qt5-macos-amd64-gpl-enabled",
+  "commit": "70cd6dc62a099c1325aaba79159f3764725e8a4b",
+  "guest": {
+    "os": "ProductName:\tMac OS X",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.6.3\nBuildVersion:\t10D2235\nDarwin qts-Mac-mini.local 10.3.3 Darwin Kernel Version 10.3.3: Wed Apr  7 20:47:33 PDT 2010; root:xnu-1504.6.1~3/RELEASE_X86_64 x86_64",
+    "vm": "Mac OS X 10.6.3 in a virtual machine",
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 494,
+    "checks_failed": 0,
+    "checks_skipped": 87
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 266,
+      "failed": 0,
+      "skipped": 64
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 13
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "3684f2b649aa59e98d95bbcb3ab432a00ad3209832aad3b932e346ad27fc20ca",
+    "graphics-gallery": "f66dfcf671b63c00fd6055a2f0758b7be5f8b632914a0dd6034e935e134473ad",
+    "multimedia-lab": "e50388324662767d4d218964da5141644f04715d5bfcc577fed30990434634f1",
+    "network-gui": "90a657e85dbf52b5ea3aaec36354aefcc1d5bbd73e3d0c7a819700eb94c1ab25",
+    "painting-lab": "2b864e59978cdde0b3badf0f8a569af9cc4c74d9a50c3f7bdbbc3d026761c468",
+    "qt-selftest": "76d1e4fcf816cc64fc379960ca9759424fe7162456dfebfabb878f7d1aba9164",
+    "quick-qml-gallery": "9af5c3b5c53a16f1a2fd3e42892111d2f5998e56d3df37012917ee2271eecaaf",
+    "smoke-runner": "c0bd5c1347bc5bf3e30e13929abae7b5f2028a48e6413f360ee37f3a6f7e3e28",
+    "widgets-gallery": "0bb63e25fda547c1536735e0871fbb154c3b08a5b5c348ca875eb1876e237c77"
+  }
+}

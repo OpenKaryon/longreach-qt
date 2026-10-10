@@ -219,7 +219,10 @@ int runQuick3DExtensionProbe()
     QElapsedTimer timer;
     timer.start();
     QImage frame;
-    while (timer.elapsed() < 5000 && extensionRender.load() == 0) {
+    // Until a grab returns a frame as well: on a fast GPU the extension can
+    // render inside the first grabWindow(), before the window is exposed and
+    // while that grab still comes back null.
+    while (timer.elapsed() < 5000 && (extensionRender.load() == 0 || frame.isNull())) {
         frame = view.grabWindow();
         QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
         QThread::msleep(10);
@@ -227,6 +230,13 @@ int runQuick3DExtensionProbe()
     const bool ok = !frame.isNull() && extensionPrepareData.load() > 0
         && extensionPrepareRender.load() > 0 && extensionRender.load() > 0
         && extensionHelpersReached.load() > 0;
+    if (!ok) {
+        std::fprintf(stderr, "frame=%s prepareData=%d prepareRender=%d render=%d helpers=%d\n",
+                     frame.isNull() ? "null" : "ok", int(extensionPrepareData.load()),
+                     int(extensionPrepareRender.load()), int(extensionRender.load()),
+                     int(extensionHelpersReached.load()));
+        std::fflush(stderr);
+    }
     extensionModel.clear();
     return ok ? 0 : 4;
 #else

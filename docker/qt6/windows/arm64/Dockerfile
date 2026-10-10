@@ -10,6 +10,8 @@ ARG QT_SRC_DOWNLOAD_URL=""
 ARG LLVM_MINGW_VERSION=20241217
 ARG LLVM_MINGW_ARCHIVE=""
 ARG PARALLEL_JOBS=""
+# The host Qt image by its tag, which carries the licence profile.
+ARG QT6_HOST_IMAGE=qt6-host
 
 # ---------------------------------------------------------------------------
 # qt-src: the Qt source archive
@@ -49,6 +51,8 @@ RUN --mount=type=bind,source=.,target=/context \
 # builder: Qt for Windows ARM64 with LLVM-MinGW
 # ---------------------------------------------------------------------------
 
+FROM ${QT6_HOST_IMAGE} AS host-qt
+
 FROM debian:12 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -72,7 +76,7 @@ RUN apt-get update && apt-get install -y \
     unzip dos2unix file wget xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=qt6-host /opt/qt6-host /opt/qt6-host
+COPY --from=host-qt /opt/qt6-host /opt/qt6-host
 
 ENV LLVM_MINGW_ROOT=/opt/llvm-mingw
 WORKDIR /tmp

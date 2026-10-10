@@ -74,10 +74,15 @@ if __name__ == '__main__':
     parser.add_argument('root', type=Path)
     parser.add_argument('report', type=Path)
     parser.add_argument('--arch', choices=['i386', 'ppc'], default='i386')
+    parser.add_argument('--expected', type=Path, default=Path('/work/suite/expected-apps.txt'),
+                        help='tests/expected-apps.txt: the applications the suite must have')
     args = parser.parse_args()
     rows = [inspect(path, args.arch) for path in sorted(args.root.glob('*.app/Contents/MacOS/*')) if path.is_file()]
-    if len(rows) != 25:
-        raise SystemExit(f'Expected 24 applications and runner, found {len(rows)}')
+    expected = sorted(line.strip() for line in args.expected.read_text().splitlines()
+                      if line.strip() and not line.startswith('#'))
+    built = sorted(row['binary'] for row in rows)
+    if built != expected:
+        raise SystemExit(f'built {built}, expected {expected} (tests/expected-apps.txt)')
     args.report.write_text(json.dumps({'target': 'Mac OS X 10.4 Tiger ' + args.arch,
                                           'runtime_tested': False, 'binaries': rows}, indent=2) + '\n')
     print(f'Mach-O audit passed: {len(rows)} Tiger {args.arch} executables; runtime testing pending')

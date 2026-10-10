@@ -83,6 +83,12 @@ RUN \
     -multimedia -audio-backend -accessibility -stl -exceptions -largefile && \
     grep -q "openssl-linked" mkspecs/qconfig.pri || \
         { echo "configure did not enable linked OpenSSL - check OPENSSL_LIBS" >&2; exit 1; } && \
+    # configure sizes pointers with a test it builds before CROSS_COMPILE applies,
+    # so the test fails and reads as 4; a 32-bit QT_POINTER_SIZE in a 64-bit Qt
+    # makes libtiff assert (tmsize_t).
+    sed -i 's/^#define QT_POINTER_SIZE 4$/#define QT_POINTER_SIZE 8/' src/corelib/global/qconfig.h && \
+    grep -q '^#define QT_POINTER_SIZE 8$' src/corelib/global/qconfig.h || \
+        { echo "QT_POINTER_SIZE is not 8 in qconfig.h" >&2; exit 1; } && \
     make -j "${PARALLEL_JOBS:-$(nproc)}" && \
     make install && \
     echo "SDK prefix to be shipped:" && du -sh /usr/local/Qt-4.8 && \

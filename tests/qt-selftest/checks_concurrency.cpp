@@ -164,8 +164,10 @@ void checkConcurrency(SmokeReporter &r)
 
         QProcess p;
         p.start(QCoreApplication::applicationFilePath(), {"--selftest-child", markerPath});
-        if (!p.waitForStarted(3000)) { r.skip(d,"process not startable"); return false; }
-        p.waitForFinished(3000);
+        if (!p.waitForStarted(10000)) { r.skip(d,"process not startable"); return false; }
+        // A static build of this binary can take seconds to start on a busy
+        // host; wait as long as the Qt 4 branch does.
+        p.waitForFinished(10000);
         QFile markerFile(markerPath);
         const QString output = markerFile.open(QIODevice::ReadOnly)
             ? QString::fromLocal8Bit(markerFile.readAll()) : QString();
@@ -177,6 +179,8 @@ void checkConcurrency(SmokeReporter &r)
                     .arg(p.errorString())
                     .arg(output.trimmed())
                     .arg(QString::fromLocal8Bit(p.readAllStandardError()).trimmed());
+            p.kill();
+            p.waitForFinished(1000);
         }
         return ok;
     });

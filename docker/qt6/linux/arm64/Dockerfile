@@ -8,6 +8,8 @@ ARG QT_VERSION=6.10.1
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG QT_SRC_DOWNLOAD_URL=""
 ARG PARALLEL_JOBS=""
+# The host Qt image by its tag, which carries the licence profile.
+ARG QT6_HOST_IMAGE=qt6-host
 
 # ---------------------------------------------------------------------------
 # qt-src: the Qt source archive
@@ -46,6 +48,8 @@ RUN --mount=type=bind,source=.,target=/context \
 # ---------------------------------------------------------------------------
 # builder: Qt for Linux arm64 against a Debian multiarch sysroot
 # ---------------------------------------------------------------------------
+
+FROM ${QT6_HOST_IMAGE} AS host-qt
 
 FROM debian:12 AS builder
 
@@ -119,7 +123,7 @@ RUN mkdir -p ${SYSROOT}/usr/lib ${SYSROOT}/lib && \
     ln -s /usr/include ${SYSROOT}/usr/include && \
     ln -s /usr/share ${SYSROOT}/usr/share
 
-COPY --from=qt6-host /opt/qt6-host /opt/qt6-host
+COPY --from=host-qt /opt/qt6-host /opt/qt6-host
 
 ENV QT_SRC_DIR=/workspace/qt-src
 ENV QT_BUILD_DIR=/workspace/qt-build

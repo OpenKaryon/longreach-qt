@@ -14,8 +14,9 @@ hosts.example.json). Built in, without any configuration:
 
     docker:<distro>     a stock container: centos-7, ubuntu-16.04,
                         ubuntu-18.04, ubuntu-24.04, debian-13, fedora-latest,
-                        arch-latest (Xvfb inside; the runtime libraries a
-                        desktop has are installed first)
+                        arch-latest, and ubuntu-16.04-i386, debian-12-i386
+                        for i386 suites (Xvfb inside; the runtime libraries
+                        a desktop has are installed first)
 
 Backends in hosts.local.json:
 
@@ -43,6 +44,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 HOSTS = Path(__file__).with_name('hosts.local.json')
@@ -57,6 +59,9 @@ DOCKER = {
     'debian-13': ('debian:trixie', 'debian'),
     'fedora-latest': ('fedora:latest', 'fedora'),
     'arch-latest': ('archlinux:latest', 'arch'),
+    # 32-bit userlands for the i386 suites (run with --platform linux/386).
+    'ubuntu-16.04-i386': ('i386/ubuntu:16.04', 'debian', 'linux/386'),
+    'debian-12-i386': ('i386/debian:12', 'debian', 'linux/386'),
 }
 # The libraries a desktop has: Xlib for Qt 4, xcb for Qt 5/6. Installing both
 # costs little and keeps the backend independent of the suite.
@@ -65,7 +70,7 @@ PACKAGES = {
                'libx11-xcb1 libxcb1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 '
                'libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 '
                'libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 fonts-dejavu-core xvfb xauth ca-certificates'),
-    'rhel': ('mesa-libGL libX11 libXext libXrender libSM libICE fontconfig freetype libX11-xcb libxcb '
+    'rhel': ('mesa-libGL mesa-dri-drivers libX11 libXext libXrender libSM libICE fontconfig freetype libX11-xcb libxcb '
              'xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm libxkbcommon libxkbcommon-x11 '
              'dejavu-sans-fonts xorg-x11-server-Xvfb'),
     'fedora': ('mesa-libGL libglvnd-opengl libX11 libXext libXrender libSM libICE fontconfig freetype '
@@ -128,6 +133,7 @@ def pack(suite):
         data = ''.join(sums).encode()
         info = tarfile.TarInfo('SHA256SUMS')
         info.size = len(data)
+        info.mtime = int(time.time())
         tar.addfile(info, io.BytesIO(data))
     return buffer.getvalue(), ''.join(sums)
 
@@ -142,7 +148,7 @@ def password(host):
 
 
 def run_docker(host, suite, out, runner_args):
-    image, family = DOCKER[host['distro']]
+    image, family, *platform = DOCKER[host['distro']]
     data, _ = pack(suite)
     (out / 'suite.tar.gz').write_bytes(data)
     script = (INSTALL[family].format(p=PACKAGES[family]) + ' || { echo INSTALL FAILED; exit 3; }\n'
@@ -154,7 +160,9 @@ def run_docker(host, suite, out, runner_args):
               'Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp > /out/xvfb.log 2>&1 &\nsleep 2\n'
               f'DISPLAY=:99 ./smoke-runner {runner_args} > /out/runner.log 2>&1; echo "exit=$?" >> /out/runner.log\n'
               'cp smoke-*.log smoke-report.txt /out/ 2>/dev/null || true\n')
-    result = subprocess.run(['docker', 'run', '--rm', '-v', f'{out.resolve()}:/out', image, 'bash', '-c', script],
+    platform_args = ['--platform', platform[0]] if platform else []
+    result = subprocess.run(['docker', 'run', '--rm', *platform_args, '-v', f'{out.resolve()}:/out', image,
+                             'bash', '-c', script],
                             capture_output=True, text=True)
     (out / 'docker.log').write_text(result.stdout + result.stderr, encoding='utf-8')
     return f'container {image}', 'suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb'

@@ -74,8 +74,11 @@ else
     cd "cmake-${version}"
 
     # CMake vendors its own curl, libarchive, expat and zlib; OpenSSL is off (no
-    # https use here).
-    ./bootstrap --parallel="$jobs" --prefix="$prefix" -- -DCMAKE_USE_OPENSSL=OFF
+    # https use here). CMake's tests and Qt dialog are off too, so a Qt already on
+    # PATH is not picked up by its Tests/.
+    ./bootstrap --parallel="$jobs" --prefix="$prefix" -- -DCMAKE_USE_OPENSSL=OFF \
+        -DBUILD_TESTING=OFF -DBUILD_QtDialog=OFF \
+        -DCMAKE_DISABLE_FIND_PACKAGE_Qt5Core=ON -DCMAKE_DISABLE_FIND_PACKAGE_Qt5Widgets=ON
     make -j"$jobs"
     make install
     cd /tmp

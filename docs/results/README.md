@@ -20,6 +20,10 @@ inside them may name directories that have since moved.
 | `qt4-tiger-i386-suite-20261003.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU) |
 | `qt4-jaguar-suite-20261005.json` | Qt 4 macOS PowerPC | Mac OS X 10.2 and 10.2.8 (QEMU) |
 | `qt4-tiger-ppc-suite-20261005.json` | Qt 4 macOS PowerPC | Mac OS X 10.4.10 (QEMU, G4) |
+| `qt4-linux-amd64-centos-5-qemu-20261011.json` | Qt 4 Linux amd64 | CentOS 5.11 x86_64 (QEMU) |
+| `qt4-linux-amd64-debian-4-qemu-20261011.json` | Qt 4 Linux amd64 | Debian 4.0 etch amd64 (QEMU) |
+| `qt4-linux-amd64-debian-13-docker-20261011.json` | Qt 4 Linux amd64 | Debian 13 (container) |
+| `qt4-linux-i386-{ubuntu-16.04-i386,debian-12-i386}-docker-20261011.json` | Qt 4 Linux i386 | Ubuntu 16.04 i386, Debian 12 i386 (containers) |
 | `linux-forward-20261010.json` | Qt 4 and Qt 5 Linux amd64 and i386 | CentOS 7, current distributions, 32-bit Ubuntu 16.04 and Debian 12 (containers) |
 | `qt5-win-i386-xp-sp3-vmware-20261010.json` | Qt 5 Windows i386 | Windows XP SP3 (VMware) |
 | `qt5-win-amd64-win11-host-20261010.json` | Qt 5 Windows amd64 | Windows 11 |

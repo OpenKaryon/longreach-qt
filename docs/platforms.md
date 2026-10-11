@@ -32,8 +32,10 @@ run.
 | | | Windows 11 (the build host) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-host-20261010.json)); the two native print dialog checks skip there |
 | `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261011.json)); not yet on XP x64 |
 | `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge (QEMU, Xfce desktop) | 24/24, 520 passed, 0 failed ([json](results/qt4-sarge-public-sdk-qemu-20261002.json), [desktop](results/qt4-sarge-desktop-20261002.json)) |
-| | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([json](results/linux-forward-20261010.json)) |
-| `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | CentOS 7, Ubuntu 24.04, Debian 13 (containers) | 8/8, 365-366 passed, 0 failed ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
+| | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([Ubuntu](results/qt4-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [Debian](results/qt4-linux-i386-debian-12-i386-docker-20261011.json)) |
+| `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
+| | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
+| | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |
 | `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU) | 24/24, 524 passed, 0 failed ([json](results/qt4-tiger-i386-suite-20261003.json)) |
 | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU) | 24/24 ([json](results/qt4-jaguar-suite-20261005.json)) |
 | | | Tiger 10.4.10 (QEMU, G4) | 24/24, 523 passed, 0 failed ([json](results/qt4-tiger-ppc-suite-20261005.json)) |

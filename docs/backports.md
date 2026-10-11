@@ -47,8 +47,10 @@ series are checked against pristine Qt 4.8.7, 5.15.19 and 6.8.4.
   changes and, for the restored code, which Qt commit it comes from
   ([`5ae330b6`](https://github.com/qt/qt/commit/5ae330b6546dabada53c394b53ce9513f552a8a5),
   [`55137901`](https://github.com/qt/qt/commit/55137901012db28857fe7638e63c78743e277c56)).
-- `linux/` (2): size flags and a static C++ runtime in the mkspec; Linux
-  without futex syscalls (Sarge's 2.4/2.6 kernels).
+- `linux/` (3): size flags and a static C++ runtime in the mkspec; Linux
+  without futex syscalls (Sarge's 2.4/2.6 kernels); no repeated
+  `glXMakeCurrent` of the current context, which loses a large window's
+  frame on Debian 4.0's X server.
 - `macos/` (17): Carbon cross-build from Linux, Tiger API substitutions
   (LaunchServices, print paper, font and file dialogs), the PowerPC timebase,
   and the Jaguar layer: a 10.2 floor, run-time checks for every 10.3/10.4 API

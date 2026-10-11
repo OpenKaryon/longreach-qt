@@ -39,8 +39,11 @@ the target has them.
 The i386 build passed 24/24 (520 checks) with Sarge's own libraries and
 kernel 2.6.8 in QEMU, on a Sarge Xfce desktop, and on Ubuntu 16.04 to 24.04,
 Debian 13 and Fedora 44 in containers ([platforms](../platforms.md#qt-487)).
-The Sarge amd64 build is new in 0.1.0; the earlier amd64 build (Ubuntu 16.04
-based) passed 24/24 on 16.04 through current distributions.
+The amd64 build passed 8/8 (362 checks) on CentOS 5.11 x86_64, glibc 2.5, and
+on Debian 4.0 etch amd64, glibc 2.3.6, both in QEMU, and 8/8 on Debian 13 in a
+container. On etch it needed `patches/qt4/linux/03`: that X server loses a
+large GL window's frame when the current context is bound to it again, as
+`grabFrameBuffer()` did.
 
 ## Limits
 

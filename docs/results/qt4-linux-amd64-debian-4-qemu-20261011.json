@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-11",
+  "target": "qt4-linux-amd64",
+  "status": "PASS",
+  "image": "qt4-linux-amd64",
+  "guest": {
+    "os": "4.0",
+    "system": "4.0\nldd (GNU libc) 2.3.6\nx86_64",
+    "vm": "QEMU, debian/eol:etch userland under a current kernel",
+    "method": "suite unpacked in the guest and checked by SHA256; smoke-runner under Xvfb"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 362,
+    "checks_failed": 0,
+    "checks_skipped": 133
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 11,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "COPYING.RUNTIME": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+    "COPYING3": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "LGPL_EXCEPTION.txt": "41351b1164df4960dff35af9304e4f7e1f6d4d65b24641e4e3c6310ac0fae37e",
+    "LICENSE.LGPLv21": "a3db6c7f3027aa27489c25a2fa259185cdee945780c32e01c60cbfabf4743b6c",
+    "LICENSE.LGPLv3": "75d800e60c8d58c2e7f0338e8552ea6123a9ce7e5dd8e1cdf2095e013b737488",
+    "OPENSSL-LICENSE.txt": "c8f60f4842bbad0353f5d81620e72b168b5638ca3a0a999f5da113b22491612e",
+    "gl-heavy-gallery": "1d65949cf8bbd54244a1fbbe18a4f8a7d120ee7c50de00ce67f641adb821875c",
+    "graphics-gallery": "017f3fc65d13245b25353ca4fc93a8595a71b5f97651b0d97deb610065755808",
+    "multimedia-lab": "c59766c18068085ba111313ac4fa916e70586f44e23cff462da77397b4b5f781",
+    "network-gui": "8170525f6268c478e1ebeb9b836a32f33ea35ffb6352bd48b28346e9f241a83f",
+    "painting-lab": "b81873a25132a76959eddc182e35ab33a89968fa69da415a1b2d96d795a5b520",
+    "qt-selftest": "a7362aeab1c1c055c31f55c6a4f283cd3c0e402a46725e485b1a9f8429944e19",
+    "quick-qml-gallery": "119c4f92ec6d9a886afd7a47ece182351460b5d2fb515617b24e40a0864bbea9",
+    "smoke-runner": "e03eb13d8b6dbce970b339639642c39ad854ad2671d4ef7b1f9443fc6444d62a",
+    "widgets-gallery": "e3c2aa81dd1d496a187aab677c7343a7082f4f212f8eb008410c8532478046e4"
+  }
+}

@@ -4,8 +4,7 @@
   "target": "Qt 6.8.4 macOS x86_64, 10.13 backport (pre-10.14 patches 01-10, with the QML JIT fix), native run on macOS 10.13",
   "status": "PASS",
   "build": {
-    "image": "qt6-macos-amd64-10.13-jit-gpl-enabled",
-    "suite": "artifacts/qt6-macos-amd64-10.13-jit"
+    "image": "qt6-macos-amd64-10.13-jit-gpl-enabled"
   },
   "runtime": {
     "machine": "virtual machine (VMware)",
@@ -61,6 +60,5 @@
       "failed": 0,
       "skipped": 0
     }
-  ],
-  "logs": "build/vm-runs/hs-qt6-1013-rel2/ (not committed)"
+  ]
 }

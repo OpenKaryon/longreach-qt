@@ -8,8 +8,9 @@ forward check (`linux-forward-*`) lists one such run per container.
 
 Only the latest run of a target on a system is kept. The Qt 4 records dated
 before 2026-10-10 predate the change of the suite from 24 applications to
-eight; they count the same checks split over more executables, and paths
-inside them may name directories that have since moved.
+eight; they count the same checks split over more executables. Files they
+name are local evidence of the run: only the file name is kept, next to its
+checksum.
 
 | File | Target | System |
 |------|--------|--------|

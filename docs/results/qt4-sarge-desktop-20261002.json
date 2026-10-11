@@ -81,31 +81,31 @@
   "ready_disk_sha256": "e453ff8e326f454a11605d3adaad89626f4450d1377124e7188afc02ffbc5c1a",
   "evidence": {
     "vmware-widgets-full.png": {
-      "path": "artifacts/vm-debian-sarge-i386/vmware-widgets-full.png",
+      "path": "vmware-widgets-full.png",
       "sha256": "7c382f0a77637f861043c47764795f4487fbddfce1ff2369d12bb2509dc19824"
     },
     "vmware-qml-full.png": {
-      "path": "artifacts/vm-debian-sarge-i386/vmware-qml-full.png",
+      "path": "vmware-qml-full.png",
       "sha256": "cc3ffc79f4ca001ef3ec6b3f9b6aee4f8aa71b495eb06b8cba44a6235c9f7e7c"
     },
     "vmware-final-check.txt": {
-      "path": "artifacts/vm-debian-sarge-i386/vmware-final-check.txt",
+      "path": "vmware-final-check.txt",
       "sha256": "7fa95c25a07617baa5cfb735da62a3f49e3be9482efaac3535679a47b9a7d303"
     },
     "vmware-XFree86.log": {
-      "path": "artifacts/vm-debian-sarge-i386/vmware-XFree86.log",
+      "path": "vmware-XFree86.log",
       "sha256": "a2a2aa066b93e3e87622467a448c9549609816b8bb9b951b8aa13cba9d37b4d1"
     },
     "guest-setup.log": {
-      "path": "artifacts/vm-debian-sarge-i386/guest-setup.log",
+      "path": "guest-setup.log",
       "sha256": "c3148d0a2ea93eb80b975a5845cc94f1216fda2cda3748a32d073d697c974c4c"
     },
     "guest-inittab.txt": {
-      "path": "artifacts/vm-debian-sarge-i386/guest-inittab.txt",
+      "path": "guest-inittab.txt",
       "sha256": "1319b16b34473c7f662a23c4b12eaa7796d13882db49a2fd78d95444ae14427b"
     },
     "vmware-examples-sha256.json": {
-      "path": "artifacts/vm-debian-sarge-i386/vmware-examples-sha256.json",
+      "path": "vmware-examples-sha256.json",
       "sha256": "dac38f49d50e9d91d78665a9b06f1a0c33664a9e7dd28ca026fab0a346e2bad8"
     }
   },

@@ -4,18 +4,12 @@
   "arch": "ppc",
   "guest": {
     "os": "Mac OS X 10.4.10 (8R3032)",
-    "cpu": "emulated G4 (ppc7400)",
-    "disk": "build/vm-tiger-ppc-repaired"
+    "cpu": "emulated G4 (ppc7400)"
   },
   "qt": "4.8.7 static Carbon",
   "status": "PASS",
   "purpose": "Rebuild of the Tiger PowerPC set with patches/qt4/macos/all/11-ppc-timebase-overflow.patch and patches/qt4/all/05-ssl-tls12-tls13-cipher-selection.patch, rerun on the same guest.",
   "build": {
-    "commands": [
-      "python scripts/build/tiger-ppc-toolchain-probe.py --qt",
-      "python scripts/build/tiger-ppc-toolchain-probe.py --examples --jobs 12"
-    ],
-    "archive": "artifacts/tests-qt4-macos-ppc/qt4-tiger-ppc-examples.tar.gz",
     "archive_sha256": "6ff2353e8f613aa9ebcf4649c9dbe3c92f7bf72f50a4589fee08bd36a0f03949",
     "archive_md5_in_guest": "27463107851fe6a49ba4440668054a24"
   },
@@ -195,7 +189,6 @@
       "skipped": 0
     }
   ],
-  "evidence": "artifacts/runtime-tiger-suite/ppc-20261005",
   "evidence_sha256": {
     "ppc-report-gl-heavy-gallery-extended.txt": "d53edba75eb3587e898861ed61bd3a809559555ab6defbe907965faaa3aefc24",
     "ppc-report-gl-heavy-gallery.txt": "b5d4a02b374706a086f91c4cc2d32afe33b84c72886afdde059666905c76acb4",

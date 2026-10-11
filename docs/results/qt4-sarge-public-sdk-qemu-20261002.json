@@ -163,7 +163,6 @@
     "checks_skipped": 133
   },
   "evidence": {
-    "directory": "build/qt4-sarge-public/vm-2cad995e58a042efb6447ca21aebf733",
     "serial_sha256": "f2c97161f0a072411773512ebe5d5e9ea81ca599a429d6faebc7cca0b66c30db",
     "initramfs_sha256": "41c6fd9e88baf75731550100e43b09f5f4fe3c0fa4ef8af4a0196914191815ef",
     "kernel_image_sha256": "aa20fcd781423f38364fb842721af767f7ca8df2b69f1a8b26ddb7f76d626b9c",
@@ -1235,7 +1234,6 @@
     "TLS uses an explicit fixture CA; system trust store and Internet HTTPS are not covered.",
     "WebKit and Phonon are excluded; OpenGL/audio checks obey available device capabilities."
   ],
-  "artifact": "artifacts/tests-qt4-linux-i386/",
   "sdk_image": "qt4-linux-i386",
   "sdk_image_id": "sha256:ea15816e397d3728c2b1c4ff4bb597e2039a8bfc34517c8968a2e506f97fc30e",
   "examples_input_sha256": "06fb25e846d9b69ce0c6702caca065eaf164e493a5fbf9ede786cbadbc2a04ac"

@@ -22,8 +22,7 @@
     "winsock": 2,
     "runner_args": [
       "--timeout=900"
-    ],
-    "guest_dir": "C:/QT/TLS106"
+    ]
   },
   "summary": {
     "apps_passed": 24,
@@ -320,12 +319,10 @@
     }
   ],
   "earlier_tls_control": {
-    "evidence": "build/vm-tcg-tls2-20261002/",
     "apps_passed": 24,
     "checks_passed": 528,
     "checks_failed": 0,
-    "checks_skipped": 130,
-    "exact_package": "artifacts/qt4-win95-openssl102u-i386/"
+    "checks_skipped": 130
   },
   "build_commands": [
     "make build-qt4-win-i386",

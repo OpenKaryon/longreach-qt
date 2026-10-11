@@ -4,7 +4,6 @@
   "target": "Qt 4.8.7 (Carbon, all modules) with OpenSSL 1.0.2u on Mac OS X 10.2 Jaguar / PowerPC: shared application suite (milestone 4)",
   "status": "PASS",
   "build": {
-    "recipe": "scripts/build/qt4-macos-jaguar/Dockerfile.qt (image qt4-jaguar-qt-probe), rebuilt from scratch; build-openssl.sh, build-qt.sh, then build-suite.sh",
     "openssl": "OpenSSL 1.0.2u, static, no-asm, no-dso (build-openssl.sh); its command line tool passes check-imports.py (openssl-jaguar-imports.txt)",
     "configure": "the module set of the Tiger build with -openssl-linked: QtCore, QtGui, QtNetwork, QtSql (static SQLite plugin), QtXml, QtXmlPatterns, QtSvg, QtScript, QtScriptTools, QtDeclarative, QtOpenGL, QtMultimedia, Qt3Support, QtTest, QtUiTools; -no-iconv",
     "patches": [
@@ -20,7 +19,6 @@
     {
       "os": "Mac OS X 10.2 (6C115)",
       "cpu": "emulated G4 (ppc7400)",
-      "evidence": "artifacts/runtime-jaguar/suite-20261005/6C115",
       "apps_passed": 24,
       "apps_total": 24,
       "checks_passed": 521,
@@ -286,7 +284,6 @@
     {
       "os": "Mac OS X 10.2.8 (6R73)",
       "cpu": "emulated G4 (ppc7400)",
-      "evidence": "artifacts/runtime-jaguar/suite-20261005/6R73",
       "apps_passed": 24,
       "apps_total": 24,
       "checks_passed": 521,
@@ -552,7 +549,6 @@
     {
       "os": "Mac OS X 10.4.10 (8R3032)",
       "cpu": "emulated G4 (ppc7400)",
-      "evidence": "artifacts/runtime-jaguar/suite-20261005/8R3032",
       "apps_passed": 24,
       "apps_total": 24,
       "checks_passed": 523,
@@ -818,7 +814,6 @@
     {
       "os": "Mac OS X 10.2.8 (6R73)",
       "cpu": "emulated G3 (ppc750)",
-      "evidence": "artifacts/runtime-jaguar/suite-20261005/6R73-g3",
       "apps_passed": 24,
       "apps_total": 24,
       "checks_passed": 521,

@@ -19,23 +19,23 @@
   "all_25_host_archive_binary_sha256_match_macho_audit": true,
   "all_25_native_binary_md5_match_host_audit": true,
   "host_archive": {
-    "path": "artifacts/tests-qt4-macos-i386-final/qt4-tiger-i386-examples.tar.gz",
+    "path": "qt4-tiger-i386-examples.tar.gz",
     "sha256": "5b0d901617cf2485aba3c020889494ce1db13e30399fb790dd7f536f54491bd6"
   },
   "host_macho_audit": {
-    "path": "artifacts/tests-qt4-macos-i386-final/macho-audit.json",
+    "path": "macho-audit.json",
     "sha256": "a5185b62d74d10cc2f1a4792313ecb49166f0e27cd8d3c84ac8be94091bbcda5"
   },
   "shared_project_list": {
-    "path": "scripts/build/qt4-suite-projects.txt",
+    "path": "qt4-suite-projects.txt",
     "sha256": "dad3adf0ca7178b46eab17e9b781209ca0c29c8f0ac8b01688ae624e1612be91"
   },
   "identity_log": {
-    "path": "artifacts/runtime-tiger-suite/i386-final/i386-suite-identity.log",
+    "path": "i386-suite-identity.log",
     "sha256": "0e02326a66f46826dddbd05abe53651718a1ef369feedb11ee8d128d10e907d9"
   },
   "status_log": {
-    "path": "artifacts/runtime-tiger-suite/i386-final/i386-suite-status.tsv",
+    "path": "i386-suite-status.tsv",
     "sha256": "2a931cffedc16583b51532722db8c507b1a042a45923f6f21e1d6f1e849905fa"
   },
   "runner_binary": {
@@ -63,15 +63,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-qt-selftest-extended.log",
+          "path": "i386-smoke-qt-selftest-extended.log",
           "sha256": "06e80a1af941e523991400f95013e238e66a2bf5cfbb0e89be4b1b9862260c44"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-qt-selftest-extended.txt",
+          "path": "i386-report-qt-selftest-extended.txt",
           "sha256": "c99a56b2c5f9970fc15e18b935507b68aeaf14af8c181103362551d66e8e302e"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-qt-selftest-extended.log",
+          "path": "i386-runner-qt-selftest-extended.log",
           "sha256": "210887446f76fdc61eeda925c12886bd9e87039a44c5b8ef97507a5939010d4a"
         }
       ],
@@ -94,15 +94,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-widgets-gallery-extended.log",
+          "path": "i386-smoke-widgets-gallery-extended.log",
           "sha256": "abb2344b67a81974619f4dc60a62b9dd4e662eeb8df9372b2f225f6dfdb157db"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-widgets-gallery-extended.txt",
+          "path": "i386-report-widgets-gallery-extended.txt",
           "sha256": "4c3ee1e332390162b86bf079461be0593ef8e535066f26ace765e60228ce3f3a"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-widgets-gallery-extended.log",
+          "path": "i386-runner-widgets-gallery-extended.log",
           "sha256": "a76cdf0756dd91b65764968d8fe6cf306e72d83b2d2e7316a48ae54b870f5be2"
         }
       ],
@@ -125,15 +125,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-graphics-gallery-extended.log",
+          "path": "i386-smoke-graphics-gallery-extended.log",
           "sha256": "240ab1a2e38bacc8eb137537f03a77539babf116666392fbde9a0817d9953ccb"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-graphics-gallery-extended.txt",
+          "path": "i386-report-graphics-gallery-extended.txt",
           "sha256": "e31682209df3061f15efe468fea14072447b85bdf63797c8ab23571d9aeb8d78"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-graphics-gallery-extended.log",
+          "path": "i386-runner-graphics-gallery-extended.log",
           "sha256": "d03c9484beda9eec04564656a23e84f5909592c92f99be7a73c61569bb8b1e7d"
         }
       ],
@@ -156,15 +156,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-painting-lab-extended.log",
+          "path": "i386-smoke-painting-lab-extended.log",
           "sha256": "19843f991970cac23677a74d25a504ec9f1458e1164da102b6a07ab2a27b5b08"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-painting-lab-extended.txt",
+          "path": "i386-report-painting-lab-extended.txt",
           "sha256": "2ba0c42a528ef6af32c10c87ddbd9e4682cfa3b00ba6b5b5743aabf0bab6cd6f"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-painting-lab-extended.log",
+          "path": "i386-runner-painting-lab-extended.log",
           "sha256": "16438b8cf78d46ced869efdaa698549b74751f677c997ee3ff8fa537c22bef49"
         }
       ],
@@ -187,15 +187,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-multimedia-lab-extended.log",
+          "path": "i386-smoke-multimedia-lab-extended.log",
           "sha256": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-multimedia-lab-extended.txt",
+          "path": "i386-report-multimedia-lab-extended.txt",
           "sha256": "c49e55c6d8ce3697fb3b2a257a30e51e18677d7752374007c6d43b259eca05a5"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-multimedia-lab-extended.log",
+          "path": "i386-runner-multimedia-lab-extended.log",
           "sha256": "e314016f642c9ea4b82fd61ae7f0f11fdeb10233fd1ee0026e99cf70ebd4665a"
         }
       ],
@@ -218,15 +218,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-gl-heavy-gallery-extended.log",
+          "path": "i386-smoke-gl-heavy-gallery-extended.log",
           "sha256": "af0c8653de110842b800d77f43a9060749511e09bb87f5650135a0284b930bba"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-gl-heavy-gallery-extended.txt",
+          "path": "i386-report-gl-heavy-gallery-extended.txt",
           "sha256": "02cee07f6add607ae2afc23ddbba17fe403c771b208bc0bf6a382bf8d9c76dba"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-gl-heavy-gallery-extended.log",
+          "path": "i386-runner-gl-heavy-gallery-extended.log",
           "sha256": "6146abe11e16770e347997bc87dbeb1a5bc01c97c8f5355b6433c2c9fa9581cc"
         }
       ],
@@ -249,15 +249,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-quick-qml-gallery-extended.log",
+          "path": "i386-smoke-quick-qml-gallery-extended.log",
           "sha256": "a00f1cbac18e90aefd96fa198fdff45ba9a05a09015ced69eff816b1759a597d"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-quick-qml-gallery-extended.txt",
+          "path": "i386-report-quick-qml-gallery-extended.txt",
           "sha256": "98521fe1d5ad4afd6f2edd10a7fc2b3fd97666a904fa210b64576337b039ed38"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-quick-qml-gallery-extended.log",
+          "path": "i386-runner-quick-qml-gallery-extended.log",
           "sha256": "bacb5a0ecbe54376825fa1dfa8785191ac59d63866d48a9a6efeb73bdf0dfe35"
         }
       ],
@@ -280,15 +280,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-svg-gallery.log",
+          "path": "i386-smoke-svg-gallery.log",
           "sha256": "b588e969142f315af5d931b50e08acba2bb57d2d21c9b7ccb20d03f4ee5b69ab"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-svg-gallery.txt",
+          "path": "i386-report-svg-gallery.txt",
           "sha256": "ed6bfb6c98e0e88b703afacfe397850e90928235144c7e7241239a25d5bcc7d3"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-svg-gallery.log",
+          "path": "i386-runner-svg-gallery.log",
           "sha256": "6a2379a45fc4f39dac107bcb77e2869a0262e73136953fd813e3da5abbbe0751"
         }
       ],
@@ -311,15 +311,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-xml-gallery.log",
+          "path": "i386-smoke-xml-gallery.log",
           "sha256": "bb788b778d54709bd2257eff4bdf212fb2fc138707eadd909a62d3811cedd184"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-xml-gallery.txt",
+          "path": "i386-report-xml-gallery.txt",
           "sha256": "1496104236d520363ffce6a15489189210bccbdb3e2690899f68adedf4614ff2"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-xml-gallery.log",
+          "path": "i386-runner-xml-gallery.log",
           "sha256": "dc86dac953dec4204d4f0496fd7bd1db9f54c8beb017a67fd0b5e8a286362a30"
         }
       ],
@@ -342,15 +342,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-xmlpatterns-gallery.log",
+          "path": "i386-smoke-xmlpatterns-gallery.log",
           "sha256": "fbc3d51aea62e89804ddfa52889897b12a6ab3168b90c1d50dfd71b03ccb8b76"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-xmlpatterns-gallery.txt",
+          "path": "i386-report-xmlpatterns-gallery.txt",
           "sha256": "bfeefe5307c35dc54559f1bb2484d0727d449b93cbd720eb53217fba4de11b61"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-xmlpatterns-gallery.log",
+          "path": "i386-runner-xmlpatterns-gallery.log",
           "sha256": "0f5be36cf03e6a9a0cbcf5ab49ca1221b2f07103888cda7ff5c284317a9dc54c"
         }
       ],
@@ -373,15 +373,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-sql-gallery.log",
+          "path": "i386-smoke-sql-gallery.log",
           "sha256": "42d1a669f401f979cfe362888167b1684e5a73eaf15c2347c1ca85440787deb4"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-sql-gallery.txt",
+          "path": "i386-report-sql-gallery.txt",
           "sha256": "92e8f360b5067ba4cf566f93c8c6f9eeecaa7deda7306f4d72f04adb14b6790f"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-sql-gallery.log",
+          "path": "i386-runner-sql-gallery.log",
           "sha256": "e8c68f2c35419b3b954ee717320414eb42c1e0bb7967d91015510f97b7ce7f27"
         }
       ],
@@ -404,15 +404,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-testlib-gallery.log",
+          "path": "i386-smoke-testlib-gallery.log",
           "sha256": "607d00eda03c9007d02416fe8f7a7afd673a5a46e776d7fb4d065332a2e6ed49"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-testlib-gallery.txt",
+          "path": "i386-report-testlib-gallery.txt",
           "sha256": "e8f3f92d8532c2f256683f08566a70ea2fdfaddae40aba070e615cd5217b709a"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-testlib-gallery.log",
+          "path": "i386-runner-testlib-gallery.log",
           "sha256": "4c728e079b71b7e7ba8c1dd1faaa1100040c5b8c2d63cbf9423053b190947f00"
         }
       ],
@@ -435,15 +435,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-script-gallery.log",
+          "path": "i386-smoke-script-gallery.log",
           "sha256": "8a1a1b717eef4938190dd6f6b109fb81015686d1c8d1840a7a38e1d459c3434e"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-script-gallery.txt",
+          "path": "i386-report-script-gallery.txt",
           "sha256": "744ba1759bfda8b42221bed66d97789bf29049373f70b9f2155372c6c7c587a8"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-script-gallery.log",
+          "path": "i386-runner-script-gallery.log",
           "sha256": "aa752c1564cb151bb05a112238a7a72341579eb27432f9362eb9dee6fb4a2b5c"
         }
       ],
@@ -466,15 +466,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-scripttools-gallery.log",
+          "path": "i386-smoke-scripttools-gallery.log",
           "sha256": "69668abdcfd539f3dac7385c621adc14e3f9535cdacbf3f5e1160fd3ac2291d2"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-scripttools-gallery.txt",
+          "path": "i386-report-scripttools-gallery.txt",
           "sha256": "e273f5705b76c1170bc759ca5ab8c3aadf49926415eb99fa7387235a33332a70"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-scripttools-gallery.log",
+          "path": "i386-runner-scripttools-gallery.log",
           "sha256": "d8df685ff1a14078721f71620bd701049be25c467a07132766c3a15c6999fcd6"
         }
       ],
@@ -497,15 +497,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-qt3support-gallery.log",
+          "path": "i386-smoke-qt3support-gallery.log",
           "sha256": "ab9ee760203e2f796560d8456294a0b63f8547430d05416ab353a8aab2d96530"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-qt3support-gallery.txt",
+          "path": "i386-report-qt3support-gallery.txt",
           "sha256": "35c521f219b19c2cd08e7163b3f1b30fa407dac2a10968d4dcf8ee6562f1fdf0"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-qt3support-gallery.log",
+          "path": "i386-runner-qt3support-gallery.log",
           "sha256": "59ca3ca740f12655840271e90e9a9d2f5c7bf5c60612f53be936023b30cdbbbc"
         }
       ],
@@ -528,15 +528,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-uitools-gallery.log",
+          "path": "i386-smoke-uitools-gallery.log",
           "sha256": "54f6d5973f14efd80d477678417f74b69f33f2a9cca09931f95d4188eeb3166b"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-uitools-gallery.txt",
+          "path": "i386-report-uitools-gallery.txt",
           "sha256": "60d0f30f6b40aa7680976a7c25e9dd2b1b8d5cace70dc419652741003b2eb17b"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-uitools-gallery.log",
+          "path": "i386-runner-uitools-gallery.log",
           "sha256": "d19ab0280e2a24a172db1585ced7aa180f69b387bb032c3f3ddb5988945938b8"
         }
       ],
@@ -559,15 +559,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-network-gui.log",
+          "path": "i386-smoke-network-gui.log",
           "sha256": "c296f930f30616c74f6a6b5676a7a23c07253d431b0711fe801af75d59981161"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-network-gui.txt",
+          "path": "i386-report-network-gui.txt",
           "sha256": "b23c274e96859acad6acef40023deea3d2f7a8b46eea6243fd4870726900a72e"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-network-gui.log",
+          "path": "i386-runner-network-gui.log",
           "sha256": "f7a7dde3853ffcd28a8f5ef6c1a9fb0d89b3b46de80a81fd5e0eb6c6e80c039d"
         }
       ],
@@ -590,15 +590,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-qt-selftest.log",
+          "path": "i386-smoke-qt-selftest.log",
           "sha256": "5b3a0320441a3204637dcc95a5cc7a65ab40c6b81fe0b5072469856a8b718f24"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-qt-selftest.txt",
+          "path": "i386-report-qt-selftest.txt",
           "sha256": "5a71c7a5eb7c828c3d8a0de725770e1bf1cd5160562539a6c8c115dd06430c85"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-qt-selftest.log",
+          "path": "i386-runner-qt-selftest.log",
           "sha256": "44743b8af09603f738eb6776ab637a6e94243d020d376080155377543c95f9d0"
         }
       ],
@@ -621,15 +621,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-widgets-gallery.log",
+          "path": "i386-smoke-widgets-gallery.log",
           "sha256": "aec32e485858ecd424159cad4cdc570d13cf92e06b4812bf1cc0f988f5afa5ba"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-widgets-gallery.txt",
+          "path": "i386-report-widgets-gallery.txt",
           "sha256": "74450d8dbf6ee721ce7bf3c587243272162c356478cec2b7d22d8b18ed882839"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-widgets-gallery.log",
+          "path": "i386-runner-widgets-gallery.log",
           "sha256": "48510af5956c01afca6212b13dec54a27a774a391bbdc4a2f1ff8b7b2d42e4b7"
         }
       ],
@@ -652,15 +652,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-graphics-gallery.log",
+          "path": "i386-smoke-graphics-gallery.log",
           "sha256": "49b5d5b4e48b8ebe86a6ff153228d9101e2b7998dca8cec5080174e7a4582d0f"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-graphics-gallery.txt",
+          "path": "i386-report-graphics-gallery.txt",
           "sha256": "3b1645358845b4845ddc7ba5a5baa1f9fb6dc624688d10cd5bd8f4980f51227a"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-graphics-gallery.log",
+          "path": "i386-runner-graphics-gallery.log",
           "sha256": "c5b388bdb7bd2a347e249265ddd12a588e7b3893c1210d9540835d23fb37da36"
         }
       ],
@@ -683,15 +683,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-painting-lab.log",
+          "path": "i386-smoke-painting-lab.log",
           "sha256": "541457a50781ad558d441b4ee52c432a66838620e598b79d38e37b3f02087ca0"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-painting-lab.txt",
+          "path": "i386-report-painting-lab.txt",
           "sha256": "8daaf7b82234b17c3605eff77cfb6e4d034dd3efd8e0278abed860f1ce4692be"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-painting-lab.log",
+          "path": "i386-runner-painting-lab.log",
           "sha256": "2ccede91f6b48ebeae6d7d8c1acee4c5475239435a0cb24165b3815965863ada"
         }
       ],
@@ -714,15 +714,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-multimedia-lab.log",
+          "path": "i386-smoke-multimedia-lab.log",
           "sha256": "27de63c5eb25c54b2be41ec69a86683f731c5917c3c30f5059d6ddf2d78c851a"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-multimedia-lab.txt",
+          "path": "i386-report-multimedia-lab.txt",
           "sha256": "2ad1bb1219f8e45d69bdf6ab7836db9552945d1da67235167b63fc3bb747eb5b"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-multimedia-lab.log",
+          "path": "i386-runner-multimedia-lab.log",
           "sha256": "c3561bf668fbcffbc49186fa3a5013cef4983ecfc948d6062587900a8d29aa7a"
         }
       ],
@@ -745,15 +745,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-gl-heavy-gallery.log",
+          "path": "i386-smoke-gl-heavy-gallery.log",
           "sha256": "7751da75c4ea009b981d83dfc3ce8f8ff4979bde8a4d8487955293d119ac1b76"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-gl-heavy-gallery.txt",
+          "path": "i386-report-gl-heavy-gallery.txt",
           "sha256": "bdb071f10a819a4cb5b127e192182d2869685f10ef94ecdcc68dcbb4c9bf85ce"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-gl-heavy-gallery.log",
+          "path": "i386-runner-gl-heavy-gallery.log",
           "sha256": "0b4780dc8fc3dc404babf57d3f66afd39fc19fe9c698eba1b1720846c42e1888"
         }
       ],
@@ -776,15 +776,15 @@
       "native_binary_md5_match": true,
       "evidence": [
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-smoke-quick-qml-gallery.log",
+          "path": "i386-smoke-quick-qml-gallery.log",
           "sha256": "eecc86b4c606912f5aa15bcf8739232f2c989cb44a29a570fd9e8e123a3cdeea"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-report-quick-qml-gallery.txt",
+          "path": "i386-report-quick-qml-gallery.txt",
           "sha256": "3659daeda7d059f3307fa39982450eb1655473efe612ddcb219594b2542a9e22"
         },
         {
-          "path": "artifacts/runtime-tiger-suite/i386-final/i386-runner-quick-qml-gallery.log",
+          "path": "i386-runner-quick-qml-gallery.log",
           "sha256": "df532b59558e5fb393edb72a0782da7e619bb166a9cffde650e0f9f842c382bd"
         }
       ],
@@ -792,7 +792,7 @@
     }
   ],
   "capture_manifest": {
-    "path": "artifacts/runtime-tiger-suite/i386-final/i386-capture-manifest.tsv",
+    "path": "i386-capture-manifest.tsv",
     "sha256": "341d5e0b82531e00cb2ece24e3898744781cec95956d1bf218d348c518111acf"
   },
   "screenshots_verified_for_this_snapshot": 21,
@@ -803,7 +803,7 @@
       "native_md5_match": true,
       "width": 720,
       "height": 384,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-gl-heavy-gallery-extended.app_Contents_MacOS_gl-gallery-frame.png",
+      "path": "i386-gl-heavy-gallery-extended.app_Contents_MacOS_gl-gallery-frame.png",
       "sha256": "a02fdc1c1cd13cb2089e87b445866c141b1378c4c408541690db92535c6620d0"
     },
     {
@@ -812,7 +812,7 @@
       "native_md5_match": true,
       "width": 1140,
       "height": 340,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-graphics-gallery-extended.app_Contents_MacOS_graphics-gallery-pages.png",
+      "path": "i386-graphics-gallery-extended.app_Contents_MacOS_graphics-gallery-pages.png",
       "sha256": "a76a5798e2ba8d941fa4501d7f4c58f3a95a16bc47cb37ffa33594702d7b1ee9"
     },
     {
@@ -821,7 +821,7 @@
       "native_md5_match": true,
       "width": 260,
       "height": 200,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-graphics-gallery-extended.app_Contents_MacOS_graphics-shaped-window.png",
+      "path": "i386-graphics-gallery-extended.app_Contents_MacOS_graphics-shaped-window.png",
       "sha256": "86a14e71bdcac7b5463218016a23641beba16d6ae1499ba0ce87ae2d5916ba4f"
     },
     {
@@ -830,7 +830,7 @@
       "native_md5_match": true,
       "width": 544,
       "height": 273,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-graphics-gallery.app_Contents_MacOS_graphics-animation.png",
+      "path": "i386-graphics-gallery.app_Contents_MacOS_graphics-animation.png",
       "sha256": "51d0e4a40be69c0fcf279216b509cb9ed6c29f5394f944f4aac9cfef44ea19d5"
     },
     {
@@ -839,7 +839,7 @@
       "native_md5_match": true,
       "width": 544,
       "height": 273,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-graphics-gallery.app_Contents_MacOS_graphics-effects.png",
+      "path": "i386-graphics-gallery.app_Contents_MacOS_graphics-effects.png",
       "sha256": "6c57bb79532b85b6503174e6caeef1789f235b8fb2fa2c3bfcd31ee82a07343d"
     },
     {
@@ -848,7 +848,7 @@
       "native_md5_match": true,
       "width": 544,
       "height": 273,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-graphics-gallery.app_Contents_MacOS_graphics-painter.png",
+      "path": "i386-graphics-gallery.app_Contents_MacOS_graphics-painter.png",
       "sha256": "6961164ca603130edf8aef43e421498185b2c179efb678be043405356bdd388c"
     },
     {
@@ -857,7 +857,7 @@
       "native_md5_match": true,
       "width": 1140,
       "height": 270,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-multimedia-lab-extended.app_Contents_MacOS_multimedia-lab-pages.png",
+      "path": "i386-multimedia-lab-extended.app_Contents_MacOS_multimedia-lab-pages.png",
       "sha256": "e81adfd66bd64b10ce4b9b5607828c7db354f8f6cffd32e5e4392f26c4ec2af2"
     },
     {
@@ -866,7 +866,7 @@
       "native_md5_match": true,
       "width": 760,
       "height": 540,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab-extended.app_Contents_MacOS_painting-lab-pages.png",
+      "path": "i386-painting-lab-extended.app_Contents_MacOS_painting-lab-pages.png",
       "sha256": "9b108df42a87ee4db682c6f46e6ac1e47f60dd9e813c58cea5869f32a10c64e2"
     },
     {
@@ -875,7 +875,7 @@
       "native_md5_match": true,
       "width": 760,
       "height": 500,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab-extended.app_Contents_MacOS_painting-preview-dialog.png",
+      "path": "i386-painting-lab-extended.app_Contents_MacOS_painting-preview-dialog.png",
       "sha256": "532a6a916f7227aee648e78dc48580a64372117ae263e751e794e4edf524fe18"
     },
     {
@@ -884,7 +884,7 @@
       "native_md5_match": true,
       "width": 760,
       "height": 500,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab-extended.app_Contents_MacOS_painting-preview.png",
+      "path": "i386-painting-lab-extended.app_Contents_MacOS_painting-preview.png",
       "sha256": "60a89edeb4fb241e7357932dea3a8e10e07cca9af707327cfa88265fd0d1426d"
     },
     {
@@ -893,7 +893,7 @@
       "native_md5_match": true,
       "width": 180,
       "height": 120,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab.app_Contents_MacOS_painting-images.png",
+      "path": "i386-painting-lab.app_Contents_MacOS_painting-images.png",
       "sha256": "b930fe6082c8a2ee0cca2e3a3e324fcb3ca7a7bc4091cedc3e2c54cd35e5f30c"
     },
     {
@@ -902,7 +902,7 @@
       "native_md5_match": true,
       "width": 574,
       "height": 367,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab.app_Contents_MacOS_painting-painter.png",
+      "path": "i386-painting-lab.app_Contents_MacOS_painting-painter.png",
       "sha256": "a6a093a0e2eedcab5214bb36b00b7466af85ffaf722a20a651cab79b12de7b07"
     },
     {
@@ -911,7 +911,7 @@
       "native_md5_match": true,
       "width": 500,
       "height": 240,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-painting-lab.app_Contents_MacOS_painting-text.png",
+      "path": "i386-painting-lab.app_Contents_MacOS_painting-text.png",
       "sha256": "350dafbba27d3e311227c596730bf677798770a4a2bfe8b3a81b96d00cb0f630"
     },
     {
@@ -920,7 +920,7 @@
       "native_md5_match": true,
       "width": 1280,
       "height": 1000,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-gallery-pages.png",
+      "path": "i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-gallery-pages.png",
       "sha256": "fdb9f604081a57dde2302368bb24813ddf6e490e1e1a756533dd832c9d4923c3"
     },
     {
@@ -929,7 +929,7 @@
       "native_md5_match": true,
       "width": 940,
       "height": 640,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-00.png",
+      "path": "i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-00.png",
       "sha256": "7acfd40c1753181c857ba67e3bb97de822cd8ccad1178d1a47f611f8417aee1a"
     },
     {
@@ -938,7 +938,7 @@
       "native_md5_match": true,
       "width": 940,
       "height": 640,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-07.png",
+      "path": "i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-07.png",
       "sha256": "0ba41a840d614b46fd73dcb0ef767871615ad0e98f862da801c464f0c95267ae"
     },
     {
@@ -947,7 +947,7 @@
       "native_md5_match": true,
       "width": 940,
       "height": 640,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-10.png",
+      "path": "i386-quick-qml-gallery-extended.app_Contents_MacOS_qml-page-10.png",
       "sha256": "1918c2bec2bd2bc8beadb747a2c104fedd8ce4101ca74da4eff6b1cc47308116"
     },
     {
@@ -956,7 +956,7 @@
       "native_md5_match": true,
       "width": 560,
       "height": 360,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-quick-qml-gallery.app_Contents_MacOS_qml-scene.png",
+      "path": "i386-quick-qml-gallery.app_Contents_MacOS_qml-scene.png",
       "sha256": "07507e7b9779c4cf632b007a3ac197ed4de79450b2a6a4e3841b92a2faca697e"
     },
     {
@@ -965,7 +965,7 @@
       "native_md5_match": true,
       "width": 1600,
       "height": 1280,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-widgets-gallery-extended.app_Contents_MacOS_widgets-gallery-pages.png",
+      "path": "i386-widgets-gallery-extended.app_Contents_MacOS_widgets-gallery-pages.png",
       "sha256": "ed13ba79496c8b1fa3fa576f2c7c418312a2794a7f6d5cb1a1a03a05c0bc4cc7"
     },
     {
@@ -974,7 +974,7 @@
       "native_md5_match": true,
       "width": 656,
       "height": 451,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-widgets-gallery.app_Contents_MacOS_widgets-file-dialog.png",
+      "path": "i386-widgets-gallery.app_Contents_MacOS_widgets-file-dialog.png",
       "sha256": "a125c8c6adff42618ab80d525710a0a2d90a0c1cdb20f6a74b29562a6dd0e553"
     },
     {
@@ -983,7 +983,7 @@
       "native_md5_match": true,
       "width": 760,
       "height": 560,
-      "path": "artifacts/runtime-tiger-suite/i386-final/i386-widgets-gallery.app_Contents_MacOS_widgets-gallery.png",
+      "path": "i386-widgets-gallery.app_Contents_MacOS_widgets-gallery.png",
       "sha256": "7503096908bf1ce0d5c3249b38219443f15f12f7c2921a9cabe26db0c60b29c0"
     }
   ],
@@ -997,13 +997,11 @@
   ],
   "public_make_output_matches_tested_binaries": true,
   "public_make_output": {
-    "directory": "artifacts/tests-qt4-macos-i386",
     "archive_sha256": "50d66d109f90d96d4288675aa11ef4a29cabb61367b1bab5828cdc15333ea6e7"
   },
   "provenance": {
     "scope": "23 unchanged binaries from the full repaired suite plus updated extended selftest retest. Exactly one executable differs between repair and final archives.",
     "first_full_report": "qt4-tiger-i386-script-repaired-first-full-20261003.json",
-    "extended_retest_evidence": "artifacts/runtime-tiger-suite/i386-process-final-retest",
     "preserved_failure": "The preceding3-second process/run timeout remains a FAIL in its original report. Final test uses bounded10-second waits and requires NormalExit/exit0/output.",
     "cold_boot_reliability": "Not established. Subsequent native IOGraphicsFamily panic occurs before Qt; separately recorded."
   }

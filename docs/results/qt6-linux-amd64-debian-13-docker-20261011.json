@@ -4,7 +4,6 @@
   "target": "qt6-linux-amd64",
   "status": "PASS",
   "image": "qt6-linux-amd64",
-  "commit": "d9f219ecda9b41b692d76b14d68a65de751385ac",
   "guest": {
     "os": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"",
     "system": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.7\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.41-12+deb13u4) 2.41",

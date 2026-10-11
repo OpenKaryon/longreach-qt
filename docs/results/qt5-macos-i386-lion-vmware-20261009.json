@@ -4,7 +4,6 @@
   "target": "Qt 5.15.19 macOS i386, deployment target Mac OS X 10.6, on OS X 10.7.5",
   "status": "PASS",
   "image": "qt5-macos-i386-gpl-enabled (make macos-i386)",
-  "commit": "465437ac9919e8ad517ddb61aae0f94460fcc531",
   "guest": {
     "os": "OS X 10.7.5 (11G63)",
     "vm": "virtual machine (VMware)",

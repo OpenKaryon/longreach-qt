@@ -4,7 +4,6 @@
   "target": "tests-qt5-win-amd64-gpl-enabled",
   "status": "PASS",
   "image": "qt5-win-amd64-gpl-enabled",
-  "commit": "daa024de9fa816a23afb70aebc4e967862f7b908",
   "guest": {
     "os": "Microsoft Windows [Version 10.0.26200.9457]",
     "system": "Microsoft Windows [Version 10.0.26200.9457]",

@@ -4,7 +4,6 @@
   "target": "tests-qt4-win-amd64",
   "status": "PASS",
   "image": "qt4-win-amd64",
-  "commit": "acb6d689779eee5906ab788d62ecc32cb0dfd256",
   "guest": {
     "os": "Microsoft Windows [Version 10.0.26200.9457]",
     "system": "Microsoft Windows [Version 10.0.26200.9457]",

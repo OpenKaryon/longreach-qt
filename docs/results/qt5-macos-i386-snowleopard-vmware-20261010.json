@@ -4,7 +4,6 @@
   "target": "tests-qt5-macos-i386-gpl-enabled",
   "status": "PASS",
   "image": "qt5-macos-i386-gpl-enabled",
-  "commit": "70cd6dc62a099c1325aaba79159f3764725e8a4b",
   "guest": {
     "os": "ProductName:\tMac OS X",
     "system": "ProductName:\tMac OS X\nProductVersion:\t10.6.3\nBuildVersion:\t10D2235\nDarwin qts-Mac-mini.local 10.3.3 Darwin Kernel Version 10.3.3: Wed Apr  7 20:47:33 PDT 2010; root:xnu-1504.6.1~3/RELEASE_X86_64 x86_64",

@@ -4,7 +4,6 @@
   "target": "tests-qt5-linux-i386-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-i386-gpl-enabled",
-  "commit": "f0562204ccf3b6f974ae08a860e66cf2910303c3",
   "guest": {
     "os": "NAME=\"Ubuntu\"",
     "system": "NAME=\"Ubuntu\"\nVERSION=\"16.04.7 LTS (Xenial Xerus)\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 16.04.7 LTS\"\nVERSION_ID=\"16.04\"\nHOME_URL=\"http://www.ubuntu.com/\"\nSUPPORT_URL=\"http://help.ubuntu.com/\"\nBUG_REPORT_URL=\"http://bugs.launchpad.net/ubuntu/\"\nVERSION_CODENAME=xenial\nUBUNTU_CODENAME=xenial\nldd (Ubuntu GLIBC 2.23-0ubuntu11.3) 2.23",

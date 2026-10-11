@@ -4,7 +4,6 @@
   "target": "tests-qt5-linux-lucid-amd64-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-lucid-amd64-gpl-enabled",
-  "commit": "72a73675f24b77366a9a12315292c1dbf8697c4a",
   "guest": {
     "os": "Linux ubuntu 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
     "system": "Linux ubuntu 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux\nDISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=10.04\nDISTRIB_CODENAME=lucid\nDISTRIB_DESCRIPTION=\"Ubuntu 10.04.4 LTS\"\nldd (Ubuntu EGLIBC 2.11.1-0ubuntu7.8) 2.11.1",

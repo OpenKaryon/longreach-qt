@@ -4,7 +4,6 @@
   "target": "qt6-win-amd64",
   "status": "PASS",
   "image": "qt6-win-amd64",
-  "commit": "69662cd478c411e981fe7cbf9be20f8d0fb6a310",
   "guest": {
     "os": "Microsoft Windows [Version 10.0.26200.9457]",
     "system": "Microsoft Windows [Version 10.0.26200.9457]",

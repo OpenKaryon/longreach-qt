@@ -4,7 +4,6 @@
   "target": "tests-qt5-linux-i386-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-i386-gpl-enabled",
-  "commit": "f0562204ccf3b6f974ae08a860e66cf2910303c3",
   "guest": {
     "os": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"",
     "system": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nVERSION=\"12 (bookworm)\"\nVERSION_CODENAME=bookworm\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.36-9+deb12u14) 2.36",

@@ -4,7 +4,6 @@
   "target": "Qt 5.15.19 macOS x86_64, deployment target 10.6, rebuilt with the i386 patches 34-38",
   "status": "PASS",
   "image": "qt5-macos-amd64-gpl-enabled (make macos-amd64, deployment target 10.6, with pre-10.11 patches 34-38)",
-  "commit": "13cfa98bf64ff6e1a9c121499488230a6a178253",
   "guest": {
     "os": "see the run of the same system without these patches",
     "vm": "VMware Workstation 26",

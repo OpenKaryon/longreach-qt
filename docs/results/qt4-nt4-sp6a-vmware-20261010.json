@@ -4,7 +4,6 @@
   "target": "tests-qt4-win-i386",
   "status": "PASS",
   "image": "qt4-win-i386",
-  "commit": "fafce45bef13b944d522d0258057e1443ba01eb2",
   "guest": {
     "os": "",
     "system": "",

@@ -11,7 +11,6 @@
     "compiler": "GCC5, MinGW-w64 win32 thread model"
   },
   "build_provenance_git": {
-    "commit": "6e2c02ef390a95ab2943bd8e51b7c38da4b99c6a",
     "branch": "main",
     "dirty": true
   },

@@ -4,7 +4,6 @@
   "target": "tests-qt5-win-i386-gpl-enabled",
   "status": "PASS",
   "image": "qt5-win-i386-gpl-enabled",
-  "commit": "72ac7848609bc185fb38e5c99cad432f46b020fe",
   "guest": {
     "os": "",
     "system": "",

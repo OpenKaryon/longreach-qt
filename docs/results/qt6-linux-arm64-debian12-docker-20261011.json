@@ -4,7 +4,6 @@
   "target": "qt6-linux-arm64",
   "status": "PASS",
   "image": "qt6-linux-arm64",
-  "commit": "63ab3937e895aa1cc292ce3996a9f50bfe664508",
   "guest": {
     "os": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"",
     "system": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nVERSION=\"12 (bookworm)\"\nVERSION_CODENAME=bookworm\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.36-9+deb12u14) 2.36",

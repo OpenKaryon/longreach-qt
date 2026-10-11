@@ -4,7 +4,6 @@
   "target": "tests-qt5-linux-amd64-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-amd64-gpl-enabled",
-  "commit": "f0562204ccf3b6f974ae08a860e66cf2910303c3",
   "guest": {
     "os": "NAME=\"CentOS Linux\"",
     "system": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\nldd (GNU libc) 2.17",

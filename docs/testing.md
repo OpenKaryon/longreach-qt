@@ -70,7 +70,7 @@ or Debian 12, or arm64 Ubuntu 16.04 or Debian 12 under emulation, with the
 libraries a desktop has and Xvfb. `qemu:<distro>` boots an old
 distribution's userland in QEMU under a current kernel, for systems a
 container host cannot run (64-bit glibc before 2.14 needs the vsyscall page,
-which current kernels leave out): `qemu:centos-5-x86_64`. Other hosts are described in
+which current kernels leave out): `qemu:centos-5-x86_64`, `qemu:debian-4-amd64`. Other hosts are described in
 `scripts/run/hosts.local.json` (copy `scripts/run/hosts.example.json`; the file
 is not tracked): `ssh` for Linux and macOS machines, `vmware` (vmrun) for
 Linux and Windows guests, `virtualbox` (VBoxManage). A guest password is read

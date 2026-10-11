@@ -21,7 +21,7 @@ hosts.example.json). Built in, without any configuration:
     qemu:<distro>       an old distribution's userland booted in QEMU under a
                         current kernel, for systems a container host cannot
                         run (64-bit glibc before 2.14 needs the vsyscall
-                        page): centos-5-x86_64
+                        page): centos-5-x86_64, debian-4-amd64
     local               this machine, in the current session
 
 Backends in hosts.local.json:
@@ -113,6 +113,7 @@ INSTALL = {
 # the policy tools Xvfb's fonts pull in.
 QEMU = {
     'centos-5-x86_64': ('centos:5', 'rhel5'),
+    'debian-4-amd64': ('debian/eol:etch', 'debian-old'),
 }
 QEMU_SETUP = {
     'rhel5': r'''set -e
@@ -137,6 +138,15 @@ includepkgs=libselinux*
 EOF
 yum -y -q install mesa-libGL libX11 libXext libXrender libSM libICE fontconfig freetype \
     xorg-x11-server-Xvfb xorg-x11-fonts-base xorg-x11-fonts-misc dejavu-lgc-fonts
+''',
+    # The image's sources already point at archive.debian.org, whose signing
+    # keys have long expired. etch's coreutils has no sha256sum; the guest
+    # checks the suite with Perl's shasum instead.
+    'debian-old': r'''set -e
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y --force-yes libgl1-mesa-glx libx11-6 libxext6 libxrender1 libsm6 libice6 \
+    libfontconfig1 libfreetype6 xvfb xfonts-base ttf-dejavu libdigest-sha-perl
 ''',
 }
 

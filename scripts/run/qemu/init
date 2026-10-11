@@ -18,15 +18,31 @@ mount -t tmpfs tmpfs /tmp
 # Container images have no /dev/console, so the kernel gave init no output.
 exec > /dev/ttyS0 2>&1 < /dev/null
 echo "=== guest up, kernel $(uname -r)"
-insmod /e1000.ko
+# Minimal images may lack module-init-tools or net-tools: init_module (175 on
+# x86_64) from Perl, and iproute2's ip.
+if command -v insmod > /dev/null; then
+    insmod /e1000.ko
+else
+    perl -e 'open(F, "<", "/e1000.ko") or die; binmode F; local $/; my $m = <F>;
+             my $params = ""; syscall(175, $m, length($m), $params) == 0 or die "init_module: $!\n"'
+fi
 sleep 2
-ifconfig lo 127.0.0.1 up
-ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
-route add default gw 10.0.2.2
+if command -v ifconfig > /dev/null; then
+    ifconfig lo 127.0.0.1 up
+    ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+    route add default gw 10.0.2.2
+else
+    ip link set lo up
+    ip addr add 10.0.2.15/24 dev eth0
+    ip link set eth0 up
+    ip route add default via 10.0.2.2
+fi
 echo "nameserver 10.0.2.3" > /etc/resolv.conf
 echo "=== setup"
 bash /setup.sh > /tmp/setup.log 2>&1
-echo "=== setup exit $?"
+status=$?
+echo "=== setup exit $status"
+[ $status = 0 ] || tail -20 /tmp/setup.log
 mkdir -p /suite && cd /suite && tar -xzf /suite.tar.gz
 # coreutils before 6.0 has no sha256sum; Perl's shasum does the same check.
 if command -v sha256sum > /dev/null; then check="sha256sum -c"; else check="shasum -a 256 -c"; fi
@@ -39,8 +55,10 @@ sleep 5
 DISPLAY=:99 ./smoke-runner $(cat /runner-args 2>/dev/null) > /tmp/runner.log 2>&1
 echo "exit=$?" >> /tmp/runner.log
 cp /tmp/system.txt /tmp/checksums.log /tmp/xvfb.log /tmp/runner.log /tmp/setup.log . 2>/dev/null
-echo "=== BEGIN RESULTS"
-tar -czf - smoke-*.log smoke-report.txt system.txt checksums.log xvfb.log runner.log setup.log 2>/dev/null | base64
+# coreutils before 6.0 has no base64; od prints hex everywhere.
+if command -v base64 > /dev/null; then encode=base64; else encode="od -An -v -tx1"; fi
+echo "=== BEGIN RESULTS ${encode%% *}"
+tar -czf - smoke-*.log smoke-report.txt system.txt checksums.log xvfb.log runner.log setup.log 2>/dev/null | $encode
 echo "=== END RESULTS"
 echo o > /proc/sysrq-trigger
 sleep 30

@@ -49,9 +49,10 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | | | Windows 11 (the build host), amd64 | 8/8, 498 passed, 0 failed ([json](results/qt5-win-amd64-win11-host-20261010.json)); the two native print dialog checks skip there |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 476 passed, 0 failed, rebuilt from this tree ([json](results/qt5-linux-lucid-amd64-lucid-vmware-20261010.json); earlier stock [json](results/qt5-linux-lucid-stock-vmware-20261007.json), with libx11-xcb1 [json](results/qt5-linux-lucid-x11xcb-vmware-20261007.json)) |
+| | | CentOS 7, Debian 13 (containers) | 8/8, 490 passed, 0 failed, the release image ([json](results/qt5-linux-amd64-centos-7-docker-20261011.json), [json](results/qt5-linux-amd64-debian-13-docker-20261011.json)) |
 | | | CentOS 7, Ubuntu 16.04/24.04, Debian 13, Fedora 44, Arch (containers) | 8/8 on each, 474-490 passed, 0 failed, rebuilt from this tree ([json](results/linux-forward-20261010.json); earlier [json](results/linux-forward-20261009.json)) |
-| `qt5-linux-i386` | Ubuntu 10.04 i386 | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 488 and 489 passed, 0 failed ([json](results/linux-forward-20261010.json)); not yet on Lucid i386 itself |
-| `qt5-linux-arm64` | Ubuntu 16.04 arm64 | - | built, not run |
+| `qt5-linux-i386` | Ubuntu 10.04 i386 | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 488 and 489 passed, 0 failed, the release image ([json](results/qt5-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [json](results/qt5-linux-i386-debian-12-i386-docker-20261011.json); earlier [json](results/linux-forward-20261010.json)); not yet on Lucid i386 itself |
+| `qt5-linux-arm64` | Ubuntu 16.04 arm64 | stock Ubuntu 16.04 arm64 (container, emulated) | 8/8, 510 passed, 0 failed ([json](results/qt5-linux-arm64-ubuntu-16.04-arm64-docker-20261011.json)) |
 | `qt5-macos-amd64` | Mac OS X 10.6 | 10.6.3, 10.7.5, 10.13.6 (VMware) | rebuilt from this tree: 8/8, 494 passed, 0 failed on 10.6.3 ([json](results/qt5-macos-amd64-snowleopard-vmware-20261010.json)); before: 8/8 each: 494, 496, 497 passed, 0 failed ([10.6](results/qt5-macos-amd64-patches34-38-snowleopard-vmware-20261009.json), [10.7](results/qt5-macos-amd64-patches34-38-lion-vmware-20261009.json), [10.13](results/qt5-macos-amd64-patches34-38-highsierra-vmware-20261009.json)); a 10.11 build earlier on real OS X 10.11.6 |
 | `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | rebuilt from this tree: 8/8, 494 passed, 0 failed on 10.6.3 ([json](results/qt5-macos-i386-snowleopard-vmware-20261010.json)); before: 8/8 each, same counts ([10.6](results/qt5-macos-i386-snowleopard-vmware-20261009.json), [10.7](results/qt5-macos-i386-lion-vmware-20261009.json), [10.13](results/qt5-macos-i386-highsierra-vmware-20261009.json)) |
 | `qt5-macos-arm64` | macOS 11.0 | - | built and audited, not run |
@@ -64,7 +65,8 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | | | Windows 11 (the build host) | 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-host-20261010.json)) |
 | `qt6-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | stock CentOS 7.6; Linux Mint 22.3 (VMware) | 8/8, 508 and 510 passed, 0 failed ([json](results/qt6-linux-centos76-20261006.json), [json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
-| `qt6-linux-arm64` | Debian 12 arm64 | - | built, not run |
+| | | CentOS 7, Debian 13 (containers) | 8/8, 508 passed, 0 failed, the release image ([json](results/qt6-linux-amd64-centos-7-docker-20261011.json), [json](results/qt6-linux-amd64-debian-13-docker-20261011.json)) |
+| `qt6-linux-arm64` | Debian 12 arm64 | stock Debian 12 arm64 (container, emulated) | 8/8, 496 passed, 0 failed ([json](results/qt6-linux-arm64-debian12-docker-20261011.json)) |
 | `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 7/7 built applications, 240 passed, 0 failed ([json](results/qt6-macos-1013-jit-highsierra-vmware-20261007.json)) |
 | `qt6-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 

@@ -14,8 +14,9 @@ hosts.example.json). Built in, without any configuration:
 
     docker:<distro>     a stock container: centos-7, ubuntu-16.04,
                         ubuntu-18.04, ubuntu-24.04, debian-13, fedora-latest,
-                        arch-latest, and ubuntu-16.04-i386, debian-12-i386
-                        for i386 suites (Xvfb inside; the runtime libraries
+                        arch-latest; ubuntu-16.04-i386, debian-12-i386 for
+                        i386 suites and ubuntu-16.04-arm64, debian-12-arm64
+                        for arm64 ones (Xvfb inside; the runtime libraries
                         a desktop has are installed first)
     local               this machine, in the current session
 
@@ -66,6 +67,9 @@ DOCKER = {
     # 32-bit userlands for the i386 suites (run with --platform linux/386).
     'ubuntu-16.04-i386': ('i386/ubuntu:16.04', 'debian', 'linux/386'),
     'debian-12-i386': ('i386/debian:12', 'debian', 'linux/386'),
+    # The arm64 floors, emulated on an x86 host (binfmt/QEMU).
+    'ubuntu-16.04-arm64': ('arm64v8/ubuntu:16.04', 'debian', 'linux/arm64'),
+    'debian-12-arm64': ('arm64v8/debian:12', 'debian', 'linux/arm64'),
 }
 # The libraries a desktop has: Xlib for Qt 4, xcb for Qt 5/6. Installing both
 # costs little and keeps the backend independent of the suite.
@@ -74,10 +78,10 @@ PACKAGES = {
                'libx11-xcb1 libxcb1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 '
                'libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 '
                'libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 fonts-dejavu-core xvfb xauth ca-certificates'),
-    'rhel': ('mesa-libGL mesa-dri-drivers libX11 libXext libXrender libSM libICE fontconfig freetype libX11-xcb libxcb '
+    'rhel': ('mesa-libGL mesa-libEGL mesa-dri-drivers libX11 libXext libXrender libSM libICE fontconfig freetype libX11-xcb libxcb '
              'xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm libxkbcommon libxkbcommon-x11 '
              'dejavu-sans-fonts xorg-x11-server-Xvfb'),
-    'fedora': ('mesa-libGL libglvnd-opengl libX11 libXext libXrender libSM libICE fontconfig freetype '
+    'fedora': ('mesa-libGL mesa-libEGL libglvnd-opengl libX11 libXext libXrender libSM libICE fontconfig freetype '
                'libX11-xcb libxcb xcb-util-cursor xcb-util-image xcb-util-keysyms xcb-util-renderutil '
                'xcb-util-wm libxkbcommon libxkbcommon-x11 dejavu-sans-fonts xorg-x11-server-Xvfb'),
     'arch': ('mesa libglvnd libx11 libxext libxrender libsm libice fontconfig freetype2 libxcb '
@@ -85,7 +89,13 @@ PACKAGES = {
              'libxkbcommon libxkbcommon-x11 ttf-dejavu xorg-server-xvfb'),
 }
 INSTALL = {
-    'debian': 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends {p} >/dev/null',
+    # Libraries whose names differ between releases (libegl1 and libwayland-egl1
+    # from Ubuntu 18.04 on, the -mesa packages before) or that only newer ones
+    # have are installed one by one where they exist.
+    'debian': ('apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends {p} >/dev/null'
+               ' && for x in libegl1 libegl1-mesa libgbm1 libdrm2 libxcb-cursor0 libbrotli1'
+               ' libwayland-client0 libwayland-cursor0 libwayland-server0 libwayland-egl1 libwayland-egl1-mesa; do'
+               ' DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $x >/dev/null 2>&1 || true; done'),
     'rhel': ("sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|' "
              '/etc/yum.repos.d/CentOS-*.repo && yum install -y -q {p} >/dev/null'),
     'fedora': 'dnf install -y -q {p} >/dev/null',

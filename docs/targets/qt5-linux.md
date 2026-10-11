@@ -31,7 +31,8 @@ come from the pinned Lucid packages
 
 amd64: 8/8 (476 checks) on Ubuntu 10.04.4 in VMware; 8/8 on CentOS 7,
 Ubuntu 16.04 and 24.04, Debian 13, Fedora and Arch in containers. i386: 8/8
-on Ubuntu 16.04 i386 and Debian 12 i386 in containers. See
+on Ubuntu 16.04 i386 and Debian 12 i386 in containers. arm64: 8/8 (510 checks)
+on Ubuntu 16.04 arm64 in an emulated container. See
 [platforms](../platforms.md#qt-51519).
 
 ## Limits
@@ -46,5 +47,6 @@ on Ubuntu 16.04 i386 and Debian 12 i386 in containers. See
   has no GStreamer or PulseAudio backend, QtSpeech no speech-dispatcher,
   QtBluetooth no BlueZ 5. The plan is to add them with headers at build time
   and `dlopen` at run time.
-- The arm64 build is native under emulation and has not been run; its floor
-  is to move to Ubuntu 14.04 the way Lucid did for amd64.
+- The arm64 build is native under emulation (several hours) and links the
+  Wayland client libraries dynamically; its floor is to move to Ubuntu 14.04
+  the way Lucid did for amd64.

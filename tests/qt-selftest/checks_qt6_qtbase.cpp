@@ -21,7 +21,10 @@
 #include <QPdfOutputIntent>
 #include <QPointerEvent>
 #include <QMouseEvent>
+#include <QtNetwork/qtnetworkglobal.h>
+#ifndef QT_NO_SSL
 #include <QSslDiffieHellmanParameters>
+#endif
 #include <QAccessible>
 #endif
 
@@ -162,7 +165,7 @@ void checkQt6QtBaseAdditions(SmokeReporter &r)
     });
 
     r.check("net/diffie-hellman-parameters", [&](QString &d) {
-#if QT_VERSION_MAJOR >= 6
+#if QT_VERSION_MAJOR >= 6 && !defined(QT_NO_SSL)
         const QSslDiffieHellmanParameters defaults =
             QSslDiffieHellmanParameters::defaultParameters();
         QSslDiffieHellmanParameters empty;
@@ -186,7 +189,7 @@ void checkQt6QtBaseAdditions(SmokeReporter &r)
             d = QStringLiteral("garbage DH parameters were accepted");
         return ok;
 #else
-        r.skip(d, QStringLiteral("QSslDiffieHellmanParameters is covered on Qt 6 here"));
+        r.skip(d, QStringLiteral("QSslDiffieHellmanParameters is covered on Qt 6 with SSL"));
         return false;
 #endif
     });

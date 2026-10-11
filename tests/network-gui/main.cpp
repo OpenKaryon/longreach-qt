@@ -332,6 +332,7 @@ static int runSelfTest()
         "exn5AWy7TvJB1Zu0MaN6LvGxelY9138cIL4ZZOzJVdQNoItO2ArgBaM79C6c/y49\n"
         "-----END CERTIFICATE-----\n";
 
+#ifndef QT_NO_SSL
     r.check("ssl/supported", [&](QString &d) {
         if (!QSslSocket::supportsSsl()) {
             r.skip(d, "this SDK was built without SSL");
@@ -424,6 +425,13 @@ static int runSelfTest()
         d = QString::fromLatin1("length %1").arg(key.length());
         return !key.isNull() && key.algorithm() == QSsl::Rsa && key.length() == 2048;
     });
+#else
+    Q_UNUSED(kSelfTestCertificate);
+    r.check("ssl/supported", [&](QString &d) {
+        r.skip(d, "this SDK was built without SSL");
+        return true;
+    });
+#endif
 
     return r.summary();
 }

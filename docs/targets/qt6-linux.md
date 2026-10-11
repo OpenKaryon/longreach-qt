@@ -20,10 +20,14 @@ runs the extracted suite on stock distributions.
 
 ## Results
 
-8/8 (508 checks) on stock CentOS 7.6 and 8/8 on Linux Mint 22.3 in VMware
-([platforms](../platforms.md#qt-684)). arm64 is built, not run.
+8/8 (508 checks) on stock CentOS 7.6 and 8/8 on Linux Mint 22.3 in VMware;
+the release image 8/8 (508) on CentOS 7 and Debian 13 in containers
+([platforms](../platforms.md#qt-684)). arm64: 8/8 (496 checks) on stock Debian 12
+arm64 in an emulated container.
 
 ## Limits
 
 - QtWayland, QtWebEngine and QtWebView are not built.
+- The arm64 build has no SSL (no OpenSSL in its sysroot) and no D-Bus; the
+  suite's SSL checks report SKIP there.
 - The arm64 floor is to move to CentOS 7 aarch64 like amd64.

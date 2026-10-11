@@ -32,7 +32,10 @@
 #include <QNetworkInformation>
 #include <QRestAccessManager>
 #include <QRestReply>
+#include <QtNetwork/qtnetworkglobal.h>
+#if QT_CONFIG(ssl)
 #include <QSslServer>
+#endif
 #endif
 
 #if QT_VERSION_MAJOR >= 6 && QT_VERSION_MINOR >= 8
@@ -171,12 +174,14 @@ void checkQt6Network(SmokeReporter &r)
         // server is never told to listen.
         QNetworkAccessManager networkManager;
         QRestAccessManager restManager(&networkManager);
-        QSslServer sslServer;
 
         QStringList misses;
         if (restManager.networkAccessManager() != &networkManager)
             misses << QStringLiteral("restmanager");
+#if QT_CONFIG(ssl)
+        QSslServer sslServer;
         if (sslServer.isListening()) misses << QStringLiteral("sslserver");
+#endif
         if (!misses.isEmpty())
             d = misses.join(QLatin1Char(','));
         return misses.isEmpty();

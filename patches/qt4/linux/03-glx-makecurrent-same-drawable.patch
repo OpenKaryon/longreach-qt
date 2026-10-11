@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Linux: QGLContext::makeCurrent() binds the context only when it is not
+# already current on the same drawable. Debian 4.0 etch's X server (1.1.1,
+# indirect GLX) reallocates the back buffer of a window from about 256x256
+# when the current context is bound to it again, so whatever was drawn is
+# lost; grabFrameBuffer(), which calls makeCurrent() before reading, returned
+# a black frame there. The GLX call is redundant everywhere else.
+#
+--- a/src/opengl/qgl_x11.cpp
++++ b/src/opengl/qgl_x11.cpp
+@@ -926,13 +926,19 @@
+     }
+     const QX11Info *xinfo = qt_x11Info(d->paintDevice);
+     bool ok = true;
+-    if (d->paintDevice->devType() == QInternal::Pixmap) {
+-        ok = glXMakeCurrent(xinfo->display(), (GLXPixmap)d->gpm, (GLXContext)d->cx);
+-    } else if (d->paintDevice->devType() == QInternal::Pbuffer) {
+-        ok = glXMakeCurrent(xinfo->display(), (GLXPbuffer)d->pbuf, (GLXContext)d->cx);
+-    } else if (d->paintDevice->devType() == QInternal::Widget) {
+-        ok = glXMakeCurrent(xinfo->display(), ((QWidget *)d->paintDevice)->internalWinId(), (GLXContext)d->cx);
+-    }
++    GLXDrawable drawable = 0;
++    if (d->paintDevice->devType() == QInternal::Pixmap)
++        drawable = (GLXPixmap)d->gpm;
++    else if (d->paintDevice->devType() == QInternal::Pbuffer)
++        drawable = (GLXPbuffer)d->pbuf;
++    else if (d->paintDevice->devType() == QInternal::Widget)
++        drawable = ((QWidget *)d->paintDevice)->internalWinId();
++    // Binding the context that is already current on the same drawable again
++    // changes nothing by the GLX spec, but Debian 4.0's X server (1.1.1,
++    // indirect GLX) reallocates a large window's back buffer on it, losing
++    // what was drawn: grabFrameBuffer() then reads black.
++    if (drawable && (glXGetCurrentContext() != (GLXContext)d->cx || glXGetCurrentDrawable() != drawable))
++        ok = glXMakeCurrent(xinfo->display(), drawable, (GLXContext)d->cx);
+     if (!ok)
+         qWarning("QGLContext::makeCurrent(): Failed.");
+ 

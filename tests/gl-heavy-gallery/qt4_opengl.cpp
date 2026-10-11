@@ -319,8 +319,12 @@ void checkQt4OpenGL(SmokeReporter &r)
             d = QStringLiteral("grabFrameBuffer() returned a null image");
             return false;
         }
-        d = QStringLiteral("features=0x%1").arg(int(features), 0, 16);
-        return qBlue(frame.pixel(1, 1)) > 200;
+        const QRgb pixel = frame.pixel(1, 1);
+        d = QStringLiteral("features=0x%1 pixel=%2,%3,%4 current=%5")
+                .arg(int(features), 0, 16).arg(qRed(pixel)).arg(qGreen(pixel)).arg(qBlue(pixel))
+                .arg(QGLContext::currentContext() == view.context() ? QStringLiteral("view")
+                                                                    : QStringLiteral("other"));
+        return qBlue(pixel) > 200;
     });
 }
 
@@ -351,7 +355,10 @@ void checkQt4OpenGLGallery(SmokeReporter &r)
         // The fixed-function triangle covers the center and must differ from
         // the dark clear color; RGB interpolation also produces a bright pixel.
         const bool triangle = qRed(center) + qGreen(center) + qBlue(center) > 200;
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("gl-gallery-frame.png");
-        return triangle && frame.save(d, "PNG");
+        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("gl-gallery-frame.png");
+        const bool saved = frame.save(path, "PNG");
+        d = QStringLiteral("%1 center=%2,%3,%4 %5x%6").arg(path).arg(qRed(center)).arg(qGreen(center))
+                .arg(qBlue(center)).arg(frame.width()).arg(frame.height());
+        return triangle && saved;
     });
 }

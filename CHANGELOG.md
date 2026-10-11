@@ -1,6 +1,22 @@
 # Changelog
 
-## 0.1.0 - unreleased
+## Unreleased
+
+- Qt 4 Linux: `patches/qt4/linux/03` binds a GLX context only when it is not
+  already current on the drawable; Debian 4.0's X server lost a large GL
+  window's frame on the repeated bind, so `grabFrameBuffer()` read black.
+- `scripts/run/run.py --host qemu:<distro>` boots an old distribution's
+  userland in QEMU under a current kernel, for 64-bit systems with glibc
+  before 2.14 that a container host cannot run: `centos-5-x86_64`,
+  `debian-4-amd64`.
+- Qt 4 Linux amd64 has run on its era's 64-bit systems: 8/8 on CentOS 5.11
+  and Debian 4.0 etch.
+- `docs/results` keeps the latest run of each target on each system, without
+  the commit field; run.py no longer writes it.
+- The Qt 5 macOS i386 startup object is built from one C file.
+- The project is called Longreach Qt throughout.
+
+## 0.1.0 - 2026-10-11
 
 First public pre-release, source only.
 

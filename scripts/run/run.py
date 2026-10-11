@@ -18,6 +18,10 @@ hosts.example.json). Built in, without any configuration:
                         i386 suites and ubuntu-16.04-arm64, debian-12-arm64
                         for arm64 ones (Xvfb inside; the runtime libraries
                         a desktop has are installed first)
+    qemu:<distro>       an old distribution's userland booted in QEMU under a
+                        current kernel, for systems a container host cannot
+                        run (64-bit glibc before 2.14 needs the vsyscall
+                        page): centos-5-x86_64
     local               this machine, in the current session
 
 Backends in hosts.local.json:
@@ -102,6 +106,40 @@ INSTALL = {
     'arch': 'pacman -Sy --noconfirm --needed {p} >/dev/null',
 }
 
+# qemu guests: the image whose userland is booted, and the setup the guest
+# runs with networking up. CentOS 5's own vault redirects to HTTPS, which its
+# SSL cannot reach any more, so the packages come from kernel.org's copy; the
+# image's libselinux is the centosplus build, so that repository is needed for
+# the policy tools Xvfb's fonts pull in.
+QEMU = {
+    'centos-5-x86_64': ('centos:5', 'rhel5'),
+}
+QEMU_SETUP = {
+    'rhel5': r'''set -e
+rm -f /etc/yum.repos.d/*.repo
+v=http://archive.kernel.org/centos-vault/5.11
+cat > /etc/yum.repos.d/vault.repo <<EOF
+[base]
+name=CentOS 5.11 base
+baseurl=$v/os/\$basearch/
+gpgcheck=0
+exclude=*.i386 *.i686
+[updates]
+name=CentOS 5.11 updates
+baseurl=$v/updates/\$basearch/
+gpgcheck=0
+exclude=*.i386 *.i686
+[centosplus]
+name=CentOS 5.11 centosplus
+baseurl=$v/centosplus/\$basearch/
+gpgcheck=0
+includepkgs=libselinux*
+EOF
+yum -y -q install mesa-libGL libX11 libXext libXrender libSM libICE fontconfig freetype \
+    xorg-x11-server-Xvfb xorg-x11-fonts-base xorg-x11-fonts-misc dejavu-lgc-fonts
+''',
+}
+
 # Run in a Linux guest from the suite directory: find the user's X session,
 # run the suite on it, keep the reports.
 LINUX_RUN = r'''
@@ -180,6 +218,32 @@ def run_docker(host, suite, out, runner_args):
                             capture_output=True, text=True)
     (out / 'docker.log').write_text(result.stdout + result.stderr, encoding='utf-8')
     return f'container {image}', 'suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb'
+
+
+def run_qemu(host, suite, out, runner_args):
+    image, family = QEMU[host['distro']]
+    tools = 'longreach-run-qemu'
+    subprocess.run(['docker', 'build', '-q', '-t', tools, str(Path(__file__).with_name('qemu'))],
+                   check=True, capture_output=True)
+    data, _ = pack(suite)
+    (out / 'suite.tar.gz').write_bytes(data)
+    (out / 'setup.sh').write_text(QEMU_SETUP[family], encoding='utf-8', newline='\n')
+    (out / 'runner-args').write_text(runner_args + '\n', encoding='utf-8', newline='\n')
+    container = subprocess.run(['docker', 'create', image], check=True, capture_output=True, text=True).stdout.strip()
+    try:
+        # The image's file system goes straight into the tools container.
+        export = subprocess.Popen(['docker', 'export', container], stdout=subprocess.PIPE)
+        result = subprocess.run(['docker', 'run', '--rm', '-i', '-v', f'{out.resolve()}:/out', tools,
+                                 'bash', '/opt/qemu/boot.sh'], stdin=export.stdout, capture_output=True, text=True)
+        export.stdout.close()
+        export.wait()
+    finally:
+        subprocess.run(['docker', 'rm', container], capture_output=True)
+    (out / 'docker.log').write_text(result.stdout + result.stderr, encoding='utf-8')
+    for name in ('suite.tar.gz', 'runner-args'):
+        (out / name).unlink(missing_ok=True)
+    return (f'QEMU, {image} userland under a current kernel',
+            'suite unpacked in the guest and checked by SHA256; smoke-runner under Xvfb')
 
 
 def run_ssh(host, suite, out, runner_args):
@@ -292,7 +356,7 @@ def run_local(host, suite, out, runner_args):
     return f'this machine ({platform.platform()})', 'suite unpacked locally and smoke-runner run in the current session'
 
 
-BACKENDS = {'docker': run_docker, 'ssh': run_ssh, 'vmware': run_vmware, 'virtualbox': run_virtualbox,
+BACKENDS = {'docker': run_docker, 'qemu': run_qemu, 'ssh': run_ssh, 'vmware': run_vmware, 'virtualbox': run_virtualbox,
             'local': run_local}
 
 
@@ -310,10 +374,9 @@ def result(out, suite, sums, target, guest, method):
                'checks_failed': sum(a['failed'] for a in apps),
                'checks_skipped': sum(a['skipped'] for a in apps)}
     system = (out / 'system.txt').read_text(errors='replace').strip() if (out / 'system.txt').is_file() else ''
-    commit = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     ok = total is not None and summary['apps_failed'] == 0 and summary['checks_failed'] == 0 and summary['apps_passed'] > 0
     return {'schema_version': 1, 'date': datetime.date.today().isoformat(), 'target': target,
-            'status': 'PASS' if ok else 'FAIL', 'image': suite.name.removeprefix('tests-'), 'commit': commit,
+            'status': 'PASS' if ok else 'FAIL', 'image': suite.name.removeprefix('tests-'),
             'guest': {'os': system.splitlines()[0] if system else '', 'system': system, 'vm': guest, 'method': method},
             'summary': summary, 'applications': apps,
             'executables_sha256': dict(sorted((name, digest) for digest, name in
@@ -335,6 +398,10 @@ def main():
         host = {'backend': 'docker', 'distro': args.host.split(':', 1)[1]}
         if host['distro'] not in DOCKER:
             parser.error('docker hosts: ' + ', '.join(sorted(DOCKER)))
+    elif args.host.startswith('qemu:'):
+        host = {'backend': 'qemu', 'distro': args.host.split(':', 1)[1]}
+        if host['distro'] not in QEMU:
+            parser.error('qemu hosts: ' + ', '.join(sorted(QEMU)))
     else:
         hosts = json.loads(HOSTS.read_text(encoding='utf-8')) if HOSTS.is_file() else {}
         if args.host not in hosts:

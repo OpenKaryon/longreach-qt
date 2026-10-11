@@ -1,0 +1,46 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# PID 1 of run.py's qemu guests: an old distribution's userland in the
+# initramfs, under a current kernel. Brings up the network (QEMU user
+# networking), runs /setup.sh to install what a desktop has, checks and runs
+# the suite in /suite under Xvfb, and prints the logs to the serial port,
+# base64 between markers, before powering off.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev
+mkdir -p /dev/pts /dev/shm
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /dev/shm
+mount -t tmpfs tmpfs /tmp
+# Container images have no /dev/console, so the kernel gave init no output.
+exec > /dev/ttyS0 2>&1 < /dev/null
+echo "=== guest up, kernel $(uname -r)"
+insmod /e1000.ko
+sleep 2
+ifconfig lo 127.0.0.1 up
+ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+route add default gw 10.0.2.2
+echo "nameserver 10.0.2.3" > /etc/resolv.conf
+echo "=== setup"
+bash /setup.sh > /tmp/setup.log 2>&1
+echo "=== setup exit $?"
+mkdir -p /suite && cd /suite && tar -xzf /suite.tar.gz
+# coreutils before 6.0 has no sha256sum; Perl's shasum does the same check.
+if command -v sha256sum > /dev/null; then check="sha256sum -c"; else check="shasum -a 256 -c"; fi
+$check SHA256SUMS > /tmp/checksums.log 2>&1 && echo "=== checksums ok" || echo "=== checksums FAILED"
+chmod -R u+x .
+{ cat /etc/redhat-release /etc/debian_version /etc/os-release 2>/dev/null | head -3; ldd --version 2>&1 | head -1; uname -m; } > /tmp/system.txt
+[ -s /etc/machine-id ] || tr -d - < /proc/sys/kernel/random/uuid > /etc/machine-id 2>/dev/null
+Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
+sleep 5
+DISPLAY=:99 ./smoke-runner $(cat /runner-args 2>/dev/null) > /tmp/runner.log 2>&1
+echo "exit=$?" >> /tmp/runner.log
+cp /tmp/system.txt /tmp/checksums.log /tmp/xvfb.log /tmp/runner.log /tmp/setup.log . 2>/dev/null
+echo "=== BEGIN RESULTS"
+tar -czf - smoke-*.log smoke-report.txt system.txt checksums.log xvfb.log runner.log setup.log 2>/dev/null | base64
+echo "=== END RESULTS"
+echo o > /proc/sysrq-trigger
+sleep 30

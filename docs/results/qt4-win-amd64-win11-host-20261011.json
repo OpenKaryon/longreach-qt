@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "date": "2026-10-10",
+  "date": "2026-10-11",
   "target": "tests-qt4-win-amd64",
   "status": "PASS",
   "image": "qt4-win-amd64",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery.exe": "db880be3f504c6eade2f07b0ca80d0bcce986815f6b49027764d623e250613e8",
-    "graphics-gallery.exe": "faaf79d766c36ef073485740aedb9d6ee19935059fa13306732d0848ed0fe5b0",
-    "multimedia-lab.exe": "2e076fb8704cb7da582ed92fe247bf18923f33b18692686547740ff2ae7bc2ba",
-    "network-gui.exe": "b7f3fc76041758a1e37f4ef774255fcf060b9405a353f0fcd27f1ba7bfc88767",
-    "painting-lab.exe": "16031d46abe9a5361a9f0030b4aab96ee9bafc347d8230ebc39f5cc25a1175f9",
-    "qt-selftest.exe": "e0655385396b90ddc1d4c7452751709f653e6bb5fe9c7e30f28860ef994d4424",
-    "quick-qml-gallery.exe": "d9944fcd399a69301bba3f0c995a4dc72587d5ebb74acbd01ec7f4ba2ff3793b",
-    "smoke-runner.exe": "84a2fd5381e9a14da7b716a74151ae049e15fd9b3acad4a3500c1482e1ac36f7",
-    "widgets-gallery.exe": "5728addb1784042d22331eadacec7d7c42316f645b06ce67fd0b67cd4caf2c49"
+    "gl-heavy-gallery.exe": "de97bb0eb9d770349f56116d6b02197746cb928fce24f4baa96f52c01a40e16e",
+    "graphics-gallery.exe": "46a5ef59e05a5b9837f6177deb53389c164cf8b2d1495530bbb481b1699482c4",
+    "multimedia-lab.exe": "552000787d827d0dbe329ae7e7f04eccf419a8ea217aa89ff2970fa26f12451a",
+    "network-gui.exe": "b4dd6107cb0aed718479de344da73349227397b763af0adea5a6b325dedf6926",
+    "painting-lab.exe": "5903975389b8fc0e301f4a0a338c091f505a861fddc20f35db7867912621bd1c",
+    "qt-selftest.exe": "ea668f6f37420cdc8a29b93fbc8dc27075e3668593685b2a5da4a589476b4ffe",
+    "quick-qml-gallery.exe": "8f37d15e420f3dcc44475d715163d8d81172460bd40032ebe6b748186de84639",
+    "smoke-runner.exe": "ee18b2ab1e38241f0165a019fdf34d0a9cfe4cd091cb8044c91c9595af45f2cb",
+    "widgets-gallery.exe": "bef530108ebb6130032e5b0c6d68bd959682f4d672f7a3bd7af9fdcb8f651ffd"
   }
 }

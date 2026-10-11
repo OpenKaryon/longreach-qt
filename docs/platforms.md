@@ -30,7 +30,7 @@ run.
 | `qt4-win-i386` | Windows 95 OSR2 | Windows 95 OSR2 (QEMU) | 24/24, 528 passed, 0 failed ([json](results/qt4-win95-openssl102u-qemu-20261002.json)) |
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
 | | | Windows 11 (the build host) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-host-20261010.json)); the two native print dialog checks skip there |
-| `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261010.json)); not yet on XP x64 |
+| `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261011.json)); not yet on XP x64 |
 | `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge (QEMU, Xfce desktop) | 24/24, 520 passed, 0 failed ([json](results/qt4-sarge-public-sdk-qemu-20261002.json), [desktop](results/qt4-sarge-desktop-20261002.json)) |
 | | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([json](results/linux-forward-20261010.json)) |
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | CentOS 7, Ubuntu 24.04, Debian 13 (containers) | 8/8, 365-366 passed, 0 failed ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |

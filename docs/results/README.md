@@ -15,7 +15,7 @@ inside them may name directories that have since moved.
 |------|--------|--------|
 | `qt4-win95-openssl102u-qemu-20261002.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU) |
 | `qt4-win98se-vmware-20261010.json`, `qt4-nt4-sp6a-vmware-20261010.json`, `qt4-win2000-vmware-20261010.json` | Qt 4 Windows i386 | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) |
-| `qt4-win-i386-win11-host-20261010.json`, `qt4-win-amd64-win11-host-20261010.json` | Qt 4 Windows i386, amd64 | Windows 11 |
+| `qt4-win-i386-win11-host-20261010.json`, `qt4-win-amd64-win11-host-20261011.json` | Qt 4 Windows i386, amd64 | Windows 11 |
 | `qt4-sarge-public-sdk-qemu-20261002.json`, `qt4-sarge-desktop-20261002.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU, desktop) |
 | `qt4-tiger-i386-suite-20261003.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU) |
 | `qt4-jaguar-suite-20261005.json` | Qt 4 macOS PowerPC | Mac OS X 10.2 and 10.2.8 (QEMU) |

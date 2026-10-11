@@ -1,6 +1,6 @@
 # Licensing the SDK and applications built with it
 
-Longreach itself - the Dockerfiles, Makefile, scripts, CMake toolchains and
+Longreach Qt itself - the Dockerfiles, Makefile, scripts, CMake toolchains and
 the test suite - is GPL-3.0-or-later, Copyright (C) 2026 OpenKaryon
 ([`LICENSE`](../LICENSE)). What becomes part of Qt keeps Qt's terms:
 
@@ -12,7 +12,7 @@ the test suite - is GPL-3.0-or-later, Copyright (C) 2026 OpenKaryon
 
 Every source file names its licence in an `SPDX-License-Identifier` line; the
 texts are in [`licenses/`](../licenses/). Because the patched Qt stays under
-Qt's licences, an application built with a Longreach SDK can be distributed
+Qt's licences, an application built with a Longreach Qt SDK can be distributed
 under the LGPL rules - the GPL of the kit covers the build tooling, not what
 you build with it.
 

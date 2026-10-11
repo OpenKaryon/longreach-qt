@@ -52,4 +52,4 @@ build has not been run on Windows yet.
 - Windows 95 in VMware: VMware Tools 7.7 are unstable on Windows 95 (large
   transfers hang), so its runs are in QEMU.
 - Real audio output on Windows 9x is unverified.
-- QtWebKit and Phonon are not built (as in every Longreach SDK).
+- QtWebKit and Phonon are not built (as in every Longreach Qt SDK).

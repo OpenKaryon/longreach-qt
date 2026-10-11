@@ -9,10 +9,9 @@
 suite as application bundles and pack them as a tar.gz (unpack it on the Mac:
 copying loose bundles through Windows loses the executable bits).
 
-Qt 4.8.7 on the Mac is Carbon for 10.4 and Cocoa for 10.5; Longreach builds
-Carbon, the only one that reaches 10.4 and 10.2. Intel Macs start at 10.4.4,
-so the Intel build stops at Tiger; PowerPC goes down to Jaguar, Qt 3.3's
-floor.
+Qt 4.8.7 on the Mac is Carbon for 10.4 and Cocoa for 10.5; Longreach Qt builds
+Carbon, the only one that reaches 10.4 and 10.2. Intel Macs start at 10.4.4, so
+the Intel build stops at Tiger; PowerPC goes down to Jaguar, Qt 3.3's floor.
 
 ## How the PowerPC build is made
 

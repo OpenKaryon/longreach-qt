@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 
-# Longreach: Qt 4.8.7, 5.15.19 and 6.8.4, one build per Qt version, OS and
-# architecture (`make qt<N>-<os>-<arch>`). Shared settings are here; each
-# generation's inputs, images and targets are in mk/qt4.mk, mk/qt5.mk, mk/qt6.mk.
+# Longreach Qt: Qt 4.8.7, 5.15.19 and 6.8.4, one build per Qt version, OS
+# and architecture (`make qt<N>-<os>-<arch>`). Shared settings are here; each
+# generation's inputs, images and targets are in mk/qt4.mk, mk/qt5.mk and
+# mk/qt6.mk.
 
 PROJECT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 

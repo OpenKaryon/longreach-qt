@@ -43,7 +43,7 @@ targets (Qt 4 Mac, Qt 6) put the binaries and a `manifest.json` in
 `scripts/tests/check_coverage.py` compares the Qt classes the suite references
 with each version's public API (`scripts/tests/qt-api-classes*.txt`,
 regenerated from a Qt source tree by `make regen-db`). Only sources a
-version's build compiles count for it, and API no Longreach target can reach
+version's build compiles count for it, and API no Longreach Qt target can reach
 (Qt for Embedded Linux, Symbian and Windows CE on Qt 4, QNX transports,
 Android, internal Wayland plugin classes) leaves the denominator with a stated
 reason. Today all three generations are at 100%:
@@ -78,7 +78,7 @@ distribution at once and writes `docs/results/linux-forward-<date>.json`.
 
 The old systems themselves (Windows 95, Mac OS X 10.2, Debian Sarge) were
 installed and driven with tools that are specific to one lab and are not part
-of Longreach; [platforms](platforms.md) records what was run where.
+of Longreach Qt; [platforms](platforms.md) records what was run where.
 
 ## CI
 

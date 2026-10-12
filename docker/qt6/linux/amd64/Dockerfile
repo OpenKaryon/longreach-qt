@@ -28,7 +28,7 @@ RUN set -eux; \
         libX11-devel libXext-devel libXfixes-devel libXi-devel libXrender-devel \
         libxcb-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel \
         xcb-util-renderutil-devel xcb-util-wm-devel \
-        libxkbcommon-devel libxkbcommon-x11-devel \
+        libxkbcommon-devel libxkbcommon-x11-devel wayland-devel mesa-libwayland-egl-devel \
         dejavu-sans-fonts xorg-x11-server-Xvfb xorg-x11-xauth; \
     yum clean all; \
     rm -rf /var/cache/yum
@@ -75,6 +75,17 @@ RUN PARALLEL_JOBS="${PARALLEL_JOBS}" bash /tmp/build-openssl.sh /tmp/openssl.tar
         /opt/openssl-3 no-async no-shared no-tests && \
     rm /tmp/openssl.tar.gz /tmp/build-openssl.sh
 
+# Wayland without libwayland at link time: dlopen stubs
+# (scripts/build/dlopen/wayland.sh), so that the binaries also start where it
+# is not installed, as on a RHEL 7 server.
+COPY scripts/build/dlopen /tmp/dlopen
+RUN WAYLAND_LIBDIR=/usr/lib64 WAYLAND_EGL=/usr/lib64/libwayland-egl.so.1 \
+    WAYLAND_VERSION="$(pkg-config --modversion wayland-client)" \
+    WAYLAND_EGL_VERSION="$(pkg-config --modversion wayland-egl)" \
+        bash /tmp/dlopen/wayland.sh /opt/wayland-dlopen /opt/wayland-dlopen && \
+    rm -rf /tmp/dlopen
+ENV PKG_CONFIG_PATH=/opt/wayland-dlopen/lib/pkgconfig
+
 COPY downloads/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 RUN tar -xJf /tmp/qt-src.tar.xz -C /opt && rm /tmp/qt-src.tar.xz
 
@@ -91,14 +102,16 @@ RUN mkdir -p /opt/qt-build && \
         -release -optimize-size -static \
         -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
         -nomake examples -nomake tests \
-        -skip qtwebengine -skip qtwebview -skip qtwayland \
+        -skip qtwebengine -skip qtwebview \
         -openssl-linked \
         $(/tmp/license-configure-args.sh qt6 "$LICENSE_PROFILE") \
         -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
            -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON && \
     cmake --build . --parallel "${PARALLEL_JOBS}" && \
     cmake --install . && \
-    cd / && rm -rf /opt/qt-build
+    cd / && rm -rf /opt/qt-build && \
+    if grep -rIl '/usr/lib64/libwayland' /opt/qt6-linux-amd64/lib/cmake; then \
+        echo "Qt links libwayland instead of the stubs" >&2; exit 1; fi
 
 RUN mkdir -p /opt/qt6-linux-amd64/lib && ln -s /usr/share/fonts/dejavu /opt/qt6-linux-amd64/lib/fonts
 

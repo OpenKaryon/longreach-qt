@@ -7,6 +7,7 @@
   values for APIs where 0 means success and mirrored data for libraries that
   export it. The binaries link them in place of the libraries and start where
   those are missing.
+- Qt 6 Linux amd64: QtWayland is built, through the same stubs.
 - Qt 6 macOS: `patches/qt6/macos/19` lets projects that use the SDK find
   QtNfc (its PC/SC lookup relied on variables only Qt's own build defines),
   so the suite's qt-selftest builds for Qt 6 macOS too.

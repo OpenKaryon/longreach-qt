@@ -12,7 +12,9 @@ It is built on CentOS 7 with devtoolset-11's GCC 11, CentOS 7's glibc and a
 static libstdc++; OpenSSL 3 is linked statically; FreeType is bundled and
 `patches/qt6/all` makes Qt find system fonts without fontconfig, survive a
 missing D-Bus session bus, and link the legacy `libGL.so.1` rather than
-GLVND's `libOpenGL.so.0`, which old distributions lack.
+GLVND's `libOpenGL.so.0`, which old distributions lack. QtWayland links
+libwayland through stubs that load it at run time (`scripts/build/dlopen`), so
+the binaries also start where it is not installed, as on a RHEL 7 server.
 
 `make qt6-linux-amd64-smoke` builds the test suite against the SDK and runs it
 under Xvfb in the build image; `scripts/run/run.py --host docker:<distro>`
@@ -21,13 +23,14 @@ runs the extracted suite on stock distributions.
 ## Results
 
 8/8 (508 checks) on stock CentOS 7.6 and 8/8 on Linux Mint 22.3 in VMware;
-the release image 8/8 (508) on CentOS 7 and Debian 13 in containers
+with QtWayland, 8/8 (528) on CentOS 7 and Debian 13 in containers, the live
+Wayland client check included
 ([platforms](../platforms.md#qt-684)). arm64: 8/8 (496 checks) on stock Debian 12
 arm64 in an emulated container.
 
 ## Limits
 
-- QtWayland, QtWebEngine and QtWebView are not built.
+- QtWebEngine and QtWebView are not built.
 - The arm64 build has no SSL (no OpenSSL in its sysroot) and no D-Bus; the
   suite's SSL checks report SKIP there.
 - The arm64 floor is to move to CentOS 7 aarch64 like amd64.

@@ -65,7 +65,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261010.json)) |
 | | | Windows 11 (the build host) | 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-host-20261010.json)) |
 | `qt6-win-arm64` | Windows 10 on ARM | - | built, not run |
-| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 508 passed, 0 failed ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261011.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261011.json)) |
+| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261012.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261012.json)) |
 | | | Linux Mint 22.3 (VMware) | 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
 | `qt6-linux-arm64` | Debian 12 arm64 | stock Debian 12 arm64 (container, emulated) | 8/8, 496 passed, 0 failed ([json](results/qt6-linux-arm64-debian12-docker-20261011.json)) |
 | `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 7/7 built applications, 240 passed, 0 failed ([json](results/qt6-macos-1013-jit-highsierra-vmware-20261007.json)) |

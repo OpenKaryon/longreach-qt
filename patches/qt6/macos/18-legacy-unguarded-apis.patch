@@ -1,0 +1,261 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: guard the newer APIs that would crash below their macOS version.
+#
+# With a 10.13 deployment target the build reports 144 uses of APIs newer than
+# 10.13 that no @available check guards (-Wunguarded-availability-new). Most
+# are harmless: enum values and types that only exist at compile time, a class
+# that is already behind an @available check further up, or a property of an
+# object that only a guarded call can create. The ones below run on any macOS
+# and fail there: a message to a selector the system does not have raises an
+# exception, and a weakly linked constant or class is NULL.
+#
+#   qrhimetal.mm   MTLBinaryArchive (11), which Qt Quick's pipeline cache
+#                  sets up on every start; GPUStartTime/GPUEndTime,
+#                  MTLDevice.location, supportsFamily: and
+#                  maximumPotentialExtendedDynamicRangeColorComponentValue
+#                  (10.15); kCGColorSpaceExtendedLinearDisplayP3 (10.14.3),
+#                  behind a check that only named iOS
+#   qcocoafiledialoghelper.mm
+#                  NSButton.hasDestructiveAction (11) in the replace alert
+#   qtexttospeech_darwin.mm
+#                  AVSpeechSynthesizer (10.14), whose speech rate constants
+#                  prepareUtterance reads, and writeUtterance: (10.15)
+#
+# Below their version the Metal backend reports no GPU time and builds its
+# pipelines without the binary archive, the alert's Replace button is an
+# ordinary one, and the speech engine reports an error instead of speaking.
+diff --git a/qtbase/src/gui/rhi/qrhimetal.mm b/qtbase/src/gui/rhi/qrhimetal.mm
+--- a/qtbase/src/gui/rhi/qrhimetal.mm
++++ b/qtbase/src/gui/rhi/qrhimetal.mm
+@@ -522,24 +522,38 @@ id<MTLCommandBuffer> QRhiMetalData::newCommandBuffer()
+ #endif
+ }
+ 
++// The GPU time of a completed command buffer. GPUStartTime and GPUEndTime are
++// macOS 10.15; below it there is no GPU time to report.
++static inline double qrhimtl_gpuTime(id<MTLCommandBuffer> cb)
++{
++    if (@available(macOS 10.15, *))
++        return cb.GPUEndTime - cb.GPUStartTime;
++    return 0;
++}
++
+ bool QRhiMetalData::setupBinaryArchive(NSURL *sourceFileUrl)
+ {
+ #ifdef QRHI_METAL_DISABLE_BINARY_ARCHIVE
+     return false;
+ #endif
+ 
+-    [binArch release];
+-    MTLBinaryArchiveDescriptor *binArchDesc = [MTLBinaryArchiveDescriptor new];
+-    binArchDesc.url = sourceFileUrl;
+-    NSError *err = nil;
+-    binArch = [dev newBinaryArchiveWithDescriptor: binArchDesc error: &err];
+-    [binArchDesc release];
+-    if (!binArch) {
+-        const QString msg = QString::fromNSString(err.localizedDescription);
+-        qWarning("newBinaryArchiveWithDescriptor failed: %s", qPrintable(msg));
+-        return false;
++    // MTLBinaryArchive is macOS 11: below it binArch stays nil, which every
++    // user of it checks, and pipelines are built without the cache.
++    if (@available(macOS 11.0, iOS 14.0, *)) {
++        [binArch release];
++        MTLBinaryArchiveDescriptor *binArchDesc = [MTLBinaryArchiveDescriptor new];
++        binArchDesc.url = sourceFileUrl;
++        NSError *err = nil;
++        binArch = [dev newBinaryArchiveWithDescriptor: binArchDesc error: &err];
++        [binArchDesc release];
++        if (!binArch) {
++            const QString msg = QString::fromNSString(err.localizedDescription);
++            qWarning("newBinaryArchiveWithDescriptor failed: %s", qPrintable(msg));
++            return false;
++        }
++        return true;
+     }
+-    return true;
++    return false;
+ }
+ 
+ bool QRhiMetal::create(QRhi::Flags flags)
+@@ -565,19 +579,30 @@ bool QRhiMetal::create(QRhi::Flags flags)
+     // apparently change when the system is rebooted.
+ 
+ #ifdef Q_OS_MACOS
+-    const MTLDeviceLocation deviceLocation = [d->dev location];
+-    switch (deviceLocation) {
+-    case MTLDeviceLocationBuiltIn:
+-        driverInfoStruct.deviceType = QRhiDriverInfo::IntegratedDevice;
+-        break;
+-    case MTLDeviceLocationSlot:
+-        driverInfoStruct.deviceType = QRhiDriverInfo::DiscreteDevice;
+-        break;
+-    case MTLDeviceLocationExternal:
+-        driverInfoStruct.deviceType = QRhiDriverInfo::ExternalDevice;
+-        break;
+-    default:
+-        break;
++    if (@available(macOS 10.15, *)) {
++        const MTLDeviceLocation deviceLocation = [d->dev location];
++        switch (deviceLocation) {
++        case MTLDeviceLocationBuiltIn:
++            driverInfoStruct.deviceType = QRhiDriverInfo::IntegratedDevice;
++            break;
++        case MTLDeviceLocationSlot:
++            driverInfoStruct.deviceType = QRhiDriverInfo::DiscreteDevice;
++            break;
++        case MTLDeviceLocationExternal:
++            driverInfoStruct.deviceType = QRhiDriverInfo::ExternalDevice;
++            break;
++        default:
++            break;
++        }
++    } else {
++        // MTLDevice.location is 10.15; before it, a removable GPU is an eGPU
++        // and a low-power one the integrated GPU of a dual-GPU Mac.
++        if ([d->dev isRemovable])
++            driverInfoStruct.deviceType = QRhiDriverInfo::ExternalDevice;
++        else if ([d->dev isLowPower])
++            driverInfoStruct.deviceType = QRhiDriverInfo::IntegratedDevice;
++        else
++            driverInfoStruct.deviceType = QRhiDriverInfo::DiscreteDevice;
+     }
+ #else
+     driverInfoStruct.deviceType = QRhiDriverInfo::IntegratedDevice;
+@@ -603,7 +628,11 @@ bool QRhiMetal::create(QRhi::Flags flags)
+ #if defined(Q_OS_MACOS) || defined(Q_OS_VISIONOS)
+     caps.maxTextureSize = 16384;
+     caps.baseVertexAndInstance = true;
+-    caps.isAppleGPU = [d->dev supportsFamily:MTLGPUFamilyApple7];
++    // MTLGPUFamily is 10.15; no Mac before it has an Apple GPU.
++    if (@available(macOS 10.15, *))
++        caps.isAppleGPU = [d->dev supportsFamily:MTLGPUFamilyApple7];
++    else
++        caps.isAppleGPU = false;
+     caps.maxThreadGroupSize = 1024;
+     caps.multiView = true;
+ #elif defined(Q_OS_TVOS)
+@@ -2376,7 +2405,7 @@ QRhi::FrameOpResult QRhiMetal::endFrame(QRhiSwapChain *swapChain, QRhi::EndFrame
+ 
+     __block int thisFrameSlot = currentFrameSlot;
+     [commandBuffer addCompletedHandler: ^(id<MTLCommandBuffer> cb) {
+-        swapChainD->d->lastGpuTime[thisFrameSlot] += cb.GPUEndTime - cb.GPUStartTime;
++        swapChainD->d->lastGpuTime[thisFrameSlot] += qrhimtl_gpuTime(cb);
+         dispatch_semaphore_signal(swapChainD->d->sem[thisFrameSlot]);
+     }];
+ 
+@@ -2500,7 +2529,7 @@ QRhi::FrameOpResult QRhiMetal::endOffscreenFrame(QRhi::EndFrameFlags flags)
+     // offscreen frames wait for completion, unlike swapchain ones
+     [cb waitUntilCompleted];
+ 
+-    d->ofr.lastGpuTime += cb.GPUEndTime - cb.GPUStartTime;
++    d->ofr.lastGpuTime += qrhimtl_gpuTime(cb);
+ 
+     finishActiveReadbacks(true);
+ 
+@@ -2542,10 +2571,10 @@ QRhi::FrameOpResult QRhiMetal::finish()
+ 
+     if (inFrame) {
+         if (d->ofr.active) {
+-            d->ofr.lastGpuTime += cb.GPUEndTime - cb.GPUStartTime;
++            d->ofr.lastGpuTime += qrhimtl_gpuTime(cb);
+             d->ofr.cbWrapper.d->cb = d->newCommandBuffer();
+         } else {
+-            swapChainD->d->lastGpuTime[currentFrameSlot] += cb.GPUEndTime - cb.GPUStartTime;
++            swapChainD->d->lastGpuTime[currentFrameSlot] += qrhimtl_gpuTime(cb);
+             swapChainD->cbWrapper.d->cb = d->newCommandBuffer();
+         }
+     }
+@@ -6289,7 +6318,7 @@ bool QMetalSwapChain::createOrResize()
+             d->layer.wantsExtendedDynamicRangeContent = YES;
+         }
+     } else if (m_format == HDRExtendedDisplayP3Linear) {
+-        if (@available(iOS 16.0, *)) {
++        if (@available(macOS 10.14.3, iOS 16.0, *)) {
+             d->layer.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceExtendedLinearDisplayP3);
+             d->layer.wantsExtendedDynamicRangeContent = YES;
+         }
+@@ -6415,7 +6444,11 @@ QRhiSwapChainHdrInfo QMetalSwapChain::hdrInfo()
+         NSView *view = reinterpret_cast<NSView *>(m_window->winId());
+         NSScreen *screen = view.window.screen;
+         info.limits.colorComponentValue.maxColorComponentValue = screen.maximumExtendedDynamicRangeColorComponentValue;
+-        info.limits.colorComponentValue.maxPotentialColorComponentValue = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
++        // The potential value is 10.15; before it the current value is all there is.
++        if (@available(macOS 10.15, *))
++            info.limits.colorComponentValue.maxPotentialColorComponentValue = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
++        else
++            info.limits.colorComponentValue.maxPotentialColorComponentValue = screen.maximumExtendedDynamicRangeColorComponentValue;
+ #elif defined(Q_OS_IOS)
+         if (@available(iOS 16.0, *)) {
+             UIView *view = reinterpret_cast<UIView *>(m_window->winId());
+diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+--- a/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
++++ b/qtbase/src/plugins/platforms/cocoa/qcocoafiledialoghelper.mm
+@@ -308,7 +308,9 @@ typedef QSharedPointer<QFileDialogOptions> SharedPointerFileDialogOptions;
+                         fileInfo.absoluteDir().dirName().toNSString()];
+ 
+             auto *replaceButton = [alert addButtonWithTitle:qt_mac_AppKitString(@"SavePanel", @"Replace")];
+-            replaceButton.hasDestructiveAction = YES;
++            // hasDestructiveAction is macOS 11; before it the button is an ordinary one.
++            if ([replaceButton respondsToSelector:@selector(setHasDestructiveAction:)])
++                replaceButton.hasDestructiveAction = YES;
+             replaceButton.tag = 1337;
+             [alert addButtonWithTitle:qt_mac_AppKitString(@"Common", @"Cancel")];
+ 
+diff --git a/qtspeech/src/plugins/tts/darwin/qtexttospeech_darwin.mm b/qtspeech/src/plugins/tts/darwin/qtexttospeech_darwin.mm
+--- a/qtspeech/src/plugins/tts/darwin/qtexttospeech_darwin.mm
++++ b/qtspeech/src/plugins/tts/darwin/qtexttospeech_darwin.mm
+@@ -100,6 +100,14 @@ QTextToSpeechEngineDarwin::QTextToSpeechEngineDarwin(const QVariantMap &/*parame
+     : QTextToSpeechEngine(parent)
+     , m_speechSynthesizer([AVSpeechSynthesizer new])
+ {
++    // AVSpeechSynthesizer is macOS 10.14: below it the class, and with it
++    // m_speechSynthesizer, is nil, and so are the speech rate constants
++    // prepareUtterance reads. The engine stays in the error state.
++    if (!m_speechSynthesizer) {
++        setError(QTextToSpeech::ErrorReason::Configuration,
++                 QCoreApplication::translate("QTextToSpeech", "Speech synthesis needs macOS 10.14 or later."));
++        return;
++    }
+     m_speechSynthesizer.delegate = [[QDarwinSpeechSynthesizerDelegate alloc] initWithTextToSpeechEngineDarwin:this];
+     if (setLocale(QLocale()) || setLocale(QLocale().language())) {
+         m_state = QTextToSpeech::Ready;
+@@ -165,6 +173,8 @@ AVSpeechUtterance *QTextToSpeechEngineDarwin::prepareUtterance(const QString &te
+ 
+ void QTextToSpeechEngineDarwin::say(const QString &text)
+ {
++    if (!m_speechSynthesizer)
++        return;
+     stop(QTextToSpeech::BoundaryHint::Default);
+ 
+     AVSpeechUtterance *utterance = prepareUtterance(text);
+@@ -173,6 +183,15 @@ void QTextToSpeechEngineDarwin::say(const QString &text)
+ 
+ void QTextToSpeechEngineDarwin::synthesize(const QString &text)
+ {
++    if (!m_speechSynthesizer)
++        return;
++    // writeUtterance:toBufferCallback: is macOS 10.15.
++    if (@available(macOS 10.15, *)) {
++    } else {
++        setError(QTextToSpeech::ErrorReason::Configuration,
++                 QCoreApplication::translate("QTextToSpeech", "Speech synthesis to audio needs macOS 10.15 or later."));
++        return;
++    }
+     AVSpeechUtterance *utterance = prepareUtterance(text);
+     m_format = {};
+ 
+@@ -236,8 +255,10 @@ void QTextToSpeechEngineDarwin::synthesize(const QString &text)
+             emit synthesized(m_format, QByteArray::fromRawData(static_cast<const char *>(buffer.mData), buffer.mDataByteSize));
+         }
+     };
+-    [m_speechSynthesizer writeUtterance:utterance
+-                         toBufferCallback:bufferCallback];
++    if (@available(macOS 10.15, *)) {
++        [m_speechSynthesizer writeUtterance:utterance
++                             toBufferCallback:bufferCallback];
++    }
+ }
+ 
+ void QTextToSpeechEngineDarwin::stop(QTextToSpeech::BoundaryHint boundaryHint)

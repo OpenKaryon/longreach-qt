@@ -230,7 +230,7 @@ void checkQt6QtBaseAdditions(SmokeReporter &r)
         if (!ok)
             d = QStringLiteral("the Windows MIME converter answered unexpectedly");
         return ok;
-#elif QT_VERSION_MAJOR >= 6 && defined(Q_OS_UNIX)
+#elif QT_VERSION_MAJOR >= 6 && defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
         // QX11Application exists only in an X11 build and works only under the xcb
         // plugin: under offscreen it is handed out with a null display and connection.
         auto *x11 = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Qt 6 macOS: `patches/qt6/macos/19` lets projects that use the SDK find
+  QtNfc (its PC/SC lookup relied on variables only Qt's own build defines),
+  so the suite's qt-selftest builds for Qt 6 macOS too.
+- Qt 6 macOS: `patches/qt6/macos/18` guards the newer Metal, save dialog and
+  text-to-speech APIs that the availability audit found unguarded and that
+  would fail below their macOS version (Qt Quick's pipeline cache needs
+  macOS 11's `MTLBinaryArchive`). The other uses of the 144 are compile-time
+  only or behind a guarded call.
 - Qt 4 Linux: `patches/qt4/linux/03` binds a GLX context only when it is not
   already current on the drawable; Debian 4.0's X server lost a large GL
   window's frame on the repeated bind, so `grabFrameBuffer()` read black.

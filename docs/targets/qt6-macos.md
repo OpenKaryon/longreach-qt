@@ -20,20 +20,27 @@ MacBook Pro, for one) cannot get 10.14.
 | Below | What changes |
 |-------|--------------|
 | 12 | IOKit's main port is `MACH_PORT_NULL`; no safe-area insets; CoreVideo attachments the older way |
-| 10.15 | OpenXR uses its POSIX file system code; camera without Metal-backed formats |
-| 10.14 | QtCore provides the C++17 aligned new/delete libc++ lacks (built with `-faligned-allocation`); file system, icon, key map, UTI, drag and capture-permission fallbacks; the QML JIT retries `mmap` without an address hint and then without `MAP_JIT`, both of which 10.13 rejects with EINVAL |
+| 11 | Metal pipelines without the binary archive; the save dialog's Replace button is not marked destructive |
+| 10.15 | OpenXR uses its POSIX file system code; camera without Metal-backed formats; Metal reports no GPU time and takes the device type from `isRemovable`/`isLowPower`; text-to-speech cannot synthesize to audio |
+| 10.14 | text-to-speech reports an error (no `AVSpeechSynthesizer`); QtCore provides the C++17 aligned new/delete libc++ lacks (built with `-faligned-allocation`); file system, icon, key map, UTI, drag and capture-permission fallbacks; the QML JIT retries `mmap` without an address hint and then without `MAP_JIT`, both of which 10.13 rejects with EINVAL |
 | 10.12 | no os_activity scopes or unified logging |
 
 ## Results
 
 macOS 10.13.6 in VMware: 7/7 built applications, 240 checks, none failed,
 with the QML JIT fix ([platforms](../platforms.md#qt-684)); `qt-selftest`
-was not built for that image (it lacked QtTextToSpeech). arm64 is built and
-audited (`make qt6-macos-arm64-audit`: every binary declares 11.0), not run.
+was not built for that image (it lacked QtTextToSpeech). arm64 builds all 8
+applications, `qt-selftest` included, and is audited
+(`make qt6-macos-arm64-audit`: every binary declares 11.0), not run.
 
 ## Limits
 
 - Real High Sierra hardware and Apple silicon have not run the builds.
-- 144 uses of newer APIs reported by the availability audit
-  (`scripts/audit/qt6-macos-availability-report.py`) remain to be reviewed;
-  the suite exercises the ones it reaches.
+- The availability audit (`scripts/audit/qt6-macos-availability-report.py`)
+  reported 144 uses of APIs newer than 10.13 without an `@available` check.
+  All were reviewed: the ones that would fail at run time (Metal, the save
+  dialog, text-to-speech) are guarded by `patches/qt6/macos/18`, which leaves
+  123; those are enum values and types, calls reached only through an object
+  a guarded call creates, or checks Clang does not recognize
+  (`respondsToSelector:`, Qt's Apple-GPU capability). The VMware guest has no
+  Metal device, so the Metal guards are built and reviewed, not run.

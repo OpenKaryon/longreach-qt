@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# macOS: QtNfc's PCSC dependency found in projects that use the SDK too.
+#
+# Qt6Nfc's package looks up its PC/SC dependency with FindPCSCLITE.cmake,
+# which is installed with the SDK and runs again in every project that asks
+# for Nfc. On macOS it tests MACOS and calls
+# qt_internal_find_apple_system_framework, both defined only while Qt itself
+# is being built. In a project the test is false, the module falls through to
+# pkg-config's libpcsclite, finds nothing, and find_package(Qt6 COMPONENTS Nfc)
+# fails:
+#
+#   Qt6Nfc could not be found because dependency PCSCLITE could not be found.
+#
+# CMake's own APPLE and system name decide instead, and the framework is
+# found with find_library, which is what the internal helper does.
+diff --git a/qtconnectivity/cmake/FindPCSCLITE.cmake b/qtconnectivity/cmake/FindPCSCLITE.cmake
+--- a/qtconnectivity/cmake/FindPCSCLITE.cmake
++++ b/qtconnectivity/cmake/FindPCSCLITE.cmake
+@@ -5,8 +5,8 @@ if(WIN32)
+     add_library(PkgConfig::PCSCLITE INTERFACE IMPORTED)
+     target_link_libraries(PkgConfig::PCSCLITE INTERFACE winscard)
+     set(PCSCLITE_FOUND 1)
+-elseif(MACOS)
+-    qt_internal_find_apple_system_framework(FWPCSC PCSC)
++elseif(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
++    find_library(FWPCSC PCSC)
+     add_library(PkgConfig::PCSCLITE INTERFACE IMPORTED)
+     target_link_libraries(PkgConfig::PCSCLITE INTERFACE ${FWPCSC})
+     set(PCSCLITE_FOUND 1)

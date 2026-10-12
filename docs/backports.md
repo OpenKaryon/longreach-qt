@@ -93,11 +93,13 @@ series are checked against pristine Qt 4.8.7, 5.15.19 and 6.8.4.
   multimedia, Schannel), the Windows 7 API level with its header fixes,
   MSVCRT (`_fstat64` in Assimp), and no Windows 8 import libraries
   (`synchronization`, `shcore`) in the CMake link interface.
-- `macos/` (17): macOS 12 down to 10.13 (11.0 on arm64): OpenXR's POSIX file
+- `macos/` (19): macOS 12 down to 10.13 (11.0 on arm64): OpenXR's POSIX file
   system and camera APIs before 10.15; aligned allocation, file system, icon,
   key map, UTI, drag, permission and QML JIT (`MAP_JIT`) fallbacks before
   10.14; IOKit port, safe area and CoreVideo attachments before 12; os_activity
-  and unified logging before 10.12.
+  and unified logging before 10.12; Metal, save dialog and text-to-speech
+  calls guarded by version where the availability audit found them unguarded;
+  QtNfc's PC/SC lookup made to work in projects that use the SDK.
 
 ## Writing a patch
 

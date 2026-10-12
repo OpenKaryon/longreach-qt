@@ -145,7 +145,7 @@ void checkAnimationDriverAndNdef(SmokeReporter &r)
 void checkPlatformOnlyExtras(SmokeReporter &r)
 {
     r.check("mac/autorelease-pool", [&](QString &d) {
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) && QT_VERSION_MAJOR < 6
         QMacAutoReleasePool outer;
         {
             QMacAutoReleasePool inner;
@@ -153,6 +153,9 @@ void checkPlatformOnlyExtras(SmokeReporter &r)
         }
         Q_UNUSED(outer);
         return true;
+#elif defined(Q_OS_MACOS)
+        r.skip(d, QStringLiteral("QMacAutoReleasePool is private API in Qt 6"));
+        return false;
 #else
         r.skip(d, QStringLiteral("QMacAutoReleasePool is a macOS-only class"));
         return false;

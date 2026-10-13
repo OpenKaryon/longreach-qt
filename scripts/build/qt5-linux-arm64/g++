@@ -1,0 +1,17 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# C++ for Ubuntu 14.04 arm64 (see gcc beside it). The C++ headers are GCC 5's
+# own, matching the static libstdc++ that is linked.
+sysroot=/work/sysroot
+gcc=aarch64-linux-gnu-g++-5
+cxx=/usr/aarch64-linux-gnu/include/c++/5
+exec $gcc --sysroot="$sysroot" -nostdinc \
+    -isystem "$cxx" -isystem "$cxx/aarch64-linux-gnu" -isystem "$cxx/backward" \
+    -isystem "$($gcc -print-file-name=include)" -isystem "$($gcc -print-file-name=include-fixed)" \
+    -isystem "$sysroot/usr/local/include" \
+    -isystem "$sysroot/usr/include/aarch64-linux-gnu" -isystem "$sysroot/usr/include" \
+    -B"$sysroot/usr/lib/aarch64-linux-gnu" \
+    -L"$sysroot/usr/local/lib" -L"$sysroot/lib/aarch64-linux-gnu" -L"$sysroot/usr/lib/aarch64-linux-gnu" \
+    -Wl,-rpath-link,"$sysroot/lib/aarch64-linux-gnu:$sysroot/usr/lib/aarch64-linux-gnu" "$@"

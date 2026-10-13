@@ -4,7 +4,7 @@
 |--------|-------|-------|
 | `make qt5-linux-amd64` | `qt5-linux-amd64-<profile>` | Ubuntu 10.04 Lucid amd64: glibc 2.11, libxcb 1.5, libX11 1.3 |
 | `make qt5-linux-i386` | `qt5-linux-i386-<profile>` | Ubuntu 10.04 Lucid i386 |
-| `make qt5-linux-arm64` | `qt5-linux-arm64-<profile>` | Ubuntu 16.04 arm64 |
+| `make qt5-linux-arm64` | `qt5-linux-arm64-<profile>` | Ubuntu 14.04 arm64: glibc 2.19 |
 
 One build per architecture, from Qt 4.8's Linux floor.
 
@@ -34,6 +34,18 @@ come from the pinned Lucid packages
   or no Bluetooth adapter; `patches/qt5/linux/04` keeps the GStreamer
   services from starting when GStreamer cannot be initialized.
 
+## arm64
+
+`docker/qt5/linux/arm64` is the same build cross-compiled for Ubuntu 14.04
+arm64: Ubuntu 16.04's aarch64 GCC 5 with a sysroot of the 14.04 packages in
+`scripts/build/qt5-linux-arm64/packages.txt`, the `linux-trusty-aarch64-g++`
+mkspec, a static libstdc++ (glibc's aarch64 symbols start at 2.17, so GCC 5's
+own runtime fits 14.04's 2.19), and Lucid's static X libraries: the libxcb
+1.11 extensions, xcb-util and xkbcommon 0.7.2 (14.04 has libxcb 1.10 and
+xkbcommon 0.4.1). The binaries need the same system libraries as on Lucid
+(libxcb, libX11, libGL, fontconfig, FreeType); the optional ones are stubbed
+the same way.
+
 ## Results
 
 amd64: 8/8 (498 checks) on Ubuntu 10.04.4 in VMware; 8/8 (511) on CentOS 7 and
@@ -41,8 +53,8 @@ Debian 13 in containers, 513 on Debian 13 with GStreamer, PulseAudio,
 speech-dispatcher and BlueZ installed (the media player then gets its
 GStreamer backend); earlier also on Ubuntu 16.04 and 24.04, Fedora and Arch.
 i386: 8/8 (494, 509 and 510) on Ubuntu 10.04 i386 itself, Ubuntu 16.04 i386
-and Debian 12 i386 in containers. arm64: 8/8 (510 checks) on Ubuntu
-16.04 arm64 in an emulated container. See
+and Debian 12 i386 in containers. arm64: 8/8 (510 and 511 checks) on Ubuntu
+14.04 and Debian 12 arm64 in emulated containers. See
 [platforms](../platforms.md#qt-51519).
 
 ## Limits
@@ -59,6 +71,4 @@ and Debian 12 i386 in containers. arm64: 8/8 (510 checks) on Ubuntu
   load an older one too and leave its missing functions returning 0, so
   `QT_QPA_PLATFORM=wayland` crashes there (14.04's 1.4, say); the default,
   xcb, is not affected, and systems that old have X11 sessions anyway.
-- The arm64 build is native under emulation (several hours) and links the
-  Wayland client libraries dynamically; its floor is to move to Ubuntu 14.04
-  the way Lucid did for amd64.
+- arm64 has run only in emulated containers, not on hardware.

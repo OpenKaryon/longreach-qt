@@ -13,6 +13,9 @@
   services only when GStreamer initializes, and `05` keeps QtBluetooth from
   crashing where there is no D-Bus system bus.
 - Qt 6 Linux amd64: QtWayland is built, through the same stubs.
+- Qt 5 Linux arm64 is cross-built for Ubuntu 14.04 (was a native Ubuntu 16.04
+  build under emulation), with the Lucid build's static X libraries and
+  module set.
 - Qt 6 Linux arm64 is cross-built for RHEL/CentOS 7 aarch64 (was Debian 12),
   with OpenSSL, D-Bus and QtWayland; `scripts/build/rpm-sysroot.py` makes the
   sysroot from the CentOS vault. The qt6-host image builds qtwayland and

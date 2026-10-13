@@ -14,8 +14,10 @@ hosts.example.json). Built in, without any configuration:
 
     docker:<distro>     a stock container: centos-7, ubuntu-16.04,
                         ubuntu-18.04, ubuntu-24.04, debian-13, fedora-latest,
-                        arch-latest; ubuntu-16.04-i386, debian-12-i386 for
-                        i386 suites and ubuntu-16.04-arm64, debian-12-arm64
+                        arch-latest; ubuntu-10.04-i386 (a local image,
+                        scripts/run/lucid-i386-image.sh), ubuntu-16.04-i386,
+                        debian-12-i386 for i386 suites and centos-7-arm64,
+                        ubuntu-14.04-arm64, ubuntu-16.04-arm64, debian-12-arm64
                         for arm64 ones (Xvfb inside; the runtime libraries
                         a desktop has are installed first)
     qemu:<distro>       an old distribution's userland booted in QEMU under a
@@ -70,8 +72,13 @@ DOCKER = {
     'arch-latest': ('archlinux:latest', 'arch'),
     # 32-bit userlands for the i386 suites (run with --platform linux/386).
     'ubuntu-16.04-i386': ('i386/ubuntu:16.04', 'debian', 'linux/386'),
+    # Lucid itself: a local image (scripts/run/lucid-i386-image.sh), since
+    # Docker Hub's ubuntu:10.04 is in a format containerd no longer reads.
+    'ubuntu-10.04-i386': ('longreach/ubuntu:10.04-i386', 'lucid', 'linux/386'),
     'debian-12-i386': ('i386/debian:12', 'debian', 'linux/386'),
     # The arm64 floors, emulated on an x86 host (binfmt/QEMU).
+    'centos-7-arm64': ('arm64v8/centos:7', 'rhel', 'linux/arm64'),
+    'ubuntu-14.04-arm64': ('arm64v8/ubuntu:14.04', 'trusty', 'linux/arm64'),
     'ubuntu-16.04-arm64': ('arm64v8/ubuntu:16.04', 'debian', 'linux/arm64'),
     'debian-12-arm64': ('arm64v8/debian:12', 'debian', 'linux/arm64'),
 }
@@ -88,6 +95,14 @@ PACKAGES = {
     'fedora': ('mesa-libGL mesa-libEGL libglvnd-opengl libX11 libXext libXrender libSM libICE fontconfig freetype '
                'libX11-xcb libxcb xcb-util-cursor xcb-util-image xcb-util-keysyms xcb-util-renderutil '
                'xcb-util-wm libxkbcommon libxkbcommon-x11 dejavu-sans-fonts xorg-x11-server-Xvfb'),
+    # Ubuntu 10.04 and 14.04: older names, and no xkbcommon-x11 (the kit builds
+    # xkbcommon statically for both).
+    'lucid': ('libgl1-mesa-glx libx11-6 libxext6 libxrender1 libsm6 libice6 libfontconfig1 libfreetype6 '
+              'libx11-xcb1 libxcb1 ttf-dejavu-core xvfb xauth ca-certificates'),
+    'trusty': ('libgl1-mesa-glx libegl1-mesa libx11-6 libxext6 libxrender1 libsm6 libice6 libfontconfig1 '
+               'libfreetype6 libx11-xcb1 libxcb1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 '
+               'libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 '
+               'libxcb-xfixes0 libxcb-xkb1 fonts-dejavu-core xvfb xauth ca-certificates'),
     'arch': ('mesa libglvnd libx11 libxext libxrender libsm libice fontconfig freetype2 libxcb '
              'xcb-util-cursor xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm '
              'libxkbcommon libxkbcommon-x11 ttf-dejavu xorg-server-xvfb'),
@@ -102,6 +117,8 @@ INSTALL = {
                ' DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $x >/dev/null 2>&1 || true; done'),
     'rhel': ("sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|' "
              '/etc/yum.repos.d/CentOS-*.repo && yum install -y -q {p} >/dev/null'),
+    'lucid': 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends {p} >/dev/null',
+    'trusty': 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends {p} >/dev/null',
     'fedora': 'dnf install -y -q {p} >/dev/null',
     'arch': 'pacman -Sy --noconfirm --needed {p} >/dev/null',
 }
@@ -213,12 +230,13 @@ def run_docker(host, suite, out, runner_args):
     image, family, *platform = DOCKER[host['distro']]
     data, _ = pack(suite)
     (out / 'suite.tar.gz').write_bytes(data)
-    script = (INSTALL[family].format(p=PACKAGES[family]) + ' || { echo INSTALL FAILED; exit 3; }\n'
+    packages = ' '.join([PACKAGES[family]] + host.get('packages', []))
+    script = (INSTALL[family].format(p=packages) + ' || { echo INSTALL FAILED; exit 3; }\n'
               '[ -s /etc/machine-id ] || tr -d - < /proc/sys/kernel/random/uuid > /etc/machine-id\n'
               'mkdir /tmp/run && cd /tmp/run && tar -xzf /out/suite.tar.gz && rm /out/suite.tar.gz\n'
               'sha256sum -c SHA256SUMS > /out/checksums.log 2>&1 || { echo CHECKSUM FAILED; exit 4; }\n'
               'chmod -R u+x .\n'
-              '{ cat /etc/os-release; ldd --version 2>&1 | head -1; } > /out/system.txt\n'
+              '{ cat /etc/os-release /etc/lsb-release 2>/dev/null; ldd --version 2>&1 | head -1; } > /out/system.txt\n'
               'Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp > /out/xvfb.log 2>&1 &\nsleep 2\n'
               f'DISPLAY=:99 ./smoke-runner {runner_args} > /out/runner.log 2>&1; echo "exit=$?" >> /out/runner.log\n'
               'cp smoke-*.log smoke-report.txt /out/ 2>/dev/null || true\n')
@@ -227,7 +245,9 @@ def run_docker(host, suite, out, runner_args):
                              'bash', '-c', script],
                             capture_output=True, text=True)
     (out / 'docker.log').write_text(result.stdout + result.stderr, encoding='utf-8')
-    return f'container {image}', 'suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb'
+    extra = ' plus ' + ', '.join(host['packages']) if host.get('packages') else ''
+    return (f'container {image}{extra}',
+            'suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb')
 
 
 def run_qemu(host, suite, out, runner_args):
@@ -401,11 +421,14 @@ def main():
     parser.add_argument('--json', type=Path, help='write the runtime result here as well')
     parser.add_argument('--target', default='', help='what was run, for the result (default: the suite name)')
     parser.add_argument('--runner-args', default='--timeout=900')
+    parser.add_argument('--packages', default='',
+                        help='docker hosts: more packages to install, space-separated (for the optional '
+                             'libraries, such as GStreamer or PulseAudio, that the suite then finds)')
     args = parser.parse_args()
     if args.host == 'local':
         host = {'backend': 'local'}
     elif args.host.startswith('docker:'):
-        host = {'backend': 'docker', 'distro': args.host.split(':', 1)[1]}
+        host = {'backend': 'docker', 'distro': args.host.split(':', 1)[1], 'packages': args.packages.split()}
         if host['distro'] not in DOCKER:
             parser.error('docker hosts: ' + ', '.join(sorted(DOCKER)))
     elif args.host.startswith('qemu:'):

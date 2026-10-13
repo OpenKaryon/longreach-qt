@@ -237,7 +237,9 @@ def run_docker(host, suite, out, runner_args):
               'sha256sum -c SHA256SUMS > /out/checksums.log 2>&1 || { echo CHECKSUM FAILED; exit 4; }\n'
               'chmod -R u+x .\n'
               '{ cat /etc/os-release /etc/lsb-release 2>/dev/null; ldd --version 2>&1 | head -1; } > /out/system.txt\n'
-              'Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp > /out/xvfb.log 2>&1 &\nsleep 2\n'
+              'Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp > /out/xvfb.log 2>&1 &\n'
+              # Under load Xvfb can take longer than a fixed pause to listen.
+              'for i in $(seq 30); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 1; done\n'
               f'DISPLAY=:99 ./smoke-runner {runner_args} > /out/runner.log 2>&1; echo "exit=$?" >> /out/runner.log\n'
               'cp smoke-*.log smoke-report.txt /out/ 2>/dev/null || true\n')
     platform_args = ['--platform', platform[0]] if platform else []

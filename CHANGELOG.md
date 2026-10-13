@@ -7,6 +7,11 @@
   values for APIs where 0 means success and mirrored data for libraries that
   export it. The binaries link them in place of the libraries and start where
   those are missing.
+- Qt 5 Linux (Lucid): QtWayland is built, and QtMultimedia has PulseAudio,
+  ALSA and GStreamer 1.0 backends, QtSpeech speech-dispatcher, QtBluetooth
+  BlueZ, all through those stubs; `patches/qt5/linux/04` starts the GStreamer
+  services only when GStreamer initializes, and `05` keeps QtBluetooth from
+  crashing where there is no D-Bus system bus.
 - Qt 6 Linux amd64: QtWayland is built, through the same stubs.
 - Qt 6 Linux arm64 is cross-built for RHEL/CentOS 7 aarch64 (was Debian 12),
   with OpenSSL, D-Bus and QtWayland; `scripts/build/rpm-sysroot.py` makes the

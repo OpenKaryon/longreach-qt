@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "target": "tests-qt5-linux-i386-gpl-enabled",
+  "status": "PASS",
+  "image": "qt5-linux-i386-gpl-enabled",
+  "guest": {
+    "os": "NAME=\"Ubuntu\"",
+    "system": "NAME=\"Ubuntu\"\nVERSION=\"16.04.7 LTS (Xenial Xerus)\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 16.04.7 LTS\"\nVERSION_ID=\"16.04\"\nHOME_URL=\"http://www.ubuntu.com/\"\nSUPPORT_URL=\"http://help.ubuntu.com/\"\nBUG_REPORT_URL=\"http://bugs.launchpad.net/ubuntu/\"\nVERSION_CODENAME=xenial\nUBUNTU_CODENAME=xenial\nDISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=16.04\nDISTRIB_CODENAME=xenial\nDISTRIB_DESCRIPTION=\"Ubuntu 16.04.7 LTS\"\nldd (Ubuntu GLIBC 2.23-0ubuntu11.3) 2.23",
+    "vm": "container i386/ubuntu:16.04",
+    "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 509,
+    "checks_failed": 0,
+    "checks_skipped": 89
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 278,
+      "failed": 0,
+      "skipped": 64
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 90,
+      "failed": 0,
+      "skipped": 5
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 31,
+      "failed": 0,
+      "skipped": 12
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "8e3a2aefae994065ac5a23c1cca885a48dde5e8a428002f239d289fc140f6f9b",
+    "graphics-gallery": "2b08b82fbdf55b022db6321e61106a066c090ce7d241fc4566389a6bd00bd32d",
+    "multimedia-lab": "b9e62898c6bc19b62853ad6f64bb214336b2e91985b0b445a1725e172237ad58",
+    "network-gui": "c57e4dd7700bfd7c88e28eeab740beeb730f68a4c200d0017d98baba9daf951e",
+    "painting-lab": "eb40a0ca9ecb4811f6a1dd7598f3e3bbc4fca6983aabaa64c9e723e29c9067be",
+    "qt-selftest": "911d106c3059ab23103141eaaae4c5c528266b06cb2db715c0692796fc1a16d6",
+    "quick-qml-gallery": "7a39e6cc3fd591ac1096b1a518457813dbaf0a7c8640959891b41e204128ae6d",
+    "smoke-runner": "601cd59c59c70e73da24a7d00c79c90b38e7c3d39797564a88f37bbc2f666244",
+    "widgets-gallery": "5df0175772388644ec33befe507fdac2e0cc5559425d66e6759b1e328ad71fd7"
+  }
+}

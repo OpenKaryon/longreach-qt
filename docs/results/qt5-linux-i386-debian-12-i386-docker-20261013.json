@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "date": "2026-10-11",
+  "date": "2026-10-13",
   "target": "tests-qt5-linux-i386-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-i386-gpl-enabled",
@@ -13,16 +13,16 @@
   "summary": {
     "apps_passed": 8,
     "apps_failed": 0,
-    "checks_passed": 489,
+    "checks_passed": 510,
     "checks_failed": 0,
-    "checks_skipped": 92
+    "checks_skipped": 88
   },
   "applications": [
     {
       "application": "qt-selftest",
-      "passed": 264,
+      "passed": 279,
       "failed": 0,
-      "skipped": 66
+      "skipped": 63
     },
     {
       "application": "widgets-gallery",
@@ -38,9 +38,9 @@
     },
     {
       "application": "quick-qml-gallery",
-      "passed": 25,
+      "passed": 31,
       "failed": 0,
-      "skipped": 13
+      "skipped": 12
     },
     {
       "application": "gl-heavy-gallery",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "0ad765f2381d0fa4c51ba7d71b4978dd3ffe56e82b0dc0fa81e1d6d05525b1e8",
-    "graphics-gallery": "fe29f35c9edf15293eadeb66425a565587f49a6ca67571e5af45b9b951ecbfe6",
-    "multimedia-lab": "6922316ffd5d4befc6c905fbeaa89c6c07ac587712e8dcb760b817bc5e1b6d1e",
-    "network-gui": "9f031ea4992cd54b934c86a5e91a05dc2f7a5185c838ec77abde65b08dee4993",
-    "painting-lab": "32f4bf4b5d05078c05e9458d64b1a67b2a53e176a4fa8337a5fed7c90f3ca7ca",
-    "qt-selftest": "02aa08995a93e903ab93533a6121d1b3564ab9a8932c00e81de86a2237f06f53",
-    "quick-qml-gallery": "039026db4410ad79f8fbc819b4c13e93d4bafe997a2b1c597b73d4dfc0212f3d",
+    "gl-heavy-gallery": "8e3a2aefae994065ac5a23c1cca885a48dde5e8a428002f239d289fc140f6f9b",
+    "graphics-gallery": "2b08b82fbdf55b022db6321e61106a066c090ce7d241fc4566389a6bd00bd32d",
+    "multimedia-lab": "b9e62898c6bc19b62853ad6f64bb214336b2e91985b0b445a1725e172237ad58",
+    "network-gui": "c57e4dd7700bfd7c88e28eeab740beeb730f68a4c200d0017d98baba9daf951e",
+    "painting-lab": "eb40a0ca9ecb4811f6a1dd7598f3e3bbc4fca6983aabaa64c9e723e29c9067be",
+    "qt-selftest": "911d106c3059ab23103141eaaae4c5c528266b06cb2db715c0692796fc1a16d6",
+    "quick-qml-gallery": "7a39e6cc3fd591ac1096b1a518457813dbaf0a7c8640959891b41e204128ae6d",
     "smoke-runner": "601cd59c59c70e73da24a7d00c79c90b38e7c3d39797564a88f37bbc2f666244",
-    "widgets-gallery": "a52f5cff8c7e0150d80c069abc345cba4a1a6d725010df1906db51156c97b207"
+    "widgets-gallery": "5df0175772388644ec33befe507fdac2e0cc5559425d66e6759b1e328ad71fd7"
   }
 }

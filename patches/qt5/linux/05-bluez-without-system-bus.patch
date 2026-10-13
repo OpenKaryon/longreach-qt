@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Linux: QtBluetooth without a D-Bus system bus.
+#
+# To choose its BlueZ backend, QtBluetooth asks the system bus for the
+# process id of org.bluez. Where there is no system bus (a container, a
+# minimal system, a session without dbus-daemon), QDBusConnection::interface()
+# returns null and constructing any QBluetoothSocket crashed in
+# bluetoothdVersion(). The pid is now 0 there, which the version detection
+# already treats as "bluetoothd not found".
+diff --git a/qtconnectivity/src/bluetooth/bluez/bluez5_helper.cpp b/qtconnectivity/src/bluetooth/bluez/bluez5_helper.cpp
+--- a/qtconnectivity/src/bluetooth/bluez/bluez5_helper.cpp
++++ b/qtconnectivity/src/bluetooth/bluez/bluez5_helper.cpp
+@@ -219,7 +219,10 @@ QVersionNumber bluetoothdVersion()
+         // 2. Find bluetoothd binary and check "bluetoothd --version"
+         if (bluezDaemonVersion()->isNull() && qt_haveLinuxProcfs()) {
+             QDBusConnection session = QDBusConnection::systemBus();
+-            qint64 pid = session.interface()->servicePid(QStringLiteral("org.bluez")).value();
++            // Without a system bus there is no interface, and no bluetoothd.
++            QDBusConnectionInterface *busInterface = session.isConnected() ? session.interface() : nullptr;
++            qint64 pid = busInterface
++                    ? busInterface->servicePid(QStringLiteral("org.bluez")).value() : 0;
+             QByteArray buffer;
+ 
+             auto determineBinaryVersion = [](const QString &binary) -> QVersionNumber {

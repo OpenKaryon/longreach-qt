@@ -40,10 +40,16 @@ FROM toolchain AS xdeps
 ARG PARALLEL_JOBS=6
 ENV LUCID_JOBS=${PARALLEL_JOBS}
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        pkg-config python bison flex bzip2 && rm -rf /var/lib/apt/lists/*
+        pkg-config python bison flex bzip2 libwayland-dev libasound2-dev libpulse-dev \
+        libglib2.0-dev libspeechd-dev libbluetooth-dev libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev && rm -rf /var/lib/apt/lists/*
 COPY downloads/lucid-xsrc /xsrc
 COPY scripts/build/qt5-lucid/build-xdeps.sh scripts/build/qt5-lucid/xcb-lucid-compat.c scripts/build/qt5-lucid/x11-xcb-stub.c /scripts/
 RUN bash /scripts/build-xdeps.sh && rm -rf /work/xsrc
+# Wayland, ALSA, PulseAudio, speech-dispatcher, BlueZ and GStreamer without
+# depending on them at run time: dlopen stubs (build-optional-dlopen.sh).
+COPY scripts/build/dlopen /scripts/dlopen
+RUN bash /scripts/build-optional-dlopen.sh
 
 # ---------------------------------------------------------------------------
 FROM xdeps AS builder
@@ -82,13 +88,13 @@ RUN set -eux; cd /opt; \
         -no-avx -c++std c++14 -static -optimize-size -release -opensource -confirm-license \
         -xcb -bundled-xcb-xinput -xkbcommon -fontconfig -system-freetype \
         -nomake examples -nomake tests -nomake tools \
-        -no-cups -dbus-runtime -gif -no-iconv -no-icu -no-glib -opengl desktop -openssl-linked -no-openvg -no-pch \
+        -no-cups -dbus-runtime -alsa -pulseaudio -gstreamer 1.0 -speechd -gif -no-iconv -no-icu -no-glib -opengl desktop -openssl-linked -no-openvg -no-pch \
         -sql-sqlite -qt-sqlite -ssl -no-libudev -no-libinput -no-mtdev -no-tslib \
         -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib \
-        -skip qtwebengine -skip qtwayland \
+        -skip qtwebengine \
         $(/tmp/license-configure-args.sh qt5 "$LICENSE_PROFILE") > /tmp/configure.log 2>&1 \
         || { tail -80 /tmp/configure.log; exit 1; }; \
-    grep -E "XCB|Xlib|GLX|OpenGL|xkbcommon|Fontconfig|FreeType|OpenSSL" /tmp/configure.log | head -40; \
+    grep -E "XCB|Xlib|GLX|OpenGL|xkbcommon|Fontconfig|FreeType|OpenSSL|Wayland|ALSA|PulseAudio|GStreamer|Speech|BlueZ" /tmp/configure.log | head -60; \
     make -j "$PARALLEL_JOBS" > /tmp/make.log 2>&1 || { grep -n -E "error|undefined reference" /tmp/make.log | head -60; exit 1; }; \
     make install > /dev/null; \
     du -sh /usr/local/Qt-5.15

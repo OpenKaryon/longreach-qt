@@ -12,6 +12,7 @@
 
 #include <QCoreApplication>
 #include <QFile>
+#include <QLibrary>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QRect>
@@ -275,7 +276,21 @@ int runWaylandChildMode(int argc, char *argv[])
 
 void checkWaylandLive(SmokeReporter &r)
 {
-    r.check("wayland/live-client-and-shells", [](QString &d) {
+    r.check("wayland/live-client-and-shells", [&r](QString &d) {
+        // Builds that load libwayland at run time (the Lucid ones) run on
+        // systems without it; there is then no Wayland to connect to.
+        QLibrary waylandClient(QStringLiteral("wayland-client"), 0);
+        QLibrary waylandServer(QStringLiteral("wayland-server"), 0);
+        if (!waylandClient.load() || !waylandServer.load()) {
+            r.skip(d, QStringLiteral("libwayland-client and libwayland-server are not installed"));
+            return false;
+        }
+        // Qt's Wayland client needs libwayland 1.11 (wl_proxy_create_wrapper);
+        // the stubs find older ones but not what is missing from them.
+        if (!waylandClient.resolve("wl_proxy_create_wrapper")) {
+            r.skip(d, QStringLiteral("libwayland-client is older than 1.11"));
+            return false;
+        }
         QTemporaryDir runtime;
         if (!runtime.isValid()) {
             d = QStringLiteral("could not create XDG_RUNTIME_DIR");

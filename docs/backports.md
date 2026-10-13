@@ -68,9 +68,11 @@ series are checked against pristine Qt 4.8.7, 5.15.19 and 6.8.4.
   style, multimedia, WinExtras, SCXML, Quick Controls, QProcess pipes,
   QCollator. Windows on ARM applies them too; there they always find the
   newer API.
-- `linux/` (3): no Xinerama in the xcb plugin; run-time fallbacks for Lucid's
+- `linux/` (5): no Xinerama in the xcb plugin; run-time fallbacks for Lucid's
   libxcb 1.5 and libX11 1.3 (`xcb_poll_for_queued_event`, a missing
-  libX11-xcb), and thread naming without glibc 2.12.
+  libX11-xcb), and thread naming without glibc 2.12; GStreamer services only
+  where GStreamer initializes (it is loaded at run time); QtBluetooth without
+  a D-Bus system bus.
 - `macos/` (47): from 10.12 down to 10.6 in steps - os_activity, unified
   logging, Metal, file system fast paths (pre-10.12); OS version queries,
   CoreGraphics, CoreText weights, the Metal RHI (pre-10.11); App Nap,

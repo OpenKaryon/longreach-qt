@@ -25,14 +25,24 @@ come from the pinned Lucid packages
   without libX11-xcb (not on a stock Lucid) the plugin opens a plain xcb
   connection and reports OpenGL unavailable, so Qt Quick uses its software
   renderer; with `libx11-xcb1` installed Xlib and GLX are used as usual;
-- OpenSSL 3.5.7 is linked statically; D-Bus is loaded at run time.
+- OpenSSL 3.5.7 is linked statically; D-Bus is loaded at run time;
+- Wayland, ALSA, PulseAudio, GStreamer 1.0, speech-dispatcher and BlueZ are
+  compiled against Ubuntu 16.04's headers and linked to stub archives
+  (`scripts/build/dlopen`) that load the libraries on first use, so the
+  binaries need none of them. Where one is missing, Qt finds no Wayland
+  display (and uses xcb), no audio device, no media backend, no speech engine
+  or no Bluetooth adapter; `patches/qt5/linux/04` keeps the GStreamer
+  services from starting when GStreamer cannot be initialized.
 
 ## Results
 
-amd64: 8/8 (476 checks) on Ubuntu 10.04.4 in VMware; 8/8 on CentOS 7,
-Ubuntu 16.04 and 24.04, Debian 13, Fedora and Arch in containers. i386: 8/8
-on Ubuntu 16.04 i386 and Debian 12 i386 in containers. arm64: 8/8 (510 checks)
-on Ubuntu 16.04 arm64 in an emulated container. See
+amd64: 8/8 (498 checks) on Ubuntu 10.04.4 in VMware; 8/8 (511) on CentOS 7 and
+Debian 13 in containers, 513 on Debian 13 with GStreamer, PulseAudio,
+speech-dispatcher and BlueZ installed (the media player then gets its
+GStreamer backend); earlier also on Ubuntu 16.04 and 24.04, Fedora and Arch.
+i386: 8/8 (494, 509 and 510) on Ubuntu 10.04 i386 itself, Ubuntu 16.04 i386
+and Debian 12 i386 in containers. arm64: 8/8 (510 checks) on Ubuntu
+16.04 arm64 in an emulated container. See
 [platforms](../platforms.md#qt-51519).
 
 ## Limits
@@ -43,10 +53,12 @@ on Ubuntu 16.04 arm64 in an emulated container. See
   reports GLX 1.4 but has not been measured.
 - The 64-bit Lucid binaries cannot run in Docker Desktop's WSL2 kernel
   (glibc 2.11 needs the vsyscall page); newer distributions run them fine.
-- Not built: QtWayland, and the unreleased QtHttpServer and QtMqtt. QtMultimedia
-  has no GStreamer or PulseAudio backend, QtSpeech no speech-dispatcher,
-  QtBluetooth no BlueZ 5. The plan is to add them with headers at build time
-  and `dlopen` at run time.
+- Not built: the unreleased QtHttpServer and QtMqtt. GStreamer's GL and
+  photography interfaces (gst-plugins-bad) are left out.
+- The Wayland platform needs libwayland 1.11 or newer at run time. The stubs
+  load an older one too and leave its missing functions returning 0, so
+  `QT_QPA_PLATFORM=wayland` crashes there (14.04's 1.4, say); the default,
+  xcb, is not affected, and systems that old have X11 sessions anyway.
 - The arm64 build is native under emulation (several hours) and links the
   Wayland client libraries dynamically; its floor is to move to Ubuntu 14.04
   the way Lucid did for amd64.

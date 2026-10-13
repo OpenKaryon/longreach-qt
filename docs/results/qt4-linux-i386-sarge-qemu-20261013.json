@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "target": "qt4-linux-i386",
+  "status": "PASS",
+  "image": "qt4-linux-i386",
+  "guest": {
+    "os": "Linux (none) 2.6.8-4-386 #1 Wed Feb 20 06:15:54 UTC 2008 i686 GNU/Linux",
+    "system": "Linux (none) 2.6.8-4-386 #1 Wed Feb 20 06:15:54 UTC 2008 i686 GNU/Linux\nMemTotal:       776564 kB\nMemFree:        582056 kB\nBuffers:             0 kB\nDebian GNU/Linux 3.1 (sarge), glibc 2.3.2",
+    "vm": "QEMU TCG, pc-i440fx, Pentium III, 768 MiB; Sarge kernel 2.6.8 and userland in an initramfs",
+    "method": "suite copied into the initramfs and checked by SHA256 on the host; smoke-runner under Sarge Xvfb"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 361,
+    "checks_failed": 0,
+    "checks_skipped": 134
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "7ab8cc0611cfafc92e6a175be74296521b6a7d5c6418e2b795adc900c673337e",
+    "graphics-gallery": "8da998ac2077f1964658f2deff98ddbacadd2e686cac68b90836d1518f1baaa3",
+    "multimedia-lab": "bd96239ddeefa5d392acc7240d749453e551bb61db3cc110088d81241a091778",
+    "network-gui": "7b9d024b03778964cce627dc11c06a1260b0b08a2ac4f4f26a241d8e610f3b91",
+    "painting-lab": "2c63ea56c28d0110b482881ae3107f4fe4662327a5c24726a6fb18559b8ab201",
+    "qt-selftest": "f903de6ed2c15fb0471fca6a987e1bf04eee6119a1d799f6221dd15890935463",
+    "quick-qml-gallery": "be29d1f63cacf105a9e96ba920eac6848e7aae734014ffb2efe21cb6b6b7be8a",
+    "smoke-runner": "4934044dc7b4c379b237bce8220ae6d104e9c04de541e14d7cbc73f2e783aa1b",
+    "widgets-gallery": "e7ced83266a351287887ad999dd27cb133e024452ac837391b24ea98e508450b"
+  }
+}

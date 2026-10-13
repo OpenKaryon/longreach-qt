@@ -31,7 +31,7 @@ run.
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
 | | | Windows 11 (the build host) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-host-20261010.json)); the two native print dialog checks skip there |
 | `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261011.json)); not yet on XP x64 |
-| `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge (QEMU, Xfce desktop) | 24/24, 520 passed, 0 failed ([json](results/qt4-sarge-public-sdk-qemu-20261002.json), [desktop](results/qt4-sarge-desktop-20261002.json)) |
+| `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge, kernel 2.6.8 (QEMU) | 8/8, 361 passed, 0 failed ([json](results/qt4-linux-i386-sarge-qemu-20261013.json)); earlier 24/24 on a Sarge Xfce desktop ([json](results/qt4-sarge-desktop-20261002.json)) |
 | | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([Ubuntu](results/qt4-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [Debian](results/qt4-linux-i386-debian-12-i386-docker-20261011.json)) |
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |

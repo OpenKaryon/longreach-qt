@@ -1,244 +1,159 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6 for Linux arm64, cross-built against a Debian 12 arm64 sysroot with the
-# host tools from the qt6-host image.
+# Qt 6.8.4 for Linux arm64 from RHEL/CentOS 7 aarch64 (glibc 2.17), the floor
+# of the amd64 build. Cross-built on Debian 12 with its aarch64 GCC 11 against
+# a sysroot of CentOS 7.9 aarch64 packages (scripts/build/rpm-sysroot.py) and
+# Developer Toolset 10's C++ library, linked as Developer Toolset links it:
+# RHEL 7's libstdc++.so.6 plus the newer parts statically. The host tools come
+# from the qt6-host image. As for amd64, the result needs only RHEL 7's own
+# libraries: OpenSSL and xcb-util-cursor are static, D-Bus is loaded at run
+# time, and Wayland is linked through dlopen stubs.
 
-ARG QT_VERSION=6.10.1
+ARG QT_VERSION=6.8.4
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
-ARG QT_SRC_DOWNLOAD_URL=""
 ARG PARALLEL_JOBS=""
 # The host Qt image by its tag, which carries the licence profile.
 ARG QT6_HOST_IMAGE=qt6-host
 
-# ---------------------------------------------------------------------------
-# qt-src: the Qt source archive
-# ---------------------------------------------------------------------------
-
-FROM debian:12 AS qt-src
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-ARG QT_VERSION
-ARG QT_ARCHIVE
-ARG QT_SRC_DOWNLOAD_URL
-
-RUN apt-get update && apt-get install -y \
-    wget ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-ARG DOWNLOAD_DIR="downloads"
-RUN --mount=type=bind,source=.,target=/context \
-    set -e; \
-    ARCHIVE_NAME="${QT_ARCHIVE:-qt-everywhere-src-${QT_VERSION}.tar.xz}"; \
-    if [ -f "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}"; \
-        cp "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -f "/context/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${ARCHIVE_NAME}"; \
-        cp "/context/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -n "${QT_SRC_DOWNLOAD_URL}" ]; then \
-        echo "Downloading Qt archive from ${QT_SRC_DOWNLOAD_URL}"; \
-        wget -qO /tmp/qt-src.tar.xz "${QT_SRC_DOWNLOAD_URL}"; \
-    else \
-        echo "ERROR: Qt archive not found in build context and QT_SRC_DOWNLOAD_URL not set"; \
-        exit 1; \
-    fi
-
-# ---------------------------------------------------------------------------
-# builder: Qt for Linux arm64 against a Debian multiarch sysroot
-# ---------------------------------------------------------------------------
-
 FROM ${QT6_HOST_IMAGE} AS host-qt
 
-FROM debian:12 AS builder
+# ---------------------------------------------------------------------------
+# toolchain: the cross-compiler, the CentOS 7 aarch64 sysroot and the host Qt
+# ---------------------------------------------------------------------------
+
+FROM debian:12 AS toolchain
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG QT_VERSION
-ARG PARALLEL_JOBS
-
-RUN dpkg --add-architecture arm64
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake ninja-build python3 python3-pip perl pkg-config \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-    libssl-dev libgl1-mesa-dev libglu1-mesa-dev \
-    libfontconfig1-dev libfreetype6-dev \
-    libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev \
-    libxrender-dev libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev \
-    libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev \
-    libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
-    libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev \
-    libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev \
-    libxcb-cursor-dev \
-    unzip dos2unix file wget xz-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# The arm64 libraries that make up the sysroot.
-RUN apt-get update && apt-get install -y \
-    libc6-dev:arm64 \
-    libstdc++-12-dev:arm64 \
-    libgcc-12-dev:arm64 \
-    libfontconfig-dev:arm64 \
-    libfreetype-dev:arm64 \
-    libx11-dev:arm64 \
-    libx11-xcb-dev:arm64 \
-    libxext-dev:arm64 \
-    libxfixes-dev:arm64 \
-    libxi-dev:arm64 \
-    libxrender-dev:arm64 \
-    libxcb1-dev:arm64 \
-    libxcb-cursor-dev:arm64 \
-    libxcb-glx0-dev:arm64 \
-    libxcb-icccm4-dev:arm64 \
-    libxcb-image0-dev:arm64 \
-    libxcb-keysyms1-dev:arm64 \
-    libxcb-randr0-dev:arm64 \
-    libxcb-render0-dev:arm64 \
-    libxcb-render-util0-dev:arm64 \
-    libxcb-shape0-dev:arm64 \
-    libxcb-shm0-dev:arm64 \
-    libxcb-sync-dev:arm64 \
-    libxcb-util-dev:arm64 \
-    libxcb-xfixes0-dev:arm64 \
-    libxcb-xinerama0-dev:arm64 \
-    libxcb-xkb-dev:arm64 \
-    libxkbcommon-dev:arm64 \
-    libxkbcommon-x11-dev:arm64 \
-    libgl1-mesa-dev:arm64 \
-    libglu1-mesa-dev:arm64 \
-    libegl1-mesa-dev:arm64 \
-    libgles2-mesa-dev:arm64 \
-    libgbm-dev:arm64 \
-    libdrm-dev:arm64 \
-    mesa-common-dev:arm64 \
-    && rm -rf /var/lib/apt/lists/*
+# qemu-user-static runs the sysroot's wayland-scanner (see its wrapper); the
+# libraries after it are what the host tools (qsb and the rest) load.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        g++-11-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+        cmake ninja-build make m4 perl python3 pkg-config file xz-utils git \
+        rpm2cpio cpio qemu-user-static binutils ca-certificates \
+        libfontconfig1 libfreetype6 libpng16-16 zlib1g libbrotli1 libglib2.0-0 libdbus-1-3 \
+        libx11-6 libx11-xcb1 libxcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 \
+        libxcb-xfixes0 libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 \
+        libwayland-client0 libwayland-cursor0 libwayland-server0 && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV SYSROOT=/opt/sysroot-arm64
-RUN mkdir -p ${SYSROOT}/usr/lib ${SYSROOT}/lib && \
-    ln -s /usr/lib/aarch64-linux-gnu ${SYSROOT}/usr/lib/aarch64-linux-gnu && \
-    ln -s /lib/aarch64-linux-gnu ${SYSROOT}/lib/aarch64-linux-gnu && \
-    ln -s /usr/include ${SYSROOT}/usr/include && \
-    ln -s /usr/share ${SYSROOT}/usr/share
+COPY scripts/build/rpm-sysroot.py scripts/build/qt6-linux-arm64/packages.txt /tmp/sysroot/
+RUN base=http://vault.centos.org/altarch/7.9.2009 && \
+    python3 /tmp/sysroot/rpm-sysroot.py --dest ${SYSROOT} --arch aarch64 --merged-usr \
+        --repo $base/os/aarch64 --repo $base/updates/aarch64 --repo $base/sclo/aarch64/rh \
+        $(grep -v '^#' /tmp/sysroot/packages.txt) > /tmp/sysroot/installed.txt && \
+    wc -l < /tmp/sysroot/installed.txt && rm -rf /tmp/sysroot
+
+COPY scripts/build/qt6-linux-arm64/gcc /opt/cross/bin/aarch64-centos7-gcc
+COPY scripts/build/qt6-linux-arm64/g++ /opt/cross/bin/aarch64-centos7-g++
+COPY scripts/build/qt6-linux-arm64/wayland-scanner /opt/cross/bin/wayland-scanner
+RUN chmod +x /opt/cross/bin/*
+ENV PATH="/opt/cross/bin:${PATH}"
+
+# The toolchain must produce nothing that needs a glibc newer than RHEL 7's.
+COPY scripts/build/qt5-lucid/probe.cpp scripts/build/qt5-lucid/max-glibc.py /tmp/probe/
+RUN aarch64-centos7-g++ -std=c++17 -O2 -pthread /tmp/probe/probe.cpp -o /tmp/probe/probe && \
+    python3 /tmp/probe/max-glibc.py /tmp/probe/probe 2.17 && rm -rf /tmp/probe
 
 COPY --from=host-qt /opt/qt6-host /opt/qt6-host
 
-ENV QT_SRC_DIR=/workspace/qt-src
-ENV QT_BUILD_DIR=/workspace/qt-build
-ENV QT_INSTALL_DIR=/opt/qt6-linux-arm64
+# ---------------------------------------------------------------------------
+# deps: what Qt links statically, and the Wayland stubs
+# ---------------------------------------------------------------------------
 
-RUN mkdir -p ${QT_BUILD_DIR} ${QT_INSTALL_DIR}
+FROM toolchain AS deps
+ARG PARALLEL_JOBS
 
-COPY --from=qt-src /tmp/qt-src.tar.xz /workspace/qt-src.tar.xz
+# Static OpenSSL 3.
+ARG OPENSSL_VERSION=3.5.7
+COPY downloads/openssl-${OPENSSL_VERSION}.tar.gz /tmp/openssl.tar.gz
+COPY scripts/build/openssl.sh /tmp/build-openssl.sh
+RUN CC=aarch64-centos7-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib \
+    PARALLEL_JOBS="${PARALLEL_JOBS:-$(nproc)}" bash /tmp/build-openssl.sh /tmp/openssl.tar.gz linux-aarch64 \
+        /opt/openssl-3 no-async no-shared no-tests && \
+    rm /tmp/openssl.tar.gz /tmp/build-openssl.sh
+
+# Static xcb-util-cursor (not in RHEL 7), into the sysroot.
+COPY downloads/xcb-util-cursor-0.1.5.tar.xz /tmp/xcb-util-cursor.tar.xz
+RUN set -eux && \
+    echo '0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  /tmp/xcb-util-cursor.tar.xz' | sha256sum -c - && \
+    mkdir /tmp/xcb-cursor && tar -xJf /tmp/xcb-util-cursor.tar.xz -C /tmp/xcb-cursor --strip-components=1 && \
+    cd /tmp/xcb-cursor && \
+    PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib64/pkgconfig:${SYSROOT}/usr/share/pkgconfig PKG_CONFIG_SYSROOT_DIR=${SYSROOT} \
+        ./configure --host=aarch64-linux-gnu CC=aarch64-centos7-gcc --prefix=/usr --libdir=/usr/lib64 \
+        --disable-shared --enable-static --with-pic && \
+    make -j "${PARALLEL_JOBS:-$(nproc)}" && make install DESTDIR=${SYSROOT} && \
+    test -f ${SYSROOT}/usr/lib64/libxcb-cursor.a && \
+    rm -rf /tmp/xcb-cursor /tmp/xcb-util-cursor.tar.xz
+
+# Wayland without libwayland at link time: dlopen stubs
+# (scripts/build/dlopen/wayland.sh), so that the binaries also start where it
+# is not installed, as on a RHEL 7 server.
+COPY scripts/build/dlopen /tmp/dlopen
+RUN CC=aarch64-centos7-gcc NM=aarch64-linux-gnu-nm AR=aarch64-linux-gnu-ar \
+    WAYLAND_LIBDIR=${SYSROOT}/usr/lib64 WAYLAND_EGL=${SYSROOT}/usr/lib64/libwayland-egl.so.1 \
+    WAYLAND_INCLUDEDIR=${SYSROOT}/usr/include WAYLAND_XML=${SYSROOT}/usr/share/wayland/wayland.xml \
+    WAYLAND_SCANNER=/opt/cross/bin/wayland-scanner \
+    WAYLAND_VERSION="$(PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib64/pkgconfig pkg-config --modversion wayland-client)" \
+    WAYLAND_EGL_VERSION="$(PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib64/pkgconfig pkg-config --modversion wayland-egl)" \
+        bash /tmp/dlopen/wayland.sh ${SYSROOT}/usr/local /usr/local && \
+    rm -rf /tmp/dlopen
+
+# ---------------------------------------------------------------------------
+# builder: Qt
+# ---------------------------------------------------------------------------
+
+FROM deps AS builder
+ARG QT_VERSION
+ARG QT_ARCHIVE
+ARG PARALLEL_JOBS
+ARG LICENSE_PROFILE="gpl-enabled"
+
+COPY downloads/${QT_ARCHIVE} /tmp/qt-src.tar.xz
+RUN tar -xJf /tmp/qt-src.tar.xz -C /opt \
+        --exclude="qt-everywhere-src-${QT_VERSION}/qtwebengine/*" \
+        --exclude="qt-everywhere-src-${QT_VERSION}/qtwebview/*" && \
+    rm /tmp/qt-src.tar.xz
+
 COPY patches/qt6/all /tmp/patches-qt6-all
+COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
+RUN cd /opt/qt-everywhere-src-${QT_VERSION} && \
+    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p"; done
 
-WORKDIR /workspace
+COPY cmake/qt6/qt-toolchain-linux-arm64.cmake /workspace/qt-build/toolchain.cmake
 
-# Unpack without the modules skipped below; the two lists must agree.
-RUN tar -xJf qt-src.tar.xz --wildcards \
-      --exclude="qt-everywhere-src-${QT_VERSION}/qtwebengine/*" \
-      --exclude="qt-everywhere-src-${QT_VERSION}/qtwebview/*" \
-      --exclude="qt-everywhere-src-${QT_VERSION}/qtwayland/*" && \
-    mv qt-everywhere-src-${QT_VERSION} ${QT_SRC_DIR} && \
-    rm -f qt-src.tar.xz
-
-RUN cd ${QT_SRC_DIR} && \
-    for p in /tmp/patches-qt6-all/*.patch; do echo "applying qt6/all/$(basename $p)"; patch -p1 < "$p"; done
-
-RUN cd ${QT_SRC_DIR} && \
-    find . \( -name "configure" -o -name "*.sh" -o -name "*.pl" \) -print0 \
-      | xargs -0 dos2unix 2>/dev/null || true && \
-    find . \( -name "configure" -o -name "*.sh" -o -name "*.pl" \) -exec chmod +x {} + 2>/dev/null || true
-
-COPY cmake/qt6/qt-toolchain-linux-arm64.cmake ${QT_BUILD_DIR}/toolchain.cmake
-
-WORKDIR ${QT_BUILD_DIR}
-
-# The module set of the Qt 5 targets: not built are qtwebengine and qtwebview
-# (Chromium) and qtwayland. XCB comes from the sysroot.
-RUN ${QT_SRC_DIR}/configure \
+# The module set of the amd64 build: not built are qtwebengine and qtwebview
+# (Chromium).
+RUN mkdir -p /opt/qt-build && cd /opt/qt-build && \
+    /opt/qt-everywhere-src-${QT_VERSION}/configure \
         -opensource -confirm-license \
-        -prefix ${QT_INSTALL_DIR} \
+        -prefix /opt/qt6-linux-arm64 \
         -qt-host-path /opt/qt6-host \
-        -release -optimize-size -strip -static \
+        -release -optimize-size -static \
+        -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
         -nomake examples -nomake tests \
-        -no-vulkan -no-dbus \
-        -xcb \
-        -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-harfbuzz \
-        -fontconfig -system-freetype \
-        -skip qtwebengine -skip qtwebview -skip qtwayland \
-        -- \
-        -DCMAKE_TOOLCHAIN_FILE=${QT_BUILD_DIR}/toolchain.cmake \
-        -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build . --parallel ${PARALLEL_JOBS:-$(nproc)} && \
-    cmake --install .
+        -skip qtwebengine -skip qtwebview \
+        -openssl-linked \
+        $(/tmp/license-configure-args.sh qt6 "$LICENSE_PROFILE") \
+        -- -DCMAKE_TOOLCHAIN_FILE=/workspace/qt-build/toolchain.cmake \
+           -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+           -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON && \
+    cmake --build . --parallel "${PARALLEL_JOBS:-$(nproc)}" && \
+    cmake --install . && \
+    cd / && rm -rf /opt/qt-build && \
+    if grep -rIl 'usr/lib64/libwayland' /opt/qt6-linux-arm64/lib/cmake; then \
+        echo "Qt links libwayland instead of the stubs" >&2; exit 1; fi
 
 # ---------------------------------------------------------------------------
-# final: the cross-compiler, the arm64 sysroot, the host tools and the SDK
+# final: the toolchain, the sysroot, the host tools and the SDK
 # ---------------------------------------------------------------------------
 
-FROM debian:12-slim
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN dpkg --add-architecture arm64
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    cmake ninja-build make \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-    pkg-config \
-    ca-certificates \
-    libc6-dev:arm64 \
-    libstdc++-12-dev:arm64 \
-    libfontconfig-dev:arm64 \
-    libfreetype-dev:arm64 \
-    libx11-dev:arm64 \
-    libx11-xcb-dev:arm64 \
-    libxext-dev:arm64 \
-    libxfixes-dev:arm64 \
-    libxi-dev:arm64 \
-    libxrender-dev:arm64 \
-    libxcb1-dev:arm64 \
-    libxcb-cursor-dev:arm64 \
-    libxcb-glx0-dev:arm64 \
-    libxcb-icccm4-dev:arm64 \
-    libxcb-image0-dev:arm64 \
-    libxcb-keysyms1-dev:arm64 \
-    libxcb-randr0-dev:arm64 \
-    libxcb-render0-dev:arm64 \
-    libxcb-render-util0-dev:arm64 \
-    libxcb-shape0-dev:arm64 \
-    libxcb-shm0-dev:arm64 \
-    libxcb-sync-dev:arm64 \
-    libxcb-util-dev:arm64 \
-    libxcb-xfixes0-dev:arm64 \
-    libxcb-xinerama0-dev:arm64 \
-    libxcb-xkb-dev:arm64 \
-    libxkbcommon-dev:arm64 \
-    libxkbcommon-x11-dev:arm64 \
-    libgl1-mesa-dev:arm64 \
-    libglu1-mesa-dev:arm64 \
-    libegl1-mesa-dev:arm64 \
-    libgles2-mesa-dev:arm64 \
-    libgbm-dev:arm64 \
-    libdrm-dev:arm64 \
-    mesa-common-dev:arm64 \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV SYSROOT=/opt/sysroot-arm64
-RUN mkdir -p ${SYSROOT}/usr/lib ${SYSROOT}/lib && \
-    ln -s /usr/lib/aarch64-linux-gnu ${SYSROOT}/usr/lib/aarch64-linux-gnu && \
-    ln -s /lib/aarch64-linux-gnu ${SYSROOT}/lib/aarch64-linux-gnu && \
-    ln -s /usr/include ${SYSROOT}/usr/include && \
-    ln -s /usr/share ${SYSROOT}/usr/share
-
-COPY --from=builder /opt/qt6-host /opt/qt6-host
+FROM deps
 
 COPY --from=builder /opt/qt6-linux-arm64 /opt/qt6-linux-arm64
-
-# The toolchain file is referenced by Qt's CMake packages.
 COPY --from=builder /workspace/qt-build/toolchain.cmake /workspace/qt-build/toolchain.cmake
 
 ENV QT_INSTALL_DIR=/opt/qt6-linux-arm64
@@ -246,4 +161,4 @@ ENV PATH="${QT_INSTALL_DIR}/bin:${PATH}"
 
 WORKDIR /workspace
 
-CMD ["bash", "-c", "echo 'Qt 6 for Linux ARM64 cross-compilation image'; echo 'Qt: /opt/qt6-linux-arm64'; echo 'Sysroot: /opt/sysroot-arm64'"]
+CMD ["bash", "-c", "echo 'Qt 6 for Linux arm64 (RHEL/CentOS 7 aarch64)'; echo 'Qt: /opt/qt6-linux-arm64'; echo 'Sysroot: /opt/sysroot-arm64'"]

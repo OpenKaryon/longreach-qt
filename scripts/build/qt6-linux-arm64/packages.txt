@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# The CentOS 7.9 aarch64 packages of the Qt 6 arm64 sysroot
+# (scripts/build/rpm-sysroot.py, from vault.centos.org/altarch/7.9.2009).
+# Development packages for what Qt links, their libraries, and the libraries
+# those link, which the linker reads.
+
+# C and C++
+glibc glibc-devel glibc-headers kernel-headers libgcc libstdc++
+devtoolset-10-libstdc++-devel
+
+# X11, xcb and xkbcommon (xcb-util-cursor is built statically: not in RHEL 7)
+libX11 libX11-devel libXau libXau-devel libXdmcp libxcb libxcb-devel
+libXext libXext-devel libXrender libXrender-devel libXfixes libXfixes-devel
+libXi libXi-devel xorg-x11-proto-devel
+xcb-util xcb-util-devel xcb-util-image xcb-util-image-devel
+xcb-util-keysyms xcb-util-keysyms-devel xcb-util-renderutil xcb-util-renderutil-devel
+xcb-util-wm xcb-util-wm-devel
+libxkbcommon libxkbcommon-devel libxkbcommon-x11 libxkbcommon-x11-devel
+
+# Fonts
+fontconfig fontconfig-devel freetype freetype-devel expat expat-devel
+libpng zlib zlib-devel bzip2-libs libuuid libuuid-devel
+
+# OpenGL and EGL (Mesa through libglvnd)
+mesa-libGL mesa-libGL-devel mesa-libEGL mesa-libEGL-devel mesa-libgbm mesa-libglapi
+mesa-khr-devel libdrm libdrm-devel
+libglvnd libglvnd-devel libglvnd-core-devel libglvnd-glx libglvnd-egl
+libglvnd-gles libglvnd-opengl
+
+# Wayland: headers, libraries for the stub list and the scanner
+wayland-devel libwayland-client libwayland-server libwayland-cursor libwayland-egl
+libxml2 xz-libs

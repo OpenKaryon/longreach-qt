@@ -353,7 +353,9 @@ void checkQuick3D(SmokeReporter &r)
         child.setProcessEnvironment(environment);
         child.start(QCoreApplication::applicationFilePath(),
                     QStringList() << QStringLiteral("--quick3d-extension-probe"));
-        if (!child.waitForStarted(3000) || !child.waitForFinished(10000)) {
+        // A minute: one software-rendered Quick 3D frame takes tens of seconds
+        // in an emulated arm64 container.
+        if (!child.waitForStarted(3000) || !child.waitForFinished(60000)) {
             d = QStringLiteral("probe did not finish: %1").arg(child.errorString());
             return false;
         }

@@ -65,7 +65,7 @@ RUN apt-get update && apt-get install -y \
     libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev \
     libxcb-randr0-dev libxcb-render-util0-dev libxcb-util-dev \
     libxcb-xinerama0-dev libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev \
-    libxcb-cursor-dev \
+    libxcb-cursor-dev libwayland-dev \
     unzip dos2unix file wget xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -76,8 +76,7 @@ WORKDIR /tmp
 # Unpack without the modules skipped below; the two lists must agree.
 RUN tar -xJf qt-src.tar.xz --wildcards \
       --exclude="qt-everywhere-src-${QT_VERSION}/qtwebengine/*" \
-      --exclude="qt-everywhere-src-${QT_VERSION}/qtwebview/*" \
-      --exclude="qt-everywhere-src-${QT_VERSION}/qtwayland/*" && \
+      --exclude="qt-everywhere-src-${QT_VERSION}/qtwebview/*" && \
     mv qt-everywhere-src-${QT_VERSION} ./qt-src && \
     rm -f qt-src.tar.xz
 
@@ -90,13 +89,14 @@ RUN cd ${QT_SRC_DIR} && \
 
 WORKDIR /tmp/qt-build-host
 # The module set of the targets: not built are qtwebengine and qtwebview
-# (Chromium) and qtwayland.
+# (Chromium). qtwayland provides qtwaylandscanner and QtDBus the D-Bus tools
+# for the Linux cross-builds.
 RUN ${QT_SRC_DIR}/configure \
       -prefix /opt/qt6-host \
       -release \
       -nomake tests -nomake examples \
-      -no-opengl -no-dbus \
-      -skip qtwebengine -skip qtwebview -skip qtwayland \
+      -no-opengl \
+      -skip qtwebengine -skip qtwebview \
 && cmake --build . --parallel ${PARALLEL_JOBS:-$(nproc)} \
       && cmake --install .
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# C for RHEL/CentOS 7 aarch64: Debian's aarch64 GCC 11 with the CentOS 7
+# sysroot (see g++ beside it, also for -nostdinc).
+sysroot=${CENTOS7_SYSROOT:-/opt/sysroot-arm64}
+gcc=aarch64-linux-gnu-gcc-11
+exec $gcc --sysroot="$sysroot" -nostdinc \
+    -isystem "$($gcc -print-file-name=include)" -isystem "$($gcc -print-file-name=include-fixed)" \
+    -isystem "$sysroot/usr/include" \
+    -B"$sysroot/usr/lib64" -L"$sysroot/usr/lib64" \
+    -Wl,-rpath-link,"$sysroot/usr/lib64" -static-libgcc "$@"

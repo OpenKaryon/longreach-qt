@@ -8,6 +8,10 @@
   export it. The binaries link them in place of the libraries and start where
   those are missing.
 - Qt 6 Linux amd64: QtWayland is built, through the same stubs.
+- Qt 6 Linux arm64 is cross-built for RHEL/CentOS 7 aarch64 (was Debian 12),
+  with OpenSSL, D-Bus and QtWayland; `scripts/build/rpm-sysroot.py` makes the
+  sysroot from the CentOS vault. The qt6-host image builds qtwayland and
+  QtDBus for their host tools.
 - Qt 6 macOS: `patches/qt6/macos/19` lets projects that use the SDK find
   QtNfc (its PC/SC lookup relied on variables only Qt's own build defines),
   so the suite's qt-selftest builds for Qt 6 macOS too.

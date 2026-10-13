@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# C++ for RHEL/CentOS 7 aarch64: Debian's aarch64 GCC 11 with the CentOS 7
+# sysroot and Developer Toolset 10's C++ library, linked as Developer Toolset
+# links it (its libstdc++.so is a linker script: RHEL 7's libstdc++.so.6 plus
+# libstdc++_nonshared.a for everything newer). libgcc is linked statically.
+#
+# -nostdinc: Debian's cross GCC also searches /usr/aarch64-linux-gnu/include,
+# Debian's own glibc headers, ahead of the sysroot, which --sysroot does not
+# change. Those would map calls to symbols RHEL 7's glibc 2.17 lacks.
+sysroot=${CENTOS7_SYSROOT:-/opt/sysroot-arm64}
+dts=$sysroot/opt/rh/devtoolset-10/root/usr
+gcc=aarch64-linux-gnu-g++-11
+exec $gcc --sysroot="$sysroot" -nostdinc \
+    -isystem "$dts/include/c++/10" -isystem "$dts/include/c++/10/aarch64-redhat-linux" \
+    -isystem "$dts/include/c++/10/backward" \
+    -isystem "$($gcc -print-file-name=include)" -isystem "$($gcc -print-file-name=include-fixed)" \
+    -isystem "$sysroot/usr/include" \
+    -B"$sysroot/usr/lib64" -L"$dts/lib/gcc/aarch64-redhat-linux/10" -L"$sysroot/usr/lib64" \
+    -Wl,-rpath-link,"$sysroot/usr/lib64" -static-libgcc "$@"

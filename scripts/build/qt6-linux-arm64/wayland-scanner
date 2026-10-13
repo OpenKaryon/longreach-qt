@@ -1,0 +1,9 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+#
+# CentOS 7's own wayland-scanner (1.15), run under QEMU: the code it writes
+# calls only what libwayland 1.15 has. A newer scanner's code calls
+# wl_proxy_marshal_flags, which RHEL 7's libwayland lacks.
+sysroot=${CENTOS7_SYSROOT:-/opt/sysroot-arm64}
+exec qemu-aarch64-static -L "$sysroot" "$sysroot/usr/bin/wayland-scanner" "$@"

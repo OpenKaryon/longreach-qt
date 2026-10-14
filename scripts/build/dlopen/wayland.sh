@@ -14,7 +14,8 @@
 # to the same archive, for build systems that look for the library files.
 # The protocol's interface tables, which libwayland exports as data, are
 # generated from wayland.xml and compiled in. Where no libwayland is
-# installed, Qt finds no Wayland display and uses xcb, as it does without a
+# installed, or only one older than the build's (missing some of its
+# functions), Qt finds no Wayland display and uses xcb, as it does without a
 # Wayland session.
 #
 #   WAYLAND_LIBDIR      the build's libwayland-*.so.0 (required)
@@ -48,7 +49,7 @@ fi
 cp "$includedir"/wayland-*.h "$prefix/include/"
 "$scanner" code < "$xml" > "$work/wayland-protocol.c"
 CFLAGS="-I$prefix/include" bash "$here/archive.sh" "$prefix/lib/libwayland-dlopen.a" longreach_wayland \
-    --extra "$work/wayland-protocol.c" "${libraries[@]}"
+    --whole --extra "$work/wayland-protocol.c" "${libraries[@]}"
 # Every exported data symbol must come from the generated tables.
 for symbol in $(cat "$prefix/lib/libwayland-dlopen.a.data"); do
     grep -q "^WL_EXPORT const struct wl_interface $symbol = " "$work/wayland-protocol.c" \

@@ -67,8 +67,7 @@ and Debian 12 i386 in containers. arm64: 8/8 (510 and 511 checks) on Ubuntu
   (glibc 2.11 needs the vsyscall page); newer distributions run them fine.
 - Not built: the unreleased QtHttpServer and QtMqtt. GStreamer's GL and
   photography interfaces (gst-plugins-bad) are left out.
-- The Wayland platform needs libwayland 1.11 or newer at run time. The stubs
-  load an older one too and leave its missing functions returning 0, so
-  `QT_QPA_PLATFORM=wayland` crashes there (14.04's 1.4, say); the default,
-  xcb, is not affected, and systems that old have X11 sessions anyway.
+- Wayland needs libwayland 1.12 or newer, the version the stubs are made
+  from. An older one (14.04's 1.4, say) counts as missing: Qt uses xcb, and
+  `QT_QPA_PLATFORM=wayland` reports that no Wayland display is available.
 - arm64 has run only in emulated containers, not on hardware.

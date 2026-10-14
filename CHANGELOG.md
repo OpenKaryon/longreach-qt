@@ -6,7 +6,8 @@
   on first use (x86_64, i386, aarch64; position-independent), with failure
   values for APIs where 0 means success and mirrored data for libraries that
   export it. The binaries link them in place of the libraries and start where
-  those are missing.
+  those are missing. libwayland older than the one the stubs are made from
+  counts as missing, so Qt uses xcb there instead of calling what it lacks.
 - Qt 5 Linux (Lucid): QtWayland is built, and QtMultimedia has PulseAudio,
   ALSA and GStreamer 1.0 backends, QtSpeech speech-dispatcher, QtBluetooth
   BlueZ, all through those stubs; `patches/qt5/linux/04` starts the GStreamer

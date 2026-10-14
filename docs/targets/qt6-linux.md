@@ -14,7 +14,8 @@ static libstdc++; OpenSSL 3 is linked statically; FreeType is bundled and
 missing D-Bus session bus, and link the legacy `libGL.so.1` rather than
 GLVND's `libOpenGL.so.0`, which old distributions lack. QtWayland links
 libwayland through stubs that load it at run time (`scripts/build/dlopen`), so
-the binaries also start where it is not installed, as on a RHEL 7 server.
+the binaries also start where it is not installed, as on a RHEL 7 server;
+a libwayland older than RHEL 7's 1.15 counts as missing, and Qt uses xcb.
 
 The arm64 build is cross-built on Debian 12 with its aarch64 GCC 11 against a
 sysroot of CentOS 7.9 aarch64 packages (`scripts/build/rpm-sysroot.py`) and

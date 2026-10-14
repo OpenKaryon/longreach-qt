@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "date": "2026-10-13",
-  "target": "tests-qt5-linux-arm64-gpl-enabled",
+  "date": "2026-10-14",
+  "target": "qt6-linux-arm64",
   "status": "PASS",
-  "image": "qt5-linux-arm64-gpl-enabled",
+  "image": "qt6-linux-arm64",
   "guest": {
     "os": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"",
     "system": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nVERSION=\"12 (bookworm)\"\nVERSION_CODENAME=bookworm\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.36-9+deb12u14) 2.36",
@@ -13,22 +13,22 @@
   "summary": {
     "apps_passed": 8,
     "apps_failed": 0,
-    "checks_passed": 511,
+    "checks_passed": 528,
     "checks_failed": 0,
-    "checks_skipped": 87
+    "checks_skipped": 51
   },
   "applications": [
     {
       "application": "qt-selftest",
-      "passed": 280,
+      "passed": 283,
       "failed": 0,
-      "skipped": 62
+      "skipped": 38
     },
     {
       "application": "widgets-gallery",
-      "passed": 90,
+      "passed": 91,
       "failed": 0,
-      "skipped": 5
+      "skipped": 4
     },
     {
       "application": "graphics-gallery",
@@ -38,15 +38,15 @@
     },
     {
       "application": "quick-qml-gallery",
-      "passed": 31,
+      "passed": 41,
       "failed": 0,
-      "skipped": 12
+      "skipped": 4
     },
     {
       "application": "gl-heavy-gallery",
-      "passed": 53,
+      "passed": 55,
       "failed": 0,
-      "skipped": 6
+      "skipped": 4
     },
     {
       "application": "painting-lab",
@@ -56,9 +56,9 @@
     },
     {
       "application": "multimedia-lab",
-      "passed": 2,
+      "passed": 3,
       "failed": 0,
-      "skipped": 2
+      "skipped": 1
     },
     {
       "application": "network-gui",
@@ -68,14 +68,15 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "f04ff43986718aefb34b1a4d3325f4f1732c15ceb8494917e0ab3515ccde4b43",
-    "graphics-gallery": "ee69b8af26a8d76a58bc4cbde9ec1c8d8acb537f3bb29debfefbecd475a736ee",
-    "multimedia-lab": "46b039c1e6645f53a12f9db30af39e297eacec0f3a131a057f7db2ca0d5d364e",
-    "network-gui": "e4be2bfb42afcc0c9907f3b44fcb0cfe2a481b8f58c88cd517a3e18d7259b6e5",
-    "painting-lab": "c9780127bc7d7e0c0d4fbf3a56c51caae40b960227d0abdd2ab2599fa69c949c",
-    "qt-selftest": "4cbfef52827cf94419fbc4717e7ee415523a65932a8df75c43324cadaed9b092",
-    "quick-qml-gallery": "d9491ea7ba6ba651132dffbff0dab2419e8c29d385cd4b07695c7986491c2821",
-    "smoke-runner": "669877a4cabfe27fb49304fea33677e5e910fc879687759ecddeb8d501405840",
-    "widgets-gallery": "850514618a1dd89dd37e0cea576ed19c01e8a2e1ef0ce3f491cf023e1420706a"
+    "GraphicalEffectsTab.qml": "9c01ad61c8904388166ab85476cba2424e34716b9ebaaead8907fa39591e267a",
+    "gl-heavy-gallery": "314d48cc32707631fcf714dbd6853a7e4fde92153d7db52ddbdc75c565d983ba",
+    "graphics-gallery": "98b7845a0536058adf3ca479c5b1404ad394847fb14442638a3a072a031fe7d2",
+    "multimedia-lab": "d4d554ab016efe31550afa200106141c865299fd8dcaf813d715f0a94fee465d",
+    "network-gui": "c0e697e0b18361df475daebf3168586b4dc62f64118f23154bfca64fcadaff94",
+    "painting-lab": "01ff7991af288882f9b262f50405d708be9bc76bfae21625f2abe874f3316208",
+    "qt-selftest": "4ac8d1e4a0e26abafcbd75b275265bbac7215d2e7527765bafcefabf317eff3c",
+    "quick-qml-gallery": "7f65988ffaef2e444b25a86c06453172a046065e0ae1b0a54953f26348726dbd",
+    "smoke-runner": "19c005be554a44162a7e9fbc86c6daa466a11c4ee6c1980b32578e4248f07abb",
+    "widgets-gallery": "7e699cdb57d6360b54832c6c2fa81e0f0fefdec2abc13abeb003b0ea75147d07"
   }
 }

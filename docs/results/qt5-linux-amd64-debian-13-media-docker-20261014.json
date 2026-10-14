@@ -1,28 +1,28 @@
 {
   "schema_version": 1,
-  "date": "2026-10-13",
+  "date": "2026-10-14",
   "target": "tests-qt5-linux-amd64-gpl-enabled",
   "status": "PASS",
   "image": "qt5-linux-amd64-gpl-enabled",
   "guest": {
     "os": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"",
     "system": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.7\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.41-12+deb13u4) 2.41",
-    "vm": "container debian:trixie",
+    "vm": "container debian:trixie plus libgstreamer1.0-0, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, libpulse0, libpulse-mainloop-glib0, libasound2t64, libglib2.0-0t64, libspeechd2, libbluetooth3",
     "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb"
   },
   "summary": {
     "apps_passed": 8,
     "apps_failed": 0,
-    "checks_passed": 511,
+    "checks_passed": 513,
     "checks_failed": 0,
-    "checks_skipped": 87
+    "checks_skipped": 85
   },
   "applications": [
     {
       "application": "qt-selftest",
-      "passed": 280,
+      "passed": 281,
       "failed": 0,
-      "skipped": 62
+      "skipped": 61
     },
     {
       "application": "widgets-gallery",
@@ -56,9 +56,9 @@
     },
     {
       "application": "multimedia-lab",
-      "passed": 2,
+      "passed": 3,
       "failed": 0,
-      "skipped": 2
+      "skipped": 1
     },
     {
       "application": "network-gui",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "b08d19438d238b0d5368db78d33215032ba68f7103cb3482dc8cc6dbae5dea81",
-    "graphics-gallery": "29c408fd8ec7341deeae24b8a08b3240ee93248c4e9d8f86a9c8116acf51cdab",
-    "multimedia-lab": "7131d7a45c4254b95cfbfa5fff2e15d2648cca9c73a34f6b3ac0e891be82ebda",
-    "network-gui": "520c98d87a8c3a676687ce17d5bd59add3525eafa4bab68de8e08fa5cb897c08",
-    "painting-lab": "70f67fd63bd7ece9eb34b69f56fa319ba2a81b7111640b05c3b4b106964f33c4",
-    "qt-selftest": "08c69cc3b6ddfe738e0dfdbbb896b09e02753a766922aa9de0444c4f14d8d50d",
-    "quick-qml-gallery": "a1eb89fc42331c6a9ce3628a0e5bdc2dd8021cf29a84ee70024f090df011ab1d",
+    "gl-heavy-gallery": "9f644073e90c794f721836c10014c3e04cf9a6aef8f53e101b90f4e6f000e5e5",
+    "graphics-gallery": "17a647565c628e2d5bd1e7180f9f05498f051a04bf80c9249435ca96aa455ab6",
+    "multimedia-lab": "a3e728bffb8e6dd93981ff91e469b6babfe122c92df3d1d3abaa5da145419d70",
+    "network-gui": "e7c3617b5d94df9e582bfdf6b400ea93ea96095bed2cd81e220b3136b1d7caa6",
+    "painting-lab": "d0657d36b580ccafc946b856e2433872bcd8a729faa389db50b333a82db01d03",
+    "qt-selftest": "28c9ee76758d87e7966d6cb02b3e42dcd8bfa15091dd36e32292daaa1a79b1b8",
+    "quick-qml-gallery": "190023c330349d000b2b5eacb003c9e5e96a323b1452f9d04524266246a94579",
     "smoke-runner": "980e555e53a35d6c06fe891d26b1f70d3eae68b302bf4415b5c1167b11becdff",
-    "widgets-gallery": "62cdfd8c10668024407ad6c4ec6d4437ea1d4a338b05320885869d700cf6eca6"
+    "widgets-gallery": "d3caeea78be5c9991377fb9f233bdac5fdb8085c2a792283c79ef33329709d4e"
   }
 }

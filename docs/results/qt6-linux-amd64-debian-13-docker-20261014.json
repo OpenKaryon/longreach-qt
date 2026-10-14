@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "date": "2026-10-12",
+  "date": "2026-10-14",
   "target": "qt6-linux-amd64",
   "status": "PASS",
   "image": "qt6-linux-amd64",
@@ -69,21 +69,21 @@
   ],
   "executables_sha256": {
     "GraphicalEffectsTab.qml": "9c01ad61c8904388166ab85476cba2424e34716b9ebaaead8907fa39591e267a",
-    "gl-heavy-gallery": "0b5b9ceb50ef396ad9dba629c9085e2796f05d9e2a9d320e235fefb024fb9244",
-    "graphics-gallery": "c7ef7fe7d255ee9bec70b82729a4b99d43a2e265014a7e620ab951a253376980",
+    "gl-heavy-gallery": "55b60e44fa86ccae38d8c91dc8dea5065c149cf68463c0e9b716c045c1f698c3",
+    "graphics-gallery": "25e963a59501b07ea3faaf43771e54168c151df9422535749beccc24f228ded9",
     "graphics-gallery-pages.png": "21011326d10cafa5d6bb1b95c6b4c305f6fd176512cf802bca1fb8ae108eca5e",
     "graphics-shaped-window.png": "b3214b0132bcabbe8f7da209e16dc443834baf11d01dde427b5f9db877f79484",
-    "multimedia-lab": "131df9ac44bcf20055984f60d20823f02fa96d39914728403edebca4419f0c4d",
-    "network-gui": "3d20c920922c659f40857cbe30d14db9ef46f78313fd8f185e4056f50a52b1b1",
-    "painting-lab": "1d5c5f800e481feca6aa283b2c9cccf1aa3f688cfe2cec68c04805dc4895eac1",
+    "multimedia-lab": "ad8954c3c457e350370f90c0a225e66c7b2a6f726d23847738a8215facb25147",
+    "network-gui": "4c63bdbc3aa8eac1b6439f36f81fa3f7f00bbdd5b84a0f7bb1fb473e15947555",
+    "painting-lab": "7a30da94a2303d9fe91f620fab86612058fb66934b6d5235093cee7f1dae9215",
     "painting-lab-pages.png": "09ea3567db7a43d189cec7cb6dabb2125fd685c477bef1d9d4c53f3e7798224e",
     "painting-preview-dialog.png": "c8f9b1d56f1a5efeb34ae63beabfac9d7839e0b15e92dbf32b621c5cd00b64e0",
     "painting-preview.png": "d39a10b7878a6dfc4a23a1b8b442ebff1ca76bfa1a7e3559a09b3ac05514bb5d",
-    "painting-sample.pdf": "e410110f7417798a3358fc82f0e86667414997fd5680395ae90e9483c12d38f5",
-    "qt-selftest": "45d0bfe499c444190aa6b1797301fba442b8b1c1b724ee4a8cff6c913dccb80e",
-    "quick-qml-gallery": "05ee93e3b6b43b952a69645ecef2ece3b4fd1a8c305ef921af9f678831d0d83b",
+    "painting-sample.pdf": "359aff95df438b3f2dde87f2b04303413acf61975e1f5cd7f2d1b8e1bd66075d",
+    "qt-selftest": "b463070adc4e0833c8683732b28a66d8efdc45daf9dace48b30e0c30ee37bb81",
+    "quick-qml-gallery": "2b4d1d20caa9021dec6092824ab28561f3f044ab79403737e6606ae5706001b7",
     "smoke-runner": "6b4bd2a05df1bc763733d71d92b17a576c4a15c1409d5d1c35f7ee54a2f896fe",
-    "widgets-gallery": "e18494c85f24116ab7aa39afb13e6113e5858ab2afe88471b7f7fdf154963576",
-    "widgets-gallery-pages.png": "17d357919b2dac39088b119b5aa136c5e5d893677edd1ad93d9f2c3b26f8e0ba"
+    "widgets-gallery": "e7f09dca81813c146fcb8e3cabea3fa46203908a40722e3386ba8bc273219ac0",
+    "widgets-gallery-pages.png": "48d92f82673ff3b317a15cce42c27c6531d5e79e37358c13f9f76294fbcad21c"
   }
 }

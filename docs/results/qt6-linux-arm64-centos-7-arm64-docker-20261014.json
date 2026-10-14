@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "date": "2026-10-12",
+  "date": "2026-10-14",
   "target": "qt6-linux-arm64",
   "status": "PASS",
   "image": "qt6-linux-arm64",
   "guest": {
-    "os": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"",
-    "system": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"12\"\nVERSION=\"12 (bookworm)\"\nVERSION_CODENAME=bookworm\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.36-9+deb12u14) 2.36",
-    "vm": "container arm64v8/debian:12",
+    "os": "NAME=\"CentOS Linux\"",
+    "system": "NAME=\"CentOS Linux\"\nVERSION=\"7 (AltArch)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (AltArch)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7:server\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\nldd (GNU libc) 2.17",
+    "vm": "container arm64v8/centos:7",
     "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb"
   },
   "summary": {
@@ -69,14 +69,14 @@
   ],
   "executables_sha256": {
     "GraphicalEffectsTab.qml": "9c01ad61c8904388166ab85476cba2424e34716b9ebaaead8907fa39591e267a",
-    "gl-heavy-gallery": "462791110537e77c381994b11f20f779597b4f4f02d2c71d17b53043aa9bc4a3",
-    "graphics-gallery": "004b58f1a50518a7610111614981aa883e5973991af3acc48ac073925fd569d2",
-    "multimedia-lab": "fcf458c6f950242148a3a98a1a86200854faff48e4e3cb183d8f12537338acc2",
-    "network-gui": "8de78f814fd71511b378b63bc4631b02693d5e352e4cdae126ef24e1b1a0868c",
-    "painting-lab": "714707750b84d82138cdf6e8ff93c8a67ba2e8fa050f5acda5d9759657776b6a",
-    "qt-selftest": "edee93fe4d8f504406577b5c4c79588fec0c8718332a94926a85859b5b5c4be8",
-    "quick-qml-gallery": "027da1a4d4149154109ee8c54bedf70cfd0b75ac1272b5578c127e241b08d16d",
+    "gl-heavy-gallery": "314d48cc32707631fcf714dbd6853a7e4fde92153d7db52ddbdc75c565d983ba",
+    "graphics-gallery": "98b7845a0536058adf3ca479c5b1404ad394847fb14442638a3a072a031fe7d2",
+    "multimedia-lab": "d4d554ab016efe31550afa200106141c865299fd8dcaf813d715f0a94fee465d",
+    "network-gui": "c0e697e0b18361df475daebf3168586b4dc62f64118f23154bfca64fcadaff94",
+    "painting-lab": "01ff7991af288882f9b262f50405d708be9bc76bfae21625f2abe874f3316208",
+    "qt-selftest": "4ac8d1e4a0e26abafcbd75b275265bbac7215d2e7527765bafcefabf317eff3c",
+    "quick-qml-gallery": "7f65988ffaef2e444b25a86c06453172a046065e0ae1b0a54953f26348726dbd",
     "smoke-runner": "19c005be554a44162a7e9fbc86c6daa466a11c4ee6c1980b32578e4248f07abb",
-    "widgets-gallery": "d57083b3a9899e32ae45fe7182b6ee1450755821bc59737c7deb6c926b5c61b1"
+    "widgets-gallery": "7e699cdb57d6360b54832c6c2fa81e0f0fefdec2abc13abeb003b0ea75147d07"
   }
 }

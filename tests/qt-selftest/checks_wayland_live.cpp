@@ -274,22 +274,28 @@ int runWaylandChildMode(int argc, char *argv[])
     return -1;
 }
 
+// Defined by the dlopen stubs where the build links them.
+extern "C" int longreach_wayland_available(int) __attribute__((weak));
+
 void checkWaylandLive(SmokeReporter &r)
 {
     r.check("wayland/live-client-and-shells", [&r](QString &d) {
-        // Builds that load libwayland at run time (the Lucid ones) run on
-        // systems without it; there is then no Wayland to connect to.
-        QLibrary waylandClient(QStringLiteral("wayland-client"), 0);
-        QLibrary waylandServer(QStringLiteral("wayland-server"), 0);
-        if (!waylandClient.load() || !waylandServer.load()) {
-            r.skip(d, QStringLiteral("libwayland-client and libwayland-server are not installed"));
-            return false;
-        }
-        // Qt's Wayland client needs libwayland 1.11 (wl_proxy_create_wrapper);
-        // the stubs find older ones but not what is missing from them.
-        if (!waylandClient.resolve("wl_proxy_create_wrapper")) {
-            r.skip(d, QStringLiteral("libwayland-client is older than 1.11"));
-            return false;
+        // Builds that load libwayland at run time (scripts/build/dlopen) run
+        // on systems without it, or with one older than they were built
+        // against, which they then leave alone; there is no Wayland to
+        // connect to. The stubs say which (client 0, server 1).
+        if (longreach_wayland_available) {
+            if (!longreach_wayland_available(0) || !longreach_wayland_available(1)) {
+                r.skip(d, QStringLiteral("no libwayland as new as the build's"));
+                return false;
+            }
+        } else {
+            QLibrary waylandClient(QStringLiteral("wayland-client"), 0);
+            QLibrary waylandServer(QStringLiteral("wayland-server"), 0);
+            if (!waylandClient.load() || !waylandServer.load()) {
+                r.skip(d, QStringLiteral("libwayland-client and libwayland-server are not installed"));
+                return false;
+            }
         }
         QTemporaryDir runtime;
         if (!runtime.isValid()) {

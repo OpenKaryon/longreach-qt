@@ -28,8 +28,17 @@ version() { dpkg-query -W -f='${Version}' "$1" | sed -e 's/^[0-9]*://' -e 's/[-+
 
 # The scanner is copied into the sysroot so that the path wayland-scanner.pc
 # names works whether or not pkg-config prefixes it with the sysroot.
-WAYLAND_LIBDIR=$so WAYLAND_VERSION=$(version libwayland-dev) WAYLAND_SCANNER_PC=/usr/bin/wayland-scanner \
-    bash "$dlopen/wayland.sh" "$prefix" /usr/local
+# libwayland 1.12 also exports its private wl_map functions, which later
+# versions do not: the symbol reader leaves them out, or the stubs would take
+# every newer libwayland for an older one (wayland.sh treats a library that
+# lacks a stubbed function as missing).
+cat > /tmp/nm-wayland <<EOF
+#!/bin/sh
+${NM:-nm} "\$@" | grep -v ' wl_map_'
+EOF
+chmod +x /tmp/nm-wayland
+NM=/tmp/nm-wayland WAYLAND_LIBDIR=$so WAYLAND_VERSION=$(version libwayland-dev) \
+    WAYLAND_SCANNER_PC=/usr/bin/wayland-scanner bash "$dlopen/wayland.sh" "$prefix" /usr/local
 cp /usr/bin/wayland-scanner "$sysroot/usr/bin/wayland-scanner"
 
 # pc NAME VERSION LIBS [CFLAGS]

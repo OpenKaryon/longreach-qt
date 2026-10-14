@@ -4,7 +4,7 @@
 """Generate lazy dlopen stubs for the functions of shared libraries.
 
     stubs.py --arch x86_64|i386|aarch64 --prefix NAME --out DIR
-             [--fail FUNCTION=VALUE]... [--mirror SONAME:DATA_FILE]...
+             [--fail FUNCTION=VALUE]... [--mirror SONAME:DATA_FILE]... [--whole]
              SONAME:FUNCTIONS_FILE...
 
 For each library, FUNCTIONS_FILE lists the function names to stub, one per
@@ -25,6 +25,12 @@ A stub cannot stand in for exported data. --mirror defines the variables
 DATA_FILE lists ("name size" per line) and copies the library's values into
 them once it is loaded; PREFIX_mirror() copies them again, for data the
 library sets later (GStreamer's types, set by gst_init).
+
+With --whole, a library that lacks any of the stubbed functions (an older
+version) counts as missing altogether, for callers that cannot cope with
+some of its functions returning 0 (libwayland: Qt's Wayland client uses
+what it was built against). PREFIX_available(LIB) says whether library LIB
+is used.
 
 Runs on Python 3.5 and later, the oldest being Ubuntu 16.04's.
 """
@@ -136,7 +142,7 @@ HIDDEN void PREFIX_mirror(void)
     return ''.join(out)
 
 
-def resolver(prefix, libs, fails, mirrors):
+def resolver(prefix, libs, fails, mirrors, whole):
     # The tables, thunks and resolver are hidden: the stubs reach them
     # without the GOT or PLT, also when linked into a shared object.
     out = [HEADER, '#include <dlfcn.h>\n#include <stddef.h>\n#include <string.h>\n\n'
@@ -169,9 +175,25 @@ def resolver(prefix, libs, fails, mirrors):
                % (prefix, ', '.join('%s_table_%d' % (prefix, lib) for lib in range(count))))
     out.append('static const char *const *const %s_all_names[] = { %s };\n'
                % (prefix, ', '.join('%s_names_%d' % (prefix, lib) for lib in range(count))))
-    out.append('static const unsigned %s_counts[] = { %s };\n\n'
+    out.append('static const unsigned %s_counts[] = { %s };\n'
                % (prefix, ', '.join(str(len(names)) for _, names in libs)))
-    out.append('''/* Called by a lazy thunk: fills the table of library LIB. Concurrent first
+    out.append('static const int %s_whole = %d;\n\n' % (prefix, 1 if whole else 0))
+    out.append('''/* The library LIB, or NULL where it is missing; with --whole also where any
+   stubbed function is missing from it, an older version. */
+static void *PREFIX_open(int lib)
+{
+    void *handle = dlopen(PREFIX_sonames[lib], RTLD_NOW | RTLD_GLOBAL);
+    unsigned i;
+    for (i = 0; handle && PREFIX_whole && i < PREFIX_counts[lib]; ++i) {
+        if (!dlsym(handle, PREFIX_all_names[lib][i])) {
+            dlclose(handle);
+            handle = NULL;
+        }
+    }
+    return handle;
+}
+
+/* Called by a lazy thunk: fills the table of library LIB. Concurrent first
    calls may both resolve; they write the same values. */
 #if defined(__i386__) || defined(__x86_64__)
 __attribute__((force_align_arg_pointer))
@@ -179,7 +201,7 @@ __attribute__((force_align_arg_pointer))
 __attribute__((used)) HIDDEN
 void PREFIX_resolve(int lib)
 {
-    void *handle = dlopen(PREFIX_sonames[lib], RTLD_NOW | RTLD_GLOBAL);
+    void *handle = PREFIX_open(lib);
     unsigned i;
     for (i = 0; i < PREFIX_counts[lib]; ++i) {
         void *address = handle ? dlsym(handle, PREFIX_all_names[lib][i]) : NULL;
@@ -188,10 +210,10 @@ void PREFIX_resolve(int lib)
     PREFIX_mirror();
 }
 
-/* Whether library LIB can be loaded, for callers that want to ask first. */
+/* Whether library LIB is used, for callers that want to ask first. */
 int PREFIX_available(int lib)
 {
-    return dlopen(PREFIX_sonames[lib], RTLD_NOW | RTLD_GLOBAL) != NULL;
+    return PREFIX_open(lib) != NULL;
 }
 '''.replace('PREFIX', prefix))
     return ''.join(out)
@@ -204,6 +226,7 @@ def main():
     parser.add_argument('--out', required=True)
     parser.add_argument('--fail', action='append', default=[], metavar='FUNCTION=VALUE')
     parser.add_argument('--mirror', action='append', default=[], metavar='SONAME:DATA_FILE')
+    parser.add_argument('--whole', action='store_true')
     parser.add_argument('libs', nargs='+', metavar='SONAME:FUNCTIONS_FILE')
     args = parser.parse_args()
     libs = []
@@ -236,7 +259,7 @@ def main():
     if not out.is_dir():
         out.mkdir(parents=True)
     (out / ('%s-stubs.S' % args.prefix)).write_text(STUBS[args.arch](args.prefix, libs))
-    (out / ('%s-resolve.c' % args.prefix)).write_text(resolver(args.prefix, libs, fails, mirrors))
+    (out / ('%s-resolve.c' % args.prefix)).write_text(resolver(args.prefix, libs, fails, mirrors, args.whole))
     print(', '.join('%s: %d' % (soname, len(names)) for soname, names in libs))
 
 

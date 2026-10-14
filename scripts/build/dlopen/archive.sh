@@ -6,7 +6,7 @@
 # libraries at link time:
 #
 #   archive.sh OUTPUT.a PREFIX [--fail FUNCTION=VALUE]... [--skip FUNCTION]...
-#              [--extra FILE.c]... [--mirror] SONAME=LIBRARY...
+#              [--extra FILE.c]... [--mirror] [--whole] SONAME=LIBRARY...
 #
 # LIBRARY is the build's copy of a library, read only for the symbols it
 # exports; SONAME is what the stubs load at run time. --fail is passed to
@@ -14,9 +14,10 @@
 # --extra compiles a C file into the archive (the functions --fail and --skip
 # name). Stubs cannot stand in for exported data: --mirror has stubs.py define
 # it and copy it from the library; without it the names are written to
-# OUTPUT.a.data, for the caller to provide or to rule out. CC compiles
-# (default cc) with CFLAGS for the extra files, NM reads the symbols (default
-# nm), AR archives (default ar).
+# OUTPUT.a.data, for the caller to provide or to rule out. With --whole, a
+# library that lacks any of the functions counts as missing (stubs.py). CC
+# compiles (default cc) with CFLAGS for the extra files, NM reads the symbols
+# (default nm), AR archives (default ar).
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 out=$1
@@ -41,6 +42,7 @@ while [ $# -gt 0 ]; do
         --skip) echo "$2" >> "$work/skip.txt"; shift 2 ;;
         --extra) extras+=("$2"); shift 2 ;;
         --mirror) mirror=1; shift ;;
+        --whole) fails+=(--whole); shift ;;
         *=*)
             soname=${1%%=*}
             library=${1#*=}

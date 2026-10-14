@@ -191,6 +191,12 @@ void checkNetwork(SmokeReporter &r)
             return false;
         }
 
+#ifdef Q_OS_MACOS
+        // SecureTransport imports the server identity into the default
+        // keychain, which an SSH session cannot unlock; a temporary keychain
+        // also leaves the user's keychain alone.
+        qputenv("QT_SSL_USE_TEMPORARY_KEYCHAIN", "1");
+#endif
         TlsLoopbackServer srv;
         srv.certificate = certs.first();
         srv.privateKey = key;

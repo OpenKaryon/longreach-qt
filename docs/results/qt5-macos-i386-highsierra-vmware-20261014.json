@@ -1,27 +1,28 @@
 {
   "schema_version": 1,
-  "date": "2026-10-09",
-  "target": "Qt 5.15.19 macOS i386, deployment target Mac OS X 10.6, on macOS 10.13.6",
+  "date": "2026-10-14",
+  "target": "tests-qt5-macos-i386-gpl-enabled",
   "status": "PASS",
-  "image": "qt5-macos-i386-gpl-enabled (make macos-i386)",
+  "image": "qt5-macos-i386-gpl-enabled",
   "guest": {
-    "os": "macOS 10.13.6 (17G65)",
-    "vm": "virtual machine (VMware)",
-    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH in the logged-in user session"
+    "os": "Mac OS X 10.13.6 17G66",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.13.6\nBuildVersion:\t17G66\nDarwin 17.7.0 Darwin Kernel Version 17.7.0: Thu Jun 21 22:53:14 PDT 2018; root:xnu-4570.71.2~1/RELEASE_X86_64 x86_64",
+    "vm": "macOS 10.13.6 in VMware Workstation, clean install from the 10.13.6 installer",
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
   },
   "summary": {
     "apps_passed": 8,
     "apps_failed": 0,
-    "checks_passed": 497,
+    "checks_passed": 496,
     "checks_failed": 0,
-    "checks_skipped": 84
+    "checks_skipped": 85
   },
   "applications": [
     {
       "application": "qt-selftest",
-      "passed": 268,
+      "passed": 267,
       "failed": 0,
-      "skipped": 62
+      "skipped": 63
     },
     {
       "application": "widgets-gallery",
@@ -67,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "40828281a4e3c342f150cb84b91473026efdc2c3a82d2c0981550a901ca7697e",
+    "gl-heavy-gallery": "0bcc38a24f27ece4dfc6b3b80d949a5d76896881d19aaa2df37553f507dcd863",
     "graphics-gallery": "c119b4443a2f72f327249981213999763f00cfdba20da494a54f5c5f1b5e449b",
-    "multimedia-lab": "a98b62397f3b1ac8345eed5a12923b827d1fc7c6beb7801ed3f4b4e86e87189a",
-    "network-gui": "e70a6eed85162ef5f7eb54649b018f02d3394f76044673c206b2241f01fbd942",
+    "multimedia-lab": "c1528def3bb3edd7c89f30d008b10e677f2d1b95bc4ed6910726b0d5d3abf3bd",
+    "network-gui": "eb062e6f10d05bd9ec77db683ea1a0a83196deef1f1a99cfa6c6cf313370698b",
     "painting-lab": "b10791c5fb220dda38e778f7bc3944fadf65056f544cb9ca219e0b5ee999143e",
-    "qt-selftest": "9e1bbcbfe208f5a9c5aaee3b5c63f194a66fd60110c01e5cea2db1b7b6c15b3a",
-    "quick-qml-gallery": "659f10e128b22ab7087c9dd1756ec555a09c422932a8c2090ba9a6f46af5a37d",
+    "qt-selftest": "23edea3542c808856189270b6938a72817a5d8307cb089eb89718e2b82a2d62e",
+    "quick-qml-gallery": "c5649ab173dd0cc42dfaa6bc9dee206a01ab5903ebb74ced4f4663cd209fc4bb",
     "smoke-runner": "dc9f84644de10b8911041efc1434515dafe712e1de46da4466e9a7aef63b5962",
-    "widgets-gallery": "b878910ba3301ee74aebf174bb7f89ee5b900e013e540cb91f5c85e792b7ba5b"
+    "widgets-gallery": "987b69dde251c47b2548850c6a1d855fac4642600e833dde01a602d4bf979115"
   }
 }

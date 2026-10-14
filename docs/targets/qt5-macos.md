@@ -53,7 +53,7 @@ The binaries run on every Intel Mac up to 10.14.
 ## Results
 
 amd64 and i386: 8/8 on Mac OS X 10.6.3, OS X 10.7.5 and macOS 10.13.6 in
-VMware, 494, 496 and 497 checks, none failed; a 10.11 build earlier on real
+VMware, 494, 496 and 496 checks, none failed; a 10.11 build earlier on real
 OS X 10.11.6. arm64 is built and audited, not run
 ([platforms](../platforms.md#qt-51519)).
 

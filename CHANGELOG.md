@@ -21,6 +21,12 @@
   with OpenSSL, D-Bus and QtWayland; `scripts/build/rpm-sysroot.py` makes the
   sysroot from the CentOS vault. The qt6-host image builds qtwayland and
   QtDBus for their host tools.
+- Tests: on macOS, qt-selftest's TLS loopback check gives the server a
+  temporary keychain (`QT_SSL_USE_TEMPORARY_KEYCHAIN`). SecureTransport
+  otherwise imports the server identity into the user's keychain, which an
+  SSH session cannot unlock, and the handshake failed there.
+- Results: Qt 5 (amd64, i386) and Qt 6 macOS 8/8 on a clean macOS 10.13.6
+  install in VMware, 496 and 504 checks, none failed.
 - Qt 6 macOS: `patches/qt6/macos/19` lets projects that use the SDK find
   QtNfc (its PC/SC lookup relied on variables only Qt's own build defines),
   so the suite's qt-selftest builds for Qt 6 macOS too.

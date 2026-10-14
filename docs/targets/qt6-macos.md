@@ -27,11 +27,10 @@ MacBook Pro, for one) cannot get 10.14.
 
 ## Results
 
-macOS 10.13.6 in VMware: 7/7 built applications, 240 checks, none failed,
-with the QML JIT fix ([platforms](../platforms.md#qt-684)); `qt-selftest`
-was not built for that image (it lacked QtTextToSpeech). arm64 builds all 8
-applications, `qt-selftest` included, and is audited
-(`make qt6-macos-arm64-audit`: every binary declares 11.0), not run.
+macOS 10.13.6 in VMware, installed clean from the 10.13.6 installer: 8/8,
+504 checks, none failed ([platforms](../platforms.md#qt-684)). arm64 builds
+all 8 applications and is audited (`make qt6-macos-arm64-audit`: every
+binary declares 11.0), not run.
 
 ## Limits
 

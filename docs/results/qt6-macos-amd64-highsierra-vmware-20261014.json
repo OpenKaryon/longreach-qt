@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "target": "qt6-macos-amd64",
+  "status": "PASS",
+  "image": "qt6-macos-amd64",
+  "guest": {
+    "os": "Mac OS X 10.13.6 17G66",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.13.6\nBuildVersion:\t17G66\nDarwin 17.7.0 Darwin Kernel Version 17.7.0: Thu Jun 21 22:53:14 PDT 2018; root:xnu-4570.71.2~1/RELEASE_X86_64 x86_64",
+    "vm": "macOS 10.13.6 in VMware Workstation, clean install from the 10.13.6 installer",
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 504,
+    "checks_failed": 0,
+    "checks_skipped": 57
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 264,
+      "failed": 0,
+      "skipped": 44
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 35,
+      "failed": 0,
+      "skipped": 5
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "d6a979d437431148347b8d4534c66160eef1afce179fc44d890e5b755e73cabd",
+    "graphics-gallery": "f1e8820eefa5384ddea1eec1ffc66894de4eee882516652539d057bfd6bfa08c",
+    "multimedia-lab": "bd1c042fe972c042b8bd9db60c4bd04b2fbe7f7ee44f84f5ea378946bc45186d",
+    "network-gui": "d066750cb9f7d0ad091be0c19072ab096a3beb15868a3d9b584a04d6a9dc1413",
+    "painting-lab": "49ec332fa13b529070d409c5d5ef0cb60c1b180a58008e47a02685395858bc48",
+    "qt-selftest": "e05165a6dcc98388645d636f5e110386c9dba3ddb89ac04af48caaa0054b6aa9",
+    "quick-qml-gallery": "9ef62498ef6367d351b776e6f0f9059c99c85710546857f3f2642f901d6a70a1",
+    "smoke-runner": "1f7294d9910d95a621e7e317b0ea59634f388bdec2732757b791d55be5f8a089",
+    "widgets-gallery": "792d5e053564e40d4b3458e953da2d57a2b58edac028e4052c11e72c14026710"
+  }
+}

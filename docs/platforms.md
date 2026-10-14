@@ -54,8 +54,8 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | | | Ubuntu 16.04/24.04, Fedora 44, Arch (containers) | 8/8 on each, 474-490 passed, 0 failed ([json](results/linux-forward-20261010.json)) |
 | `qt5-linux-i386` | Ubuntu 10.04 i386 | Ubuntu 10.04 i386, 16.04 i386, Debian 12 i386 (containers) | 8/8, 494, 509 and 510 passed, 0 failed ([10.04](results/qt5-linux-i386-ubuntu-10.04-i386-docker-20261014.json), [16.04](results/qt5-linux-i386-ubuntu-16.04-i386-docker-20261014.json), [Debian 12](results/qt5-linux-i386-debian-12-i386-docker-20261014.json)) |
 | `qt5-linux-arm64` | Ubuntu 14.04 arm64 (glibc 2.19) | stock Ubuntu 14.04 and Debian 12 arm64 (containers, emulated) | 8/8, 510 and 511 passed, 0 failed ([14.04](results/qt5-linux-arm64-ubuntu-14.04-arm64-docker-20261014.json), [Debian 12](results/qt5-linux-arm64-debian-12-arm64-docker-20261014.json)) |
-| `qt5-macos-amd64` | Mac OS X 10.6 | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 497 passed, 0 failed ([10.6](results/qt5-macos-amd64-snowleopard-vmware-20261010.json), [10.7](results/qt5-macos-amd64-patches34-38-lion-vmware-20261009.json), [10.13](results/qt5-macos-amd64-patches34-38-highsierra-vmware-20261009.json)); a 10.11 build earlier on real OS X 10.11.6 |
-| `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 497 passed, 0 failed ([10.6](results/qt5-macos-i386-snowleopard-vmware-20261010.json), [10.7](results/qt5-macos-i386-lion-vmware-20261009.json), [10.13](results/qt5-macos-i386-highsierra-vmware-20261009.json)) |
+| `qt5-macos-amd64` | Mac OS X 10.6 | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 496 passed, 0 failed ([10.6](results/qt5-macos-amd64-snowleopard-vmware-20261010.json), [10.7](results/qt5-macos-amd64-patches34-38-lion-vmware-20261009.json), [10.13](results/qt5-macos-amd64-highsierra-vmware-20261014.json)); a 10.11 build earlier on real OS X 10.11.6 |
+| `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 496 passed, 0 failed ([10.6](results/qt5-macos-i386-snowleopard-vmware-20261010.json), [10.7](results/qt5-macos-i386-lion-vmware-20261009.json), [10.13](results/qt5-macos-i386-highsierra-vmware-20261014.json)) |
 | `qt5-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
 ### Qt 6.8.4
@@ -68,7 +68,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261014.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261014.json)) |
 | | | Linux Mint 22.3 (VMware) | 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
 | `qt6-linux-arm64` | RHEL/CentOS 7 aarch64 (glibc 2.17) | stock CentOS 7 and Debian 12 arm64 (containers, emulated) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-arm64-centos-7-arm64-docker-20261014.json), [Debian 12](results/qt6-linux-arm64-debian-12-arm64-docker-20261014.json)) |
-| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 7/7 built applications, 240 passed, 0 failed ([json](results/qt6-macos-1013-jit-highsierra-vmware-20261007.json)) |
+| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 8/8, 504 passed, 0 failed ([json](results/qt6-macos-amd64-highsierra-vmware-20261014.json)) |
 | `qt6-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
 ## Current systems

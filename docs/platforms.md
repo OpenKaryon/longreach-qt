@@ -37,8 +37,8 @@ run.
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
 | | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |
 | `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU) | 24/24, 524 passed, 0 failed ([json](results/qt4-tiger-i386-suite-20261003.json)) |
-| `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU) | 24/24 ([json](results/qt4-jaguar-suite-20261005.json)) |
-| | | Tiger 10.4.10 (QEMU, G4) | 24/24, 523 passed, 0 failed ([json](results/qt4-tiger-ppc-suite-20261005.json)) |
+| `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU, G4) | 8/8 each, 361 passed, 0 failed ([10.2](results/qt4-macos-ppc-jaguar-10.2-qemu-20261014.json), [10.2.8](results/qt4-macos-ppc-jaguar-10.2.8-qemu-20261014.json)); earlier 24/24 also on an emulated G3 ([json](results/qt4-jaguar-suite-20261005.json)) |
+| | | Tiger 10.4.10 (QEMU, G4) | 8/8, 363 passed, 0 failed ([json](results/qt4-macos-ppc-tiger-qemu-20261014.json)) |
 
 Windows Me is expected to behave like Windows 98 SE and has not been run.
 

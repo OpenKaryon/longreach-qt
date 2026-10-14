@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "target": "qt4-macos-ppc",
+  "status": "PASS",
+  "image": "qt4-macos-ppc",
+  "guest": {
+    "os": "Mac OS X 10.4.10 8R3032",
+    "system": "Darwin 8.10.2 Darwin Kernel Version 8.10.2: Wed Jun 20 21:54:20 PDT 2007; root:xnu-792.22.6~1/RELEASE_PPC Power Macintosh powerpc\nProductName:\tMac OS X\nProductVersion:\t10.4.10\nBuildVersion:\t8R3032\nARCHIVE_MD5 a980fa16806d87bdf4bf27b832b4133d\nINSTALL complete",
+    "vm": "Mac OS X 10.4.10 in QEMU (mac99, emulated G4, 768 MiB)",
+    "method": "suite installed through an HTTP bridge and checked by MD5; jaguar-suite.sh runs smoke-runner once per application in the logged-in desktop session"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 363,
+    "checks_failed": 0,
+    "checks_skipped": 132
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "a4920570095940a7ee2c7ffd8da14f35148806b1048bdb64481177b4763721de",
+    "graphics-gallery": "b318adf8ffba893010c8f013a84c45221a78ef3f8c333b2eeb66e70af40bafac",
+    "multimedia-lab": "0395b100dbd3049a6e42ddc11b2f5dc06a21bd8a0106e54032d1377405094746",
+    "network-gui": "23337db074a075fe5105db072c9b05adc06b1a5871bf7a52561fd6a9aa6fec6c",
+    "painting-lab": "43fc06ba2886c793e720cf0a8682c858aec327ada62bdbc53240ca00cd8f4e42",
+    "qt-selftest": "30aa2587e0a1de56b06685d7bcd0b1bf13d3a87a777d638e18795523bf815498",
+    "quick-qml-gallery": "37146cc25771c032a87bef9b9d2ad24578b21ceb7213803a124a595b239dbd14",
+    "smoke-runner": "edfe1c4e387bbca3d8e51dc093d2cf87dd7f91610dbf1d829f6684cf8e1ef051",
+    "widgets-gallery": "90f6d7baa139f7e37463138b54024f043d6482ec4d39c7da9b6d51e7bec31e23"
+  }
+}

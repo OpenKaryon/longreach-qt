@@ -36,15 +36,15 @@ Rosetta). G5 Macs run them as 32-bit; there is no ppc64 build.
 
 ## Results
 
-- Tiger Intel: 24/24, 524 checks, on Tiger 10.4.10 in QEMU.
-- Jaguar PowerPC: 24/24 on Mac OS X 10.2 and 10.2.8 in QEMU (521 checks),
-  and on Tiger 10.4.10 (523 checks), TLS 1.2 included.
-- Tiger PowerPC (the 10.4u compiler, before the Jaguar build replaced it):
-  24/24, 523 checks, including on an emulated G3.
+- PowerPC (the Jaguar build), with the current eight-application suite:
+  8/8 on Mac OS X 10.2 and 10.2.8 (361 checks each) and on Tiger 10.4.10
+  (363), on an emulated G4 in QEMU.
+- With the earlier 24-application layout: Tiger Intel 24/24 (524 checks) on
+  Tiger 10.4.10 in QEMU; PowerPC 24/24 on the same three systems and on an
+  emulated G3.
 
-All with the earlier 24-application layout; see
-[platforms](../platforms.md#qt-487). The Jaguar build is a target of its own
-from 0.1.0 on; before, it was built by probe scripts.
+See [platforms](../platforms.md#qt-487). The Jaguar build is a target of its
+own from 0.1.0 on; before, it was built by probe scripts.
 
 ## Limits
 

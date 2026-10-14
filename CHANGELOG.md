@@ -10,7 +10,8 @@
   summary in `build/build-all-<time>/`.
 - The default licence profile no longer adds itself to image and artifact
   names (`qt5-win-amd64`, not `qt5-win-amd64-gpl-enabled`).
-- The README's quick start lists every target.
+- The README's quick start lists every target; `make help` prints each SDK
+  target next to its `-examples` form.
 - `quick-qml-gallery` is classified GPL-enabled where it links Qt Quick 3D.
 
 ## 0.1.0 - 2026-10-15

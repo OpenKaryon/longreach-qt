@@ -94,6 +94,7 @@ $(LLVM_MINGW_PATH):
 # $(1) public name, $(2) SDK target, $(3) image variable, $(4) examples
 # target, $(5) examples arguments, $(6) fingerprint settings.
 define simple-build-targets
+BUILD_TARGETS += $(1)
 .PHONY: build-$(1) build-$(1)-examples $(1)-examples
 $(1)-examples: build-$(1)-examples
 build-$(1):
@@ -109,7 +110,11 @@ include $(PROJECT_DIR)mk/qt4.mk
 include $(PROJECT_DIR)mk/qt5.mk
 include $(PROJECT_DIR)mk/qt6.mk
 
-.PHONY: download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
+.PHONY: help download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
+
+# Every target, each SDK next to its -examples form.
+help:
+	@$(PYTHON) scripts/build/make-help.py qt4=$(QT4_VERSION) qt5=$(QT5_VERSION) qt6=$(QT6_VERSION) $(BUILD_TARGETS)
 
 # Re-check the pinned inputs already in downloads/.
 verify-downloads:

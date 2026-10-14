@@ -87,15 +87,17 @@ $(LLVM_MINGW_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(LLVM_MINGW_URL)" "$@" "$(LLVM_MINGW_SHA256)"
 
 # build-<target> builds only when an input changed (the image carries a
-# fingerprint label); build-<target>-examples also builds its test suite.
+# fingerprint label); <target>-examples (also build-<target>-examples) does
+# that and then builds the test applications into artifacts/tests-<image>/.
 # $(1) public name, $(2) SDK target, $(3) image variable, $(4) examples
 # target, $(5) examples arguments, $(6) fingerprint settings.
 define simple-build-targets
-.PHONY: build-$(1) build-$(1)-examples
+.PHONY: build-$(1) build-$(1)-examples $(1)-examples
+$(1)-examples: build-$(1)-examples
 build-$(1):
-	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags "$(DOCKER_BUILD_FLAGS)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE)),--force,)
+	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags "$(DOCKER_BUILD_FLAGS)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 build-$(1)-examples:
-	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags "$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE)),--force,)
+	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags "$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 endef
 
 # A bare `make` fetches the Qt 5 source archive.

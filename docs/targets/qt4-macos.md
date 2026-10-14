@@ -5,7 +5,7 @@
 | `make qt4-macos-i386` | `qt4-macos-i386` | Mac OS X 10.4 Tiger, Intel | Carbon; osxcross with the 10.4u SDK; clang, libstdc++ from GCC 5.5 |
 | `make qt4-macos-ppc` | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar, PowerPC | Carbon; GCC 5.5 for PowerPC with the 10.2.8 SDK as sysroot |
 
-`make qt4-macos-examples` and `make qt4-macos-ppc-examples` build the test
+`make qt4-macos-i386-examples` and `make qt4-macos-ppc-examples` build the test
 suite as application bundles and pack them as a tar.gz (unpack it on the Mac:
 copying loose bundles through Windows loses the executable bits).
 

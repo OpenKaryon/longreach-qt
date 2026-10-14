@@ -9,6 +9,7 @@ import argparse
 from contextlib import contextmanager
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -22,7 +23,14 @@ INPUT_PREFIXES = ("scripts/build/", "scripts/audit/", "scripts/fetch/", "tests/"
 
 @contextmanager
 def build_lock():
-    """Serialize SDK and example builds started through the short targets."""
+    """Serialize SDK and example builds started through the short targets.
+
+    scripts/build/build-all.py sets LONGREACH_BUILDS_COORDINATED=1: it limits
+    concurrent builds itself, so each one skips the lock.
+    """
+    if os.environ.get("LONGREACH_BUILDS_COORDINATED") == "1":
+        yield
+        return
     lock_path = ROOT / "build" / ".sdk-build.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as lock:

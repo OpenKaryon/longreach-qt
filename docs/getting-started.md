@@ -27,10 +27,17 @@ against it under `/opt/qt-smoke-bin`. The names of every target are on the
 Makefile holds the shared settings; each generation's inputs, images and
 targets are in `mk/qt4.mk`, `mk/qt5.mk` and `mk/qt6.mk`.
 
-The `build-<target>` form (`make build-qt5-win-i386`) builds only when an
-input changed: it fingerprints the make settings, the Dockerfile, the
-patches and scripts the target uses, and labels the image with it.
-`NO_CACHE=1` forces a rebuild.
+`make <target>-examples` (`make qt5-win-i386-examples`) builds the SDK only
+when an input changed - it fingerprints the make settings, the Dockerfile,
+the patches and scripts the target uses, and labels the image with it - and
+then builds the test applications into `artifacts/tests-<image>/`.
+`make build-<target>` does the first half alone. `FORCE=1` rebuilds the
+image anyway, `NO_CACHE=1` rebuilds it without the Docker cache.
+
+`python scripts/build/build-all.py` runs `<target>-examples` for every
+target, `--jobs` of them at a time (each waits for `--min-free-gb` of free
+memory), and writes logs and a summary to `build/build-all-<time>/`; see
+`--help`.
 
 Useful variables:
 

@@ -24,7 +24,7 @@ it: RHEL 7's `libstdc++.so.6` plus the newer parts statically. CentOS 7's own
 wayland-scanner runs under QEMU, so the generated code calls only what
 libwayland 1.15 has. The host tools come from the qt6-host image.
 
-`make qt6-linux-amd64-smoke` builds the test suite against the SDK and runs it
+`make qt6-linux-amd64-examples` builds the test suite against the SDK and runs it
 under Xvfb in the build image; `scripts/run/run.py --host docker:<distro>`
 runs the extracted suite on stock distributions.
 

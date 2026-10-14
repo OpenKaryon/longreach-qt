@@ -33,10 +33,9 @@ list). Where a module is newer than Qt 4 the application uses the
 period-equivalent one, so every generation produces the same names.
 
 The Qt 4/5 SDK images build the suite in their final stage, which proves the
-installed SDK stands on its own; `make qt5-extract-tests QT5_IMAGE=<image>` (Qt 5),
-`make qt4-extract-tests QT4_IMAGE=<image>` and the `-examples`/`-smoke`
-targets (Qt 4 Mac, Qt 6) put the binaries and a `manifest.json` in
-`artifacts/`.
+installed SDK stands on its own. `make <target>-examples` puts the binaries
+and a `manifest.json` in `artifacts/tests-<image>/` for every target (Qt 4
+macOS as application bundles in a tar.gz).
 
 ## Coverage
 

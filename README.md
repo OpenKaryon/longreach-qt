@@ -25,20 +25,36 @@ You need Docker, GNU make and Python 3.11 or newer
 ([details](docs/getting-started.md)).
 
 ```sh
-make qt5-win-i386            # the SDK image: qt5-win-i386-gpl-enabled
-make qt5-extract-tests QT5_IMAGE=qt5-win-i386-gpl-enabled
+make qt5-win-amd64            # the SDK: toolchain and static Qt
+make qt5-win-amd64-examples   # the SDK if needed, then the test applications
 ```
 
-The SDK is a Docker image holding the cross toolchain and a static Qt; build
-your application inside it with qmake or CMake. The test suite built with it
-lands in `artifacts/tests-<image>/`; copy it to the target and run
-`smoke-runner`, or let `scripts/run/run.py` do that
-([testing](docs/testing.md)).
+`<target>-examples` builds the eight test applications against the SDK and
+copies them to `artifacts/tests-<image>/` on this machine; copy that
+directory to the target system and run `smoke-runner`, or let
+`scripts/run/run.py` do it ([testing](docs/testing.md)).
 
-Targets are named `qt<N>-<os>-<arch>`: `make qt4-win-i386`,
-`make qt5-macos-amd64`, `make qt6-linux-amd64`, and so on - one build per
-architecture, OS and Qt version - the full
-list per generation is in [docs/targets/](docs/targets/).
+Every target, one per Qt version, OS and architecture, each from its floor:
+
+| Qt | Windows | Linux | macOS |
+|----|---------|-------|-------|
+| 4.8.7 | `qt4-win-i386`, `qt4-win-amd64` | `qt4-linux-i386`, `qt4-linux-amd64` | `qt4-macos-i386`, `qt4-macos-ppc` |
+| 5.15.19 | `qt5-win-i386`, `qt5-win-amd64`, `qt5-win-arm64` | `qt5-linux-i386`, `qt5-linux-amd64`, `qt5-linux-arm64` | `qt5-macos-i386`, `qt5-macos-amd64`, `qt5-macos-arm64` |
+| 6.8.4 | `qt6-win-amd64`, `qt6-win-arm64` | `qt6-linux-amd64`, `qt6-linux-arm64` | `qt6-macos-amd64`, `qt6-macos-arm64` |
+
+Each name works with `make <target>` and `make <target>-examples`; the floors
+and details are on the [target pages](docs/targets/).
+
+All of them, SDKs and test applications, in one run (hours; not a make
+target):
+
+```sh
+python scripts/build/build-all.py --jobs 2
+```
+
+`--jobs` is how many targets build at once, `--make-jobs` the compiler jobs
+inside each; `--only`/`--skip` pick targets, `--no-cache` rebuilds from
+nothing. Logs and a summary go to `build/build-all-<time>/`.
 
 ## How it works
 

@@ -96,10 +96,10 @@ qt6-macos-amd64: $(QT6_ARCHIVE_PATH) qt6-host
 qt6-macos-arm64: $(QT6_ARCHIVE_PATH) qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_ARM64_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
 
-# qt6-<target>-smoke builds tests/ against the image into artifacts/qt6-<target>/
-# and, for Linux amd64, runs it there; the cross-built suites are run with
-# scripts/run/run.py.
-QT6_SMOKE_OUT = $(ARTIFACTS_DIR)/qt6-$(QT6_SMOKE_TARGET)
+# qt6-<target>-smoke builds tests/ against the image into
+# artifacts/tests-<image>/ and, for Linux amd64, runs it there; the
+# cross-built suites are run with scripts/run/run.py.
+QT6_SMOKE_OUT = $(ARTIFACTS_DIR)/tests-$(QT6_SMOKE_IMAGE)
 
 define qt6-build-smoke
 	$(call MKDIR_P,$(QT6_SMOKE_OUT))
@@ -119,7 +119,6 @@ QT6_COLLECT_APP := find . -maxdepth 2 -type d -name "*.app" -exec cp -r {} /out/
 QT6_RUN_OFFSCREEN := cd /out && xvfb-run -a -s "-screen 0 1280x1024x24" env QT_QPA_PLATFORM=offscreen ./smoke-runner
 QT6_RUN_NONE := true
 
-qt6-win-amd64-smoke: QT6_SMOKE_TARGET := win-amd64
 qt6-win-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_WIN_AMD64_IMAGE)
 qt6-win-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-amd64
 qt6-win-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_EXE)
@@ -127,11 +126,10 @@ qt6-win-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-win-amd64-smoke:
 	$(qt6-build-smoke)
 
-qt6-win-amd64-audit: QT6_SMOKE_TARGET := win-amd64
+qt6-win-amd64-audit: QT6_SMOKE_IMAGE := $(QT6_WIN_AMD64_IMAGE)
 qt6-win-amd64-audit:
 	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-win7-audit.sh:/audit.sh:ro" $(QT6_WIN_AMD64_IMAGE) -c 'sh /audit.sh /in/*.exe'
 
-qt6-win-arm64-smoke: QT6_SMOKE_TARGET := win-arm64
 qt6-win-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_WIN_ARM64_IMAGE)
 qt6-win-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-arm64
 qt6-win-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_EXE)
@@ -139,7 +137,6 @@ qt6-win-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-win-arm64-smoke:
 	$(qt6-build-smoke)
 
-qt6-linux-amd64-smoke: QT6_SMOKE_TARGET := linux-amd64
 qt6-linux-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_AMD64_IMAGE)
 qt6-linux-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-amd64
 qt6-linux-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON
@@ -148,7 +145,6 @@ qt6-linux-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_OFFSCREEN)
 qt6-linux-amd64-smoke:
 	$(qt6-build-smoke)
 
-qt6-linux-arm64-smoke: QT6_SMOKE_TARGET := linux-arm64
 qt6-linux-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_ARM64_IMAGE)
 qt6-linux-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-arm64
 qt6-linux-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_ELF)
@@ -156,7 +152,6 @@ qt6-linux-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-linux-arm64-smoke:
 	$(qt6-build-smoke)
 
-qt6-macos-amd64-smoke: QT6_SMOKE_TARGET := macos-amd64
 qt6-macos-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_AMD64_IMAGE)
 qt6-macos-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-amd64
 qt6-macos-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET)
@@ -165,11 +160,10 @@ qt6-macos-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-macos-amd64-smoke:
 	$(qt6-build-smoke)
 
-qt6-macos-amd64-audit: QT6_SMOKE_TARGET := macos-amd64
+qt6-macos-amd64-audit: QT6_SMOKE_IMAGE := $(QT6_MACOS_AMD64_IMAGE)
 qt6-macos-amd64-audit:
 	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_AMD64_IMAGE) -c 'sh /audit.sh $(QT6_MACOS_DEPLOYMENT_TARGET) /in/*'
 
-qt6-macos-arm64-smoke: QT6_SMOKE_TARGET := macos-arm64
 qt6-macos-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_ARM64_IMAGE)
 qt6-macos-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-arm64
 qt6-macos-arm64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET)
@@ -178,7 +172,7 @@ qt6-macos-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-macos-arm64-smoke:
 	$(qt6-build-smoke)
 
-qt6-macos-arm64-audit: QT6_SMOKE_TARGET := macos-arm64
+qt6-macos-arm64-audit: QT6_SMOKE_IMAGE := $(QT6_MACOS_ARM64_IMAGE)
 qt6-macos-arm64-audit:
 	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_ARM64_IMAGE) -c 'MACHO_AUDIT_ARCH=arm64 sh /audit.sh $(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) /in/*'
 

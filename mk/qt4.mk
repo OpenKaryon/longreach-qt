@@ -81,8 +81,8 @@ $(TIGER_SDK_PATH):
 $(GCC55_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(GCC55_URL)" "$@" "$(GCC55_SHA256)"
 
-.PHONY: qt4-macos-examples qt4-macos-ppc qt4-macos-ppc-examples
-qt4-macos-examples:
+.PHONY: qt4-macos-i386-extract-tests qt4-macos-ppc qt4-macos-ppc-extract-tests
+qt4-macos-i386-extract-tests:
 	$(PYTHON) scripts/build/qt4-macos-examples.py --image "$(QT4_MACOS_I386_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 
 # PowerPC from Jaguar: one Dockerfile builds both compilers, OpenSSL and Qt.
@@ -96,7 +96,7 @@ $(JAGUAR_SDK_PATH):
 qt4-macos-ppc: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(JAGUAR_SDK_PATH) $(GCC55_PATH)
 	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg JOBS=$(PARALLEL_JOBS) -f docker/qt4/macos/ppc/Dockerfile -t $(QT4_MACOS_PPC_IMAGE) .
 
-qt4-macos-ppc-examples:
+qt4-macos-ppc-extract-tests:
 	$(PYTHON) scripts/build/qt4-macos-examples.py --platform macos-jaguar-ppc --image "$(QT4_MACOS_PPC_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 
 # Windows 95 OSR2 and later: the Win9x backport, one configure.
@@ -150,5 +150,5 @@ $(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,
 $(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),QT4_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_IMAGE_CONFIG))
 $(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_AMD64_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-examples,QT4_BUILD_LOCK_HELD=1,QT4_TIGER_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-examples,QT4_BUILD_LOCK_HELD=1,QT4_JAGUAR_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-i386-extract-tests,QT4_BUILD_LOCK_HELD=1,QT4_TIGER_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-extract-tests,QT4_BUILD_LOCK_HELD=1,QT4_JAGUAR_IMAGE_CONFIG))

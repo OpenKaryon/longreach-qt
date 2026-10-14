@@ -42,10 +42,9 @@ Windows 95 certificate store is not consulted.
 
 ## Results
 
-See [platforms](../platforms.md#qt-487): 24/24 on Windows 95 OSR2 (QEMU),
-Windows 98 SE, NT 4.0 SP6a and Windows 2000 (VMware) with the earlier
-24-application layout of the suite. Windows Me has not been run. The amd64
-build has not been run on Windows yet.
+See [platforms](../platforms.md#qt-487): i386 8/8 on Windows 95 OSR2
+(QEMU), Windows 98 SE, NT 4.0 SP6a and Windows 2000 (VMware) and Windows 11;
+amd64 8/8 on Windows 11, not yet on XP x64. Windows Me has not been run.
 
 ## Limits
 

@@ -14,7 +14,8 @@ checksum.
 
 | File | Target | System |
 |------|--------|--------|
-| `qt4-win95-openssl102u-qemu-20261002.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU) |
+| `qt4-win-i386-win95-qemu-20261015.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU) |
+| `qt4-win95-openssl102u-qemu-20261002.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU), 24-application suite |
 | `qt4-win98se-vmware-20261010.json`, `qt4-nt4-sp6a-vmware-20261010.json`, `qt4-win2000-vmware-20261010.json` | Qt 4 Windows i386 | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) |
 | `qt4-win-i386-win11-host-20261010.json`, `qt4-win-amd64-win11-host-20261011.json` | Qt 4 Windows i386, amd64 | Windows 11 |
 | `qt4-linux-i386-sarge-qemu-20261013.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU) |

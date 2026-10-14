@@ -27,7 +27,7 @@ run.
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
-| `qt4-win-i386` | Windows 95 OSR2 | Windows 95 OSR2 (QEMU) | 24/24, 528 passed, 0 failed ([json](results/qt4-win95-openssl102u-qemu-20261002.json)) |
+| `qt4-win-i386` | Windows 95 OSR2 | Windows 95 OSR2 (QEMU) | 8/8, 367 passed, 0 failed ([json](results/qt4-win-i386-win95-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-win95-openssl102u-qemu-20261002.json)) |
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
 | | | Windows 11 (the build host) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-host-20261010.json)); the two native print dialog checks skip there |
 | `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261011.json)); not yet on XP x64 |

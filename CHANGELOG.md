@@ -26,7 +26,8 @@
   otherwise imports the server identity into the user's keychain, which an
   SSH session cannot unlock, and the handshake failed there.
 - Results: Qt 5 (amd64, i386) and Qt 6 macOS 8/8 on a clean macOS 10.13.6
-  install in VMware, 496 and 504 checks, none failed.
+  install in VMware, 496 and 504 checks, none failed; Qt 4 Windows i386 8/8
+  on Windows 95 OSR2 in QEMU, 367 checks, none failed.
 - Qt 6 macOS: `patches/qt6/macos/19` lets projects that use the SDK find
   QtNfc (its PC/SC lookup relied on variables only Qt's own build defines),
   so the suite's qt-selftest builds for Qt 6 macOS too.

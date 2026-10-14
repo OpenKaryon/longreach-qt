@@ -53,7 +53,10 @@
     },
     "widgets-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
     "graphics-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
-    "quick-qml-gallery": { "profile": "lgpl-friendly", "gpl_triggers": [] },
+    "quick-qml-gallery": {
+      "profile_by_qt": { "4": "lgpl-friendly", "5": "gpl-enabled", "6": "gpl-enabled" },
+      "gpl_triggers_by_qt": { "4": [], "5": ["QtQuick3D"], "6": ["QtQuick3D"] }
+    },
     "gl-heavy-gallery": {
       "profile_by_qt": { "4": "lgpl-friendly", "5": "gpl-enabled", "6": "gpl-enabled" },
       "gpl_triggers_by_qt": { "4": [], "5": ["QtCharts", "QtDataVisualization"], "6": ["QtCharts", "QtDataVisualization"] }

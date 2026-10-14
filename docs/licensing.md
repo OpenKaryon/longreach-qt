@@ -82,7 +82,7 @@ links:
 | `gl-heavy-gallery` | Qt 4: LGPL-friendly; Qt 5/6: GPL-enabled | Qt 4 uses LGPL QtOpenGL; Qt 5/6 link Qt Charts and Qt Data Visualization |
 | `widgets-gallery` | LGPL-friendly | No GPL-only module linked |
 | `graphics-gallery` | LGPL-friendly | No GPL-only module linked |
-| `quick-qml-gallery` | LGPL-friendly | No GPL-only module linked |
+| `quick-qml-gallery` | Qt 4: LGPL-friendly; Qt 5/6: GPL-enabled when Qt Quick 3D is available | Its Qt Quick 3D checks link the GPL-only Qt Quick 3D when the SDK contains it; the `lgpl-friendly` build has none, so the checks are left out |
 | `painting-lab` | LGPL-friendly | No GPL-only module linked |
 | `multimedia-lab` | LGPL-friendly | Qt Multimedia and Qt TextToSpeech are LGPL options |
 | `network-gui` | Qt 4: LGPL-friendly; Qt 5/6: GPL-enabled when Qt HTTP Server is available | The Qt 5/6 HTTP demonstration links Qt HTTP Server when the SDK contains it; otherwise it uses Qt Network |
@@ -90,9 +90,9 @@ links:
 
 If all example source code were combined into **one** executable, that binary
 would be GPL-enabled because it would link the GPL-only modules used by
-`qt-selftest` and `gl-heavy-gallery`. Keeping the examples separate preserves a
-useful distinction: most examples do not inherit GPL merely because another
-executable in the same artifact does.
+`qt-selftest`, `gl-heavy-gallery`, `network-gui` and `quick-qml-gallery`. Keeping the examples separate preserves a
+useful distinction: the other examples do not inherit GPL merely because
+another executable in the same artifact does.
 
 Qt MQTT checks live in `qt-selftest`, which is already GPL-enabled in a full
 Qt 5/6 build. Qt HTTP Server support is now present in `network-gui`; the

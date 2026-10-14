@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- `make <target>-examples` for every target: the SDK when one of its inputs
+  changed (`FORCE=1` rebuilds it anyway), then the test applications into
+  `artifacts/tests-<image>/`; Qt 6's move there from `artifacts/qt6-*/`.
+- `scripts/build/build-all.py` builds every SDK and its test applications,
+  `--jobs` targets at a time while enough memory is free, with logs and a
+  summary in `build/build-all-<time>/`.
+- The default licence profile no longer adds itself to image and artifact
+  names (`qt5-win-amd64`, not `qt5-win-amd64-gpl-enabled`).
+- The README's quick start lists every target.
+- `quick-qml-gallery` is classified GPL-enabled where it links Qt Quick 3D.
+
 ## 0.1.0 - 2026-10-15
 
 First public pre-release, source only.

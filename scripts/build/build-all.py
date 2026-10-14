@@ -13,7 +13,8 @@ Each target runs `make <target>-examples`: the SDK image is built when one of
 its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
 machine. qt6-host, which the cross-built Qt 6 targets copy their tools from,
-is built first. A failed target does not stop the others.
+is built first. A failed target does not stop the others; at the end the
+failed ones are built again, one at a time (--retries, default once).
 
 --jobs sets how many targets build at the same time; --make-jobs the compiler
 jobs inside each (PARALLEL_JOBS). A Qt link can take several GB, so a new
@@ -163,6 +164,8 @@ def main() -> int:
     parser.add_argument('--license-profile', default='gpl-enabled',
                         choices=['lgpl-friendly', 'gpl-enabled', 'commercial-qt'])
     parser.add_argument('--make', default='make')
+    parser.add_argument('--retries', type=int, default=1,
+                        help='build failed targets again, one at a time, this many times (default 1)')
     parser.add_argument('--log-dir', type=Path)
     parser.add_argument('--list', action='store_true', help='print the targets and exit')
     args = parser.parse_args()
@@ -202,52 +205,69 @@ def main() -> int:
         with (log_dir / 'progress.log').open('a', encoding='utf-8') as f:
             f.write(line + '\n')
 
+    def run(targets, parallel):
+        """Build targets, at most parallel at a time; returns the finished jobs."""
+        jobs, done = [], []
+        pending = list(targets)
+        host_job = None
+        if any(TARGETS[t][1] for t in targets):
+            host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'qt6-host', *make_vars]], log_dir, env)
+            jobs.append(host_job)
+            say('started qt6-host (the Qt 6 cross targets wait for it)')
+
+        def stop_all(*_):
+            for job in jobs:
+                job.stop()
+            say('interrupted; running builds stopped')
+            sys.exit(130)
+        signal.signal(signal.SIGINT, stop_all)
+
+        while pending or jobs:
+            for job in list(jobs):
+                if job.poll():
+                    jobs.remove(job)
+                    done.append(job)
+                    say(f'{job.status} {job.target} in {(job.finished - job.started) / 60:.0f} min'
+                        + (f' (failed: {job.failed_step})' if job.failed_step else ''))
+            host_ready = host_job is None or host_job.status == 'PASS'
+            host_failed = host_job is not None and host_job.status == 'FAIL'
+            for target in list(pending):
+                if TARGETS[target][1] and host_failed:
+                    pending.remove(target)
+                    skipped = Job.__new__(Job)
+                    skipped.target, skipped.status, skipped.failed_step = target, 'SKIP', 'qt6-host failed'
+                    skipped.started = skipped.finished = time.time()
+                    skipped.log_path = None
+                    done.append(skipped)
+                    say(f'SKIP {target} (qt6-host failed)')
+            startable = [t for t in pending if host_ready or not TARGETS[t][1]]
+            if startable and len(jobs) < parallel:
+                free = free_memory_gb()
+                if jobs and free is not None and free < args.min_free_gb:
+                    pass  # wait for memory
+                else:
+                    target = startable[0]
+                    pending.remove(target)
+                    jobs.append(Job(target, steps_for(target), log_dir, env))
+                    say(f'started {target}' + (f' ({free:.1f} GB free)' if free is not None else ''))
+                    continue
+            time.sleep(10)
+        return done
+
     say(f'{len(targets)} targets, {args.jobs} at a time, logs in {log_dir}')
-    jobs, done = [], []
-    pending = list(targets)
-    host_job = None
-    if any(TARGETS[t][1] for t in targets):
-        host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'qt6-host', *make_vars]], log_dir, env)
-        jobs.append(host_job)
-        say('started qt6-host (the Qt 6 cross targets wait for it)')
-
-    def stop_all(*_):
-        for job in jobs:
-            job.stop()
-        say('interrupted; running builds stopped')
-        sys.exit(130)
-    signal.signal(signal.SIGINT, stop_all)
-
-    while pending or jobs:
-        for job in list(jobs):
-            if job.poll():
-                jobs.remove(job)
-                done.append(job)
-                say(f'{job.status} {job.target} in {(job.finished - job.started) / 60:.0f} min'
-                    + (f' (failed: {job.failed_step})' if job.failed_step else ''))
-        host_ready = host_job is None or host_job.status == 'PASS'
-        host_failed = host_job is not None and host_job.status == 'FAIL'
-        for target in list(pending):
-            if TARGETS[target][1] and host_failed:
-                pending.remove(target)
-                skipped = Job.__new__(Job)
-                skipped.target, skipped.status, skipped.failed_step = target, 'SKIP', 'qt6-host failed'
-                skipped.started = skipped.finished = time.time()
-                skipped.log_path = None
-                done.append(skipped)
-                say(f'SKIP {target} (qt6-host failed)')
-        startable = [t for t in pending if host_ready or not TARGETS[t][1]]
-        if startable and len(jobs) < args.jobs:
-            free = free_memory_gb()
-            if jobs and free is not None and free < args.min_free_gb:
-                pass  # wait for memory
-            else:
-                target = startable[0]
-                pending.remove(target)
-                jobs.append(Job(target, steps_for(target), log_dir, env))
-                say(f'started {target}' + (f' ({free:.1f} GB free)' if free is not None else ''))
-                continue
-        time.sleep(10)
+    done = {job.target: job for job in run(targets, args.jobs)}
+    attempts = dict.fromkeys(done, 1)
+    # A build can fail only under load (a large image export timing out while
+    # another build runs); the failed ones get another try on their own.
+    for attempt in range(args.retries):
+        again = [t for t in targets if done[t].status != 'PASS']
+        if not again:
+            break
+        say(f'retry {attempt + 1}: {", ".join(again)}, one at a time')
+        for job in run(again, 1):
+            done[job.target] = job
+            attempts[job.target] = attempts.get(job.target, 0) + 1
+    done = list(done.values())
 
     results = []
     for job in done:
@@ -257,15 +277,16 @@ def main() -> int:
         fresh = newest >= job.started
         results.append({'target': job.target, 'status': job.status,
                          'minutes': round((job.finished - job.started) / 60, 1),
+                         'attempts': attempts.get(job.target, 1),
                          'failed_step': job.failed_step,
                          'artifacts': out.relative_to(ROOT).as_posix() if out else None,
                          'artifacts_rebuilt': fresh if out else None,
                          'log': job.log_path.name if job.log_path else None})
     (log_dir / 'summary.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
-    lines = ['| Target | Status | Minutes | Test applications | Log |', '|---|---|---|---|---|']
+    lines = ['| Target | Status | Attempts | Minutes | Test applications | Log |', '|---|---|---|---|---|---|']
     for r in results:
         apps = (f'`{r["artifacts"]}`' + ('' if r['artifacts_rebuilt'] else ' (not rebuilt)')) if r['artifacts'] else '-'
-        lines.append(f'| {r["target"]} | {r["status"]} | {r["minutes"]} | {apps} | {r["log"] or "-"} |')
+        lines.append(f'| {r["target"]} | {r["status"]} | {r["attempts"]} | {r["minutes"]} | {apps} | {r["log"] or "-"} |')
     failed = [r for r in results if r['status'] != 'PASS']
     lines += ['', f'{len(results) - len(failed)} passed, {len(failed)} failed or skipped.']
     (log_dir / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')

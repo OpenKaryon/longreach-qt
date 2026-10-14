@@ -6,8 +6,9 @@
   changed (`FORCE=1` rebuilds it anyway), then the test applications into
   `artifacts/tests-<image>/`; Qt 6's move there from `artifacts/qt6-*/`.
 - `scripts/build/build-all.py` builds every SDK and its test applications,
-  `--jobs` targets at a time while enough memory is free, with logs and a
-  summary in `build/build-all-<time>/`.
+  `--jobs` targets at a time while enough memory is free, builds the failed
+  ones again one at a time, and writes logs and a summary to
+  `build/build-all-<time>/`.
 - The default licence profile no longer adds itself to image and artifact
   names (`qt5-win-amd64`, not `qt5-win-amd64-gpl-enabled`).
 - The README's quick start lists every target; `make help` prints each SDK

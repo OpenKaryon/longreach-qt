@@ -43,7 +43,9 @@ Every target, one per Qt version, OS and architecture, each from its floor:
 | 6.8.4 | `qt6-win-amd64`, `qt6-win-arm64` | `qt6-linux-amd64`, `qt6-linux-arm64` | `qt6-macos-amd64`, `qt6-macos-arm64` |
 
 Each name works with `make <target>` and `make <target>-examples`; the floors
-and details are on the [target pages](docs/targets/).
+and details are on the [target pages](docs/targets/). Make variables tune a
+build (compiler jobs, Qt version, licence profile, deployment target): see
+[getting started](docs/getting-started.md).
 
 All of them, SDKs and test applications, in one run (hours; not a make
 target):

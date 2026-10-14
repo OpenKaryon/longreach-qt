@@ -17,7 +17,9 @@ VALID_LICENSE_PROFILES := lgpl-friendly gpl-enabled commercial-qt
 ifeq ($(filter $(LICENSE_PROFILE),$(VALID_LICENSE_PROFILES)),)
 $(error LICENSE_PROFILE must be one of: $(VALID_LICENSE_PROFILES))
 endif
-LICENSE_SUFFIX := -$(LICENSE_PROFILE)
+# The default profile keeps the plain names (qt5-win-amd64); another one is
+# added to the image and artifact names so that the two never overwrite.
+LICENSE_SUFFIX := $(if $(filter gpl-enabled,$(LICENSE_PROFILE)),,-$(LICENSE_PROFILE))
 
 # Compiler jobs inside one image build; Qt links can take several GB each.
 PARALLEL_JOBS ?= 6

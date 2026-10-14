@@ -2,8 +2,8 @@
 
 | Target | Image | Floor |
 |--------|-------|-------|
-| `make qt6-macos-amd64` | `qt6-macos-amd64-<profile>` | macOS 10.13 High Sierra, x86_64 |
-| `make qt6-macos-arm64` | `qt6-macos-arm64-<profile>` | macOS 11.0, Apple silicon |
+| `make qt6-macos-amd64` | `qt6-macos-amd64` | macOS 10.13 High Sierra, x86_64 |
+| `make qt6-macos-arm64` | `qt6-macos-arm64` | macOS 11.0, Apple silicon |
 
 Both cross-build with osxcross and the 14.0 SDK (pinned) and need the
 host-tools image (`make qt6-host`). Qt 6.8 itself starts at macOS 12.

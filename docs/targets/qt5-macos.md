@@ -2,9 +2,9 @@
 
 | Target | Image | Floor | |
 |--------|-------|-------|---|
-| `make qt5-macos-amd64` | `qt5-macos-amd64-<profile>` | Mac OS X 10.6 Snow Leopard, x86_64 | osxcross, SDK 11.3, static libc++ 14 |
-| `make qt5-macos-i386` | `qt5-macos-i386-<profile>` | Mac OS X 10.6, 32-bit Intel | the same, plus the i386 drivers |
-| `make qt5-macos-arm64` | `qt5-macos-arm64-<profile>` | macOS 11.0, Apple silicon | osxcross, SDK 11.3 |
+| `make qt5-macos-amd64` | `qt5-macos-amd64` | Mac OS X 10.6 Snow Leopard, x86_64 | osxcross, SDK 11.3, static libc++ 14 |
+| `make qt5-macos-i386` | `qt5-macos-i386` | Mac OS X 10.6, 32-bit Intel | the same, plus the i386 drivers |
+| `make qt5-macos-arm64` | `qt5-macos-arm64` | macOS 11.0, Apple silicon | osxcross, SDK 11.3 |
 
 The SDK is fetched from Apple's software-update CDN (the package MacPorts
 uses), checked by SHA256, unpacked in a container and never redistributed;

@@ -2,11 +2,11 @@
 
 | Target | Image | Floor | Toolchain |
 |--------|-------|-------|-----------|
-| `make qt5-win-i386` | `qt5-win-i386-<profile>` | Windows XP SP3 | MinGW-w64 GCC 7.3, runtime v5 (Ubuntu 18.04) |
-| `make qt5-win-amd64` | `qt5-win-amd64-<profile>` | Windows XP x64 SP2 | same |
-| `make qt5-win-arm64` | `qt5-win-arm64-<profile>` | Windows 10 on ARM | LLVM-MinGW 20241217 (UCRT, clang 19) |
+| `make qt5-win-i386` | `qt5-win-i386` | Windows XP SP3 | MinGW-w64 GCC 7.3, runtime v5 (Ubuntu 18.04) |
+| `make qt5-win-amd64` | `qt5-win-amd64` | Windows XP x64 SP2 | same |
+| `make qt5-win-arm64` | `qt5-win-arm64` | Windows 10 on ARM | LLVM-MinGW 20241217 (UCRT, clang 19) |
 
-`make qt5-extract-tests QT5_IMAGE=qt5-win-i386-gpl-enabled` copies the test suite
+`make qt5-win-i386-examples` copies the test suite
 built in the image to `artifacts/tests-<image>/`.
 
 ## Windows XP

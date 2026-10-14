@@ -2,9 +2,9 @@
 
 | Target | Image | Floor |
 |--------|-------|-------|
-| `make qt5-linux-amd64` | `qt5-linux-amd64-<profile>` | Ubuntu 10.04 Lucid amd64: glibc 2.11, libxcb 1.5, libX11 1.3 |
-| `make qt5-linux-i386` | `qt5-linux-i386-<profile>` | Ubuntu 10.04 Lucid i386 |
-| `make qt5-linux-arm64` | `qt5-linux-arm64-<profile>` | Ubuntu 14.04 arm64: glibc 2.19 |
+| `make qt5-linux-amd64` | `qt5-linux-amd64` | Ubuntu 10.04 Lucid amd64: glibc 2.11, libxcb 1.5, libX11 1.3 |
+| `make qt5-linux-i386` | `qt5-linux-i386` | Ubuntu 10.04 Lucid i386 |
+| `make qt5-linux-arm64` | `qt5-linux-arm64` | Ubuntu 14.04 arm64: glibc 2.19 |
 
 One build per architecture, from Qt 4.8's Linux floor.
 

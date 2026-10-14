@@ -24,8 +24,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SUITES = {
     'qt4-linux-i386': ('artifacts/tests-qt4-linux-i386', 'i386', 'xlib', 2005),
     'qt4-linux-amd64': ('artifacts/tests-qt4-linux-amd64', 'amd64', 'xlib', 2005),
-    'qt5-linux-amd64': ('artifacts/tests-qt5-linux-amd64-gpl-enabled', 'amd64', 'xlib', 2010),
-    'qt6-linux-amd64': ('artifacts/tests-qt6-linux-amd64-gpl-enabled', 'amd64', 'xcb', 2014),
+    'qt5-linux-amd64': ('artifacts/tests-qt5-linux-amd64', 'amd64', 'xlib', 2010),
+    'qt6-linux-amd64': ('artifacts/tests-qt6-linux-amd64', 'amd64', 'xcb', 2014),
 }
 
 # distro: (image, package family, release year, role)

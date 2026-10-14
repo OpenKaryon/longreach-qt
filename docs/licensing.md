@@ -42,10 +42,11 @@ make qt5-linux-amd64 LICENSE_PROFILE=gpl-enabled
 make qt6-linux-amd64 LICENSE_PROFILE=commercial-qt
 ```
 
-The profile is part of the Docker image and artifact name, for example
-`qt5-linux-amd64-lgpl-friendly`; two profiles therefore cannot silently
-overwrite one another. `gpl-enabled` is the default because it is the
-full module set. The default is compatibility,
+A profile other than the default is part of the Docker image and artifact
+name, for example `qt5-linux-amd64-lgpl-friendly`, so two profiles cannot
+silently overwrite one another; the default keeps the plain name
+(`qt5-linux-amd64`). `gpl-enabled` is the default because it is the full
+module set. The default is compatibility,
 not a recommendation for proprietary applications.
 
 “GPL-enabled” is the broader profile. GPL code can be combined with compatible

@@ -2,8 +2,8 @@
 
 | Target | Image | Floor |
 |--------|-------|-------|
-| `make qt6-linux-amd64` | `qt6-linux-amd64-<profile>` | RHEL/CentOS 7.6: glibc 2.17 |
-| `make qt6-linux-arm64` | `qt6-linux-arm64-<profile>` | RHEL/CentOS 7 aarch64: glibc 2.17 |
+| `make qt6-linux-amd64` | `qt6-linux-amd64` | RHEL/CentOS 7.6: glibc 2.17 |
+| `make qt6-linux-arm64` | `qt6-linux-arm64` | RHEL/CentOS 7 aarch64: glibc 2.17 |
 
 One build per architecture. Both reach Qt 5.15's floor (RHEL 7); Qt's own
 Linux binaries need glibc 2.28.

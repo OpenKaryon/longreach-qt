@@ -2,12 +2,12 @@
 
 | Target | Image | Floor | Toolchain |
 |--------|-------|-------|-----------|
-| `make qt6-win-amd64` | `qt6-win-amd64-<profile>` | Windows 7 SP1 | LLVM-MinGW 20241217, MSVCRT |
-| `make qt6-win-arm64` | `qt6-win-arm64-<profile>` | Windows 10 on ARM | LLVM-MinGW 20241217, UCRT |
+| `make qt6-win-amd64` | `qt6-win-amd64` | Windows 7 SP1 | LLVM-MinGW 20241217, MSVCRT |
+| `make qt6-win-arm64` | `qt6-win-arm64` | Windows 10 on ARM | LLVM-MinGW 20241217, UCRT |
 
 Both need the host-tools image (`make qt6-host`), which they use by tag.
 `make qt6-win-amd64-examples` builds the test suite against the SDK into
-`artifacts/tests-qt6-win-amd64-gpl-enabled/`; `make qt6-win-amd64-audit` screens every EXE for
+`artifacts/tests-qt6-win-amd64/`; `make qt6-win-amd64-audit` screens every EXE for
 Windows 8+ loader dependencies (PE subsystem above 6.1, `api-ms-win-*`,
 SHCore, WaitOnAddress, GetDpiForMonitor and similar imports).
 

@@ -41,8 +41,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# target: image name without the licence suffix, whether it carries one,
-# and whether it needs qt6-host first.
+# target: (whether a licence profile other than the default is added to its
+# image name, whether it needs qt6-host first).
 TARGETS = {
     'qt4-win-i386': (False, False),
     'qt4-win-amd64': (False, False),
@@ -101,7 +101,7 @@ def free_memory_gb() -> float | None:
 
 
 def image_of(target: str, profile: str) -> str:
-    return target + (f'-{profile}' if TARGETS[target][0] else '')
+    return target + (f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else '')
 
 
 class Job:

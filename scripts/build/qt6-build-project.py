@@ -47,14 +47,14 @@ PLATFORMS = {
 # both in step with the Makefile - the two entry points build the same images.
 PLATFORM_CONFIG = {
     "win-amd64": {
-        "image": "qt6-win-amd64-gpl-enabled",
+        "image": "qt6-win-amd64",
         "qt_path": "/opt/qt6-amd64",
         "dockerfile": "docker/qt6/windows/amd64/Dockerfile",
         "artifact_pattern": "*.exe",
         "needs_host": True,
     },
     "win-arm64": {
-        "image": "qt6-win-arm64-gpl-enabled",
+        "image": "qt6-win-arm64",
         "qt_path": "/opt/qt6-arm64",
         "dockerfile": "docker/qt6/windows/arm64/Dockerfile",
         "artifact_pattern": "*.exe",

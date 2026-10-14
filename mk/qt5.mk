@@ -140,7 +140,7 @@ $(QT5_MACOS_SDK_PATH):
 
 # Copy an image's test suite to artifacts/tests-<image>/, with the same
 # LICENSE_PROFILE as its build:
-#   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64-gpl-enabled
+#   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64
 QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
 QT5_TESTS_OUT := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE)
 QT5_TESTS_PACKAGE := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE).tar.gz

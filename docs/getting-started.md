@@ -20,7 +20,7 @@
 make qt5-linux-amd64
 ```
 
-builds the image `qt5-linux-amd64-gpl-enabled`: the toolchain and the
+builds the image `qt5-linux-amd64`: the toolchain and the
 static Qt installed under `/usr/local/Qt-5.15`, plus the test suite built
 against it under `/opt/qt-smoke-bin`. The names of every target are on the
 [target pages](targets/); `make -n <target>` shows what it would do. The
@@ -44,7 +44,7 @@ Useful variables:
 | Variable | Default | |
 |----------|---------|---|
 | `PARALLEL_JOBS` | 6 | compiler jobs inside the build |
-| `LICENSE_PROFILE` | `gpl-enabled` | `lgpl-friendly` leaves out the GPL-only Qt modules ([licensing](licensing.md)); the profile is part of the image name |
+| `LICENSE_PROFILE` | `gpl-enabled` | `lgpl-friendly` leaves out the GPL-only Qt modules ([licensing](licensing.md)); another profile is added to the image name (`qt5-linux-amd64-lgpl-friendly`) |
 | `DOWNLOAD_DIR` | `downloads` | where the inputs are kept |
 | `QT4_VERSION`, `QT5_VERSION`, `QT6_VERSION` | 4.8.7, 5.15.19, 6.8.4 | another version also needs its `*_SHA256` (and patches that apply to it) |
 | `QT5_MACOS_TARGET_AMD64` | 10.6 | a higher Qt 5 macOS deployment target leaves out the static OpenSSL and libc++ the old systems need |
@@ -55,7 +55,7 @@ Useful variables:
 Run your build inside the image, with your sources mounted:
 
 ```sh
-docker run --rm -v "$PWD:/src" -w /src qt5-win-i386-gpl-enabled \
+docker run --rm -v "$PWD:/src" -w /src qt5-win-i386 \
     'mkdir -p build && cd build && qmake ../app.pro && make -j8'
 ```
 
@@ -84,9 +84,10 @@ Qt 4 and Lucid mkspecs do that already.
 
 ## Images and tags
 
-Images are built locally and tagged `qt<N>-<os>-<arch>[-<variant>][-<profile>]`
-(`qt5-macos-i386-gpl-enabled`, `qt4-win-i386`). Qt 4 images carry no profile:
-every Qt 4 module is under the LGPL. No prebuilt images are published for
+Images are built locally and tagged `qt<N>-<os>-<arch>` (`qt5-macos-i386`,
+`qt4-win-i386`); a `LICENSE_PROFILE` other than the default adds itself
+(`qt5-macos-i386-lgpl-friendly`). Qt 4 images carry no profile: every Qt 4
+module is under the LGPL. No prebuilt images are published for
 0.1.0; [releasing.md](releasing.md) says what later releases will publish.
 
 ## Cleaning up

@@ -59,7 +59,7 @@ python scripts/tests/check_coverage.py --gate   # CI: fails below 95% on the wor
 [results/](results/):
 
 ```sh
-python scripts/run/run.py --suite artifacts/tests-qt5-linux-amd64-gpl-enabled --host docker:centos-7
+python scripts/run/run.py --suite artifacts/tests-qt5-linux-amd64 --host docker:centos-7
 python scripts/run/run.py --suite artifacts/tests-qt4-win-i386 --host windows-xp --json docs/results/<name>.json
 ```
 

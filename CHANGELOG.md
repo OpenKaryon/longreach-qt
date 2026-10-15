@@ -1,24 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- `make <target>-examples` for every target: the SDK when one of its inputs
-  changed (`FORCE=1` rebuilds it anyway), then the test applications into
-  `artifacts/tests-<image>/`; Qt 6's move there from `artifacts/qt6-*/`.
-- `make build-all` (every SDK) and `make build-all-examples` (every SDK and
-  its test applications) ask before they start, build up to `BUILD_ALL_JOBS`
-  targets at a time - no more than Docker's memory holds, started a few
-  minutes apart while enough memory is free - build the failed ones again
-  one at a time, and write logs and a summary to `build/build-all-<time>/`
-  (`scripts/build/build-all.py`).
-- The default licence profile no longer adds itself to image and artifact
-  names (`qt5-win-amd64`, not `qt5-win-amd64-gpl-enabled`).
-- The README's quick start lists every target; `make help` prints each SDK
-  target next to its `-examples` form.
-- `quick-qml-gallery` is classified GPL-enabled where it links Qt Quick 3D.
-- Results: Qt 4 macOS i386 8/8 on Mac OS X Tiger 10.4.10 (QEMU, emulated
-  Core Duo), 364 checks, none failed.
-
 ## 0.1.0 - 2026-10-15
 
 First public pre-release, source only.
@@ -43,6 +24,19 @@ First public pre-release, source only.
 
 Also in this release:
 
+- `make <target>-examples` for every target: the SDK when one of its inputs
+  changed (`FORCE=1` rebuilds it anyway), then the test applications into
+  `artifacts/tests-<image>/`. `make help` lists every target next to its
+  `-examples` form.
+- `make build-all` (every SDK) and `make build-all-examples` (every SDK and
+  its test applications) ask before they start, build up to `BUILD_ALL_JOBS`
+  targets at a time - no more than Docker's memory holds, started a few
+  minutes apart while enough memory is free - build the failed ones again
+  one at a time, and write logs and a summary to `build/build-all-<time>/`
+  (`scripts/build/build-all.py`).
+- Images and test artifacts take the target's name (`qt5-win-amd64`); a
+  `LICENSE_PROFILE` other than the default adds itself
+  (`qt5-win-amd64-lgpl-friendly`).
 - Optional Linux libraries at run time: `scripts/build/dlopen` makes static
   stub archives that load a shared library on first use, so a binary starts
   where the library is missing and uses it where it is installed. A
@@ -68,6 +62,7 @@ Also in this release:
   (`centos-5-x86_64`, `debian-4-amd64`).
 - qt-selftest's macOS TLS check uses a temporary keychain, so it passes over
   SSH as well.
-- Results: Qt 4 Linux amd64 8/8 on CentOS 5.11 and Debian 4.0; Qt 5 and
-  Qt 6 macOS 8/8 on a clean macOS 10.13.6; Qt 4 Windows i386 8/8 on Windows
-  95 OSR2 (QEMU). See [docs/platforms.md](docs/platforms.md).
+- Results: Qt 4 Linux amd64 8/8 on CentOS 5.11 and Debian 4.0; Qt 4 macOS
+  i386 8/8 on Tiger 10.4.10 (QEMU, emulated Core Duo); Qt 5 and Qt 6 macOS
+  8/8 on a clean macOS 10.13.6; Qt 4 Windows i386 8/8 on Windows 95 OSR2
+  (QEMU). See [docs/platforms.md](docs/platforms.md).

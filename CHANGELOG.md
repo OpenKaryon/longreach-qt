@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `scripts/audit/stop_words.py` checks the tree, the staged changes, commit
+  messages and identities, the history or a push against a list of private
+  words kept outside the repository (`.stopwords`); `scripts/audit/git_hooks.py
+  install` runs it from pre-commit, commit-msg and pre-push hooks.
+
 ## 0.1.0 - 2026-10-15
 
 First public pre-release, source only.

@@ -15,7 +15,10 @@ Thank you for helping old systems keep running new software.
   dropped out).
 - **Kit changes**: one Dockerfile per target, every input pinned by SHA256,
   new source files with an SPDX line (`scripts/audit/repo_scan.py --spdx`).
-  Commit messages say why, not only what.
+  Commit messages say why, not only what. `python scripts/audit/git_hooks.py
+  install` adds hooks that check commits, their messages and pushes against a
+  `.stopwords` list kept outside the repository (`scripts/audit/stop_words.py`
+  says how to write one).
 - **Results**: add a result file from `scripts/run/run.py --json` only for a
   run of the current tree, and update [platforms](docs/platforms.md).
 

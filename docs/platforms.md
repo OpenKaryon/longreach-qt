@@ -36,7 +36,7 @@ run.
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
 | | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |
-| `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU) | 24/24, 524 passed, 0 failed ([json](results/qt4-tiger-i386-suite-20261003.json)) |
+| `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU, Core Duo) | 8/8, 364 passed, 0 failed ([json](results/qt4-macos-i386-tiger-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-tiger-i386-suite-20261003.json)) |
 | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU, G4) | 8/8 each, 361 passed, 0 failed ([10.2](results/qt4-macos-ppc-jaguar-10.2-qemu-20261014.json), [10.2.8](results/qt4-macos-ppc-jaguar-10.2.8-qemu-20261014.json)); earlier 24/24 also on an emulated G3 ([json](results/qt4-jaguar-suite-20261005.json)) |
 | | | Tiger 10.4.10 (QEMU, G4) | 8/8, 363 passed, 0 failed ([json](results/qt4-macos-ppc-tiger-qemu-20261014.json)) |
 

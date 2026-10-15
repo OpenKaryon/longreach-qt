@@ -20,7 +20,8 @@ checksum.
 | `qt4-win-i386-win11-host-20261010.json`, `qt4-win-amd64-win11-host-20261011.json` | Qt 4 Windows i386, amd64 | Windows 11 |
 | `qt4-linux-i386-sarge-qemu-20261013.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU) |
 | `qt4-sarge-public-sdk-qemu-20261002.json`, `qt4-sarge-desktop-20261002.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU, desktop) |
-| `qt4-tiger-i386-suite-20261003.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU) |
+| `qt4-macos-i386-tiger-qemu-20261015.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU, Core Duo) |
+| `qt4-tiger-i386-suite-20261003.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU), 24-application suite |
 | `qt4-macos-ppc-jaguar-10.2-qemu-20261014.json`, `qt4-macos-ppc-jaguar-10.2.8-qemu-20261014.json`, `qt4-macos-ppc-tiger-qemu-20261014.json` | Qt 4 macOS PowerPC | Mac OS X 10.2, 10.2.8 and 10.4.10 (QEMU, G4) |
 | `qt4-jaguar-suite-20261005.json` | Qt 4 macOS PowerPC | Mac OS X 10.2 and 10.2.8 (QEMU, G3) |
 | `qt4-linux-amd64-centos-5-qemu-20261011.json` | Qt 4 Linux amd64 | CentOS 5.11 x86_64 (QEMU) |

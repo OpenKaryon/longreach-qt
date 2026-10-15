@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-15",
+  "target": "qt4-macos-i386",
+  "status": "PASS",
+  "image": "tiger-transfer",
+  "guest": {
+    "os": "Mac OS X 10.4.10 8R3032",
+    "system": "Darwin 8.10.2 Darwin Kernel Version 8.10.2: Wed Jun 20 21:49:49 PDT 2007; root:xnu-792.22.6~1/RELEASE_I386 i386 i386\nProductName:\tMac OS X\nProductVersion:\t10.4.10\nBuildVersion:\t8R3032\nARCHIVE_MD5 66710446229336dc81ec7659b1295f3b\nINSTALL complete",
+    "vm": "Mac OS X 10.4.10 in QEMU (q35, emulated Core Duo, 1 GiB)",
+    "method": "suite installed through an HTTP bridge and checked by MD5; tiger-i386-suite.sh runs smoke-runner once per application in the logged-in desktop session"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 364,
+    "checks_failed": 0,
+    "checks_skipped": 131
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 13,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "ce8ebf271ca70b73c453895ad9968560a1482cd3bb0e4b780c645d4be9aa1b38",
+    "graphics-gallery": "ad35543d52f05089d565b40aa142b3c59dd55dbc564adcde5b2ac97977ed5289",
+    "multimedia-lab": "b80798033cc9d438fb92223345d8681b6b4dfc6297b5121ab349fa07ac086138",
+    "network-gui": "16ac5ba49da07666b63aaa42bcdd6e533440112a0a3f79d53503dffa24e9cced",
+    "painting-lab": "9d71a3d420c7b5467432243fd7cd0477eb05f18b7fe7b6440b305dc6c658a5ce",
+    "qt-selftest": "9eea194b4ff56f78f09241a8b02541a6be7b479ea20d97aea3984f2e7e07ae11",
+    "quick-qml-gallery": "198023ce0b6480dab647ba9aaa55c059e156f3a95ad9a43c6463a7e2f1d0ad25",
+    "smoke-runner": "ef0d9493de4234a2912a6c9ca2603d2ade04e10e10b487905fe584466e2e50cb",
+    "widgets-gallery": "091fd5231979592b7b1cd36eb72cad7baa9d0adc331706b30d3ad5fef37aa10e"
+  }
+}

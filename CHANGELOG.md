@@ -6,6 +6,7 @@
   messages and identities, the history or a push against a list of private
   words kept outside the repository (`.stopwords`); `scripts/audit/git_hooks.py
   install` runs it from pre-commit, commit-msg and pre-push hooks.
+- A bare `make` prints `make help` instead of downloading the Qt 5 sources.
 
 ## 0.1.0 - 2026-10-15
 

@@ -48,16 +48,17 @@ and details are on the [target pages](docs/targets/). Make variables tune a
 build (compiler jobs, Qt version, licence profile, deployment target): see
 [getting started](docs/getting-started.md).
 
-All of them, SDKs and test applications, in one run (hours; not a make
-target):
+All of them in one run - hours to a day or more, so it asks before it
+starts:
 
 ```sh
-python scripts/build/build-all.py --jobs 2
+make build-all                # every SDK
+make build-all-examples       # every SDK and its test applications
 ```
 
-`--jobs` is how many targets build at once, `--make-jobs` the compiler jobs
-inside each; `--only`/`--skip` pick targets, `--no-cache` rebuilds from
-nothing. Logs and a summary go to `build/build-all-<time>/`.
+`BUILD_ALL_JOBS=2` builds two targets at once; logs and a summary go to
+`build/build-all-<time>/`. `scripts/build/build-all.py --help` has the other
+options (`--only`, `--skip`, `--no-cache`, ...).
 
 ## How it works
 

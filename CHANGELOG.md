@@ -5,10 +5,12 @@
 - `make <target>-examples` for every target: the SDK when one of its inputs
   changed (`FORCE=1` rebuilds it anyway), then the test applications into
   `artifacts/tests-<image>/`; Qt 6's move there from `artifacts/qt6-*/`.
-- `scripts/build/build-all.py` builds every SDK and its test applications,
-  `--jobs` targets at a time while enough memory is free, builds the failed
-  ones again one at a time, and writes logs and a summary to
-  `build/build-all-<time>/`.
+- `make build-all` (every SDK) and `make build-all-examples` (every SDK and
+  its test applications) ask before they start, build up to `BUILD_ALL_JOBS`
+  targets at a time - no more than Docker's memory holds, started a few
+  minutes apart while enough memory is free - build the failed ones again
+  one at a time, and write logs and a summary to `build/build-all-<time>/`
+  (`scripts/build/build-all.py`).
 - The default licence profile no longer adds itself to image and artifact
   names (`qt5-win-amd64`, not `qt5-win-amd64-gpl-enabled`).
 - The README's quick start lists every target; `make help` prints each SDK

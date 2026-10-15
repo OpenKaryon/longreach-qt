@@ -34,10 +34,17 @@ then builds the test applications into `artifacts/tests-<image>/`.
 `make build-<target>` does the first half alone. `FORCE=1` rebuilds the
 image anyway, `NO_CACHE=1` rebuilds it without the Docker cache.
 
-`python scripts/build/build-all.py` runs `<target>-examples` for every
-target, `--jobs` of them at a time (each waits for `--min-free-gb` of free
-memory), and writes logs and a summary to `build/build-all-<time>/`; see
-`--help`.
+`make build-all-examples` runs `<target>-examples` for every target
+(`make build-all`: `build-<target>`, the SDKs alone) after asking whether to
+start (`YES=1` does not ask). Up to `BUILD_ALL_JOBS` targets build at once:
+no more than Docker's memory holds at about 2 GB per compiler job
+(`PARALLEL_JOBS` 6 makes 12 GB a build, so a 31 GB Docker VM runs two), one
+start every five minutes and only while 12 GB is free. The failed ones are
+built again one at a time, and the logs and a summary go to
+`build/build-all-<time>/`.
+`BUILD_ALL_ARGS` passes more options to `scripts/build/build-all.py`
+(`--only`, `--skip`, `--min-free-gb`, `--gb-per-job`, `--start-gap`, `--retries`; see its
+`--help`).
 
 Useful variables:
 

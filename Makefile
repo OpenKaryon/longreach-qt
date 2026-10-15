@@ -110,7 +110,22 @@ include $(PROJECT_DIR)mk/qt4.mk
 include $(PROJECT_DIR)mk/qt5.mk
 include $(PROJECT_DIR)mk/qt6.mk
 
-.PHONY: help download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
+.PHONY: help build-all build-all-examples download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
+
+# Every target in one run (hours to a day or more); asks before it starts,
+# YES=1 does not. BUILD_ALL_JOBS targets build at once, each with
+# PARALLEL_JOBS compiler jobs; BUILD_ALL_ARGS passes more options to
+# scripts/build/build-all.py (--only, --skip, --retries, see its --help).
+#   make build-all-examples BUILD_ALL_JOBS=2
+BUILD_ALL_JOBS ?= 1
+BUILD_ALL_ARGS ?=
+BUILD_ALL_FLAGS = --jobs $(BUILD_ALL_JOBS) --make-jobs $(PARALLEL_JOBS) --license-profile $(LICENSE_PROFILE) $(if $(filter 1,$(YES)),--yes,) $(if $(filter 1,$(NO_CACHE)),--no-cache,$(if $(filter 1,$(FORCE)),--force,)) $(BUILD_ALL_ARGS)
+
+build-all:
+	$(PYTHON) scripts/build/build-all.py --sdk-only $(BUILD_ALL_FLAGS)
+
+build-all-examples:
+	$(PYTHON) scripts/build/build-all.py $(BUILD_ALL_FLAGS)
 
 # Every target, each SDK next to its -examples form.
 help:

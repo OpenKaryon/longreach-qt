@@ -23,7 +23,10 @@ def main() -> int:
         for target in targets:
             if target.startswith(generation + '-'):
                 print(f'  {f"make {target}":<{width}}make {target}-examples')
-    print('\nEvery target in one run: python scripts/build/build-all.py --help')
+    print('\nEvery target in one run (asks first; hours to a day or more):')
+    print('  make build-all               every SDK')
+    print('  make build-all-examples      every SDK and its test applications')
+    print('  BUILD_ALL_JOBS=2 builds two at once; scripts/build/build-all.py --help has the rest')
     print('Settings (PARALLEL_JOBS, LICENSE_PROFILE, ...): docs/getting-started.md')
     return 0
 

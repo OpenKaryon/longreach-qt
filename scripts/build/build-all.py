@@ -8,8 +8,13 @@
     python scripts/build/build-all.py --only 'qt5-*' --skip '*-arm64'
     python scripts/build/build-all.py --no-cache            # rebuild from nothing
     python scripts/build/build-all.py --list                # what would be built
+    make build-all-examples      # the same through make; make build-all: SDKs only
 
-Each target runs `make <target>-examples`: the SDK image is built when one of
+It asks before it starts (--yes does not); without a terminal to ask on it
+stops unless --yes is given.
+
+Each target runs `make <target>-examples` (`make build-<target>` with
+--sdk-only): the SDK image is built when one of
 its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
 machine. qt6-host, which the cross-built Qt 6 targets copy their tools from,
@@ -101,6 +106,16 @@ def free_memory_gb() -> float | None:
     return None
 
 
+def docker_memory_gb() -> float | None:
+    """Memory of the machine Docker builds on (Docker Desktop's VM on Windows and macOS)."""
+    try:
+        out = subprocess.run(['docker', 'info', '--format', '{{.MemTotal}}'], capture_output=True,
+                             text=True, timeout=120).stdout.strip()
+        return int(out) / 2 ** 30 if out.isdigit() else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 def image_of(target: str, profile: str) -> str:
     return target + (f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else '')
 
@@ -155,6 +170,12 @@ def main() -> int:
                         help='compiler jobs inside one build, PARALLEL_JOBS (default: the Makefile\'s)')
     parser.add_argument('--min-free-gb', type=float, default=12.0,
                         help='start another target only while this much memory is free (default 12)')
+    parser.add_argument('--gb-per-job', type=float, default=2.0,
+                        help='memory one compiler job can take while Qt links (default 2); with --make-jobs '
+                             'it caps --jobs to what the Docker memory holds')
+    parser.add_argument('--start-gap', type=int, default=300,
+                        help='seconds between starting two targets (default 300), so that the free-memory '
+                             'check sees what the last one took')
     parser.add_argument('--only', action='append', default=[], metavar='PATTERN',
                         help='build only targets matching PATTERN (shell-style, repeatable)')
     parser.add_argument('--skip', action='append', default=[], metavar='PATTERN',
@@ -168,6 +189,8 @@ def main() -> int:
                         help='build failed targets again, one at a time, this many times (default 1)')
     parser.add_argument('--log-dir', type=Path)
     parser.add_argument('--list', action='store_true', help='print the targets and exit')
+    parser.add_argument('--sdk-only', action='store_true', help='build the SDK images, not the test applications')
+    parser.add_argument('--yes', action='store_true', help='start without asking')
     args = parser.parse_args()
 
     targets = [t for t in TARGETS
@@ -179,6 +202,30 @@ def main() -> int:
         for t in targets:
             print(f'{t:18} -> artifacts/tests-{image_of(t, args.license_profile)}/')
         return 0
+
+    # A target's memory peaks hours in, when Qt links, so the free memory at
+    # its start says little: cap the concurrency by what Docker has.
+    make_jobs = args.make_jobs or 6
+    per_build = make_jobs * args.gb_per_job
+    memory = docker_memory_gb()
+    cap = max(1, int(memory // per_build)) if memory else 1
+    parallel = max(1, min(args.jobs, cap, len(targets)))
+    what = 'SDK images' if args.sdk_only else 'SDK images and their test applications'
+    if args.jobs > cap:
+        where = f'Docker has {memory:.0f} GB' if memory else 'the Docker memory is unknown'
+        print(f'--jobs {args.jobs} is more than fits: {where} and one build can take about '
+              f'{per_build:.0f} GB ({make_jobs} compiler jobs x {args.gb_per_job:g} GB), so {cap} at a time. '
+              f'Fewer compiler jobs (PARALLEL_JOBS) allow more at once.')
+    print(f'{len(targets)} targets will be built ({what}), {parallel} at a time:')
+    print('  ' + ' '.join(targets))
+    print('Without the Docker cache that is hours per target, the whole set a day or more.')
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print('Not starting: no terminal to confirm on; pass --yes (make ... YES=1).', file=sys.stderr)
+            return 2
+        if input('Continue? [y/N] ').strip().lower() not in ('y', 'yes'):
+            print('Not started.')
+            return 1
 
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M')
     log_dir = args.log_dir or ROOT / 'build' / f'build-all-{stamp}'
@@ -193,8 +240,9 @@ def main() -> int:
     env = dict(os.environ, LONGREACH_BUILDS_COORDINATED='1')
 
     def steps_for(target):
-        steps = []
-        steps.append([args.make, '--no-print-directory', f'{target}-examples', *make_vars])
+        if args.sdk_only:
+            return [[args.make, '--no-print-directory', f'build-{target}', *make_vars]]
+        steps = [[args.make, '--no-print-directory', f'{target}-examples', *make_vars]]
         if target in AUDITS:
             steps.append([args.make, '--no-print-directory', AUDITS[target], *make_vars])
         return steps
@@ -209,6 +257,7 @@ def main() -> int:
         """Build targets, at most parallel at a time; returns the finished jobs."""
         jobs, done = [], []
         pending = list(targets)
+        last_start = 0.0
         host_job = None
         if any(TARGETS[t][1] for t in targets):
             host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'qt6-host', *make_vars]], log_dir, env)
@@ -241,21 +290,19 @@ def main() -> int:
                     done.append(skipped)
                     say(f'SKIP {target} (qt6-host failed)')
             startable = [t for t in pending if host_ready or not TARGETS[t][1]]
-            if startable and len(jobs) < parallel:
+            if startable and len(jobs) < parallel and (not jobs or time.time() - last_start >= args.start_gap):
                 free = free_memory_gb()
-                if jobs and free is not None and free < args.min_free_gb:
-                    pass  # wait for memory
-                else:
+                if not jobs or free is None or free >= args.min_free_gb:
                     target = startable[0]
                     pending.remove(target)
                     jobs.append(Job(target, steps_for(target), log_dir, env))
+                    last_start = time.time()
                     say(f'started {target}' + (f' ({free:.1f} GB free)' if free is not None else ''))
-                    continue
             time.sleep(10)
         return done
 
-    say(f'{len(targets)} targets, {args.jobs} at a time, logs in {log_dir}')
-    done = {job.target: job for job in run(targets, args.jobs)}
+    say(f'{len(targets)} targets, {parallel} at a time, logs in {log_dir}')
+    done = {job.target: job for job in run(targets, parallel)}
     attempts = dict.fromkeys(done, 1)
     # A build can fail only under load (a large image export timing out while
     # another build runs); the failed ones get another try on their own.

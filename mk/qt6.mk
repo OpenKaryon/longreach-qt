@@ -32,6 +32,15 @@ QT6_WIN7_LLVM_MINGW_PATH := $(DOWNLOAD_DIR)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
 QT6_WIN7_LLVM_MINGW_SHA256 := eb878636e95c358452e4f4c95f032d81360096d0f1cd8ab6d24d5d09ca481372
 QT6_WIN7_LLVM_MINGW_URL := https://github.com/mstorsjo/llvm-mingw/releases/download/$(LLVM_MINGW_VERSION)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
 
+# Sources the Linux Dockerfiles copy from downloads/: ninja (CentOS 7 has none
+# new enough; amd64 only) and xcb-util-cursor, linked statically.
+QT6_NINJA_PATH := $(DOWNLOAD_DIR)/ninja-1.12.1.tar.gz
+QT6_NINJA_URL := https://github.com/ninja-build/ninja/archive/refs/tags/v1.12.1.tar.gz
+QT6_NINJA_SHA256 := 821bdff48a3f683bc4bb3b6f0b5fe7b2d647cf65d52aeb63328c91a6c6df285a
+QT6_XCB_CURSOR_PATH := $(DOWNLOAD_DIR)/xcb-util-cursor-0.1.5.tar.xz
+QT6_XCB_CURSOR_URL := https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
+QT6_XCB_CURSOR_SHA256 := 0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57
+
 # macOS floors: 10.13 on Intel, 11.0 on Apple silicon (Qt 6.8 asks for 12;
 # patches/qt6/macos takes it down).
 QT6_MACOS_SDK_VERSION ?= 14.0
@@ -57,6 +66,12 @@ QT6_MACOS_ARM64_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14
 $(QT6_WIN7_LLVM_MINGW_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT6_WIN7_LLVM_MINGW_URL)" "$@" "$(QT6_WIN7_LLVM_MINGW_SHA256)"
 
+$(QT6_NINJA_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_NINJA_URL)" "$@" "$(QT6_NINJA_SHA256)"
+
+$(QT6_XCB_CURSOR_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_XCB_CURSOR_URL)" "$@" "$(QT6_XCB_CURSOR_SHA256)"
+
 download-qt6: $(QT6_ARCHIVE_PATH)
 
 $(QT6_ARCHIVE_PATH):
@@ -78,10 +93,10 @@ qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) qt6-host
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
 # image.
-qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH)
+qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
 
-qt6-linux-arm64: $(QT6_ARCHIVE_PATH) qt6-host
+qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so

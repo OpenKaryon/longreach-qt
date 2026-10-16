@@ -7,6 +7,8 @@
   words kept outside the repository (`.stopwords`); `scripts/audit/git_hooks.py
   install` runs it from pre-commit, commit-msg and pre-push hooks.
 - A bare `make` prints `make help` instead of downloading the Qt 5 sources.
+- `make qt6-linux-amd64` and `qt6-linux-arm64` download ninja and
+  xcb-util-cursor themselves; a fresh clone had no rule for them.
 
 ## 0.1.0 - 2026-10-15
 

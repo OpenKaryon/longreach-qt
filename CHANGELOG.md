@@ -25,6 +25,8 @@
   system's patches, and the Qt 6 images only the Qt and LLVM-MinGW archives
   from the build context instead of bind-mounting all of it, which gave the
   Docker cache a new key for any change in the repository.
+- `make qt4-macos-ppc-examples` (and `qt4-macos-i386-examples`) no longer
+  fails on Windows when an earlier run left its `imports/` folder.
 
 ## 0.1.0 - 2026-10-15
 

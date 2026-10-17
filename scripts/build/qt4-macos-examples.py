@@ -72,6 +72,9 @@ def main():
             {'sha256': expected, 'image_id': image_id, 'files': files}, indent=2) + '\n')
         output.mkdir(parents=True, exist_ok=True)
         for path in pending.iterdir():
+            # On Windows a folder does not replace an earlier run's folder (imports/).
+            if (output / path.name).is_dir():
+                shutil.rmtree(output / path.name)
             path.replace(output / path.name)
         pending.rmdir()
         print(f'{args.platform} bundles: {output}; runtime testing pending')

@@ -157,14 +157,13 @@ qt5-package-tests: qt5-extract-tests
 		$(QT5_IMAGE) "tar -czf /artifacts/tests-$(QT5_IMAGE).tar.gz -C /artifacts/tests-$(QT5_IMAGE) . && sha256sum /artifacts/tests-$(QT5_IMAGE).tar.gz > /artifacts/tests-$(QT5_IMAGE).tar.gz.sha256"
 	@echo "-> $(QT5_TESTS_PACKAGE)"
 
-QT5_IMAGE_CONFIG = qt5=$(QT5_VERSION),$(QT5_ARCHIVE_URL);openssl=$(OPENSSL_VERSION),$(OPENSSL_URL);profile=$(LICENSE_PROFILE);opengl=$(QT5_OPENGL_CONFIG);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_ARCHIVE),$(LLVM_MINGW_SHA256),$(LLVM_MINGW_URL);osx=$(QT5_MACOS_SDK),$(QT5_MACOS_TARGET_AMD64),$(QT5_MACOS_TARGET_ARM64),$(OSXCROSS_REPO),$(OSXCROSS_REF),$(QT5_MACOS_SDK_PKG_URL),$(QT5_MACOS_SDK_PKG_SHA256),$(QT5_LLVM_SRC_VERSION),$(QT5_LLVM_SRC_SHA256),$(QT5_MACOS_I386_LINK_SDK_SHA256);download=$(DOWNLOAD_DIR)
 
-$(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_I386_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-win-amd64,qt5-win-amd64,QT5_WIN_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_AMD64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-win-arm64,qt5-win-arm64,QT5_WIN_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_ARM64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-linux-i386,qt5-linux-i386,QT5_LINUX_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_I386_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-linux-amd64,qt5-linux-amd64,QT5_LINUX_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_AMD64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-linux-arm64,qt5-linux-arm64,QT5_LINUX_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_ARM64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_AMD64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-macos-arm64,qt5-macos-arm64,QT5_MACOS_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_ARM64_IMAGE),QT5_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt5-macos-i386,qt5-macos-i386,QT5_MACOS_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_I386_IMAGE),QT5_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_I386_IMAGE),))
+$(eval $(call simple-build-targets,qt5-win-amd64,qt5-win-amd64,QT5_WIN_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_AMD64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-win-arm64,qt5-win-arm64,QT5_WIN_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_ARM64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-linux-i386,qt5-linux-i386,QT5_LINUX_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_I386_IMAGE),))
+$(eval $(call simple-build-targets,qt5-linux-amd64,qt5-linux-amd64,QT5_LINUX_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_AMD64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-linux-arm64,qt5-linux-arm64,QT5_LINUX_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_ARM64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_AMD64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-macos-arm64,qt5-macos-arm64,QT5_MACOS_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_ARM64_IMAGE),))
+$(eval $(call simple-build-targets,qt5-macos-i386,qt5-macos-i386,QT5_MACOS_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_I386_IMAGE),))

@@ -139,16 +139,10 @@ qt4-package-tests: qt4-extract-tests
 		--entrypoint bash $(QT4_IMAGE) -ec "tar -czf /artifacts/tests-$(QT4_IMAGE).tar.gz -C /artifacts/tests-$(QT4_IMAGE) . && sha256sum /artifacts/tests-$(QT4_IMAGE).tar.gz > /artifacts/tests-$(QT4_IMAGE).tar.gz.sha256"
 	@echo "-> $(QT4_TESTS_PACKAGE)"
 
-QT4_IMAGE_CONFIG = qt4=$(QT4_VERSION),$(QT4_ARCHIVE_URL);openssl=$(OPENSSL_VERSION),$(OPENSSL_URL);download=$(DOWNLOAD_DIR)
-QT4_WIN95_IMAGE_CONFIG = qt4=4.8.7;platform=win95-i386;openssl=1.0.2u,ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16;download=downloads
-QT4_SARGE_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-i386;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
-QT4_SARGE_AMD64_IMAGE_CONFIG = qt4=4.8.7;platform=debian-sarge-amd64;glibc=2.3.2;openssl=1.0.2u;gcc-runtime=5.5.0;download=downloads
-QT4_TIGER_IMAGE_CONFIG = qt4=4.8.7;platform=macos-tiger-i386;deployment=10.4;carbon=1;openssl=1.0.2u;sdk=d28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021;osxcross=f547d14e6ac6c5bb0ddd7563651eb29057e1d755
-QT4_JAGUAR_IMAGE_CONFIG = qt4=4.8.7;platform=macos-jaguar-ppc;deployment=10.2;openssl=1.0.2u;sdk=$(JAGUAR_SDK_SHA256),$(TIGER_SDK_SHA256);gcc=5.5.0;osxcross-ppc=af8300c6b3e099c91970a8d2d0f3bffe703f2421
 
-$(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_WIN95_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),QT4_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,QT4_SARGE_AMD64_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-i386-extract-tests,QT4_BUILD_LOCK_HELD=1,QT4_TIGER_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-extract-tests,QT4_BUILD_LOCK_HELD=1,QT4_JAGUAR_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,))
+$(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),))
+$(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,))
+$(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,))
+$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-i386-extract-tests,QT4_BUILD_LOCK_HELD=1,))
+$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-extract-tests,QT4_BUILD_LOCK_HELD=1,))

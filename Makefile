@@ -92,15 +92,16 @@ $(LLVM_MINGW_PATH):
 # fingerprint label); <target>-examples (also build-<target>-examples) does
 # that and then builds the test applications into artifacts/tests-<image>/.
 # $(1) public name, $(2) SDK target, $(3) image variable, $(4) examples
-# target, $(5) examples arguments, $(6) fingerprint settings.
+# target, $(5) examples arguments, $(6) the targets of images it is built
+# FROM (scripts/build/ensure-image.py --needs).
 define simple-build-targets
 BUILD_TARGETS += $(1)
 .PHONY: build-$(1) build-$(1)-examples $(1)-examples
 $(1)-examples: build-$(1)-examples
 build-$(1):
-	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
+	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" $(foreach n,$(6),--needs $(n)) --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 build-$(1)-examples:
-	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" --config "$($(6))" --docker-build-flags="$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(and $(filter qt6-%,$(1)),$(QT6_SOURCE)),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
+	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" $(foreach n,$(6),--needs $(n)) --docker-build-flags="$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 endef
 
 # A bare `make` lists the targets.

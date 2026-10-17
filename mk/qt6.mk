@@ -87,14 +87,14 @@ qt6-host: $(QT6_ARCHIVE_PATH)
 # What the cross targets depend on: qt6-host only when its inputs changed. A
 # plain docker build of it starts over once Docker has dropped its cache.
 build-qt6-host:
-	$(PYTHON) scripts/build/ensure-image.py --image "$(QT6_HOST_IMAGE)" --target qt6-host --config "$(QT6_IMAGE_CONFIG)" --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(QT6_SOURCE),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
+	$(PYTHON) scripts/build/ensure-image.py --image "$(QT6_HOST_IMAGE)" --target qt6-host --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 
 # Windows x86_64 is the Windows 7 backport, built against MSVCRT.
 qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_CRT=msvcrt --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(QT6_WIN7_LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
 
 qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(LLVM_MINGW_SHA256) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
 # image.
@@ -196,11 +196,10 @@ qt6-macos-arm64-audit: QT6_SMOKE_IMAGE := $(QT6_MACOS_ARM64_IMAGE)
 qt6-macos-arm64-audit:
 	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_ARM64_IMAGE) -c 'MACHO_AUDIT_ARCH=arm64 sh /audit.sh $(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) /in/*'
 
-QT6_IMAGE_CONFIG = qt6=$(QT6_VERSION);source=$(QT6_SOURCE);profile=$(LICENSE_PROFILE);llvm=$(LLVM_MINGW_VERSION),$(LLVM_MINGW_SHA256),$(QT6_WIN7_LLVM_MINGW_SHA256),$(LLVM_MINGW_URL),$(QT6_WIN7_LLVM_MINGW_URL);osx=$(QT6_MACOS_SDK_VERSION),$(QT6_MACOS_DEPLOYMENT_TARGET),$(QT6_MACOS_ARM64_SDK_VERSION),$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET),$(QT6_MACOS_OSXCROSS_REF),$(QT6_MACOS_SDK_SHA256),$(QT6_MACOS_ARM64_SDK_SHA256),$(QT6_MACOS_SDK_URL),$(QT6_MACOS_ARM64_SDK_URL);download=$(DOWNLOAD_DIR)
 
-$(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,QT6_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,QT6_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,QT6_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,QT6_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,QT6_IMAGE_CONFIG))
-$(eval $(call simple-build-targets,qt6-macos-arm64,qt6-macos-arm64,QT6_MACOS_ARM64_IMAGE,qt6-macos-arm64-smoke,,QT6_IMAGE_CONFIG))
+$(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,qt6-host))
+$(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,qt6-host))
+$(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,))
+$(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,qt6-host))
+$(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,qt6-host))
+$(eval $(call simple-build-targets,qt6-macos-arm64,qt6-macos-arm64,QT6_MACOS_ARM64_IMAGE,qt6-macos-arm64-smoke,,qt6-host))

@@ -6,7 +6,6 @@
 
 ARG QT_VERSION=6.10.1
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
-ARG QT_SRC_DOWNLOAD_URL=""
 ARG PARALLEL_JOBS=""
 
 # ---------------------------------------------------------------------------
@@ -15,33 +14,13 @@ ARG PARALLEL_JOBS=""
 
 FROM debian:12 AS qt-src
 
-ENV DEBIAN_FRONTEND=noninteractive
-
 ARG QT_VERSION
 ARG QT_ARCHIVE
-ARG QT_SRC_DOWNLOAD_URL
 
-RUN apt-get update && apt-get install -y \
-    wget ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
+# Only the archive: a bind mount of the whole context made every change
+# anywhere in the repository a new cache key for the Qt build below.
 ARG DOWNLOAD_DIR="downloads"
-RUN --mount=type=bind,source=.,target=/context \
-    set -e; \
-    ARCHIVE_NAME="${QT_ARCHIVE:-qt-everywhere-src-${QT_VERSION}.tar.xz}"; \
-    if [ -f "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}"; \
-        cp "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -f "/context/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${ARCHIVE_NAME}"; \
-        cp "/context/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -n "${QT_SRC_DOWNLOAD_URL}" ]; then \
-        echo "Downloading Qt archive from ${QT_SRC_DOWNLOAD_URL}"; \
-        wget -qO /tmp/qt-src.tar.xz "${QT_SRC_DOWNLOAD_URL}"; \
-    else \
-        echo "ERROR: Qt archive not found in build context and QT_SRC_DOWNLOAD_URL not set"; \
-        exit 1; \
-    fi
+COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 
 # ---------------------------------------------------------------------------
 # builder: Qt for the host with all tools

@@ -46,7 +46,8 @@ RUN echo 'ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16  /arc
     && make -j "$PARALLEL_JOBS" CC=i386-apple-darwin8-clang AR='i386-apple-darwin8-ar r' RANLIB=i386-apple-darwin8-ranlib \
     && make install_sw CC=i386-apple-darwin8-clang AR='i386-apple-darwin8-ar r' RANLIB=i386-apple-darwin8-ranlib
 COPY scripts/build/qt4-macos/build-qt.sh scripts/build/qt4-macos/qmake.conf /scripts/
-COPY patches/qt4 /patches
+COPY patches/qt4/all /patches/all
+COPY patches/qt4/macos /patches/macos
 RUN --mount=type=cache,id=qt4-tiger-i386-source,target=/work/qt-source,sharing=locked \
     TIGER_JOBS="$PARALLEL_JOBS" bash /scripts/build-qt.sh
 

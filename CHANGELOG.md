@@ -15,6 +15,16 @@
   one whose image was current, without the five-minute gap.
 - `DOCKER_BUILD_FLAGS` with a single flag (`DOCKER_BUILD_FLAGS=--progress=plain`)
   no longer stops `make build-<target>`.
+- An SDK image is rebuilt only when what its own `docker build` uses changed:
+  its Dockerfile, build arguments, the files it copies and (Qt 6 cross
+  targets) qt6-host. Before, any change under `scripts/build/`, the
+  Makefile or a generation's `mk/*.mk`, `docker/`, `patches/` or `cmake/`
+  marked every image of that generation, or all of them, out of date.
+  `PARALLEL_JOBS` is not part of it.
+- The Qt 4 Linux and macOS images copy only `patches/qt4/all` and their own
+  system's patches, and the Qt 6 images only the Qt and LLVM-MinGW archives
+  from the build context instead of bind-mounting all of it, which gave the
+  Docker cache a new key for any change in the repository.
 
 ## 0.1.0 - 2026-10-15
 

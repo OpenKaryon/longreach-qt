@@ -165,7 +165,8 @@ RUN sh /probes/check-probes.sh
 FROM toolchain AS builder
 ARG JOBS=6
 COPY downloads/qt-everywhere-opensource-src-4.8.7.tar.gz /archives/qt-everywhere-opensource-src-4.8.7.tar.gz
-COPY patches/qt4 /patches
+COPY patches/qt4/all /patches/all
+COPY patches/qt4/macos /patches/macos
 COPY scripts/build/qt4-macos-jaguar/qmake.conf /scripts/qmake.conf
 COPY scripts/build/qt4-macos-jaguar/build-qt.sh /scripts/build-qt.sh
 COPY scripts/build/qt4-macos-jaguar/qtcore-probe /scripts/qtcore-probe

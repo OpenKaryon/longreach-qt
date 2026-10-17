@@ -45,7 +45,8 @@ ARG DOWNLOAD_DIR="downloads"
 ARG QT4_SRC_DIR="qt-everywhere-opensource-src-${QT4_VERSION}"
 ARG PARALLEL_JOBS=""
 
-COPY patches/qt4 /tmp/patches/qt4
+COPY patches/qt4/all /tmp/patches/qt4/all
+COPY patches/qt4/windows /tmp/patches/qt4/windows
 COPY ${DOWNLOAD_DIR}/${QT4_DISTRO} /opt/${QT4_DISTRO}
 COPY ${DOWNLOAD_DIR}/${OPENSSL_DISTRO} /opt/${OPENSSL_DISTRO}
 COPY scripts/build/openssl.sh /tmp/build-openssl.sh

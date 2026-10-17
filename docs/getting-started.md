@@ -28,9 +28,14 @@ Makefile holds the shared settings; each generation's inputs, images and
 targets are in `mk/qt4.mk`, `mk/qt5.mk` and `mk/qt6.mk`.
 
 `make <target>-examples` (`make qt5-win-i386-examples`) builds the SDK only
-when an input changed - it fingerprints the make settings, the Dockerfile,
-the patches and scripts the target uses, and labels the image with it - and
-then builds the test applications into `artifacts/tests-<image>/`.
+when one of its own inputs changed, and then builds the test applications
+into `artifacts/tests-<image>/`. The image is labelled with a fingerprint of
+what its `docker build` uses: the Dockerfile, the build arguments, the
+files it copies (its own patch folders, scripts, downloads) and, for the
+Qt 6 cross targets, the qt6-host image. A macOS patch rebuilds the macOS
+images only; edits elsewhere in the Makefile or in `scripts/build/` that do
+not reach a build rebuild nothing (`python scripts/build/ensure-image.py
+--image I --target T --print` shows a target's fingerprint).
 `make build-<target>` does the first half alone. `FORCE=1` rebuilds the
 image anyway, `NO_CACHE=1` rebuilds it without the Docker cache.
 

@@ -6,10 +6,9 @@
 
 ARG QT_VERSION=6.10.1
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
-ARG QT_SRC_DOWNLOAD_URL=""
 ARG QT6_HOST_IMAGE=qt6-host
 ARG LLVM_MINGW_VERSION=20241217
-ARG LLVM_MINGW_ARCHIVE=""
+ARG LLVM_MINGW_ARCHIVE=llvm-mingw-${LLVM_MINGW_VERSION}-msvcrt-ubuntu-20.04-x86_64.tar.xz
 ARG PARALLEL_JOBS=""
 
 # ---------------------------------------------------------------------------
@@ -18,33 +17,13 @@ ARG PARALLEL_JOBS=""
 
 FROM debian:12 AS qt-src
 
-ENV DEBIAN_FRONTEND=noninteractive
-
 ARG QT_VERSION
 ARG QT_ARCHIVE
-ARG QT_SRC_DOWNLOAD_URL
 
-RUN apt-get update && apt-get install -y \
-    wget ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
+# Only the archive: a bind mount of the whole context made every change
+# anywhere in the repository a new cache key for the Qt build below.
 ARG DOWNLOAD_DIR="downloads"
-RUN --mount=type=bind,source=.,target=/context \
-    set -e; \
-    ARCHIVE_NAME="${QT_ARCHIVE:-qt-everywhere-src-${QT_VERSION}.tar.xz}"; \
-    if [ -f "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}"; \
-        cp "/context/${DOWNLOAD_DIR}/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -f "/context/${ARCHIVE_NAME}" ]; then \
-        echo "Using local Qt archive /context/${ARCHIVE_NAME}"; \
-        cp "/context/${ARCHIVE_NAME}" /tmp/qt-src.tar.xz; \
-    elif [ -n "${QT_SRC_DOWNLOAD_URL}" ]; then \
-        echo "Downloading Qt archive from ${QT_SRC_DOWNLOAD_URL}"; \
-        wget -qO /tmp/qt-src.tar.xz "${QT_SRC_DOWNLOAD_URL}"; \
-    else \
-        echo "ERROR: Qt archive not found in build context and QT_SRC_DOWNLOAD_URL not set"; \
-        exit 1; \
-    fi
+COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 
 # ---------------------------------------------------------------------------
 # builder: Qt for Windows x86_64 with LLVM-MinGW
@@ -60,7 +39,6 @@ ARG QT_VERSION
 ARG LLVM_MINGW_VERSION
 ARG LLVM_MINGW_ARCHIVE
 # MSVCRT, the C runtime Windows 7 has; UCRT is a separate install there.
-ARG LLVM_MINGW_CRT=msvcrt
 ARG LLVM_MINGW_SHA256=""
 ARG PARALLEL_JOBS
 
@@ -84,22 +62,8 @@ ENV LLVM_MINGW_ROOT=/opt/llvm-mingw
 WORKDIR /tmp
 
 ARG DOWNLOAD_DIR="downloads"
-RUN --mount=type=bind,source=.,target=/context \
-    set -e; \
-    case "${LLVM_MINGW_CRT}" in ucrt|msvcrt) ;; *) echo "Unknown CRT: ${LLVM_MINGW_CRT}"; exit 1;; esac; \
-    ARCHIVE="${LLVM_MINGW_ARCHIVE:-llvm-mingw-${LLVM_MINGW_VERSION}-${LLVM_MINGW_CRT}-ubuntu-20.04-x86_64.tar.xz}"; \
-    if [ -f "/context/${DOWNLOAD_DIR}/${ARCHIVE}" ]; then \
-        echo "Using local LLVM-MinGW archive /context/${DOWNLOAD_DIR}/${ARCHIVE}"; \
-        cp "/context/${DOWNLOAD_DIR}/${ARCHIVE}" /tmp/llvm-mingw.tar.xz; \
-    elif [ -f "/context/${ARCHIVE}" ]; then \
-        echo "Using local LLVM-MinGW archive /context/${ARCHIVE}"; \
-        cp "/context/${ARCHIVE}" /tmp/llvm-mingw.tar.xz; \
-    else \
-        echo "Downloading LLVM-MinGW ${LLVM_MINGW_VERSION} from GitHub..."; \
-        wget -q \
-          "https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/${ARCHIVE}" \
-          -O /tmp/llvm-mingw.tar.xz; \
-    fi; \
+COPY ${DOWNLOAD_DIR}/${LLVM_MINGW_ARCHIVE} /tmp/llvm-mingw.tar.xz
+RUN set -e; \
     if [ -n "${LLVM_MINGW_SHA256}" ]; then \
         echo "${LLVM_MINGW_SHA256}  /tmp/llvm-mingw.tar.xz" | sha256sum -c -; \
     fi; \

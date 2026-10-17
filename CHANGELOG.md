@@ -9,6 +9,12 @@
 - A bare `make` prints `make help` instead of downloading the Qt 5 sources.
 - `make qt6-linux-amd64` and `qt6-linux-arm64` download ninja and
   xcb-util-cursor themselves; a fresh clone had no rule for them.
+- The Qt 6 cross targets and `make build-all` build qt6-host only when its
+  inputs changed (`make build-qt6-host`), not again whenever Docker has
+  dropped its cache. `make build-all` starts the next target at once after
+  one whose image was current, without the five-minute gap.
+- `DOCKER_BUILD_FLAGS` with a single flag (`DOCKER_BUILD_FLAGS=--progress=plain`)
+  no longer stops `make build-<target>`.
 
 ## 0.1.0 - 2026-10-15
 

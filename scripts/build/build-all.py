@@ -18,8 +18,9 @@ Each target runs `make <target>-examples` (`make build-<target>` with
 its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
 machine. qt6-host, which the cross-built Qt 6 targets copy their tools from,
-is built first. A failed target does not stop the others; at the end the
-failed ones are built again, one at a time (--retries, default once).
+comes first, built like the SDKs only when its inputs changed. A failed
+target does not stop the others; at the end the failed ones are built again,
+one at a time (--retries, default once).
 
 --jobs sets how many targets build at the same time; --make-jobs the compiler
 jobs inside each (PARALLEL_JOBS). A Qt link can take several GB, so a new
@@ -174,8 +175,8 @@ def main() -> int:
                         help='memory one compiler job can take while Qt links (default 2); with --make-jobs '
                              'it caps --jobs to what the Docker memory holds')
     parser.add_argument('--start-gap', type=int, default=300,
-                        help='seconds between starting two targets (default 300), so that the free-memory '
-                             'check sees what the last one took')
+                        help='seconds after starting a target before the next one (default 300), so that the '
+                             'free-memory check sees what it took; none once it has finished')
     parser.add_argument('--only', action='append', default=[], metavar='PATTERN',
                         help='build only targets matching PATTERN (shell-style, repeatable)')
     parser.add_argument('--skip', action='append', default=[], metavar='PATTERN',
@@ -257,10 +258,10 @@ def main() -> int:
         """Build targets, at most parallel at a time; returns the finished jobs."""
         jobs, done = [], []
         pending = list(targets)
-        last_start = 0.0
+        last = None
         host_job = None
         if any(TARGETS[t][1] for t in targets):
-            host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'qt6-host', *make_vars]], log_dir, env)
+            host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'build-qt6-host', *make_vars]], log_dir, env)
             jobs.append(host_job)
             say('started qt6-host (the Qt 6 cross targets wait for it)')
 
@@ -290,13 +291,15 @@ def main() -> int:
                     done.append(skipped)
                     say(f'SKIP {target} (qt6-host failed)')
             startable = [t for t in pending if host_ready or not TARGETS[t][1]]
-            if startable and len(jobs) < parallel and (not jobs or time.time() - last_start >= args.start_gap):
+            # A target whose image was current is done in a minute: no gap after it.
+            settled = last not in jobs or time.time() - last.started >= args.start_gap
+            if startable and len(jobs) < parallel and settled:
                 free = free_memory_gb()
                 if not jobs or free is None or free >= args.min_free_gb:
                     target = startable[0]
                     pending.remove(target)
-                    jobs.append(Job(target, steps_for(target), log_dir, env))
-                    last_start = time.time()
+                    last = Job(target, steps_for(target), log_dir, env)
+                    jobs.append(last)
                     say(f'started {target}' + (f' ({free:.1f} GB free)' if free is not None else ''))
             time.sleep(10)
         return done

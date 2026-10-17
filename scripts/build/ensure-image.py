@@ -19,6 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LABEL = "org.openkaryon.longreach-qt.input-sha256"
 INPUT_PREFIXES = ("scripts/build/", "scripts/audit/", "scripts/fetch/", "tests/", "licenses/")
+# Set for the make that builds an image, so that an image it depends on
+# (qt6-host) is checked without waiting on the lock or being forced again.
+NESTED = "LONGREACH_NESTED_IMAGE_BUILD"
 
 
 @contextmanager
@@ -26,9 +29,10 @@ def build_lock():
     """Serialize SDK and example builds started through the short targets.
 
     scripts/build/build-all.py sets LONGREACH_BUILDS_COORDINATED=1: it limits
-    concurrent builds itself, so each one skips the lock.
+    concurrent builds itself, so each one skips the lock. So does an image
+    built as a prerequisite of another (NESTED), under that one's lock.
     """
-    if os.environ.get("LONGREACH_BUILDS_COORDINATED") == "1":
+    if "1" in (os.environ.get("LONGREACH_BUILDS_COORDINATED"), os.environ.get(NESTED)):
         yield
         return
     lock_path = ROOT / "build" / ".sdk-build.lock"
@@ -143,18 +147,20 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
+    # A nested build inherits the outer image's label in DOCKER_BUILD_FLAGS.
+    flags = " ".join(f for f in args.docker_build_flags.split() if not f.startswith(f"--label={LABEL}="))
+    force = args.force and os.environ.get(NESTED) != "1"
     family = args.image.split("-", 1)[0]
-    expected = fingerprint(args.config + "\0" + args.docker_build_flags,
-                           family, args.source_file)
+    expected = fingerprint(args.config + "\0" + flags, family, args.source_file)
     with build_lock():
-        if not args.force and image_fingerprint(args.image) == expected:
+        if not force and image_fingerprint(args.image) == expected:
             print(f"{args.image}: image is current ({expected[:12]})", flush=True)
         else:
             print(f"{args.image}: building from current inputs ({expected[:12]})", flush=True)
             result = subprocess.run(
                 [args.make, "--no-print-directory", "-j1", args.target,
-                 f"DOCKER_BUILD_FLAGS={args.docker_build_flags} --label={LABEL}={expected}"],
-                cwd=ROOT, check=False,
+                 f"DOCKER_BUILD_FLAGS={flags} --label={LABEL}={expected}"],
+                cwd=ROOT, check=False, env=dict(os.environ, **{NESTED: "1"}),
             )
             if result.returncode:
                 return result.returncode

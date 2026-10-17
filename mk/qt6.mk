@@ -55,7 +55,7 @@ QT6_MACOS_ARM64_SDK := MacOSX$(QT6_MACOS_ARM64_SDK_VERSION).sdk.tar.xz
 QT6_MACOS_ARM64_SDK_URL ?= https://github.com/joseluisq/macosx-sdks/releases/download/$(QT6_MACOS_ARM64_SDK_VERSION)/$(QT6_MACOS_ARM64_SDK)
 QT6_MACOS_ARM64_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
 
-.PHONY: download-qt6 qt6-host \
+.PHONY: download-qt6 qt6-host build-qt6-host \
         qt6-win-amd64 qt6-win-arm64 qt6-linux-amd64 qt6-linux-arm64 \
         qt6-macos-amd64 qt6-macos-arm64 \
         qt6-win-amd64-smoke qt6-win-amd64-audit qt6-win-arm64-smoke \
@@ -84,11 +84,16 @@ QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(
 qt6-host: $(QT6_ARCHIVE_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) -f docker/qt6/host/Dockerfile -t $(QT6_HOST_IMAGE) .
 
+# What the cross targets depend on: qt6-host only when its inputs changed. A
+# plain docker build of it starts over once Docker has dropped its cache.
+build-qt6-host:
+	$(PYTHON) scripts/build/ensure-image.py --image "$(QT6_HOST_IMAGE)" --target qt6-host --config "$(QT6_IMAGE_CONFIG)" --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(QT6_SOURCE),--source-file "$(QT6_SOURCE)",) $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
+
 # Windows x86_64 is the Windows 7 backport, built against MSVCRT.
-qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) qt6-host
+qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) build-qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_CRT=msvcrt --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
 
-qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) qt6-host
+qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
@@ -96,7 +101,7 @@ qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) qt6-host
 qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
 
-qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) qt6-host
+qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) build-qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
@@ -105,10 +110,10 @@ qt6-host-smoke:
 	docker run --rm --entrypoint sh 	    -v "$(CURDIR)/tests:/src:ro" 	    -v "$(CURDIR)/scripts/build/qt6-host-smoke.sh:/qt6-host-smoke.sh:ro" 	    $(QT6_HOST_IMAGE) -c "PARALLEL_JOBS=$(PARALLEL_JOBS) sh /qt6-host-smoke.sh"
 
 # A repacked macOS SDK from a GitHub release, pinned by SHA256.
-qt6-macos-amd64: $(QT6_ARCHIVE_PATH) qt6-host
+qt6-macos-amd64: $(QT6_ARCHIVE_PATH) build-qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
 
-qt6-macos-arm64: $(QT6_ARCHIVE_PATH) qt6-host
+qt6-macos-arm64: $(QT6_ARCHIVE_PATH) build-qt6-host
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_ARM64_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
 
 # qt6-<target>-smoke builds tests/ against the image into

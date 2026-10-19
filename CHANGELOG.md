@@ -27,6 +27,8 @@
   Docker cache a new key for any change in the repository.
 - `make qt4-macos-ppc-examples` (and `qt4-macos-i386-examples`) no longer
   fails on Windows when an earlier run left its `imports/` folder.
+- `make download-qt-mobility` and `scripts/fetch/fetch-git-archive.py` are
+  gone: no target used Qt Mobility.
 
 ## 0.1.0 - 2026-10-15
 

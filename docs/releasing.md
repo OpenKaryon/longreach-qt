@@ -30,6 +30,6 @@ number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 ## Updates
 
 Security fixes in OpenSSL 3 are picked up by moving `OPENSSL_VERSION` and its
-SHA256; OpenSSL 1.0.2u (the Qt 4 i386 targets) receives none, which is why it
+SHA256; OpenSSL 1.0.2u (every Qt 4 target but win-amd64) receives none, which is why it
 is used only where nothing newer runs. Newer Qt patch releases are adopted
 when the patch series still apply and the suite passes on every floor.

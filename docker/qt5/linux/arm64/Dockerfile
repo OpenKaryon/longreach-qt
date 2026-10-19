@@ -14,7 +14,11 @@
 #   final       the SDK plus the tests/ suite
 
 # ---------------------------------------------------------------------------
-FROM ubuntu:14.04 AS sysroot
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM ${BASE_REGISTRY}/ubuntu:14.04@sha256:64483f3496c1373bfd55348e88694d1c4d0c9b660dee6bfef5e12f43b9933b30 AS sysroot
 COPY scripts/build/qt5-linux-arm64/packages.txt /tmp/packages.txt
 # The arm64 packages come from ports.ubuntu.com, verified by apt; the
 # architecture-independent ones (protocol headers) from the amd64 archive.
@@ -34,7 +38,7 @@ RUN set -eux; \
     ls /debs | wc -l
 
 # ---------------------------------------------------------------------------
-FROM ubuntu:16.04 AS toolchain
+FROM ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
 ARG PARALLEL_JOBS=6
 ENV JOBS=${PARALLEL_JOBS} DEBIAN_FRONTEND=noninteractive
 # The -dev packages give the headers and the function names of the optional
@@ -137,6 +141,8 @@ ENV PATH="/usr/local/Qt-5.15/bin:${PATH}" \
 ARG CMAKE_VERSION="3.28.6"
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
     rm -rf /var/lib/apt/lists/*
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 ENV PATH="/opt/cmake/bin:${PATH}"

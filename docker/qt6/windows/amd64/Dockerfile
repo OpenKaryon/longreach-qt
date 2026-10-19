@@ -4,7 +4,10 @@
 # Qt 6 for Windows x86_64 from Windows 7 SP1, cross-built with LLVM-MinGW
 # (MSVCRT) and the host tools from the qt6-host image.
 
-ARG QT_VERSION=6.10.1
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG QT_VERSION=6.8.4
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG QT6_HOST_IMAGE=qt6-host
 ARG LLVM_MINGW_VERSION=20241217
@@ -15,7 +18,7 @@ ARG PARALLEL_JOBS=""
 # qt-src: the Qt source archive
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS qt-src
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS qt-src
 
 ARG QT_VERSION
 ARG QT_ARCHIVE
@@ -31,7 +34,7 @@ COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 
 FROM ${QT6_HOST_IMAGE} AS host-qt
 
-FROM debian:12 AS builder
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -104,7 +107,7 @@ RUN tar -xJf qt-src.tar.xz --wildcards \
 # patches/qt6/all for every Qt 6 target, patches/qt6/windows for Windows: the
 # Windows 7 backport, which selects newer APIs at run time.
 RUN cd ${QT_SRC_DIR} && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 < "$p"; done
+    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 < "$p" || exit 1; done
 
 RUN cd ${QT_SRC_DIR} && \
     find . \( -name "configure" -o -name "*.sh" -o -name "*.pl" \) -print0 \
@@ -145,7 +148,7 @@ RUN --mount=type=cache,id=qt6-win-amd64-ccache,target=/root/.cache/ccache \
 # final: LLVM-MinGW, the host tools and the installed SDK
 # ---------------------------------------------------------------------------
 
-FROM debian:12-slim
+FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 
 ENV DEBIAN_FRONTEND=noninteractive
 

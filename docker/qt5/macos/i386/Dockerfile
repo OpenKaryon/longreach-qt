@@ -98,6 +98,8 @@ ENV PATH="/usr/local/Qt-5.15/bin:$PATH"
 
 # CMake for the tests/ suite; see the amd64 Dockerfile.
 ARG CMAKE_VERSION="3.28.6"
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 

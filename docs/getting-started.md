@@ -56,7 +56,7 @@ Useful variables:
 | Variable | Default | |
 |----------|---------|---|
 | `PARALLEL_JOBS` | 6 | compiler jobs inside the build |
-| `LICENSE_PROFILE` | `gpl-enabled` | `lgpl-friendly` leaves out the GPL-only Qt modules ([licensing](licensing.md)); another profile is added to the image name (`qt5-linux-amd64-lgpl-friendly`) |
+| `LICENSE_PROFILE` | `gpl-enabled` | `lgpl-friendly` leaves out the GPL-only Qt modules, on the Linux Qt 5/6 targets ([licensing](licensing.md)); another profile is added to the image name (`qt5-linux-amd64-lgpl-friendly`) |
 | `DOWNLOAD_DIR` | `downloads` | where the inputs are kept |
 | `QT4_VERSION`, `QT5_VERSION`, `QT6_VERSION` | 4.8.7, 5.15.19, 6.8.4 | another version also needs its `*_SHA256` (and patches that apply to it) |
 | `QT5_MACOS_TARGET_AMD64` | 10.6 | a higher Qt 5 macOS deployment target leaves out the static OpenSSL and libc++ the old systems need |
@@ -71,8 +71,10 @@ docker run --rm -v "$PWD:/src" -w /src qt5-win-i386 \
     'mkdir -p build && cd build && qmake ../app.pro && make -j8'
 ```
 
-The Qt 4 and Qt 5 images take the command as one argument (their
-entrypoint is `bash -l -c`); with a Qt 6 image write `bash -c '...'`.
+The Qt 5 images and the Qt 4 macOS and win-amd64 ones take the command as
+one argument (their entrypoint is `bash -l -c`). The Qt 4 Linux images start
+`bash`, so write `-c '...'`; with qt4-win-i386 and the Qt 6 images write
+`bash -c '...'`.
 
 Qt 4 and Qt 5 SDKs carry qmake (configured for the target: `qmake` in the
 image cross-compiles); Qt 5 and Qt 6 SDKs work with CMake through the
@@ -98,7 +100,7 @@ Qt 4 and Lucid mkspecs do that already.
 
 Images are built locally and tagged `qt<N>-<os>-<arch>` (`qt5-macos-i386`,
 `qt4-win-i386`); a `LICENSE_PROFILE` other than the default adds itself
-(`qt5-macos-i386-lgpl-friendly`). Qt 4 images carry no profile: every Qt 4
+(`qt5-linux-i386-lgpl-friendly`). Qt 4 images carry no profile: every Qt 4
 module is under the LGPL. No prebuilt images are published for
 0.1.0; [releasing.md](releasing.md) says what later releases will publish.
 

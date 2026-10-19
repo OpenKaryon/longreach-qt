@@ -3,20 +3,28 @@
 #
 # Qt 4.8.7, static, for Intel Macs from Mac OS X 10.4 Tiger, with the legacy
 # osxcross branch (current osxcross rejects SDKs older than 10.6).
-FROM --platform=linux/amd64 ubuntu:22.04 AS toolchain
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS toolchain
 ARG PARALLEL_JOBS=6
 ARG OSXCROSS_REF=f547d14e6ac6c5bb0ddd7563651eb29057e1d755
+ARG LAB_GIT=https://github.com/OpenKaryonLab
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential clang llvm-dev cmake git patch python3 perl curl ca-certificates \
     autoconf automake libtool libssl-dev libxml2-dev liblzma-dev zlib1g-dev \
     libbz2-dev bzip2 xz-utils file && rm -rf /var/lib/apt/lists/*
 COPY downloads/MacOSX10.4u.sdk.tar.xz /tmp/MacOSX10.4u.sdk.tar.xz
+COPY scripts/build/osxcross-sources.sh scripts/build/git-fetch-pinned.sh /tmp/
 RUN echo 'd28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021  /tmp/MacOSX10.4u.sdk.tar.xz' | sha256sum -c - \
-    && git clone https://github.com/tpoechtrager/osxcross.git /opt/osxcross \
-    && cd /opt/osxcross && git checkout "$OSXCROSS_REF" \
+    && bash /tmp/git-fetch-pinned.sh /opt/osxcross "$OSXCROSS_REF" "$LAB_GIT/osxcross.git" \
+    && cd /opt/osxcross \
     && mv /tmp/MacOSX10.4u.sdk.tar.xz tarballs/ \
-    && UNATTENDED=1 OSX_VERSION_MIN=10.4 JOBS="$PARALLEL_JOBS" \
+    && LAB_GIT="$LAB_GIT" bash /tmp/osxcross-sources.sh /opt/osxcross-sources \
+       cctools-port=b73df358be0cd809c6ccf3cc26989320aa6a9b20 xar=5fa4675419cfec60ac19a9c7f7c2d0e7c831a497 \
+    && TP_OSXCROSS_DEV=/opt/osxcross-sources UNATTENDED=1 OSX_VERSION_MIN=10.4 JOBS="$PARALLEL_JOBS" \
        TARGET_DIR=/opt/tiger-toolchain ./build.sh
 ENV PATH=/opt/tiger-toolchain/bin:$PATH
 ENV MACOSX_DEPLOYMENT_TARGET=10.4

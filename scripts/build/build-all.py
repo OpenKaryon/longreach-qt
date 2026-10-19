@@ -29,7 +29,7 @@ several targets at once keep --jobs x --make-jobs within the machine.
 
 Logs and a summary (summary.md, summary.json) go to build/build-all-<time>/.
 Exits 1 if any target failed. This is a long run (hours per target without
-the Docker cache) and is deliberately not a make target.
+the Docker cache); make build-all and build-all-examples run it.
 """
 from __future__ import annotations
 

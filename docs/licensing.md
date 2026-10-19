@@ -34,7 +34,10 @@ user's commercial agreement with The Qt Company.
 | `gpl-enabled` | Everything above plus GPL-only Qt add-ons | A distributed application that links a GPL-only module must use GPL-compatible terms and provide corresponding source, unless commercial Qt terms cover it |
 | `commercial-qt` | Same technical module set as `gpl-enabled` | Rights come from the user's commercial Qt agreement; selecting this name does not grant a license |
 
-Select the profile on every Make target with `LICENSE_PROFILE`:
+Select the profile on a Make target with `LICENSE_PROFILE`. `lgpl-friendly`
+is enforced by the Linux Qt 5/6 images; the Windows and macOS ones do not
+leave the GPL-only modules out yet, so their targets refuse it rather than
+build an image that carries the name:
 
 ```sh
 make qt5-linux-amd64 LICENSE_PROFILE=lgpl-friendly
@@ -101,7 +104,7 @@ GPL-enabled because it can link that module in a full SDK. The
 `lgpl-friendly` smoke build does not discover GPL-only modules, so its
 `network-gui` uses the Qt Network fallback instead.
 
-The first enforced implementation is the Qt 5/6 Linux amd64 path. Under
+The enforced implementation is the Qt 5/6 Linux path (amd64, i386, arm64). Under
 `lgpl-friendly`, Qt configure omits Charts, Data Visualization, Quick3D,
 Network Authorization and Virtual Keyboard plus the corresponding Qt 6 GPL
 add-ons. The smoke CMake project independently refuses to discover those

@@ -4,7 +4,10 @@
 # Qt 6 for the Linux build host, with the tools every cross target needs (moc,
 # uic, rcc, lupdate, qscxmlc, repc, ...).
 
-ARG QT_VERSION=6.10.1
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG QT_VERSION=6.8.4
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
 
@@ -12,7 +15,7 @@ ARG PARALLEL_JOBS=""
 # qt-src: the Qt source archive
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS qt-src
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS qt-src
 
 ARG QT_VERSION
 ARG QT_ARCHIVE
@@ -26,7 +29,7 @@ COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 # builder: Qt for the host with all tools
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS builder
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -83,7 +86,7 @@ RUN ${QT_SRC_DIR}/configure \
 # final: the installed host Qt only
 # ---------------------------------------------------------------------------
 
-FROM debian:12-slim
+FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 
 ENV DEBIAN_FRONTEND=noninteractive
 

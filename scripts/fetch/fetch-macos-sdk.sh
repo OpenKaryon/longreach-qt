@@ -91,6 +91,10 @@ fi
 echo "Packing $SDK_TARBALL ..."
 # -p keeps the permissions, and writing to a temporary name means an interrupted
 # run cannot leave a half-written tarball that looks finished to make.
+# pipefail: a tar that fails half-way must not leave a short archive behind
+# xz's success; the archive is tested before it gets its name.
+set -o pipefail
 tar -cpf - "$SDK_DIR" | xz -T0 -6 > "/work/$SDK_TARBALL.part"
+xz -t "/work/$SDK_TARBALL.part"
 mv "/work/$SDK_TARBALL.part" "/work/$SDK_TARBALL"
 ls -la "/work/$SDK_TARBALL"

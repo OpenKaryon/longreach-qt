@@ -62,7 +62,7 @@ QT5_MACOS_I386_LINK_SDK_SHA256 ?= e5cf1c4026fa2b538201268d1b057854eb6e47676ff31a
 # The amd64 toolchain stage at 10.6, which the i386 image builds on.
 QT5_MACOS_TOOLCHAIN_106_IMAGE := qt5-macos-toolchain-10.6
 
-QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg OSXCROSS_REPO="$(OSXCROSS_REPO)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
+QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg LAB_GIT="$(LAB_GIT)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
 
 QT5_BUILD_ARGS = --build-arg QT_FULL_VERSION=$(QT5_VERSION) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg LICENSE_PROFILE=$(LICENSE_PROFILE)
 QT5_WINDOWS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg QT_OPENGL_CONFIG="$(QT5_OPENGL_CONFIG)"
@@ -81,14 +81,17 @@ $(QT5_ARCHIVE_PATH):
 # Windows: the XP backport; one binary takes the newer paths at run time up to
 # Windows 11.
 qt5-win-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/i386/Dockerfile -t $(QT5_WIN_I386_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/i386/Dockerfile -t $(QT5_WIN_I386_IMAGE) .
 
 qt5-win-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/amd64/Dockerfile -t $(QT5_WIN_AMD64_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/amd64/Dockerfile -t $(QT5_WIN_AMD64_IMAGE) .
 
 # Windows on ARM starts at Windows 10; the same patches apply.
 qt5-win-arm64: $(QT5_INPUTS) $(LLVM_MINGW_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) --build-arg QT_OPENGL_CONFIG="$(QT5_OPENGL_CONFIG)" --build-arg LLVM_MINGW_ARCHIVE="$(LLVM_MINGW_ARCHIVE)" --build-arg LLVM_MINGW_SHA256="$(LLVM_MINGW_SHA256)" -f docker/qt5/windows/arm64/Dockerfile -t $(QT5_WIN_ARM64_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) --build-arg QT_OPENGL_CONFIG="$(QT5_OPENGL_CONFIG)" --build-arg LLVM_MINGW_ARCHIVE="$(LLVM_MINGW_ARCHIVE)" --build-arg LLVM_MINGW_SHA256="$(LLVM_MINGW_SHA256)" -f docker/qt5/windows/arm64/Dockerfile -t $(QT5_WIN_ARM64_IMAGE) .
 
 $(QT5_LLVM_SRC_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT5_LLVM_SRC_URL)" "$@" "$(QT5_LLVM_SRC_SHA256)"
@@ -104,27 +107,31 @@ download-qt5-macos-i386-link-sdk: $(QT5_MACOS_I386_LINK_SDK_PATH)
 # docs/targets/qt5-linux.md.
 qt5-linux-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
 	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --arch amd64
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/amd64/Dockerfile -t $(QT5_LINUX_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/amd64/Dockerfile -t $(QT5_LINUX_AMD64_IMAGE) .
 
 qt5-linux-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
 	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --arch i386
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/i386/Dockerfile -t $(QT5_LINUX_I386_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/i386/Dockerfile -t $(QT5_LINUX_I386_IMAGE) .
 
 qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE) .
+	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --sources-only
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE) .
 
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_AMD64)"
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
 
 # 32-bit Intel from 10.6: the amd64 toolchain stage, then docker/qt5/macos/i386.
 qt5-macos-i386: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH) $(QT5_MACOS_I386_LINK_SDK_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET=10.6 --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --target toolchain -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_TOOLCHAIN_106_IMAGE) .
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg BASE_IMAGE=$(QT5_MACOS_TOOLCHAIN_106_IMAGE) --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)" -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_I386_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET=10.6 --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --target toolchain -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_TOOLCHAIN_106_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg BASE_IMAGE=$(QT5_MACOS_TOOLCHAIN_106_IMAGE) --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)" -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_I386_IMAGE) .
 
-qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH)
+qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(QT5_LLVM_SRC_PATH)
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_ARM64)"
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_ARM64)" -f docker/qt5/macos/arm64/Dockerfile -t $(QT5_MACOS_ARM64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_ARM64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/arm64/Dockerfile -t $(QT5_MACOS_ARM64_IMAGE) .
 
 # Unpacked in a container: the SDK is thousands of symlinks a Windows
 # filesystem cannot hold. The command is one `bash -c` string so that Git Bash
@@ -136,7 +143,8 @@ $(QT5_MACOS_SDK_PATH):
 	docker run --rm -v "$(CURDIR):/work" -v "$(CURDIR)/scripts:/scripts:ro" \
 		-e SDK_TARBALL="$(QT5_MACOS_SDK_PATH)" -e SDK_DIR="$(QT5_MACOS_SDK_DIR)" \
 		-e SDK_PKG_URL="$(QT5_MACOS_SDK_PKG_URL)" -e SDK_PKG_SHA256="$(QT5_MACOS_SDK_PKG_SHA256)" \
-		ubuntu:22.04 bash -c "bash /scripts/fetch/fetch-macos-sdk.sh"
+		$(BASE_REGISTRY)/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 \
+		bash -c "bash /scripts/fetch/fetch-macos-sdk.sh"
 
 # Copy an image's test suite to artifacts/tests-<image>/, with the same
 # LICENSE_PROFILE as its build:

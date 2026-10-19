@@ -5,7 +5,11 @@
 # from the vault.centos.org archive with Developer Toolset's GCC 11, which links
 # the newer parts of libstdc++ statically: the result needs only RHEL 7's own
 # libraries. xcb-util-cursor (not in RHEL 7) is built statically too.
-FROM centos:7.9.2009
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM ${BASE_REGISTRY}/centos:7.9.2009@sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4
 
 ARG PARALLEL_JOBS=8
 ARG QT_VERSION=6.8.4
@@ -36,16 +40,18 @@ ENV PATH="/opt/rh/devtoolset-11/root/usr/bin:${PATH}" \
     LD_LIBRARY_PATH="/opt/rh/devtoolset-11/root/usr/lib64:/opt/rh/devtoolset-11/root/usr/lib" \
     CC=gcc CXX=g++
 
-# CMake from Kitware's release binaries, which run on glibc 2.17.
+# CMake from Kitware's release binaries, which run on glibc 2.17; checked
+# against the SHA256 from cmake-3.27.9-SHA-256.txt, kept here. From the
+# OpenKaryonLab copy (Kitware's release is on GitHub too).
 ARG CMAKE_VERSION=3.27.9
+ARG CMAKE_SHA256=72b01478eeb312bf1a0136208957784fe55a7b587f8d9f9142a7fc9b0b9e9a28
+ARG LONGREACH_MIRROR=https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/
 RUN set -eu; \
     archive="cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz"; \
-    base="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}"; \
-    wget -q "${base}/${archive}" -O "/tmp/${archive}"; \
-    wget -q "${base}/cmake-${CMAKE_VERSION}-SHA-256.txt" -O /tmp/cmake-sha256.txt; \
-    grep " ${archive}$" /tmp/cmake-sha256.txt | (cd /tmp && sha256sum -c -); \
+    wget -q "${LONGREACH_MIRROR%/}/${archive}" -O "/tmp/${archive}"; \
+    echo "${CMAKE_SHA256}  /tmp/${archive}" | sha256sum -c -; \
     tar -xzf "/tmp/${archive}" -C /opt; \
-    rm "/tmp/${archive}" /tmp/cmake-sha256.txt
+    rm "/tmp/${archive}"
 ENV PATH="/opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin:${PATH}"
 
 # Ninja, for Qt and for the tests/ suite (the smoke macro uses -G Ninja).
@@ -92,7 +98,7 @@ RUN tar -xJf /tmp/qt-src.tar.xz -C /opt && rm /tmp/qt-src.tar.xz
 COPY patches/qt6/all /tmp/patches-qt6-all
 COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
 RUN cd /opt/qt-everywhere-src-${QT_VERSION} && \
-    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p"; done
+    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p" || exit 1; done
 
 RUN mkdir -p /opt/qt-build && \
     cd /opt/qt-build && \

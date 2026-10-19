@@ -5,7 +5,10 @@
 # e1000 driver. The guest's userland is an old distribution's, but its kernel
 # is this one, which emulates the vsyscall page that 64-bit glibc before 2.14
 # calls; container hosts without that emulation cannot run such userlands.
-FROM ubuntu:22.04
+
+# Pinned by digest like the build images (docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         qemu-system-x86 cpio linux-image-generic && \
     rm -rf /var/lib/apt/lists/* && \

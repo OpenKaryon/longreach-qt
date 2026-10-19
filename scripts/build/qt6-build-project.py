@@ -7,14 +7,16 @@ Qt 6 project builder - compile a CMake project against this kit's Qt 6 images.
 This drives the images built from docker/qt6/. It is the Qt 6 counterpart to
 `make qt5-extract-tests`, except that it builds *your* project rather than the
 smoke suite: point it at a directory with a CMakeLists.txt and it configures,
-compiles and copies the artifacts out of the container.
+compiles and copies the artifacts out of the container. The Qt image itself
+comes from `make build-qt6-<platform>`, which fetches every input with its
+pinned SHA256 and rebuilds the image only when those changed.
 
 Usage:
     python scripts/build/qt6-build-project.py <platform> --project <path> [options]
 
 Examples:
     python scripts/build/qt6-build-project.py win64 --project .
-    python scripts/build/qt6-build-project.py linux64 --project /path/to/app --download
+    python scripts/build/qt6-build-project.py linux64 --project /path/to/app
     python scripts/build/qt6-build-project.py macos-arm64 --project . --jobs 8
 
 Paths are resolved against the repository root, so it can be run from anywhere.
@@ -22,10 +24,8 @@ Paths are resolved against the repository root, so it can be run from anywhere.
 
 import argparse
 import platform
-import re
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 
 # Platform aliases and configurations
@@ -49,70 +49,34 @@ PLATFORM_CONFIG = {
     "win-amd64": {
         "image": "qt6-win-amd64",
         "qt_path": "/opt/qt6-amd64",
-        "dockerfile": "docker/qt6/windows/amd64/Dockerfile",
         "artifact_pattern": "*.exe",
-        "needs_host": True,
     },
     "win-arm64": {
         "image": "qt6-win-arm64",
         "qt_path": "/opt/qt6-arm64",
-        "dockerfile": "docker/qt6/windows/arm64/Dockerfile",
         "artifact_pattern": "*.exe",
-        "needs_host": True,
     },
     "linux-amd64": {
         "image": "qt6-linux-amd64",
         "qt_path": "/opt/qt6-linux-amd64",
-        "dockerfile": "docker/qt6/linux/amd64/Dockerfile",
         "artifact_pattern": None,  # executables without extension
-        "needs_host": False,
     },
     "linux-arm64": {
         "image": "qt6-linux-arm64",
         "qt_path": "/opt/qt6-linux-arm64",
-        "dockerfile": "docker/qt6/linux/arm64/Dockerfile",
         "artifact_pattern": None,
-        "needs_host": True,
     },
     "macos-amd64": {
         "image": "qt6-macos-amd64",
         "qt_path": "/opt/qt6-macos-amd64",
-        "dockerfile": "docker/qt6/macos/amd64/Dockerfile",
         "artifact_pattern": "*.app",
-        "needs_host": True,
     },
     "macos-arm64": {
         "image": "qt6-macos-arm64",
         "qt_path": "/opt/qt6-macos-arm64",
-        "dockerfile": "docker/qt6/macos/arm64/Dockerfile",
         "artifact_pattern": "*.app",
-        "needs_host": True,
     },
 }
-
-# Where downloaded build inputs live, matching DOWNLOAD_DIR in the Makefile.
-DOWNLOAD_DIR = "downloads"
-
-# Read from mk/qt6.mk rather than repeated here. Two copies of a version
-# number drift, and the way they drift is silent: this script would go on
-# downloading and naming one archive while `make qt6-*` built another.
-def _qt6_version_from_makefile():
-    makefile = Path(__file__).resolve().parents[2] / "mk" / "qt6.mk"
-    try:
-        text = makefile.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    m = re.search(r"^QT6_VERSION\s*\?=\s*(\S+)", text, re.MULTILINE)
-    return m.group(1) if m else None
-
-
-QT_VERSION = _qt6_version_from_makefile() or "6.8.4"
-QT_SERIES = ".".join(QT_VERSION.split(".")[:2])
-QT_ARCHIVE_NAME = f"qt-everywhere-src-{QT_VERSION}.tar.xz"
-QT_DOWNLOAD_URL = (
-    f"https://download.qt.io/archive/qt/{QT_SERIES}/{QT_VERSION}/single/{QT_ARCHIVE_NAME}"
-)
-
 
 def print_step(msg: str):
     """Print a formatted step message."""
@@ -149,138 +113,6 @@ def check_docker():
         )
     except subprocess.TimeoutExpired:
         print_error("Docker is not responding. Please restart Docker and try again.")
-
-
-def docker_image_exists(image_name: str) -> bool:
-    """Check if a Docker image exists locally."""
-    result = subprocess.run(
-        ["docker", "images", "-q", image_name],
-        capture_output=True,
-        text=True,
-    )
-    return bool(result.stdout.strip())
-
-
-def find_qt_archive(kit_dir: Path, download: bool) -> Path:
-    """Find or download the Qt source archive.
-
-    It has to end up in downloads/. That is the repository convention, and it
-    is also the only place that works: .dockerignore excludes a top-level
-    `/qt-everywhere-*.tar.xz`, so an archive left in the repository root never
-    reaches the build context and the image build fails looking for it.
-    """
-    downloads_dir = kit_dir / DOWNLOAD_DIR
-    archive_path = downloads_dir / QT_ARCHIVE_NAME
-    if archive_path.exists():
-        print(f"Found Qt archive: {archive_path}")
-        return archive_path
-
-    if not download:
-        print_error(
-            f"Qt source archive not found: {archive_path}\n\n"
-            f"Options:\n"
-            f"  1. Download manually from: {QT_DOWNLOAD_URL}\n"
-            f"     and place it in: {downloads_dir}\n\n"
-            f"  2. Use --download to fetch it automatically (~1.3GB):\n"
-            f"     python scripts/build/qt6-build-project.py <platform> "
-            f"--project <path> --download"
-        )
-
-    downloads_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download Qt archive
-    print_step(f"Downloading Qt {QT_VERSION} (~1.3GB, this may take a while)...")
-    print(f"URL: {QT_DOWNLOAD_URL}")
-    print(f"Destination: {archive_path}")
-
-    try:
-
-        def progress_hook(block_num, block_size, total_size):
-            downloaded = block_num * block_size
-            if total_size > 0:
-                percent = min(100, downloaded * 100 / total_size)
-                mb_down = downloaded / (1024 * 1024)
-                mb_total = total_size / (1024 * 1024)
-                print(
-                    f"\r  Progress: {percent:.1f}% ({mb_down:.0f}/{mb_total:.0f} MB)",
-                    end="",
-                    flush=True,
-                )
-
-        urllib.request.urlretrieve(QT_DOWNLOAD_URL, archive_path, progress_hook)
-        print("\n  Download complete!")
-        return archive_path
-
-    except Exception as e:
-        # Clean up partial download
-        if archive_path.exists():
-            archive_path.unlink()
-        print_error(f"Failed to download Qt archive: {e}")
-
-
-def build_qt_image(
-    kit_dir: Path, platform_name: str, config: dict, qt_archive: Path, jobs: int
-):
-    """Build the Qt Docker image for the target platform."""
-    image_name = config["image"]
-
-    if docker_image_exists(image_name):
-        print(f"Qt image already exists: {image_name}")
-        return
-
-    print_step(f"Building Qt image for {platform_name} (this takes 30-60 minutes)...")
-
-    # Build host image first if needed
-    if config["needs_host"] and not docker_image_exists("qt6-host"):
-        print("Building host Qt image first...")
-        cmd = [
-            "docker",
-            "build",
-            "--build-arg",
-            f"QT_VERSION={QT_VERSION}",
-            "--build-arg",
-            f"QT_ARCHIVE={qt_archive.name}",
-        ]
-        if jobs:
-            cmd.extend(["--build-arg", f"PARALLEL_JOBS={jobs}"])
-        cmd.extend(
-            [
-                "-f",
-                str(kit_dir / "docker" / "qt6" / "host" / "Dockerfile"),
-                "-t",
-                "qt6-host",
-                str(kit_dir),
-            ]
-        )
-        result = subprocess.run(cmd)
-        if result.returncode != 0:
-            print_error("Failed to build host Qt image")
-
-    # Build target platform image
-    dockerfile = kit_dir / config["dockerfile"]
-    cmd = [
-        "docker",
-        "build",
-        "--build-arg",
-        f"QT_VERSION={QT_VERSION}",
-        "--build-arg",
-        f"QT_ARCHIVE={qt_archive.name}",
-    ]
-    if jobs:
-        cmd.extend(["--build-arg", f"PARALLEL_JOBS={jobs}"])
-    cmd.extend(
-        [
-            "-f",
-            str(dockerfile),
-            "-t",
-            image_name,
-            str(kit_dir),
-        ]
-    )
-
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print_error(f"Failed to build Qt image for {platform_name}")
 
 
 def build_project(
@@ -363,7 +195,7 @@ Supported platforms:
 
 Examples:
   python scripts/build/qt6-build-project.py win64 --project .
-  python scripts/build/qt6-build-project.py linux64 --project ../app --download
+  python scripts/build/qt6-build-project.py linux64 --project ../app
   python scripts/build/qt6-build-project.py macos-arm64 --project . --output ./dist
         """,
     )
@@ -383,11 +215,6 @@ Examples:
         "--output",
         "-o",
         help="Output directory for artifacts (default: <project>/build/<platform>)",
-    )
-    parser.add_argument(
-        "--download",
-        action="store_true",
-        help="Download Qt sources if not found locally (~1.3GB)",
     )
     parser.add_argument(
         "--jobs",
@@ -439,27 +266,17 @@ Examples:
     check_docker()
     print("Docker is running.")
 
-    if platform_name in ("win-amd64", "win-arm64"):
-        # Both Windows variants use the Makefile's single canonical recipe per
-        # architecture. In particular, amd64 must never fall back to the old
-        # direct UCRT build, which did not include the Windows 7 backport.
-        command = ["make", f"build-qt6-{platform_name}"]
-        if args.jobs:
-            command.append(f"PARALLEL_JOBS={args.jobs}")
-        if args.rebuild_qt:
-            command.append("NO_CACHE=1")
-        if subprocess.run(command, cwd=kit_dir).returncode:
-            print_error(f"Failed to prepare Qt image for {platform_name}")
-    else:
-        # Remove existing image if rebuild requested.
-        if args.rebuild_qt and docker_image_exists(config["image"]):
-            print(f"Removing existing image: {config['image']}")
-            subprocess.run(["docker", "rmi", config["image"]], capture_output=True)
-        if not docker_image_exists(config["image"]):
-            qt_archive = find_qt_archive(kit_dir, args.download)
-            build_qt_image(kit_dir, platform_name, config, qt_archive, args.jobs)
-        else:
-            print(f"\nUsing existing Qt image: {config['image']}")
+    # Every platform through the Makefile's recipe: it fetches the inputs the
+    # Dockerfile copies, checks their SHA256, builds qt6-host where needed and
+    # skips an image whose inputs have not changed.
+    print_step(f"Preparing the Qt image (make build-qt6-{platform_name})...")
+    command = ["make", f"build-qt6-{platform_name}"]
+    if args.jobs:
+        command.append(f"PARALLEL_JOBS={args.jobs}")
+    if args.rebuild_qt:
+        command.append("NO_CACHE=1")
+    if subprocess.run(command, cwd=kit_dir).returncode:
+        print_error(f"Failed to prepare Qt image for {platform_name}")
 
     # Build the project
     build_project(project_dir, output_dir, platform_name, config)

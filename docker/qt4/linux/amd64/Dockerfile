@@ -17,8 +17,12 @@
 #   final      the toolchain plus the installed SDK
 
 # ---------------------------------------------------------------------------
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG SARGE_PLATFORM=amd64
-FROM --platform=linux/${SARGE_PLATFORM} ubuntu:16.04 AS toolchain
+FROM --platform=linux/${SARGE_PLATFORM} ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
 ARG SARGE_ARCH=amd64
 ENV SARGE_ARCH=${SARGE_ARCH}
 

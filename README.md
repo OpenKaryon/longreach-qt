@@ -9,8 +9,8 @@ binary.
 | Qt | Windows | Linux | macOS |
 |----|---------|-------|-------|
 | 4.8.7 | Windows 95 OSR2 (i386); XP x64* (amd64) | Debian 3.1 Sarge, glibc 2.3.2 (i386; amd64*) | Mac OS X 10.2 Jaguar (PowerPC); 10.4 Tiger (Intel) |
-| 5.15.19 | Windows XP SP3 (i386, amd64); Windows 10* (arm64) | Ubuntu 10.04 Lucid, glibc 2.11 (amd64; i386*); Ubuntu 16.04 (arm64) | Mac OS X 10.6 Snow Leopard (x86_64, i386); 11.0* (arm64) |
-| 6.8.4 | Windows 7 SP1 (amd64); Windows 10* (arm64) | RHEL/CentOS 7, glibc 2.17 (amd64); Debian 12 (arm64) | macOS 10.13 High Sierra (x86_64); 11.0* (arm64) |
+| 5.15.19 | Windows XP SP3 (i386); XP x64* (amd64); Windows 10* (arm64) | Ubuntu 10.04 Lucid, glibc 2.11 (amd64, i386); Ubuntu 14.04, glibc 2.19 (arm64) | Mac OS X 10.6 Snow Leopard (x86_64, i386); 11.0* (arm64) |
+| 6.8.4 | Windows 7 SP1 (amd64); Windows 10* (arm64) | RHEL/CentOS 7, glibc 2.17 (amd64, arm64) | macOS 10.13 High Sierra (x86_64); 11.0* (arm64) |
 
 \* built and audited, not yet run on that system.
 
@@ -70,7 +70,8 @@ options (`--only`, `--skip`, `--no-cache`, ...).
 - One Dockerfile per target under `docker/qt<N>/<os>/`, three or more stages:
   toolchain, builder, and a final image holding the toolchain plus the
   installed SDK.
-- Every input is pinned by SHA256 (`scripts/fetch/`).
+- Every input is pinned by SHA256 (`scripts/fetch/`), and copied to OpenKaryonLab
+  where its licence allows ([docs/sources.md](docs/sources.md)).
 - The same eight test applications build against Qt 4, 5 and 6 and cover the
   public API of each (100% of the classes the kit ships, by
   `scripts/tests/check_coverage.py`).

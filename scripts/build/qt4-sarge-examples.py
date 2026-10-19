@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-"""Publish the shared 24-app suite built against the installed Sarge SDK."""
+"""Publish the shared test suite (tests/) built against the installed Sarge SDK."""
 import argparse
 from contextlib import nullcontext
 import hashlib

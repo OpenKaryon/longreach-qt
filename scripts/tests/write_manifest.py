@@ -85,7 +85,7 @@ def license_block(profile: str, qt_version: str, matrix_path: Path,
         "profile": profile,
         "matrix_schema": matrix["schema"],
         "notice": (
-            "The repository's MIT license does not replace Qt module licenses. "
+            "The kit's own license (GPL-3.0-or-later) does not replace Qt module licenses. "
             "Classification is per linked executable; see docs/licensing.md."
         ),
         "applications": classified,

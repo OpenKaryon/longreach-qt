@@ -7,8 +7,8 @@
 # build logs and the whole .git history were shipped over and thrown away on
 # every single build.
 #
-# Note that build *arguments* are what pick the SDK, so the tarball cannot be
-# listed here - see docker/macos/*/Dockerfile.
+# The macOS SDKs travel from downloads/ (docker/qt*/macos/*/Dockerfile COPY
+# the one their build arguments name).
 
 .git
 .gitignore
@@ -21,11 +21,8 @@ README.md
 CHANGELOG.md
 docs/
 
-# The Qt 6 examples are bind-mounted into an already-built image at run time
-# (see the qt6-*-examples targets), never COPYed during a build, so they have
-# no reason to travel with the context. cmake/ is not listed: the Qt 6
-# Dockerfiles do COPY the toolchain files out of it.
-examples/
+# cmake/ is not listed: the Qt 6 Dockerfiles COPY the toolchain files out of
+# it.
 
 # The same tarballs at the top level, from before downloads/ existed. Nothing
 # reads them any more, but a working copy that predates the move still has them,

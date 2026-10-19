@@ -5,7 +5,10 @@
 # tools from the qt6-host image.
 
 
-ARG QT_VERSION=6.10.1
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG QT_VERSION=6.8.4
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
 ARG QT6_HOST_IMAGE=qt6-host
@@ -15,7 +18,6 @@ ARG OSX_SDK_VERSION=14.0
 ARG OSX_DEPLOYMENT_TARGET=11.0
 ARG OSXCROSS_MIN_VERSION=11.0
 ARG OSX_SDK="MacOSX${OSX_SDK_VERSION}.sdk.tar.xz"
-ARG OSX_SDK_URL="https://github.com/joseluisq/macosx-sdks/releases/download/${OSX_SDK_VERSION}/${OSX_SDK}"
 ARG OSX_SDK_SHA256=5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
 ARG OSXCROSS_REF=27d21e4977c9751d01199c7a226a6faf494c3dd9
 
@@ -25,7 +27,7 @@ FROM ${QT6_HOST_IMAGE} AS host-qt
 # qt-src: the Qt source archive
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS qt-src
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS qt-src
 
 ARG QT_VERSION
 ARG QT_ARCHIVE
@@ -39,16 +41,16 @@ COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 # osxcross: the macOS SDK and toolchain
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS osxcross-builder
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS osxcross-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PARALLEL_JOBS
 ARG OSX_SDK
-ARG OSX_SDK_URL
 ARG OSX_SDK_SHA256
 ARG OSXCROSS_MIN_VERSION
 ARG OSXCROSS_REF
+ARG LAB_GIT=https://github.com/OpenKaryonLab
 
 RUN apt-get update && apt-get install -y \
     build-essential cmake python3 perl git patch wget nano \
@@ -57,25 +59,32 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev zlib1g-dev liblzma-dev \
     && rm -rf /var/lib/apt/lists/*
 
+COPY scripts/build/osxcross-sources.sh scripts/build/git-fetch-pinned.sh /tmp/
+# The SDK, fetched by make with its SHA256 (not redistributable, so not in
+# the OpenKaryonLab copy; keep your own: docs/sources.md).
+ARG DOWNLOAD_DIR="downloads"
+COPY ${DOWNLOAD_DIR}/${OSX_SDK} /tmp/${OSX_SDK}
 RUN set -eux; \
-    cd /opt; \
-    git clone https://github.com/tpoechtrager/osxcross.git; \
+    bash /tmp/git-fetch-pinned.sh /opt/osxcross "${OSXCROSS_REF}" "${LAB_GIT}/osxcross.git"; \
     cd /opt/osxcross; \
-    git checkout "${OSXCROSS_REF}"; \
     echo "osxcross ref resolved to $(git rev-parse HEAD)"; \
     mkdir -p tarballs; \
-    wget -q "${OSX_SDK_URL}" -O "tarballs/${OSX_SDK}"; \
+    mv "/tmp/${OSX_SDK}" "tarballs/${OSX_SDK}"; \
     echo "${OSX_SDK_SHA256}  tarballs/${OSX_SDK}" | sha256sum -c -; \
+    LAB_GIT="${LAB_GIT}" bash /tmp/osxcross-sources.sh /opt/osxcross-sources \
+        apple-libtapi=640b4623929c923c0468143ff2a363a48665fa54 cctools-port=e101a6940dcb5988808a16626bc43851f00dc05f xar=5fa4675419cfec60ac19a9c7f7c2d0e7c831a497; \
+    TP_OSXCROSS_DEV=/opt/osxcross-sources \
     JOBS="${PARALLEL_JOBS:-4}" UNATTENDED=1 OSX_VERSION_MIN="${OSXCROSS_MIN_VERSION}" ./build.sh
 
 ENV OSXCROSS_ROOT=/opt/osxcross
 ENV PATH="${OSXCROSS_ROOT}/bin:${OSXCROSS_ROOT}/target/bin:${PATH}"
 
 # @available checks call __isPlatformVersionAtLeast, from the Darwin compiler
-# runtime, which osxcross does not install: built from the pinned LLVM source.
+# runtime, which osxcross does not install: built from the pinned LLVM source
+# (llvm-project f28c006, fetched by make with its SHA256).
+ARG DOWNLOAD_DIR="downloads"
+COPY ${DOWNLOAD_DIR}/os_version_check-f28c006.c /tmp/os_version_check.c
 RUN set -eux; \
-    wget -q https://raw.githubusercontent.com/llvm/llvm-project/f28c006a5895fc0e329fe15fead81e37457cb1d1/compiler-rt/lib/builtins/os_version_check.c \
-      -O /tmp/os_version_check.c; \
     echo '846d994b7dc1f229a3086b113ad946befaf963c5d6e8838323b17447bb5749fb  /tmp/os_version_check.c' | sha256sum -c -; \
     compiler="$(find /opt/osxcross/target/bin -maxdepth 1 -name 'arm64-apple-darwin*-clang' ! -name '*-cmake-clang' | sort | tail -1)"; \
     test -n "${compiler}"; \
@@ -95,7 +104,7 @@ RUN set -eux; \
 # builder: Qt for macOS arm64
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS builder
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -155,7 +164,7 @@ RUN tar -xJf qt-src.tar.xz --wildcards \
 # patches/qt6/all for every Qt 6 target, patches/qt6/macos for macOS: newer
 # APIs are chosen at run time, or at compile time from the deployment target.
 RUN cd "${QT_SRC_DIR}" && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; patch -p1 < "$p"; done
+    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; patch -p1 < "$p" || exit 1; done
 
 RUN cd "${QT_SRC_DIR}" && \
     find . \( -name "configure" -o -name "*.sh" -o -name "*.pl" \) -print0 \
@@ -212,7 +221,7 @@ RUN --mount=type=cache,id=qt6-macos-arm64-ccache,target=/root/.cache/ccache \
 # final: osxcross, the host tools and the installed SDK
 # ---------------------------------------------------------------------------
 
-FROM debian:12-slim
+FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG OSX_SDK_VERSION

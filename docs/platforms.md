@@ -46,7 +46,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
-| `qt5-win-i386`, `qt5-win-amd64` | Windows XP SP3 | Windows XP SP3 (VMware, i386) | 8/8, 478 passed, 0 failed ([json](results/qt5-win-i386-xp-sp3-vmware-20261010.json)); earlier also on real XP hardware |
+| `qt5-win-i386`, `qt5-win-amd64` | Windows XP SP3 (i386), XP x64 SP2 (amd64) | Windows XP SP3 (VMware, i386) | 8/8, 478 passed, 0 failed ([json](results/qt5-win-i386-xp-sp3-vmware-20261010.json)); earlier also on real XP hardware |
 | | | Windows 11 (the build host), amd64 | 8/8, 498 passed, 0 failed ([json](results/qt5-win-amd64-win11-host-20261010.json)); the two native print dialog checks skip there |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 498 passed, 0 failed ([json](results/qt5-linux-amd64-lucid-vmware-20261014.json)) |

@@ -11,7 +11,11 @@
 #   final        the toolchain plus /opt/qt4-jaguar and /opt/openssl-jaguar
 
 # ---------------------------------------------------------------------------
-FROM --platform=linux/amd64 ubuntu:22.04 AS osxcross
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS osxcross
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential clang llvm-dev cmake git patch python3 perl curl ca-certificates \
@@ -19,8 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libbz2-dev bzip2 xz-utils file && rm -rf /var/lib/apt/lists/*
 ARG JOBS=6
 RUN apt-get update && apt-get install -y --no-install-recommends libgmp-dev libmpfr-dev libmpc-dev wget && rm -rf /var/lib/apt/lists/*
-RUN git clone --branch ppc-test --single-branch https://github.com/tpoechtrager/osxcross.git /opt/osxcross-ppc \
-    && cd /opt/osxcross-ppc && git checkout af8300c6b3e099c91970a8d2d0f3bffe703f2421
+# osxcross's ppc-test branch, by commit, from the OpenKaryonLab copy.
+ARG LAB_GIT=https://github.com/OpenKaryonLab
+COPY scripts/build/git-fetch-pinned.sh /tmp/
+RUN bash /tmp/git-fetch-pinned.sh /opt/osxcross-ppc af8300c6b3e099c91970a8d2d0f3bffe703f2421 \
+        "$LAB_GIT/osxcross.git"
 COPY downloads/MacOSX10.4u.sdk.tar.xz /opt/osxcross-ppc/tarballs/
 RUN cd /opt/osxcross-ppc \
     && echo 'd28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021  tarballs/MacOSX10.4u.sdk.tar.xz' | sha256sum -c - \

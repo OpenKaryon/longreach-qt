@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-"""Build and publish the shared 24-app suite against the public Win95 SDK."""
+"""Build and publish the shared test suite (tests/) against the public Win95 SDK."""
 import argparse
 from contextlib import nullcontext
 import hashlib

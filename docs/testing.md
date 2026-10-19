@@ -32,10 +32,12 @@ from `<app>/<app>.pro` (`scripts/build/qt4-tests.sh`, which checks the same
 list). Where a module is newer than Qt 4 the application uses the
 period-equivalent one, so every generation produces the same names.
 
-The Qt 4/5 SDK images build the suite in their final stage, which proves the
-installed SDK stands on its own. `make <target>-examples` puts the binaries
-and a `manifest.json` in `artifacts/tests-<image>/` for every target (Qt 4
-macOS as application bundles in a tar.gz).
+The Qt 5 SDK images and qt4-win-amd64 build the suite in their final stage,
+which proves the installed SDK stands on its own; the other Qt 4 targets build
+it in `make <target>-examples`. That target puts the
+binaries in `artifacts/tests-<image>/` for every target, with a
+`manifest.json`, except Qt 4 macOS: application bundles in a tar.gz with
+`build-inputs.json` and `macho-audit.json`.
 
 ## Coverage
 
@@ -65,7 +67,8 @@ python scripts/run/run.py --suite artifacts/tests-qt4-win-i386 --host windows-xp
 
 `docker:<distro>` hosts are built in: a stock container of CentOS 7,
 Ubuntu 16.04, 18.04 or 24.04, Debian 13, Fedora or Arch, 32-bit Ubuntu 16.04
-or Debian 12, or arm64 Ubuntu 16.04 or Debian 12 under emulation, with the
+or Debian 12, or arm64 CentOS 7, Ubuntu 14.04, 16.04 or Debian 12 under
+emulation, with the
 libraries a desktop has and Xvfb. `qemu:<distro>` boots an old
 distribution's userland in QEMU under a current kernel, for systems a
 container host cannot run (64-bit glibc before 2.14 needs the vsyscall page,

@@ -41,6 +41,13 @@ use_source=0
 
 echo "cmake.sh: version=$version host=$host_triple prefix=$prefix source=$use_source"
 
+# The OpenKaryonLab copy of the file (scripts/fetch/sources.json). Kitware's
+# release is on GitHub too, so it would be no fallback.
+mirror=${LONGREACH_MIRROR:-https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/}
+release() {
+    fetch "${mirror%/}/$1" "$2"
+}
+
 # Every archive is checked against Kitware's published SHA-256 list. Another
 # version needs its own line here (from cmake-<version>-SHA-256.txt).
 expected_sha256() {
@@ -62,13 +69,13 @@ cd /tmp
 if [ "$use_source" = 0 ]; then
     archive="cmake-${version}-linux-${binary_arch}.tar.gz"
     echo "cmake.sh: fetching official binary $archive"
-    fetch "https://github.com/Kitware/CMake/releases/download/v${version}/${archive}" cmake-bin.tar.gz
+    release "$archive" cmake-bin.tar.gz
     check "$archive" cmake-bin.tar.gz
     tar -xzf cmake-bin.tar.gz -C "$prefix" --strip-components=1
     rm -f cmake-bin.tar.gz
 else
     echo "cmake.sh: building from source"
-    fetch "https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}.tar.gz" cmake-src.tar.gz
+    release "cmake-${version}.tar.gz" cmake-src.tar.gz
     check "cmake-${version}.tar.gz" cmake-src.tar.gz
     tar -xzf cmake-src.tar.gz
     cd "cmake-${version}"

@@ -14,7 +14,11 @@
 # ---------------------------------------------------------------------------
 # toolchain: the MinGW cross-compiler, shared by builder and final.
 # ---------------------------------------------------------------------------
-FROM --platform=linux/amd64 ubuntu:18.04 AS toolchain
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:18.04@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98 AS toolchain
 
 RUN \
     set -eux && \
@@ -92,6 +96,8 @@ ENV PATH="${PATH}:/usr/local/Qt-5.15/bin"
 # CMake for tests/ (Qt 5.15's static plugin import needs 3.15+; 18.04 has
 # 3.10), installed here so the builder's cache stays valid.
 ARG CMAKE_VERSION="3.28.6"
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 

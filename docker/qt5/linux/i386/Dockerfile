@@ -18,8 +18,12 @@
 # The tests/ suite is built here and run on Lucid or a newer i386 distribution.
 
 # ---------------------------------------------------------------------------
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG LUCID_PLATFORM=386
-FROM --platform=linux/${LUCID_PLATFORM} ubuntu:16.04 AS toolchain
+FROM --platform=linux/${LUCID_PLATFORM} ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
 ARG LUCID_ARCH=i386
 ARG PARALLEL_JOBS=6
 ENV LUCID_JOBS=${PARALLEL_JOBS} DEBIAN_FRONTEND=noninteractive
@@ -112,6 +116,8 @@ ENV PATH="/usr/local/Qt-5.15/bin:${PATH}" \
 ARG CMAKE_VERSION="3.28.6"
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
     rm -rf /var/lib/apt/lists/*
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 ENV PATH="/opt/cmake/bin:${PATH}"

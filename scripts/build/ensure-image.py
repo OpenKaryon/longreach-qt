@@ -37,6 +37,9 @@ ROOT = Path(__file__).resolve().parents[2]
 LABEL = "org.openkaryon.longreach-qt.input-sha256"
 # Build arguments that set how fast, not what, is built.
 SPEED_ARGS = {"PARALLEL_JOBS", "JOBS"}
+# Build arguments that say where pinned inputs come from (a digest, a commit,
+# a SHA256 fixes what they are), so switching to the copies rebuilds nothing.
+SOURCE_ARGS = {"BASE_REGISTRY", "LAB_GIT", "LONGREACH_MIRROR"}
 # Content hashes of large inputs (the downloads), by path, size and mtime.
 HASH_CACHE = ROOT / "build" / ".input-hashes.json"
 # For fingerprint() below, which the Qt 4 -examples scripts use for their stamp.
@@ -333,7 +336,7 @@ def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> t
         context = (ROOT / build["context"]).resolve()
         dockerfile = context / build["dockerfile"] if not Path(build["dockerfile"]).is_absolute() \
             else Path(build["dockerfile"])
-        args = {k: v for k, v in build["args"].items() if k not in SPEED_ARGS}
+        args = {k: v for k, v in build["args"].items() if k not in SPEED_ARGS | SOURCE_ARGS}
         digest.update(json.dumps({"dockerfile": dockerfile.relative_to(ROOT).as_posix(), "args": args,
                                   "target": build["target"], "platform": build["platform"]},
                                  sort_keys=True).encode() + b"\0")

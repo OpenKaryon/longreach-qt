@@ -12,7 +12,8 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import urllib.request
+
+import fetch as fetch_py
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCKS = ROOT / 'scripts/fetch/locks'
@@ -31,31 +32,56 @@ def verify(path, item):
         raise SystemExit('SHA256/size mismatch: ' + str(path))
 
 
+COUNTS = {'verified': 0, 'absent': 0}
+VERIFY_ONLY = False
+
+
 def fetch(item, directory):
     path = directory / item['file']
+    if not path.is_file() and VERIFY_ONLY:
+        COUNTS['absent'] += 1
+        return
     if not path.is_file():
         directory.mkdir(parents=True, exist_ok=True)
-        pending = path.with_suffix(path.suffix + '.pending')
-        with urllib.request.urlopen(item['url'], timeout=120) as response, pending.open('wb') as output:
-            while chunk := response.read(1024 * 1024):
-                output.write(chunk)
+        # fetch.py: the OpenKaryonLab copy for a file sources.json lists, else upstream.
+        pending = Path(fetch_py.download(item['url'], str(path)))
         verify(pending, item)
         pending.replace(path)
     verify(path, item)
-    print('verified ' + path.name, flush=True)
+    COUNTS['verified'] += 1
+    if not VERIFY_ONLY:
+        print('verified ' + path.name, flush=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--download-dir', type=Path, default=ROOT / 'downloads')
     parser.add_argument('--arch', choices=['amd64', 'i386'], default='amd64')
+    parser.add_argument('--sources-only', action='store_true',
+                        help='only the X sources (qt5-linux-arm64 builds them over its own sysroot)')
+    parser.add_argument('--verify-only', action='store_true',
+                        help='check what is already downloaded, for every architecture; fetch nothing')
     args = parser.parse_args()
-    lock = json.loads((LOCKS / f'qt5-lucid-{args.arch}-packages.json').read_text(encoding='utf-8'))
-    for item in lock['packages']:
-        fetch(item, args.download_dir / f'ubuntu-lucid-{args.arch}')
+    if args.verify_only:
+        global VERIFY_ONLY
+        VERIFY_ONLY = True
+        for arch in ('amd64', 'i386'):
+            lock = json.loads((LOCKS / f'qt5-lucid-{arch}-packages.json').read_text(encoding='utf-8'))
+            for item in lock['packages']:
+                fetch(item, args.download_dir / f'ubuntu-lucid-{arch}')
+        for item in json.loads(SOURCES.read_text(encoding='utf-8'))['sources']:
+            fetch(item, args.download_dir / 'lucid-xsrc')
+        fetch(GCC, args.download_dir)
+        print(f"qt5-lucid-fetch.py: {COUNTS['verified']} verified, {COUNTS['absent']} not downloaded")
+        return
+    if not args.sources_only:
+        lock = json.loads((LOCKS / f'qt5-lucid-{args.arch}-packages.json').read_text(encoding='utf-8'))
+        for item in lock['packages']:
+            fetch(item, args.download_dir / f'ubuntu-lucid-{args.arch}')
     for item in json.loads(SOURCES.read_text(encoding='utf-8'))['sources']:
         fetch(item, args.download_dir / 'lucid-xsrc')
-    fetch(GCC, args.download_dir)
+    if not args.sources_only:
+        fetch(GCC, args.download_dir)
 
 
 if __name__ == '__main__':

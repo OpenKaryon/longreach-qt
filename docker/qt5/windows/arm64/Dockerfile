@@ -14,7 +14,11 @@
 # The whole toolchain is one tarball, so the base only supplies python, perl
 # and a shell (the x86 images pin 18.04 for MinGW-w64 runtime v5 instead).
 # ---------------------------------------------------------------------------
-FROM --platform=linux/amd64 debian:12 AS toolchain
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM --platform=linux/amd64 ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS toolchain
 
 # LLVM-MinGW: clang plus the aarch64 mingw-w64 headers and import libraries,
 # from the build context (make download-llvm-mingw). Another release:
@@ -127,6 +131,8 @@ ENV PATH="/usr/local/Qt-5.15/bin:$PATH"
 # CMake for tests/ (Qt 5.15's static plugin import needs 3.15+), installed
 # here so the builder's cache stays valid.
 ARG CMAKE_VERSION="3.28.6"
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 

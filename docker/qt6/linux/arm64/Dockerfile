@@ -10,6 +10,9 @@
 # libraries: OpenSSL and xcb-util-cursor are static, D-Bus is loaded at run
 # time, and Wayland is linked through dlopen stubs.
 
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG QT_VERSION=6.8.4
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
@@ -22,7 +25,7 @@ FROM ${QT6_HOST_IMAGE} AS host-qt
 # toolchain: the cross-compiler, the CentOS 7 aarch64 sysroot and the host Qt
 # ---------------------------------------------------------------------------
 
-FROM debian:12 AS toolchain
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS toolchain
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -121,7 +124,7 @@ RUN tar -xJf /tmp/qt-src.tar.xz -C /opt \
 COPY patches/qt6/all /tmp/patches-qt6-all
 COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
 RUN cd /opt/qt-everywhere-src-${QT_VERSION} && \
-    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p"; done
+    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p" || exit 1; done
 
 COPY cmake/qt6/qt-toolchain-linux-arm64.cmake /workspace/qt-build/toolchain.cmake
 

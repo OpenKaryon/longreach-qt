@@ -54,6 +54,8 @@ import urllib.request
 
 MIRROR = "https://qt.mirror.constant.com/archive/qt"
 OFFICIAL = "https://download.qt.io/archive/qt"
+MIRROR_COPY = os.environ.get("LONGREACH_MIRROR",
+                             "https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/").rstrip("/") + "/"
 
 
 def archive_names(version):
@@ -119,6 +121,21 @@ def try_download(url, dest):
         raise
 
 
+# Failures other than 404 (a timeout, a 5xx): the next source is tried and
+# these are reported if none had the archive.
+ERRORS = []
+
+
+def attempt(url, dest):
+    """try_download, with any failure an answer too: the next source is tried."""
+    try:
+        return try_download(url, dest)
+    except Exception as error:
+        print("  failed: %s" % error)
+        ERRORS.append("%s: %s" % (url, error))
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version")
@@ -147,16 +164,34 @@ def main():
             place(local, canonical)
             return
 
-    # 3. the public archive: mirror first, then the canonical host, each under
+    # 3. the OpenKaryonLab copy, kept under the canonical name (not with
+    #    LONGREACH_UPSTREAM_FIRST=1, for a version not copied yet).
+    upstream_first = os.environ.get("LONGREACH_UPSTREAM_FIRST") == "1"
+    if not upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical):
+        print("saved %s" % canonical)
+        return
+
+    # 3a. the public archive: mirror first, then the canonical host, each under
     #    both names. The mirror is preferred for bandwidth but does not always
     #    carry a release as promptly as download.qt.io.
     for host in (MIRROR, OFFICIAL):
         for name in archive_names(args.version):
             url = "%s/%s/%s/single/%s" % (host, series(args.version),
                                           args.version, name)
-            if try_download(url, canonical):
+            if attempt(url, canonical):
+                if not upstream_first:
+                    print("WARNING: %s is not in the OpenKaryonLab copy "
+                          "(python scripts/fetch/mirror.py archives)" % os.path.basename(canonical))
                 print("saved %s" % canonical)
                 return
+
+    # 3b. the copy, when upstream went first.
+    if upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical):
+        print("saved %s" % canonical)
+        return
+
+    if ERRORS:
+        sys.exit("Qt %s could not be downloaded:\n  " % args.version + "\n  ".join(ERRORS))
 
     # 4. It is not public. Say what to do, without claiming to know why - the
     #    same 404 covers a commercial-only LTS patch and a typo in the version.

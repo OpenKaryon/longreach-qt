@@ -17,7 +17,11 @@
 # newer clang and CMake than 16.04 has; the host's glibc does not matter for a
 # Mach-O cross-build.
 # ---------------------------------------------------------------------------
-FROM --platform=linux/amd64 ubuntu:22.04 AS toolchain
+
+# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
+# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS toolchain
 
 # The macOS SDK comes from the build context and is never redistributed (see
 # QT5_MACOS_SDK in mk/qt5.mk). Its version and the deployment target are
@@ -28,7 +32,9 @@ ARG DOWNLOAD_DIR="downloads"
 
 # osxcross has no tags; a verified commit keeps the image from changing with
 # master. make qt5-macos-amd64 OSXCROSS_REF=master tests another.
-ARG OSXCROSS_REPO="https://github.com/OpenKaryon/osxcross.git"
+# osxcross and the projects it builds (cctools-port, ...) come from the
+# OpenKaryonLab copies in LAB_GIT: scripts/build/osxcross-sources.sh.
+ARG LAB_GIT="https://github.com/OpenKaryonLab"
 ARG OSXCROSS_REF="27d21e4977c9751d01199c7a226a6faf494c3dd9"
 
 # The compiler's architecture; the darwin version is read from the SDK.
@@ -64,16 +70,14 @@ RUN \
     exit 0
 
 COPY ${DOWNLOAD_DIR}/${OSX_SDK} /opt/sdk-staging/${OSX_SDK}
+COPY ${DOWNLOAD_DIR}/${LLVM_SRC} /opt/llvm-staging/${LLVM_SRC}
+COPY scripts/build/osxcross-sources.sh scripts/build/git-fetch-pinned.sh /tmp/
 
 # The resolved commit goes into the build log; only the pinned ref is fetched.
 RUN \
     set -eux && \
-    mkdir -p /opt/osxcross && \
+    bash /tmp/git-fetch-pinned.sh /opt/osxcross "$OSXCROSS_REF" "$LAB_GIT/osxcross.git" && \
     cd /opt/osxcross && \
-    git init -q && \
-    git remote add origin "$OSXCROSS_REPO" && \
-    git fetch --depth 1 origin "$OSXCROSS_REF" && \
-    git checkout -q FETCH_HEAD && \
     echo "osxcross ref '$OSXCROSS_REF' resolved to $(git rev-parse HEAD)" && \
     # The wrapper refuses libc++ below 10.7; the kit links its own there (LLVM_SRC), \
     # so the check is lifted for SDKs without libstdc++. \
@@ -81,6 +85,10 @@ RUN \
         wrapper/target.cpp && \
     grep -q 'OSNum < OSVersion(10, 7) && SDKOSNum < OSVersion(10, 14)' wrapper/target.cpp && \
     mv /opt/sdk-staging/$OSX_SDK tarballs/$OSX_SDK && \
+    LAB_GIT="$LAB_GIT" bash /tmp/osxcross-sources.sh /opt/osxcross-sources \
+        apple-libtapi=640b4623929c923c0468143ff2a363a48665fa54 cctools-port=e101a6940dcb5988808a16626bc43851f00dc05f xar=5fa4675419cfec60ac19a9c7f7c2d0e7c831a497 \
+        compiler-rt=archive:/opt/llvm-staging/$LLVM_SRC && \
+    TP_OSXCROSS_DEV=/opt/osxcross-sources \
     OCDEBUG=1 OSX_VERSION_MIN=$MACOS_DEPLOYMENT_TARGET UNATTENDED=1 \
         TARGET_DIR=/usr/local/osxcross ./build.sh && \
     ln -s /usr/local/osxcross/bin/xcrun /usr/bin/xcrun && \
@@ -95,7 +103,7 @@ ENV PATH="/usr/local/osxcross/bin:$PATH"
 RUN \
     set -eux && \
     cd /opt/osxcross && \
-    UNATTENDED=1 ENABLE_COMPILER_RT_INSTALL=1 ./build_compiler_rt.sh && \
+    TP_OSXCROSS_DEV=/opt/osxcross-sources UNATTENDED=1 ENABLE_COMPILER_RT_INSTALL=1 ./build_compiler_rt.sh && \
     exit 0
 
 # Self-checks: osxcross' own, and that an availability guard compiles and links.
@@ -111,7 +119,6 @@ RUN \
 # Below 10.7: the static C++ runtime, installed into the SDK so every C++ link
 # picks it up through -lc++ (scripts/build/qt5-macos/build-libcxx.sh). The
 # LLVM tarball is copied either way; COPY cannot be conditional.
-COPY ${DOWNLOAD_DIR}/${LLVM_SRC} /opt/llvm-staging/${LLVM_SRC}
 COPY scripts/build/qt5-macos/build-libcxx.sh /tmp/build-libcxx.sh
 ARG PARALLEL_JOBS=""
 RUN \
@@ -202,6 +209,8 @@ ENV PATH="/usr/local/Qt-5.15/bin:$PATH"
 # CMake for tests/ (Qt 5.15's static plugin import needs 3.15+), installed
 # here so the builder's cache stays valid.
 ARG CMAKE_VERSION="3.28.6"
+# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
+ARG LONGREACH_MIRROR
 COPY scripts/build/cmake.sh /tmp/build-cmake.sh
 RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
 

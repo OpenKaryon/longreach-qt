@@ -27,6 +27,55 @@
   Docker cache a new key for any change in the repository.
 - `make qt4-macos-ppc-examples` (and `qt4-macos-i386-examples`) no longer
   fails on Windows when an earlier run left its `imports/` folder.
+
+- What the build downloads has a copy in the OpenKaryonLab organisation,
+  and the build takes it from there first, upstream only when the copy lacks
+  it, if upstream is not on GitHub as well (docs/sources.md,
+  scripts/fetch/sources.json): source archives as the
+  release `sources` of longreach-qt-sources (`fetch.py`,
+  `qt6-fetch-source.py`, `cmake.sh`); osxcross and the projects its build.sh
+  clones by branch (cctools-port, apple-libtapi, xar), now fetched by commit
+  for every macOS image, from the copies only, since upstream is on GitHub
+  too (`git-fetch-pinned.sh`); the base images, now pinned
+  by digest and pulled through `BASE_REGISTRY` (ghcr.io/openkaryonlab, or
+  docker.io/library). `LONGREACH_UPSTREAM_FIRST=1` reverses the order for a
+  pin not copied yet. Where an input comes from is not part of an image's
+  fingerprint, so switching sources rebuilds nothing.
+  `scripts/fetch/mirror.py` checks the list against the pins (`check
+  --online`: and against the copies) and fills the copies.
+- The Qt 6 macOS images take the macOS SDK from `downloads/`, fetched by make
+  with its SHA256 like every other input, instead of downloading it inside
+  Docker; a kept copy of the SDK now works by putting it there.
+- `LICENSE_PROFILE=lgpl-friendly` is refused by the Windows and macOS Qt 5/6
+  targets, which do not leave the GPL-only modules out yet; before, they built
+  an image under that name with the modules in it.
+- The Qt 6 images stop at a patch that does not apply; the loop used to go on
+  with the next one.
+- `manifest.json` named the kit's licence MIT; it is GPL-3.0-or-later.
+- `make qt5-linux-arm64` fetches the X sources it copies
+  (`qt5-lucid-fetch.py --sources-only`); a fresh clone failed there.
+- `qt6-linux-arm64` builds the OpenSSL version make fetched; `QT6_SOURCE`
+  replaces an archive already in `downloads/`; the Qt 6 `-examples` targets
+  no longer need CMake on the host.
+- `LONGREACH_MIRROR` reaches the CMake downloads inside the images, and the
+  Qt 6 source fetch goes on to the Qt sites when the copy fails in any way, not
+  only with a 404.
+- `make verify-downloads` checks every pinned file in `downloads/`, and the
+  Sarge and Lucid packages against their locks (`--verify-only`), and says how
+  many it checked.
+- The Qt 5 macOS SDK is packed in the digest-pinned Ubuntu 22.04 image, and the
+  run.py QEMU helper is built from it; `fetch-macos-sdk.sh` fails instead of
+  keeping a short archive, and `qt5-extract-tests` fails when a binary could
+  not be copied.
+- `mirror.py`: `repos` can run again (existing `longreach/` tags are kept, a
+  refused push is reported); `archives` checks a download before keeping it
+  and reports a release file GitHub gives no SHA256 for; `check` matches each
+  image's tag and digest together, looks at every Dockerfile and the scripts
+  in subfolders, and finds images named by tag only in make.
+- `scripts/build/qt6-build-project.py` prepares the Qt image of every platform
+  with `make build-qt6-<platform>`; for Linux and macOS it used to run its own
+  `docker build` without the inputs make fetches, and `--download` (gone)
+  fetched a wrongly named archive without a SHA256.
 - `make download-qt-mobility` and `scripts/fetch/fetch-git-archive.py` are
   gone: no target used Qt Mobility.
 

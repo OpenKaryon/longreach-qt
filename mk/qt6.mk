@@ -40,6 +40,11 @@ QT6_NINJA_SHA256 := 821bdff48a3f683bc4bb3b6f0b5fe7b2d647cf65d52aeb63328c91a6c6df
 QT6_XCB_CURSOR_PATH := $(DOWNLOAD_DIR)/xcb-util-cursor-0.1.5.tar.xz
 QT6_XCB_CURSOR_URL := https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
 QT6_XCB_CURSOR_SHA256 := 0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57
+# compiler-rt's os_version_check.c, which the macOS images build into
+# libclang_rt.osx.a (osxcross does not install it).
+QT6_OS_VERSION_CHECK_PATH := $(DOWNLOAD_DIR)/os_version_check-f28c006.c
+QT6_OS_VERSION_CHECK_URL := https://raw.githubusercontent.com/llvm/llvm-project/f28c006a5895fc0e329fe15fead81e37457cb1d1/compiler-rt/lib/builtins/os_version_check.c
+QT6_OS_VERSION_CHECK_SHA256 := 846d994b7dc1f229a3086b113ad946befaf963c5d6e8838323b17447bb5749fb
 
 # macOS floors: 10.13 on Intel, 11.0 on Apple silicon (Qt 6.8 asks for 12;
 # patches/qt6/macos takes it down).
@@ -48,12 +53,14 @@ QT6_MACOS_DEPLOYMENT_TARGET ?= 10.13
 QT6_MACOS_SDK := MacOSX$(QT6_MACOS_SDK_VERSION).sdk.tar.xz
 QT6_MACOS_SDK_URL ?= https://github.com/joseluisq/macosx-sdks/releases/download/$(QT6_MACOS_SDK_VERSION)/$(QT6_MACOS_SDK)
 QT6_MACOS_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
+QT6_MACOS_SDK_PATH := $(DOWNLOAD_DIR)/$(QT6_MACOS_SDK)
 QT6_MACOS_OSXCROSS_REF ?= $(OSXCROSS_REF)
 QT6_MACOS_ARM64_SDK_VERSION ?= 14.0
 QT6_MACOS_ARM64_DEPLOYMENT_TARGET ?= 11.0
 QT6_MACOS_ARM64_SDK := MacOSX$(QT6_MACOS_ARM64_SDK_VERSION).sdk.tar.xz
 QT6_MACOS_ARM64_SDK_URL ?= https://github.com/joseluisq/macosx-sdks/releases/download/$(QT6_MACOS_ARM64_SDK_VERSION)/$(QT6_MACOS_ARM64_SDK)
 QT6_MACOS_ARM64_SDK_SHA256 ?= 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
+QT6_MACOS_ARM64_SDK_PATH := $(DOWNLOAD_DIR)/$(QT6_MACOS_ARM64_SDK)
 
 .PHONY: download-qt6 qt6-host build-qt6-host \
         qt6-win-amd64 qt6-win-arm64 qt6-linux-amd64 qt6-linux-arm64 \
@@ -72,7 +79,15 @@ $(QT6_NINJA_PATH):
 $(QT6_XCB_CURSOR_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT6_XCB_CURSOR_URL)" "$@" "$(QT6_XCB_CURSOR_SHA256)"
 
+$(QT6_OS_VERSION_CHECK_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_OS_VERSION_CHECK_URL)" "$@" "$(QT6_OS_VERSION_CHECK_SHA256)"
+
 download-qt6: $(QT6_ARCHIVE_PATH)
+
+# QT6_SOURCE replaces the archive even when one is already in downloads/.
+ifneq ($(QT6_SOURCE),)
+.PHONY: $(QT6_ARCHIVE_PATH)
+endif
 
 $(QT6_ARCHIVE_PATH):
 	$(PYTHON) scripts/fetch/qt6-fetch-source.py "$(QT6_VERSION)" "$(DOWNLOAD_DIR)" $(if $(QT6_SOURCE),--source "$(QT6_SOURCE)",)
@@ -82,7 +97,7 @@ QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(
 
 # Host Qt tools (moc, rcc, ...), which every cross target copies from this image.
 qt6-host: $(QT6_ARCHIVE_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) -f docker/qt6/host/Dockerfile -t $(QT6_HOST_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) -f docker/qt6/host/Dockerfile -t $(QT6_HOST_IMAGE) .
 
 # What the cross targets depend on: qt6-host only when its inputs changed. A
 # plain docker build of it starts over once Docker has dropped its cache.
@@ -91,30 +106,43 @@ build-qt6-host:
 
 # Windows x86_64 is the Windows 7 backport, built against MSVCRT.
 qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(QT6_WIN7_LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(QT6_WIN7_LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
 
 qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(LLVM_MINGW_SHA256) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(LLVM_MINGW_SHA256) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
 # image.
 qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
 
 qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
 qt6-host-smoke:
 	docker run --rm --entrypoint sh 	    -v "$(CURDIR)/tests:/src:ro" 	    -v "$(CURDIR)/scripts/build/qt6-host-smoke.sh:/qt6-host-smoke.sh:ro" 	    $(QT6_HOST_IMAGE) -c "PARALLEL_JOBS=$(PARALLEL_JOBS) sh /qt6-host-smoke.sh"
 
-# A repacked macOS SDK from a GitHub release, pinned by SHA256.
-qt6-macos-amd64: $(QT6_ARCHIVE_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
+# A repacked macOS SDK from a GitHub release, pinned by SHA256 and fetched
+# into downloads/ like every other input (one rule when both use the same).
+$(QT6_MACOS_SDK_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_MACOS_SDK_URL)" "$@" "$(QT6_MACOS_SDK_SHA256)"
 
-qt6-macos-arm64: $(QT6_ARCHIVE_PATH) build-qt6-host
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_URL=$(QT6_MACOS_ARM64_SDK_URL) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
+ifneq ($(QT6_MACOS_ARM64_SDK_PATH),$(QT6_MACOS_SDK_PATH))
+$(QT6_MACOS_ARM64_SDK_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_MACOS_ARM64_SDK_URL)" "$@" "$(QT6_MACOS_ARM64_SDK_SHA256)"
+endif
+
+qt6-macos-amd64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_SDK_PATH) build-qt6-host
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
+
+qt6-macos-arm64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_ARM64_SDK_PATH) build-qt6-host
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
 
 # qt6-<target>-smoke builds tests/ against the image into
 # artifacts/tests-<image>/ and, for Linux amd64, runs it there; the
@@ -126,7 +154,7 @@ define qt6-build-smoke
 	docker run --rm -v "$(CURDIR)/tests:/src:ro" -v "$(CURDIR)/$(QT6_SMOKE_OUT):/out" \
 		$(QT6_SMOKE_IMAGE) \
 		bash -c 'set -e; cp -r /src /tmp/qt-smoke-tests; mkdir -p /tmp/qt-smoke-build; cd /tmp/qt-smoke-build; $(QT6_SMOKE_QT_DIR)/bin/qt-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSMOKE_LICENSE_PROFILE=$(LICENSE_PROFILE) $(QT6_SMOKE_CMAKE_ARGS) /tmp/qt-smoke-tests; cmake --build . -j $(if $(PARALLEL_JOBS),$(PARALLEL_JOBS),$$(nproc)); $(QT6_SMOKE_COLLECT); ls -la /out/; $(QT6_SMOKE_RUN)'
-	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT6_SMOKE_OUT)" --image "$(QT6_SMOKE_IMAGE)" --qt-version "$(QT6_VERSION)" --openssl-version "not-pinned" --kind qt6-build-kit-tests --license-profile "$(LICENSE_PROFILE)"
+	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT6_SMOKE_OUT)" --image "$(QT6_SMOKE_IMAGE)" --qt-version "$(QT6_VERSION)" --openssl-version "$(if $(findstring linux,$(QT6_SMOKE_IMAGE)),$(OPENSSL_VERSION),none)" --kind qt6-build-kit-tests --license-profile "$(LICENSE_PROFILE)"
 	@echo "-> $(QT6_SMOKE_OUT)"
 endef
 

@@ -35,7 +35,25 @@
     {"file": "cmake-3.28.6.tar.gz", "sha256": "c39c733900affc4eb0e9688b4d1a45435a732105d9bf9cc1e75dd2b9b81a36bb",
      "url": "https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6.tar.gz", "license": "BSD-3-Clause"},
     {"file": "os_version_check-f28c006.c", "sha256": "846d994b7dc1f229a3086b113ad946befaf963c5d6e8838323b17447bb5749fb",
-     "url": "https://raw.githubusercontent.com/llvm/llvm-project/f28c006a5895fc0e329fe15fead81e37457cb1d1/compiler-rt/lib/builtins/os_version_check.c", "license": "Apache-2.0 WITH LLVM-exception"}
+     "url": "https://raw.githubusercontent.com/llvm/llvm-project/f28c006a5895fc0e329fe15fead81e37457cb1d1/compiler-rt/lib/builtins/os_version_check.c", "license": "Apache-2.0 WITH LLVM-exception"},
+    {"file": "xcb-proto-1.11.tar.bz2", "dir": "lucid-xsrc", "sha256": "b4aceee6502a0ce45fc39b33c541a2df4715d00b72e660ebe8c5bb444771e32e",
+     "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.11.tar.bz2", "license": "MIT"},
+    {"file": "libxcb-1.11.1.tar.bz2", "dir": "lucid-xsrc", "sha256": "b720fd6c7d200e5371affdb3f049cc8f88cff9aed942ff1b824d95eedbf69d30",
+     "url": "https://xcb.freedesktop.org/dist/libxcb-1.11.1.tar.bz2", "license": "MIT"},
+    {"file": "libpthread-stubs-0.3.tar.bz2", "dir": "lucid-xsrc", "sha256": "35b6d54e3cc6f3ba28061da81af64b9a92b7b757319098172488a660e3d87299",
+     "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.3.tar.bz2", "license": "MIT"},
+    {"file": "xcb-util-0.4.0.tar.bz2", "dir": "lucid-xsrc", "sha256": "46e49469cb3b594af1d33176cd7565def2be3fa8be4371d62271fabb5eae50e9",
+     "url": "https://xcb.freedesktop.org/dist/xcb-util-0.4.0.tar.bz2", "license": "MIT"},
+    {"file": "xcb-util-image-0.4.0.tar.bz2", "dir": "lucid-xsrc", "sha256": "2db96a37d78831d643538dd1b595d7d712e04bdccf8896a5e18ce0f398ea2ffc",
+     "url": "https://xcb.freedesktop.org/dist/xcb-util-image-0.4.0.tar.bz2", "license": "MIT"},
+    {"file": "xcb-util-keysyms-0.4.0.tar.bz2", "dir": "lucid-xsrc", "sha256": "0ef8490ff1dede52b7de533158547f8b454b241aa3e4dcca369507f66f216dd9",
+     "url": "https://xcb.freedesktop.org/dist/xcb-util-keysyms-0.4.0.tar.bz2", "license": "MIT"},
+    {"file": "xcb-util-renderutil-0.3.9.tar.bz2", "dir": "lucid-xsrc", "sha256": "c6e97e48fb1286d6394dddb1c1732f00227c70bd1bedb7d1acabefdd340bea5b",
+     "url": "https://xcb.freedesktop.org/dist/xcb-util-renderutil-0.3.9.tar.bz2", "license": "MIT"},
+    {"file": "xcb-util-wm-0.4.1.tar.bz2", "dir": "lucid-xsrc", "sha256": "28bf8179640eaa89276d2b0f1ce4285103d136be6c98262b6151aaee1d3c2a3f",
+     "url": "https://xcb.freedesktop.org/dist/xcb-util-wm-0.4.1.tar.bz2", "license": "MIT"},
+    {"file": "libxkbcommon-0.7.2.tar.xz", "dir": "lucid-xsrc", "sha256": "28a4dc2735863bec2dba238de07fcdff28c5dd2300ae9dfdb47282206cd9b9d8",
+     "url": "https://xkbcommon.org/download/libxkbcommon-0.7.2.tar.xz", "license": "MIT"}
   ],
   "repositories": [
     {"name": "osxcross", "upstream": "https://github.com/tpoechtrager/osxcross.git", "license": "GPL-2.0-only",
@@ -66,6 +84,6 @@
     {"file": "MacOSX11.3.sdk.tar.xz", "why": "Apple SDK, packed here from Apple's Command Line Tools package"},
     {"file": "MacOSX14.0.sdk.tar.xz", "sha256": "5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9", "why": "Apple SDK: its licence does not allow redistribution"},
     {"file": "CLTools_macOSLMOS_SDK.pkg", "sha256": "b075d3d2f3b066607209a5bbf7cf727a40b98fe65629c5b6abc17f156897af4a", "why": "Apple Command Line Tools"},
-    {"file": "Debian Sarge and Ubuntu Lucid packages (scripts/fetch/locks/)", "why": "binary packages, pinned by SHA256 from archive.debian.org and old-releases.ubuntu.com; a copy would have to carry the GPL sources too"}
+    {"file": "Debian Sarge, Ubuntu Lucid and CentOS 7.9 aarch64 packages (scripts/fetch/locks/*-packages.json)", "why": "binary packages, pinned by SHA256 from archive.debian.org, old-releases.ubuntu.com and vault.centos.org; a copy would have to carry the GPL sources too"}
   ]
 }

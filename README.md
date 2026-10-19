@@ -70,7 +70,9 @@ options (`--only`, `--skip`, `--no-cache`, ...).
 - One Dockerfile per target under `docker/qt<N>/<os>/`, three or more stages:
   toolchain, builder, and a final image holding the toolchain plus the
   installed SDK.
-- Every input is pinned by SHA256 (`scripts/fetch/`), and copied to OpenKaryonLab
+- Every input is pinned: archives by SHA256 (`scripts/fetch/`), Git projects by
+  commit, base images by digest, distribution packages by lock or snapshot date;
+  copied to OpenKaryonLab
   where its licence allows ([docs/sources.md](docs/sources.md)).
 - The same eight test applications build against Qt 4, 5 and 6 and cover the
   public API of each (100% of the classes the kit ships, by

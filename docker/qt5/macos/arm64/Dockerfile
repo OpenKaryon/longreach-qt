@@ -17,6 +17,8 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS toolchain
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 # The macOS SDK comes from the build context and is never redistributed (see
 # QT5_MACOS_SDK in mk/qt5.mk); the amd64 image uses the same one.
@@ -44,7 +46,7 @@ ARG MACOS_DEPLOYMENT_TARGET="11.0"
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt -y update && \
+    sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt -y update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python3 perl git patch wget nano ca-certificates \

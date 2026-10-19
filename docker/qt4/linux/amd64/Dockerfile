@@ -57,6 +57,7 @@ ARG SARGE_ARCH=amd64
 ARG PARALLEL_JOBS=6
 ENV SARGE_JOBS=${PARALLEL_JOBS}
 COPY downloads/debian-sarge-${SARGE_ARCH} /packages
+COPY scripts/fetch/locks/qt4-sarge-${SARGE_ARCH}-packages.json /packages-lock.json
 COPY downloads/gcc-5.5.0.tar.xz downloads/openssl-1.0.2u.tar.gz downloads/qt-everywhere-opensource-src-4.8.7.tar.gz /archives/
 COPY scripts/build/qt4-sarge /scripts
 COPY patches/qt4/all /patches/all

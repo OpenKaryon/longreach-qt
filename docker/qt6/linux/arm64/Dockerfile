@@ -26,12 +26,14 @@ FROM ${QT6_HOST_IMAGE} AS host-qt
 # ---------------------------------------------------------------------------
 
 FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS toolchain
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # qemu-user-static runs the sysroot's wayland-scanner (see its wrapper); the
 # libraries after it are what the host tools (qsb and the rest) load.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y --no-install-recommends \
         g++-11-aarch64-linux-gnu binutils-aarch64-linux-gnu \
         cmake ninja-build make m4 perl python3 pkg-config file xz-utils git \
         rpm2cpio cpio qemu-user-static binutils ca-certificates \
@@ -43,11 +45,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 ENV SYSROOT=/opt/sysroot-arm64
-COPY scripts/build/rpm-sysroot.py scripts/build/qt6-linux-arm64/packages.txt /tmp/sysroot/
-RUN base=http://vault.centos.org/altarch/7.9.2009 && \
-    python3 /tmp/sysroot/rpm-sysroot.py --dest ${SYSROOT} --arch aarch64 --merged-usr \
-        --repo $base/os/aarch64 --repo $base/updates/aarch64 --repo $base/sclo/aarch64/rh \
-        $(grep -v '^#' /tmp/sysroot/packages.txt) > /tmp/sysroot/installed.txt && \
+# The CentOS 7.9 aarch64 packages, each by URL and SHA256 from the lock
+# (scripts/build/qt6-linux-arm64/packages.txt says how it is made).
+COPY scripts/build/rpm-sysroot.py scripts/fetch/locks/qt6-centos7-aarch64-packages.json /tmp/sysroot/
+RUN python3 /tmp/sysroot/rpm-sysroot.py --lock /tmp/sysroot/qt6-centos7-aarch64-packages.json \
+        --dest ${SYSROOT} --merged-usr > /tmp/sysroot/installed.txt && \
     wc -l < /tmp/sysroot/installed.txt && rm -rf /tmp/sysroot
 
 COPY scripts/build/qt6-linux-arm64/gcc /opt/cross/bin/aarch64-centos7-gcc

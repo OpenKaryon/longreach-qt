@@ -52,6 +52,8 @@ import sys
 import urllib.error
 import urllib.request
 
+import fetch  # scripts/fetch/fetch.py: the per-file download lock
+
 MIRROR = "https://qt.mirror.constant.com/archive/qt"
 OFFICIAL = "https://download.qt.io/archive/qt"
 MIRROR_COPY = os.environ.get("LONGREACH_MIRROR",
@@ -147,7 +149,13 @@ def main():
     os.makedirs(args.download_dir, exist_ok=True)
     canonical = os.path.join(args.download_dir,
                              "qt-everywhere-src-%s.tar.xz" % args.version)
+    # Another build fetching the same archive (qt6-host next to a cross
+    # target) finishes first; this one then finds it in step 2.
+    with fetch.downloading(canonical):
+        obtain(args, canonical)
 
+
+def obtain(args, canonical):
     # 1. an explicitly supplied archive
     if args.source:
         if not os.path.isfile(args.source):

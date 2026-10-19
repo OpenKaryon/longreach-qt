@@ -1,0 +1,438 @@
+{
+ "purpose": "packages of the sysroot rpm-sysroot.py --lock unpacks, from rpm-sysroot.py --write-lock --repo https://vault.centos.org/altarch/7.9.2009/os/aarch64 --repo https://vault.centos.org/altarch/7.9.2009/updates/aarch64 --repo https://vault.centos.org/altarch/7.9.2009/sclo/aarch64/rh",
+ "arch": "aarch64",
+ "packages": [
+  {
+   "name": "bzip2-libs",
+   "version": "1.0.6-13.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/bzip2-libs-1.0.6-13.el7.aarch64.rpm",
+   "sha256": "197dccf040ceac57765d4e3f90210077f78d0f99c8107a7377ac218138c10fdf"
+  },
+  {
+   "name": "devtoolset-10-libstdc++-devel",
+   "version": "10.2.1-11.2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/sclo/aarch64/rh/Packages/d/devtoolset-10-libstdc++-devel-10.2.1-11.2.el7.aarch64.rpm",
+   "sha256": "ec3d4718f509b653cf75265f4549f8fb4c13f7ed87cb7c32b21d11177524e101"
+  },
+  {
+   "name": "expat",
+   "version": "2.1.0-15.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/expat-2.1.0-15.el7_9.aarch64.rpm",
+   "sha256": "ddcd57e504d03312dce703d4b4fb26466ad5d31587a07ca166f01a1b70f58d96"
+  },
+  {
+   "name": "expat-devel",
+   "version": "2.1.0-15.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/expat-devel-2.1.0-15.el7_9.aarch64.rpm",
+   "sha256": "28e23cd2f157fcfae745b76260339edd7e6bbd94c47e49a559ed00c85076a1a3"
+  },
+  {
+   "name": "fontconfig",
+   "version": "2.13.0-4.3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/fontconfig-2.13.0-4.3.el7.aarch64.rpm",
+   "sha256": "2551609942fed6a170bca99d0bd8383c9fce03b4cdabec9c964bde509ef55ea9"
+  },
+  {
+   "name": "fontconfig-devel",
+   "version": "2.13.0-4.3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/fontconfig-devel-2.13.0-4.3.el7.aarch64.rpm",
+   "sha256": "bdc32001398a5a85228aeff0eb295dc3463fd76e105c40ac3038e8c848c6961e"
+  },
+  {
+   "name": "freetype",
+   "version": "2.8-14.el7_9.1",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/freetype-2.8-14.el7_9.1.aarch64.rpm",
+   "sha256": "7fd8a8dacbbfbe1b572ffac9a0477c49917d6cfa93d13d254cde910a71ad42e1"
+  },
+  {
+   "name": "freetype-devel",
+   "version": "2.8-14.el7_9.1",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/freetype-devel-2.8-14.el7_9.1.aarch64.rpm",
+   "sha256": "73e1ad010c88a63f3c68d99238b17e4de0694f67399800ddd84a5fa8a0231896"
+  },
+  {
+   "name": "glibc",
+   "version": "2.17-326.el7_9.3",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/glibc-2.17-326.el7_9.3.aarch64.rpm",
+   "sha256": "98d52e08fed74855f8bec16abd64c6bc50554bb0efe175e7f3c490c9f24de00a"
+  },
+  {
+   "name": "glibc-devel",
+   "version": "2.17-326.el7_9.3",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/glibc-devel-2.17-326.el7_9.3.aarch64.rpm",
+   "sha256": "884cb8c9aae5d2943dfa8fdb48a9afe7de1cbd171c7738605dcf4196c3e8b24d"
+  },
+  {
+   "name": "glibc-headers",
+   "version": "2.17-326.el7_9.3",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/glibc-headers-2.17-326.el7_9.3.aarch64.rpm",
+   "sha256": "299b2ec1e39fc560ef7123d4ed705f906d6ad4c604e2a6fa8b0dc7eadba789df"
+  },
+  {
+   "name": "kernel-headers",
+   "version": "4.18.0-348.20.1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/kernel-headers-4.18.0-348.20.1.el7.aarch64.rpm",
+   "sha256": "f22a6a3ede39bb2f3ee9523559c1d7cef563d21ef190a8aaf0aae0428824ce6c"
+  },
+  {
+   "name": "libX11",
+   "version": "1.6.7-5.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/libX11-1.6.7-5.el7_9.aarch64.rpm",
+   "sha256": "e16e7fbdd4e7da0b978b149caf74c084ef896dedbfc62280cc5af8e9d3bcb08b"
+  },
+  {
+   "name": "libX11-devel",
+   "version": "1.6.7-5.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/libX11-devel-1.6.7-5.el7_9.aarch64.rpm",
+   "sha256": "c8645a28883b2327b75d1ed56c00465e0ba02f1d05628e9c7e96415f94cb9433"
+  },
+  {
+   "name": "libXau",
+   "version": "1.0.8-2.1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXau-1.0.8-2.1.el7.aarch64.rpm",
+   "sha256": "a8cd3649457f0166dabae26350f387b43bc6f9ac52f49766d8dee1a9cc60742a"
+  },
+  {
+   "name": "libXau-devel",
+   "version": "1.0.8-2.1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXau-devel-1.0.8-2.1.el7.aarch64.rpm",
+   "sha256": "0003ff9339ca18cbab3dd6c0899d7d8ec8ea703351da9c9ccd16dfdd211fc57b"
+  },
+  {
+   "name": "libXdmcp",
+   "version": "1.1.2-6.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXdmcp-1.1.2-6.el7.aarch64.rpm",
+   "sha256": "0263916b523c035de40ffc39126875a00bf6d7b513614f05c884c9fdf714186e"
+  },
+  {
+   "name": "libXext",
+   "version": "1.3.3-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXext-1.3.3-3.el7.aarch64.rpm",
+   "sha256": "00ed1512384e41e06a822984152a5a42a46dc963f5ca16f0e7007274cc1d54f3"
+  },
+  {
+   "name": "libXext-devel",
+   "version": "1.3.3-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXext-devel-1.3.3-3.el7.aarch64.rpm",
+   "sha256": "16da1ccb6de8f6618ff8aed0c6dea27ecaa4c698fec36ae717c5f5ce35f086cb"
+  },
+  {
+   "name": "libXfixes",
+   "version": "5.0.3-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXfixes-5.0.3-1.el7.aarch64.rpm",
+   "sha256": "e20b03ef865873f1cc6903e1e78c898d593e114df4e3436caaf20b49f2c994c8"
+  },
+  {
+   "name": "libXfixes-devel",
+   "version": "5.0.3-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXfixes-devel-5.0.3-1.el7.aarch64.rpm",
+   "sha256": "b8eb45abf6e6f4cb9b149821aedb6fedbe0b307d609c46773063701baa62420a"
+  },
+  {
+   "name": "libXi",
+   "version": "1.7.9-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXi-1.7.9-1.el7.aarch64.rpm",
+   "sha256": "04fd002ccd765db6ea93aae26fd269301e9b3f0b64568acb85e6c2bdc8f45e18"
+  },
+  {
+   "name": "libXi-devel",
+   "version": "1.7.9-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXi-devel-1.7.9-1.el7.aarch64.rpm",
+   "sha256": "c1d5faf91377c1ccf168e3c2183929d163165f5f253a529106197ea463f2a726"
+  },
+  {
+   "name": "libXrender",
+   "version": "0.9.10-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXrender-0.9.10-1.el7.aarch64.rpm",
+   "sha256": "9fe491041a1bbcd7bae323a953b6526164eedd37fa707f1d15e95151f067c7eb"
+  },
+  {
+   "name": "libXrender-devel",
+   "version": "0.9.10-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libXrender-devel-0.9.10-1.el7.aarch64.rpm",
+   "sha256": "f6d9da30d0aee0a97cf77aa48186612a8d0f7f10e4eefe0d299a0e3bc460c72f"
+  },
+  {
+   "name": "libdrm",
+   "version": "2.4.97-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libdrm-2.4.97-2.el7.aarch64.rpm",
+   "sha256": "33983c207aba2f148da9e68ccd0ee9f1006fd254acfba05401a4109a514be678"
+  },
+  {
+   "name": "libdrm-devel",
+   "version": "2.4.97-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libdrm-devel-2.4.97-2.el7.aarch64.rpm",
+   "sha256": "5c3648f2cabbc5acaf89c32f56a40c05825ac1682ede0fc611882f22f64338af"
+  },
+  {
+   "name": "libgcc",
+   "version": "4.8.5-44.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libgcc-4.8.5-44.el7.aarch64.rpm",
+   "sha256": "4f44c5be70ed9d8d74c2a616cde92a842b15eefaccd766959e5fbd7fbe965d2d"
+  },
+  {
+   "name": "libglvnd",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "58930bad0d7540669ffcd048b5010d04cb1db2b922b5289a92afe0caa15640f9"
+  },
+  {
+   "name": "libglvnd-core-devel",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-core-devel-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "8b1f4205064651ef0e3beeb1c48b76d1454db2f75621322c480a042bfefaf2cd"
+  },
+  {
+   "name": "libglvnd-devel",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-devel-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "dd1889e284cf590cebbf3bf10d04c56dbc8abcfde7382de425164ae7a85a7ba3"
+  },
+  {
+   "name": "libglvnd-egl",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-egl-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "593f06c36c5a8caf87d9755be4123ecbc9014bb144544fb5d27396ffe9d72d52"
+  },
+  {
+   "name": "libglvnd-gles",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-gles-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "147264c9cc9c16ebfb14bc1cb66e3af5c31de7fa60ce2dd9c7c40a09a7635ab7"
+  },
+  {
+   "name": "libglvnd-glx",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-glx-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "a9110f29a63515c817fc595fe0d5a14b15d2e52c6aa06d7ddfd9ca3bc6f50834"
+  },
+  {
+   "name": "libglvnd-opengl",
+   "version": "1.0.1-0.8.git5baa1e5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libglvnd-opengl-1.0.1-0.8.git5baa1e5.el7.aarch64.rpm",
+   "sha256": "e4c6a70912365733d556d765acc373f60f0c67cd9789178142269012bda4d8a2"
+  },
+  {
+   "name": "libpng",
+   "version": "1.5.13-8.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libpng-1.5.13-8.el7.aarch64.rpm",
+   "sha256": "a132cbe0d407be884e14691031a9a613160577446b8297b378391f943f0ceff0"
+  },
+  {
+   "name": "libstdc++",
+   "version": "4.8.5-44.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libstdc++-4.8.5-44.el7.aarch64.rpm",
+   "sha256": "8eedde26d573e858d6d2dbaac68d22451d015a13baeb52404a5724206fba278b"
+  },
+  {
+   "name": "libuuid",
+   "version": "2.23.2-65.el7_9.1",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/libuuid-2.23.2-65.el7_9.1.aarch64.rpm",
+   "sha256": "aed0effc23cf769da25dfaae6c81dab07d14de0b8fc991d0d1f24cf9799b558f"
+  },
+  {
+   "name": "libuuid-devel",
+   "version": "2.23.2-65.el7_9.1",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/libuuid-devel-2.23.2-65.el7_9.1.aarch64.rpm",
+   "sha256": "26ebc3033bbc3bacded543a779fb8ca19612408ed6eddbdcf4ac24699b545408"
+  },
+  {
+   "name": "libwayland-client",
+   "version": "1.15.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libwayland-client-1.15.0-1.el7.aarch64.rpm",
+   "sha256": "24558a47bf2c5e9e793a6fdcb2f9fc23033287cc372c8a394988e49a346efda8"
+  },
+  {
+   "name": "libwayland-cursor",
+   "version": "1.15.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libwayland-cursor-1.15.0-1.el7.aarch64.rpm",
+   "sha256": "ee83375ae15cb26e0a8ab0d9b676cc0191909b711d15214bf0f491ab639a21ec"
+  },
+  {
+   "name": "libwayland-egl",
+   "version": "1.15.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libwayland-egl-1.15.0-1.el7.aarch64.rpm",
+   "sha256": "9c3135ff10a10daecd28d3a26a29bcfc7251b5a5da15fc118eca85d77bc5af29"
+  },
+  {
+   "name": "libwayland-server",
+   "version": "1.15.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libwayland-server-1.15.0-1.el7.aarch64.rpm",
+   "sha256": "4d50ecd0c013406a34e6b5668dd8531a8a1a7bbfc3f082c28899328f36a7391f"
+  },
+  {
+   "name": "libxcb",
+   "version": "1.13-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxcb-1.13-1.el7.aarch64.rpm",
+   "sha256": "723c1a24b8c4638414796e67f446b519a002df5e0481e106da845e684a40614e"
+  },
+  {
+   "name": "libxcb-devel",
+   "version": "1.13-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxcb-devel-1.13-1.el7.aarch64.rpm",
+   "sha256": "3dd124054651f9c7f62f131fd6af368f440330b066f5efe242b43bf8fe470aab"
+  },
+  {
+   "name": "libxkbcommon",
+   "version": "0.7.1-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxkbcommon-0.7.1-3.el7.aarch64.rpm",
+   "sha256": "ad9684ce41bae8980522aa3a48e5473f105c322a12df666b9a1d1a5ed0063b46"
+  },
+  {
+   "name": "libxkbcommon-devel",
+   "version": "0.7.1-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxkbcommon-devel-0.7.1-3.el7.aarch64.rpm",
+   "sha256": "fb6f1b847528eafa3633ae8dc90d76573b1dd69417fb13173831d6dbd9b41e4d"
+  },
+  {
+   "name": "libxkbcommon-x11",
+   "version": "0.7.1-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxkbcommon-x11-0.7.1-3.el7.aarch64.rpm",
+   "sha256": "aca2d6aae6ea4868a5537681a66d8b7559614f3c12684ecf6d641bd8f304994d"
+  },
+  {
+   "name": "libxkbcommon-x11-devel",
+   "version": "0.7.1-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/libxkbcommon-x11-devel-0.7.1-3.el7.aarch64.rpm",
+   "sha256": "bdb94331424724c73a946be8198b0fb58505f829af749ffdcfbc64a0caa1e5bd"
+  },
+  {
+   "name": "libxml2",
+   "version": "2.9.1-6.el7_9.6",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/libxml2-2.9.1-6.el7_9.6.aarch64.rpm",
+   "sha256": "495af56657ce040d0ad54c48e516cd69721148baa0c1b00753f220c8d4f8e477"
+  },
+  {
+   "name": "mesa-khr-devel",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-khr-devel-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "07b01a9e6270f5e16492a1b37a592033a0b45f6d365f3d9a24db41e99c5942db"
+  },
+  {
+   "name": "mesa-libEGL",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libEGL-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "d52fa580695a5cf1a2f5564c9200b07b1cae906a49d6ff70e99e1f5806e8ad72"
+  },
+  {
+   "name": "mesa-libEGL-devel",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libEGL-devel-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "a2bed5ebaa08c7f2bc1ebc96b2f9512093c7070be9d6302274271be1fe2338f2"
+  },
+  {
+   "name": "mesa-libGL",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libGL-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "0f8bbb680205c39f6a5edc22f4ca315cccec3484df8bf04e45844b6667e15151"
+  },
+  {
+   "name": "mesa-libGL-devel",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libGL-devel-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "fee11e0e5aaed8cf77a57b2a39bb9476c9ff64242a3c3c871aa9da8236f181f2"
+  },
+  {
+   "name": "mesa-libgbm",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libgbm-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "51db5f98f4e785be116e7ec358087d175cd93a7683a3685ebac732d33739a660"
+  },
+  {
+   "name": "mesa-libglapi",
+   "version": "18.3.4-12.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/mesa-libglapi-18.3.4-12.el7_9.aarch64.rpm",
+   "sha256": "b1dae4ce66c60d5c6e75c36c672607230198a123dfd5850b5d91c6d633b01644"
+  },
+  {
+   "name": "wayland-devel",
+   "version": "1.15.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/wayland-devel-1.15.0-1.el7.aarch64.rpm",
+   "sha256": "64502a904bcc9c2d5f651991b6b8d027e364edd85ee2b0228d566c1c86b49b40"
+  },
+  {
+   "name": "xcb-util",
+   "version": "0.4.0-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-0.4.0-2.el7.aarch64.rpm",
+   "sha256": "0b967f58b83018767aaa1a1c616dac87c823dbcaeb4b75fd2f73811c9a618db2"
+  },
+  {
+   "name": "xcb-util-devel",
+   "version": "0.4.0-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-devel-0.4.0-2.el7.aarch64.rpm",
+   "sha256": "296215992bef0ce3e2cd2e68951757645dd8077bbfc86113cc169dccd69ce7d9"
+  },
+  {
+   "name": "xcb-util-image",
+   "version": "0.4.0-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-image-0.4.0-2.el7.aarch64.rpm",
+   "sha256": "998e0337fbddd4d8f82b89a5d1c0b078f5f4031da0e0ee5a3d5e6b9206fc9af4"
+  },
+  {
+   "name": "xcb-util-image-devel",
+   "version": "0.4.0-2.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-image-devel-0.4.0-2.el7.aarch64.rpm",
+   "sha256": "e51ba8c00e923f4b043f257ea80c7c0572be6e8dc34e985109a948255621ed75"
+  },
+  {
+   "name": "xcb-util-keysyms",
+   "version": "0.4.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-keysyms-0.4.0-1.el7.aarch64.rpm",
+   "sha256": "8d932752b26eed6fefe5dd4c9a4bcbcd6532d210c42bf0117a718f5ca6e32177"
+  },
+  {
+   "name": "xcb-util-keysyms-devel",
+   "version": "0.4.0-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-keysyms-devel-0.4.0-1.el7.aarch64.rpm",
+   "sha256": "bc35ca677a388f2741e959a589c2c4476bf4765d3a24847b8ec172cc80ab17bd"
+  },
+  {
+   "name": "xcb-util-renderutil",
+   "version": "0.3.9-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-renderutil-0.3.9-3.el7.aarch64.rpm",
+   "sha256": "8515689dbe19802a79ccd2ecab3dde862c2f87b63faf98b881c413e3100b3bf1"
+  },
+  {
+   "name": "xcb-util-renderutil-devel",
+   "version": "0.3.9-3.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-renderutil-devel-0.3.9-3.el7.aarch64.rpm",
+   "sha256": "f320115bbf90befe8e15ce032ac02962f57247960742dc6e0cda10a685279fcc"
+  },
+  {
+   "name": "xcb-util-wm",
+   "version": "0.4.1-5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-wm-0.4.1-5.el7.aarch64.rpm",
+   "sha256": "d70e65d6f172f5d5820f3445ae3bbec3274e5cd31bf796f89e0b9300fc7067d6"
+  },
+  {
+   "name": "xcb-util-wm-devel",
+   "version": "0.4.1-5.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xcb-util-wm-devel-0.4.1-5.el7.aarch64.rpm",
+   "sha256": "916b421045be079c1bc58863790dbfd027e09932bdef359f4b3d4cb345f18bcf"
+  },
+  {
+   "name": "xorg-x11-proto-devel",
+   "version": "2018.4-1.el7",
+   "url": "https://vault.centos.org/altarch/7.9.2009/os/aarch64/Packages/xorg-x11-proto-devel-2018.4-1.el7.noarch.rpm",
+   "sha256": "ed33c07dd19aae73edaef6cb5daeca44fae87aa7fba16d5de6aad4c244f5232f"
+  },
+  {
+   "name": "xz-libs",
+   "version": "5.2.2-2.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/xz-libs-5.2.2-2.el7_9.aarch64.rpm",
+   "sha256": "ae27766338ac64249820d33bf8bc47f7971eb3219765e8704526e14d45139a73"
+  },
+  {
+   "name": "zlib",
+   "version": "1.2.7-21.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/zlib-1.2.7-21.el7_9.aarch64.rpm",
+   "sha256": "e7b60cb3b65487362dd1854a3bee3c5fe9c2dac2193e688c73ddb93b0ea99df2"
+  },
+  {
+   "name": "zlib-devel",
+   "version": "1.2.7-21.el7_9",
+   "url": "https://vault.centos.org/altarch/7.9.2009/updates/aarch64/Packages/zlib-devel-1.2.7-21.el7_9.aarch64.rpm",
+   "sha256": "539756c99669d689a03846d16c4c71a291fd41a54e1ab44a36a5ce254731c8b7"
+  }
+ ]
+}

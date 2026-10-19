@@ -25,6 +25,16 @@ apt-get install -y -qq --no-install-recommends \
     > /dev/null
 
 cp -r "$SRC" /tmp/qt-smoke-tests
+# The host image has no Qt 3D or Data Visualization (the cross builds need
+# neither), so gl-heavy-gallery is not expected of it; tests/CMakeLists.txt
+# fails the configure step for an app missing from expected-apps.txt otherwise.
+for module in 3DCore 3DQuick DataVisualization; do
+    if [ ! -d "$QT_PREFIX/lib/cmake/Qt6$module" ]; then
+        sed -i '/^gl-heavy-gallery$/d' /tmp/qt-smoke-tests/expected-apps.txt
+        echo "gl-heavy-gallery: SKIP (no Qt6$module in this image)"
+        break
+    fi
+done
 mkdir -p /tmp/qt-smoke-build
 cd /tmp/qt-smoke-build
 

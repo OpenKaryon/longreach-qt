@@ -5,6 +5,12 @@
 # (scripts/build/rpm-sysroot.py, from vault.centos.org/altarch/7.9.2009).
 # Development packages for what Qt links, their libraries, and the libraries
 # those link, which the linker reads.
+#
+# The image takes the packages from scripts/fetch/locks/qt6-centos7-aarch64-packages.json;
+# after changing this list, write the lock again:
+#
+#   base=https://vault.centos.org/altarch/7.9.2009
+#   python scripts/build/rpm-sysroot.py --write-lock scripts/fetch/locks/qt6-centos7-aarch64-packages.json \n#       --arch aarch64 --repo $base/os/aarch64 --repo $base/updates/aarch64 --repo $base/sclo/aarch64/rh \n#       $(grep -v '^#' scripts/build/qt6-linux-arm64/packages.txt)
 
 # C and C++
 glibc glibc-devel glibc-headers kernel-headers libgcc libstdc++

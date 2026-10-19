@@ -49,6 +49,55 @@ INPUT_PREFIXES = ("scripts/build/", "scripts/audit/", "scripts/fetch/", "tests/"
 NESTED = "LONGREACH_NESTED_IMAGE_BUILD"
 
 
+def try_lock(stream) -> bool:
+    """Lock an open file's first byte without waiting: False if another process holds it."""
+    stream.seek(0)
+    if sys.platform == "win32":
+        import msvcrt
+        try:
+            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            return False
+    import fcntl
+    try:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
+def unlock(stream) -> None:
+    stream.seek(0)
+    if sys.platform == "win32":
+        import msvcrt
+        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def held(path: Path, wait: bool, busy: str):
+    """Hold the lock file at path; if another process has it, wait (printing
+    busy once) or exit with busy as the error."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as stream:
+        if path.stat().st_size == 0:
+            stream.write(b"0")
+            stream.flush()
+        if not try_lock(stream):
+            if not wait:
+                raise SystemExit(busy)
+            print(busy + "; waiting", flush=True)
+            while not try_lock(stream):
+                time.sleep(1)
+        try:
+            yield
+        finally:
+            unlock(stream)
+
+
 @contextmanager
 def build_lock():
     """Serialize SDK and example builds started through the short targets.
@@ -60,37 +109,20 @@ def build_lock():
     if "1" in (os.environ.get("LONGREACH_BUILDS_COORDINATED"), os.environ.get(NESTED)):
         yield
         return
-    lock_path = ROOT / "build" / ".sdk-build.lock"
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+b") as lock:
-        if lock_path.stat().st_size == 0:
-            lock.write(b"0")
-            lock.flush()
-        lock.seek(0)
-        if sys.platform == "win32":
-            import msvcrt
-            waiting = False
-            while True:
-                try:
-                    msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
-                    break
-                except OSError:
-                    if not waiting:
-                        print("another SDK or example build is running; waiting", flush=True)
-                        waiting = True
-                    time.sleep(1)
-            try:
-                yield
-            finally:
-                lock.seek(0)
-                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+    with held(ROOT / "build" / ".sdk-build.lock", wait=True,
+              busy="another SDK or example build is running"):
+        yield
+
+
+@contextmanager
+def target_lock(target: str):
+    """One build of a target at a time on this machine, whoever started it
+    (make, build-all.py, another shell): a second one stops with an error. An
+    image built as another's prerequisite (NESTED: qt6-host) waits instead,
+    since the target that needs it cannot go on without it."""
+    with held(ROOT / "build" / "locks" / f"{target}.lock", wait=os.environ.get(NESTED) == "1",
+              busy=f"{target} is already being built on this machine"):
+        yield
 
 
 def build_input(relative: str, family: str) -> bool:
@@ -400,7 +432,7 @@ def main() -> int:
     if args.print:
         print(expected)
         return 0
-    with build_lock():
+    with target_lock(args.target), build_lock():
         if not force and complete and image_fingerprint(args.image) == expected:
             print(f"{args.image}: image is current ({expected[:12]})", flush=True)
         else:

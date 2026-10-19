@@ -3,15 +3,22 @@
 # Copyright (C) 2026 OpenKaryon
 """Unpack packages of a yum repository into a sysroot for cross-building.
 
-    rpm-sysroot.py --dest DIR --arch ARCH --repo URL [--repo URL]... [--merged-usr] PACKAGE...
+    rpm-sysroot.py --write-lock LOCK --arch ARCH --repo URL [--repo URL]... PACKAGE...
+    rpm-sysroot.py --lock LOCK --dest DIR [--merged-usr]
 
-Reads each repository's primary index, takes the newest build of every named
-package for ARCH (or noarch) across the repositories, checks the download
-against the SHA256 the index records and unpacks it into DIR with rpm2cpio
-and cpio. Nothing is installed and no scriptlet runs; absolute symbolic links
-are made relative to DIR, so that they resolve inside it. Packages are named
-exactly: dependencies are not followed.
+The first, run when the package list changes: reads each repository's
+primary index, takes the newest build of every named package for ARCH (or
+noarch) across the repositories, downloads it, checks it against the SHA256
+the index records and writes the URL and SHA256 of each to LOCK.
+
+The second, in the build: downloads exactly the packages LOCK names, checks
+each against the SHA256 in LOCK (not against an index fetched with it) and
+unpacks it into DIR with rpm2cpio and cpio. Nothing is installed and no
+scriptlet runs; absolute symbolic links are made relative to DIR, so that
+they resolve inside it. Packages are named exactly: dependencies are not
+followed.
 """
+import json
 import argparse
 import gzip
 import hashlib
@@ -84,15 +91,9 @@ def relativize(root):
                 os.symlink(os.path.relpath(target, parent), path)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--dest', required=True)
-    parser.add_argument('--arch', required=True)
-    parser.add_argument('--repo', action='append', required=True)
-    parser.add_argument('--merged-usr', action='store_true',
-                        help='/bin, /sbin, /lib and /lib64 link into /usr, as from RHEL 7 on')
-    parser.add_argument('names', nargs='+', metavar='PACKAGE')
-    args = parser.parse_args()
+def write_lock(args):
+    if not (args.arch and args.repo and args.names):
+        raise SystemExit('--write-lock needs --arch, --repo and the package names')
     wanted = set(args.names)
     best = {}
     for repo in args.repo:
@@ -103,6 +104,27 @@ def main():
     missing = sorted(wanted - set(best))
     if missing:
         raise SystemExit('not in the repositories: %s' % ', '.join(missing))
+    locked = []
+    for name in sorted(best):
+        package = best[name]
+        digest = hashlib.sha256(fetch(package['url'])).hexdigest()
+        if package['sha256'] and digest != package['sha256']:
+            raise SystemExit('%s: SHA256 does not match the index' % package['url'])
+        locked.append({'name': name, 'version': '%s-%s' % (package['ver'], package['rel']),
+                       'url': package['url'], 'sha256': digest})
+        print('locked %s-%s-%s' % (name, package['ver'], package['rel']), flush=True)
+    with open(args.write_lock, 'w', encoding='utf-8', newline='\n') as out:
+        json.dump({'purpose': 'packages of the sysroot rpm-sysroot.py --lock unpacks, '
+                              'from rpm-sysroot.py --write-lock ' + ' '.join('--repo ' + r for r in args.repo),
+                   'arch': args.arch, 'packages': locked}, out, indent=1)
+        out.write('\n')
+
+
+def unpack_lock(args):
+    if not args.dest:
+        raise SystemExit('--lock needs --dest')
+    with open(args.lock, encoding='utf-8') as stream:
+        locked = json.load(stream)['packages']
     dest = os.path.abspath(args.dest)
     os.makedirs(dest, exist_ok=True)
     if args.merged_usr:
@@ -111,11 +133,10 @@ def main():
             if not os.path.lexists(os.path.join(dest, name)):
                 os.symlink('usr/' + name, os.path.join(dest, name))
     with tempfile.TemporaryDirectory() as work:
-        for name in sorted(best):
-            package = best[name]
+        for package in locked:
             data = fetch(package['url'])
-            if package['sha256'] and hashlib.sha256(data).hexdigest() != package['sha256']:
-                raise SystemExit('%s: SHA256 does not match the index' % package['url'])
+            if hashlib.sha256(data).hexdigest() != package['sha256']:
+                raise SystemExit('%s: SHA256 does not match the lock' % package['url'])
             path = os.path.join(work, os.path.basename(package['url']))
             with open(path, 'wb') as out:
                 out.write(data)
@@ -125,9 +146,27 @@ def main():
             if rpm2cpio.wait():
                 raise SystemExit('%s: rpm2cpio failed' % path)
             os.unlink(path)
-            print('%s-%s-%s' % (name, package['ver'], package['rel']))
+            print('%s-%s' % (package['name'], package['version']))
             sys.stdout.flush()
     relativize(dest)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--write-lock', metavar='LOCK', help='resolve the packages and write LOCK')
+    mode.add_argument('--lock', metavar='LOCK', help='unpack the packages LOCK names')
+    parser.add_argument('--dest')
+    parser.add_argument('--arch')
+    parser.add_argument('--repo', action='append')
+    parser.add_argument('--merged-usr', action='store_true',
+                        help='/bin, /sbin, /lib and /lib64 link into /usr, as from RHEL 7 on')
+    parser.add_argument('names', nargs='*', metavar='PACKAGE')
+    args = parser.parse_args()
+    if args.write_lock:
+        write_lock(args)
+    else:
+        unpack_lock(args)
 
 
 if __name__ == '__main__':

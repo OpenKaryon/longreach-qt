@@ -76,6 +76,39 @@
   with `make build-qt6-<platform>`; for Linux and macOS it used to run its own
   `docker build` without the inputs make fetches, and `--download` (gone)
   fetched a wrongly named archive without a SHA256.
+- A `QT6_VERSION` other than 6.8.4 is not downloaded without
+  `QT6_ARCHIVE_SHA256` (or a `QT6_SOURCE` archive); it used to be taken unchecked.
+- One build of a target at a time on a machine: a second `make` or
+  `build-all.py` of the same target stops with an error (an image built as a
+  prerequisite, qt6-host, waits instead). Two targets that need the same input
+  no longer download it into the same `.part`: the second waits for the first
+  (locks under `build/locks/`).
+- `DOWNLOAD_DIR` is fixed to `downloads/`, which the Dockerfiles copy from;
+  setting it on the make command line is an error instead of a broken build.
+- The xcb and libxkbcommon sources Qt 5 Linux builds are listed in
+  `sources.json` and come from the OpenKaryonLab copy first.
+- `make qt6-host-smoke` skips gl-heavy-gallery when the host image has no Qt 3D
+  or Data Visualization, as its comment always said, instead of failing the
+  configure step.
+- The Qt 4 and Qt 5 Linux sysroots take only the packages their lock names,
+  each checked against its SHA256; a `.deb` an older lock left in
+  `downloads/` used to be extracted too.
+- The Qt 4 macOS i386 build reuses its source tree (a cache mount, which
+  outlasts `--no-cache`) only while the archive and the patches are the same;
+  a patch removed or renamed used to stay applied.
+- The CentOS 7 aarch64 sysroot of qt6-linux-arm64 comes from a lock
+  (`scripts/fetch/locks/qt6-centos7-aarch64-packages.json`, written with
+  `rpm-sysroot.py --write-lock`): 72 packages by https URL and SHA256. It
+  used to take the newest packages over http and trust the checksums of the
+  index fetched with them.
+- qt4-macos-ppc takes xar from the OpenKaryonLab copy at its pinned commit; the
+  ppc-test branch of osxcross cloned xar's master from upstream.
+- `qt5-lucid-lock.py` reads the Lucid indexes over https.
+- The Debian 12 and Ubuntu 22.04 stages install their packages from the
+  archive as it was at `APT_SNAPSHOT` (20261019T000000Z, through
+  snapshot.debian.org and snapshot.ubuntu.com:
+  `scripts/build/apt-snapshot.sh`), so an image built later gets the same
+  versions; `APT_SNAPSHOT=none` takes the live archive.
 - `make download-qt-mobility` and `scripts/fetch/fetch-git-archive.py` are
   gone: no target used Qt Mobility.
 

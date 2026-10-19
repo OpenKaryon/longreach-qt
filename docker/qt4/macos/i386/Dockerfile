@@ -8,11 +8,13 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS toolchain
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 ARG PARALLEL_JOBS=6
 ARG OSXCROSS_REF=f547d14e6ac6c5bb0ddd7563651eb29057e1d755
 ARG LAB_GIT=https://github.com/OpenKaryonLab
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y --no-install-recommends \
     build-essential clang llvm-dev cmake git patch python3 perl curl ca-certificates \
     autoconf automake libtool libssl-dev libxml2-dev liblzma-dev zlib1g-dev \
     libbz2-dev bzip2 xz-utils file && rm -rf /var/lib/apt/lists/*

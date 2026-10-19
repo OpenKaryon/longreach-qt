@@ -6,7 +6,23 @@
 # packages, and the C++ runtime is rebuilt against them.
 set -euo pipefail
 mkdir -p /work/sysroot /work/probe /out
-for package in /packages/*.deb; do dpkg-deb -x "$package" /work/sysroot; done
+# Only the packages the lock names, each checked against its SHA256: a .deb
+# left in the folder by an older lock does not reach the sysroot. Sorted by
+# name, the order the glob used to give.
+python3 - /packages-lock.json /packages > /tmp/locked-packages <<'EOF'
+import hashlib, json, os, sys
+lock, folder = sys.argv[1], sys.argv[2]
+paths = []
+for item in json.load(open(lock))['packages']:
+    path = os.path.join(folder, item['file'])
+    digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+    if digest != item['sha256']:
+        sys.exit('%s: SHA256 %s, expected %s' % (path, digest, item['sha256']))
+    paths.append(path)
+for path in sorted(paths):
+    print(path)
+EOF
+while read -r package; do dpkg-deb -x "$package" /work/sysroot; done < /tmp/locked-packages
 python3 /scripts/relativize-sysroot.py
 bash /scripts/build-cxx-runtime.sh
 export PATH=/work/toolchain/bin:$PATH

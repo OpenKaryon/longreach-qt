@@ -53,7 +53,8 @@ build checks it against are listed in longreach-qt's
 '''
 # Where the build reads its pins.
 PIN_FILES = ['Makefile', 'mk/*.mk', 'docker/**/Dockerfile', 'scripts/build/**/*.sh', 'scripts/build/**/*.py',
-             'scripts/fetch/*.py', 'scripts/fetch/*.sh', 'scripts/run/**/Dockerfile']
+             'scripts/fetch/*.py', 'scripts/fetch/*.sh', 'scripts/run/**/Dockerfile',
+             'scripts/fetch/locks/qt5-lucid-sources.json']
 
 
 def identity() -> list[str]:
@@ -138,9 +139,9 @@ def check(args) -> int:
     for archive in SOURCES['archives']:
         if archive['sha256'] not in text:
             problems.append(f"{archive['file']}: SHA256 not pinned anywhere in the build")
-        local = ROOT / 'downloads' / archive['file']
+        local = ROOT / 'downloads' / archive.get('dir', '') / archive['file']
         if local.is_file() and sha256(local) != archive['sha256']:
-            problems.append(f"downloads/{archive['file']}: SHA256 differs from the pin")
+            problems.append(f"{local.relative_to(ROOT).as_posix()}: SHA256 differs from the pin")
     for repository in SOURCES['repositories']:
         for commit in repository['pins']:
             if commit not in text:
@@ -206,7 +207,7 @@ def repos(args) -> int:
             run(['gh', 'repo', 'create', target, '--public', '--disable-issues', '--disable-wiki',
                  '--description', f"Copy of {repository['upstream']} for longreach-qt: pinned commits "
                                   f"are tagged longreach/<commit>"], args.apply)
-        with tempfile.TemporaryDirectory(prefix='lab-mirror-') as scratch:
+        with tempfile.TemporaryDirectory(prefix='openkaryonlab-repo-') as scratch:
             bare = str(Path(scratch) / 'repo.git')
             run(['git', 'clone', '--bare', repository['upstream'], bare], args.apply)
             remote = f'https://github.com/{target}.git'
@@ -246,7 +247,7 @@ def release_assets() -> dict[str, str]:
 
 def seed(apply: bool) -> None:
     """The archives repository's first commit, a README: a release needs a commit to tag."""
-    with tempfile.TemporaryDirectory(prefix='lab-sources-') as scratch:
+    with tempfile.TemporaryDirectory(prefix='openkaryonlab-sources-') as scratch:
         if apply:
             Path(scratch, 'README.md').write_text(SOURCES_README, encoding='utf-8', newline='\n')
         git = ['git', *identity(), '-c', 'core.autocrlf=false', '-C', scratch]
@@ -285,7 +286,8 @@ def archives(args) -> int:
             else:
                 print(f"{archive['file']}: already there")
             continue
-        local = ROOT / 'downloads' / archive['file']
+        # Where the build keeps it (a dir for those fetched with their lock).
+        local = ROOT / 'downloads' / archive.get('dir', '') / archive['file']
         if not local.is_file():
             print(f"{archive['file']}: downloading from upstream first")
             if args.apply:

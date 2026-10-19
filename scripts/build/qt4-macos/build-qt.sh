@@ -10,8 +10,19 @@ qt_arch=$target_arch
 case "$target_arch" in ppc|ppc64) qt_arch=powerpc;; esac
 source=/work/qt-source
 mkdir -p "$source"
+# The tree lives in a cache mount, which outlasts --no-cache. It is reused
+# only while it was made from this archive and exactly these patches; with
+# one removed, renamed or changed it starts again, since a patch no longer
+# here would otherwise stay applied.
+tree_key=$( { echo qt-everywhere-opensource-src-4.8.7.tar.gz;
+              cd /patches && sha256sum all/*.patch macos/*.patch; } | sha256sum | cut -d" " -f1)
+if [ -f "$source/configure" ] && [ "$(cat "$source/.kit-tree-key" 2>/dev/null || true)" != "$tree_key" ]; then
+    echo "build-qt.sh: the patches changed since this tree was made; starting from a clean tree"
+    find "$source" -mindepth 1 -delete
+fi
 if [ ! -f "$source/configure" ]; then
     tar -xzf /archives/qt-everywhere-opensource-src-4.8.7.tar.gz --strip-components=1 -C "$source"
+    printf '%s\n' "$tree_key" > "$source/.kit-tree-key"
 fi
 cd "$source"
 apply_patch() {

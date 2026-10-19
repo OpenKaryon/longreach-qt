@@ -21,7 +21,8 @@ QT6_MACOS_ARM64_IMAGE := qt6-macos-arm64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
 # scripts/fetch/qt6-fetch-source.py finds the archive and stores it under this
-# one name. The SHA256 is checked for the default version's public archive.
+# one name. The SHA256 is pinned for the default version; another one needs
+# QT6_ARCHIVE_SHA256, or QT6_SOURCE, to be downloaded at all.
 QT6_ARCHIVE := qt-everywhere-src-$(QT6_VERSION).tar.xz
 QT6_ARCHIVE_SHA256 ?= $(if $(filter 6.8.4,$(QT6_VERSION)),1da37a32a583e7856d6fc13357c8ff6ad3ef7b877b8d276713b85026426d5246,)
 QT6_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT6_ARCHIVE)
@@ -90,6 +91,7 @@ ifneq ($(QT6_SOURCE),)
 endif
 
 $(QT6_ARCHIVE_PATH):
+	$(if $(or $(QT6_ARCHIVE_SHA256),$(QT6_SOURCE)),,$(error Qt $(QT6_VERSION) has no pinned SHA256: give QT6_ARCHIVE_SHA256=<sha256> (from the Qt release), or QT6_SOURCE=<archive> you trust))
 	$(PYTHON) scripts/fetch/qt6-fetch-source.py "$(QT6_VERSION)" "$(DOWNLOAD_DIR)" $(if $(QT6_SOURCE),--source "$(QT6_SOURCE)",)
 	$(if $(and $(QT6_ARCHIVE_SHA256),$(if $(QT6_SOURCE),,1)),$(PYTHON) scripts/fetch/fetch.py --check "$@" "$(QT6_ARCHIVE_SHA256)")
 

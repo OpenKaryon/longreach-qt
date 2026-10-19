@@ -36,6 +36,8 @@ COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 FROM ${QT6_HOST_IMAGE} AS host-qt
 
 FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS builder
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -45,7 +47,7 @@ ARG LLVM_MINGW_ARCHIVE
 ARG LLVM_MINGW_SHA256=""
 ARG PARALLEL_JOBS
 
-RUN apt-get update && apt-get install -y \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y \
     build-essential \
     cmake ninja-build python3 python3-pip perl pkg-config \
     libssl-dev libgl1-mesa-dev libglu1-mesa-dev \
@@ -144,10 +146,12 @@ RUN ${QT_SRC_DIR}/configure \
 # ---------------------------------------------------------------------------
 
 FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y --no-install-recommends \
     cmake ninja-build make \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

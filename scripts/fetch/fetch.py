@@ -24,6 +24,8 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
+from pathlib import Path
 
 MIRROR = os.environ.get('LONGREACH_MIRROR',
                         'https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/')
@@ -45,6 +47,65 @@ def verify(path, expected):
     if actual != expected.lower():
         sys.exit(f'{path}: SHA256 {actual}, expected {expected}')
     print(f'{path}: SHA256 ok')
+
+
+def try_lock(stream) -> bool:
+    """Lock an open file's first byte without waiting: False if another process holds it."""
+    stream.seek(0)
+    if sys.platform == "win32":
+        import msvcrt
+        try:
+            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            return False
+    import fcntl
+    try:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
+def unlock(stream) -> None:
+    stream.seek(0)
+    if sys.platform == "win32":
+        import msvcrt
+        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def held(path: Path, wait: bool, busy: str):
+    """Hold the lock file at path; if another process has it, wait (printing
+    busy once) or exit with busy as the error."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as stream:
+        if path.stat().st_size == 0:
+            stream.write(b"0")
+            stream.flush()
+        if not try_lock(stream):
+            if not wait:
+                raise SystemExit(busy)
+            print(busy + "; waiting", flush=True)
+            while not try_lock(stream):
+                time.sleep(1)
+        try:
+            yield
+        finally:
+            unlock(stream)
+
+
+def downloading(path):
+    """Held while <path> is downloaded: two targets that need the same input
+    (qt6-host and qt6-linux-amd64, both the Qt archive) do not both write
+    <path>.part; the second waits, then finds the file there."""
+    # Under build/locks/, not beside the file: downloads/ folders are COPYed
+    # into images whole.
+    lock = Path(__file__).resolve().parents[2] / 'build' / 'locks' / f'download-{os.path.basename(path)}.lock'
+    return held(lock, wait=True, busy=f'{os.path.basename(path)} is being downloaded by another build')
 
 
 def sources(url, path):
@@ -100,9 +161,12 @@ def main(argv):
         verify(path, expected)
         return
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-    part = download(url, path)
-    verify(part, expected)
-    os.replace(part, path)
+    with downloading(path):
+        if not os.path.exists(path):
+            part = download(url, path)
+            verify(part, expected)
+            os.replace(part, path)
+    verify(path, expected)
 
 
 if __name__ == '__main__':

@@ -31,8 +31,12 @@ PARALLEL_JOBS ?= 6
 BUILD_DIR := build
 ARTIFACTS_DIR := artifacts
 
-# Every downloaded input, git-ignored. The Dockerfiles take it as a build arg.
-DOWNLOAD_DIR ?= downloads
+# Every downloaded input, git-ignored. Fixed: the Dockerfiles and the Sarge and
+# Lucid fetchers name downloads/ themselves.
+DOWNLOAD_DIR := downloads
+ifneq ($(origin DOWNLOAD_DIR),file)
+$(error DOWNLOAD_DIR is fixed to downloads/ (the Dockerfiles copy from there); link that folder elsewhere instead)
+endif
 
 # OpenSSL for the Qt 5 and Qt 6 targets and qt4-win-amd64 (the other Qt 4
 # targets take 1.0.2u: QT4_OPENSSL in mk/qt4.mk).
@@ -75,7 +79,11 @@ BASE_REGISTRY ?= ghcr.io/openkaryonlab
 # Docker too (CMake); another copy of it: LONGREACH_MIRROR=<url>.
 LONGREACH_MIRROR ?= https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/
 export LONGREACH_MIRROR
-SOURCE_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) --build-arg LONGREACH_MIRROR=$(LONGREACH_MIRROR)
+# Debian 12 and Ubuntu 22.04 install their packages from the archive as it was
+# at this moment (scripts/build/apt-snapshot.sh); none: the live archive.
+APT_SNAPSHOT ?= 20261019T000000Z
+SOURCE_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) --build-arg LONGREACH_MIRROR=$(LONGREACH_MIRROR) \
+              --build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)
 
 # Recipes run under whatever SHELL is: sh in Git Bash (where OS is still
 # Windows_NT), cmd.exe on some Windows installs.

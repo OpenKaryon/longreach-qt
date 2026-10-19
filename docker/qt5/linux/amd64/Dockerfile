@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential python3 xz-utils file ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 COPY downloads/ubuntu-lucid-${LUCID_ARCH} /packages
+COPY scripts/fetch/locks/qt5-lucid-${LUCID_ARCH}-packages.json /packages-lock.json
 COPY downloads/gcc-5.5.0.tar.xz /archives/
 COPY scripts/build/qt5-lucid /scripts
 RUN bash /scripts/prepare.sh && rm -rf /work/gcc-source /work/cxx-build

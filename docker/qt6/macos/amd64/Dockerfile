@@ -42,6 +42,8 @@ COPY ${DOWNLOAD_DIR}/${QT_ARCHIVE} /tmp/qt-src.tar.xz
 # ---------------------------------------------------------------------------
 
 FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS osxcross-builder
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -52,7 +54,7 @@ ARG OSXCROSS_MIN_VERSION
 ARG OSXCROSS_REF
 ARG LAB_GIT=https://github.com/OpenKaryonLab
 
-RUN apt-get update && apt-get install -y \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y \
     build-essential cmake python3 perl git patch wget nano \
     bash clang bzip2 binutils-multiarch-dev cpio xz-utils \
     libbz2-dev libmpc-dev libmpfr-dev libgmp-dev libssl-dev \
@@ -105,6 +107,8 @@ RUN set -eux; \
 # ---------------------------------------------------------------------------
 
 FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS builder
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -113,7 +117,7 @@ ARG PARALLEL_JOBS
 ARG OSX_SDK_VERSION
 ARG OSX_DEPLOYMENT_TARGET
 
-RUN apt-get update && apt-get install -y \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y \
     build-essential \
     cmake ninja-build ccache python3 python3-pip perl pkg-config \
     gcc g++ clang \
@@ -227,6 +231,8 @@ RUN if dpkg --compare-versions "${OSX_DEPLOYMENT_TARGET}" lt 10.14; then \
 # ---------------------------------------------------------------------------
 
 FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG OSX_SDK_VERSION
@@ -234,7 +240,7 @@ ARG OSX_DEPLOYMENT_TARGET
 ENV OSXCROSS_SDK_VERSION="${OSX_SDK_VERSION}" \
     MACOSX_DEPLOYMENT_TARGET="${OSX_DEPLOYMENT_TARGET}"
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get install -y --no-install-recommends \
     cmake ninja-build make \
     clang \
     ca-certificates \

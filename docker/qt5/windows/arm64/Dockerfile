@@ -19,6 +19,8 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS toolchain
+ARG APT_SNAPSHOT
+COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
 # LLVM-MinGW: clang plus the aarch64 mingw-w64 headers and import libraries,
 # from the build context (make download-llvm-mingw). Another release:
@@ -33,7 +35,7 @@ ARG TARGET_PREFIX="aarch64-w64-mingw32-"
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt-get -y update && \
+    sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get -y update && \
     apt-get -y upgrade && \
     apt-get -y install \
         build-essential python3 python-is-python3 perl git wget ca-certificates \

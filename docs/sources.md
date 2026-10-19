@@ -2,7 +2,8 @@
 
 Every file a build downloads is pinned: archives by SHA256 (in the Makefile,
 `mk/*.mk`, the Dockerfiles and `scripts/fetch/`), Git projects by commit,
-base images by digest. A pin stops the build when upstream changes a file; it
+base images by digest, distribution packages by lock (Sarge, Lucid, CentOS 7
+aarch64) or by archive snapshot date (Debian 12, Ubuntu 22.04). A pin stops the build when upstream changes a file; it
 does not help when upstream deletes it, and a busy upstream (download.qt.io,
 Docker Hub) rate-limits parallel builds. So the GitHub organisation
 [OpenKaryonLab](https://github.com/OpenKaryonLab) keeps a copy of everything
@@ -14,7 +15,7 @@ accepted from either.
 
 | What | Copy (first) | Upstream (fallback) |
 |---|---|---|
-| Source archives (Qt, OpenSSL, GCC, LLVM, LLVM-MinGW, CMake, ninja, xcb-util-cursor) | release `sources` of [longreach-qt-sources](https://github.com/OpenKaryonLab/longreach-qt-sources) | the project's own site, unless that is GitHub (LLVM, LLVM-MinGW, CMake, ninja) |
+| Source archives (Qt, OpenSSL, GCC, LLVM, LLVM-MinGW, CMake, ninja, xcb-util-cursor, the xcb and libxkbcommon sources Qt 5 Linux builds) | release `sources` of [longreach-qt-sources](https://github.com/OpenKaryonLab/longreach-qt-sources) | the project's own site, unless that is GitHub (LLVM, LLVM-MinGW, CMake, ninja) |
 | osxcross and the projects its `build.sh` clones (cctools-port, apple-libtapi, xar) | OpenKaryonLab/&lt;name&gt;, each pinned commit tagged `longreach/<first 12 hex digits>` | none: github.com/tpoechtrager is on GitHub too, so it is only where `mirror.py` copies from |
 | Base images (Debian 12, Ubuntu 14.04-22.04, CentOS 7.9) | ghcr.io/openkaryonlab/&lt;name&gt; | Docker Hub, same digest |
 
@@ -38,6 +39,11 @@ accepted from either.
 
       make qt5-linux-amd64 BASE_REGISTRY=docker.io/library
 
+- The packages Debian 12 and Ubuntu 22.04 install come from the archive as it
+  was at `APT_SNAPSHOT` (snapshot.debian.org, snapshot.ubuntu.com:
+  `scripts/build/apt-snapshot.sh`); a later date is a deliberate update and
+  rebuilds those images, `APT_SNAPSHOT=none` takes the live archive. The older
+  releases (Ubuntu 14.04-18.04, CentOS 7.9) no longer change.
 - Where an input comes from (`BASE_REGISTRY`, `LAB_GIT`, `LONGREACH_MIRROR`)
   is not part of an image's fingerprint
   (`scripts/build/ensure-image.py`), so switching sources rebuilds nothing.
@@ -47,9 +53,12 @@ Not copied, because their licences do not allow it: the Apple SDKs
 package the 11.3 SDK is packed from. make fetches them into `downloads/` from
 where they are published (phracker/MacOSX-SDKs, joseluisq/macosx-sdks,
 swcdn.apple.com) and checks their SHA256 pins; keep your own copies, and put
-them back in `downloads/` under the same names when those go away. The Debian Sarge and Ubuntu Lucid packages
-(`scripts/fetch/locks/`) come from archive.debian.org and
-old-releases.ubuntu.com, which are archives themselves.
+them back in `downloads/` under the same names when those go away.
+
+The Debian Sarge, Ubuntu Lucid and CentOS 7.9 aarch64 packages
+(`scripts/fetch/locks/`) come from archive.debian.org, old-releases.ubuntu.com
+and vault.centos.org, which are archives themselves; each is pinned by SHA256
+in its lock.
 
 Maintainers fill the copies with `scripts/fetch/mirror.py`, logged in to gh
 (and to ghcr.io, for images) as one of the `publishers` in `sources.json`,

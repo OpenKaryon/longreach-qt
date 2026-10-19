@@ -18,7 +18,9 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCKS = ROOT / 'scripts/fetch/locks'
-ARCHIVE = 'http://old-releases.ubuntu.com/ubuntu/'
+# Over https: the lock takes the SHA256 the index records, so the index must
+# come from the archive itself.
+ARCHIVE = 'https://old-releases.ubuntu.com/ubuntu/'
 POCKETS = ['lucid', 'lucid-updates', 'lucid-security']
 COMPONENTS = ['main', 'universe']
 

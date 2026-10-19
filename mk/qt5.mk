@@ -143,6 +143,7 @@ $(QT5_MACOS_SDK_PATH):
 	docker run --rm -v "$(CURDIR):/work" -v "$(CURDIR)/scripts:/scripts:ro" \
 		-e SDK_TARBALL="$(QT5_MACOS_SDK_PATH)" -e SDK_DIR="$(QT5_MACOS_SDK_DIR)" \
 		-e SDK_PKG_URL="$(QT5_MACOS_SDK_PKG_URL)" -e SDK_PKG_SHA256="$(QT5_MACOS_SDK_PKG_SHA256)" \
+		-e APT_SNAPSHOT="$(APT_SNAPSHOT)" \
 		$(BASE_REGISTRY)/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 \
 		bash -c "bash /scripts/fetch/fetch-macos-sdk.sh"
 

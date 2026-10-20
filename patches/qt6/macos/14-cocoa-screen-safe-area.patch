@@ -3,12 +3,16 @@
 #
 # macOS before 12: no safe-area insets (NSScreen safeAreaInsets is 12).
 #
-diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
 --- a/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
 +++ b/qtbase/src/plugins/platforms/cocoa/qcocoawindow.mm
-@@ -316,2 +316,4 @@ QMargins QCocoaWindow::safeAreaMargins() const
+@@ -317,7 +317,9 @@
+     // not include the screen's insets automatically, so we need to manually
+     // merge them.
      auto screenRect = m_view.window.screen.frame;
 -    auto screenInsets = m_view.window.screen.safeAreaInsets;
 +    NSEdgeInsets screenInsets = {};
 +    if (@available(macOS 12.0, *))
 +        screenInsets = m_view.window.screen.safeAreaInsets;
+     auto screenRelativeViewBounds = QCocoaScreen::mapFromNative(
+         [m_view.window convertRectToScreen:
+             [m_view convertRect:m_view.bounds toView:nil]]

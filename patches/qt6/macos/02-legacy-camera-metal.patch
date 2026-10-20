@@ -5,7 +5,6 @@
 # (the default camera first, as the newer path does), and Metal frame capture
 # only where it exists.
 #
-diff --git a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
 --- a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
 +++ b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
 @@ -31,6 +31,9 @@
@@ -40,14 +39,12 @@ diff --git a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm b/qtmultimed
  }
  
  // Given a list of AVCaptureDevices, returns a list of all the QCameraDevices
-diff --git a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm b/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
 --- a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
 +++ b/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
-@@ -96,6 +96,28 @@
- }
+@@ -97,6 +97,28 @@
  
  #endif // defined(Q_OS_IOS)
-+
+ 
 +bool qt_flash_available(AVCaptureDevice *captureDevice)
 +{
 +#ifdef Q_OS_MACOS
@@ -69,9 +66,10 @@ diff --git a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
 +    return [captureDevice isTorchAvailable];
 +#endif
 +}
- 
++
  } // Unnamed namespace.
  
+ QAVFCameraBase::QAVFCameraBase(QCamera *camera)
 @@ -631,7 +653,7 @@
      // AVCaptureDevice's docs:
      // "The flash may become unavailable if, for example,
@@ -116,7 +114,6 @@ diff --git a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
                  if (mode == QCamera::TorchOn)
                      setAvTorchModeSafe(AVCaptureTorchModeOn);
                  else if (mode == QCamera::TorchAuto)
-diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
 --- a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
 +++ b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
 @@ -22,7 +22,8 @@
@@ -135,10 +132,7 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
  
 -    QRhi::Implementation backend = rhi->backend();
 -    const QRhiNativeHandles *nh = rhi->nativeHandles();
-+    if (@available(macOS 10.15, *)) {
-+        QRhi::Implementation backend = rhi->backend();
-+        const QRhiNativeHandles *nh = rhi->nativeHandles();
- 
+-
 -    switch (backend) {
 -    case QRhi::Implementation::Metal: {
 -        const  QRhiMetalNativeHandles *mtlnh = static_cast<const QRhiMetalNativeHandles *>(nh);
@@ -148,6 +142,10 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
 -            m_captureDescriptor.captureObject = mtlnh->dev;
 -        } else {
 -            qCWarning(lcGraphicsFrameCapture) << "No valid Metal Device or Metal Command Queue found";
++    if (@available(macOS 10.15, *)) {
++        QRhi::Implementation backend = rhi->backend();
++        const QRhiNativeHandles *nh = rhi->nativeHandles();
++
 +        switch (backend) {
 +        case QRhi::Implementation::Metal: {
 +            const QRhiMetalNativeHandles *mtlnh = static_cast<const QRhiMetalNativeHandles *>(nh);
@@ -167,6 +165,7 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
              m_initialized = false;
              return;
 +            break;
++        }
          }
 -        break;
 -    }
@@ -177,7 +176,6 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
 -        break;
 -    }
 -    }
-+        }
  
 -    if (!m_captureManager) {
 -        m_captureManager = MTLCaptureManager.sharedCaptureManager;
@@ -195,7 +193,7 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
          }
      }
  }
-@@ -91,8 +94,10 @@
+@@ -91,9 +94,11 @@
  
      updateCaptureFileName();
      NSError *error;
@@ -209,3 +207,4 @@ diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/
 +        }
      }
  }
+ 

@@ -46,6 +46,7 @@ care where it came from.
 """
 
 import argparse
+import glob
 import os
 import shutil
 import sys
@@ -72,10 +73,40 @@ def series(version):
     return ".".join(version.split(".")[:2])
 
 
+def same_content(a, b):
+    if os.path.samefile(a, b):
+        return True
+    return os.path.getsize(a) == os.path.getsize(b) and fetch.sha256(a) == fetch.sha256(b)
+
+
+def builds_running():
+    """The Qt 6 targets being built on this machine (ensure-image.py holds
+    build/locks/<target>.lock): their docker build may still read the archive."""
+    locks = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "build", "locks")
+    busy = []
+    for path in sorted(glob.glob(os.path.join(locks, "qt6-*.lock"))):
+        with open(path, "a+b") as stream:
+            if fetch.try_lock(stream):
+                fetch.unlock(stream)
+            else:
+                busy.append(os.path.basename(path)[:-len(".lock")])
+    return busy
+
+
 def place(src, dest):
     """Put src at dest without copying a gigabyte when it can be avoided."""
     if os.path.abspath(src) == os.path.abspath(dest):
         return
+    # Each make of a build runs this again (QT6_SOURCE makes the archive
+    # phony): an archive already in place stays as it is.
+    if os.path.exists(dest) and same_content(src, dest):
+        print("%s is already %s" % (dest, src))
+        return
+    busy = builds_running()
+    if busy:
+        sys.exit("%s would replace the Qt 6 archive while %s %s being built from it; "
+                 "wait for %s" % (src, ", ".join(busy), "is" if len(busy) == 1 else "are",
+                                  "it" if len(busy) == 1 else "them"))
     try:
         if os.path.exists(dest):
             os.remove(dest)

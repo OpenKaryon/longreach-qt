@@ -26,8 +26,9 @@ if [ -f "/work/$SDK_TARBALL" ]; then
 fi
 
 export DEBIAN_FRONTEND=noninteractive
-# The tools from the archive as it was at APT_SNAPSHOT (make passes it).
-sh /scripts/build/apt-snapshot.sh "${APT_SNAPSHOT:-none}"
+# The tools from the archive as it was at the snapshot date (make passes
+# APT_SNAPSHOT when it is set).
+sh /scripts/build/apt-snapshot.sh ${APT_SNAPSHOT:+"$APT_SNAPSHOT"}
 apt-get -qq update >/dev/null
 apt-get -qq install -y curl ca-certificates python3 libarchive-tools xz-utils >/dev/null
 

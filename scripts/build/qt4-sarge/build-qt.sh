@@ -25,7 +25,7 @@ if [ ! -f /work/qt-source/configure ]; then
     tar -xzf /archives/qt-everywhere-opensource-src-4.8.7.tar.gz --strip-components=1 -C /work/qt-source
     cd /work/qt-source
     # OpenSSL 1.0.2u here; the 1.1 API port in all/01 is guarded on the version.
-    for p in /patches/all/*.patch /patches/linux/*.patch; do patch -p1 < "$p"; done
+    for p in /patches/all/*.patch /patches/linux/*.patch; do patch -p1 --fuzz=0 < "$p"; done
     rm -f .sarge-configured
 fi
 cd /work/qt-source

@@ -10,7 +10,9 @@
 # after changing this list, write the lock again:
 #
 #   base=https://vault.centos.org/altarch/7.9.2009
-#   python scripts/build/rpm-sysroot.py --write-lock scripts/fetch/locks/qt6-centos7-aarch64-packages.json \n#       --arch aarch64 --repo $base/os/aarch64 --repo $base/updates/aarch64 --repo $base/sclo/aarch64/rh \n#       $(grep -v '^#' scripts/build/qt6-linux-arm64/packages.txt)
+#   python scripts/build/rpm-sysroot.py --write-lock scripts/fetch/locks/qt6-centos7-aarch64-packages.json \
+#       --arch aarch64 --repo $base/os/aarch64 --repo $base/updates/aarch64 --repo $base/sclo/aarch64/rh \
+#       $(grep -v '^#' scripts/build/qt6-linux-arm64/packages.txt)
 
 # C and C++
 glibc glibc-devel glibc-headers kernel-headers libgcc libstdc++

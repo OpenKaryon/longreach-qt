@@ -6,7 +6,6 @@
 # through a using directive. Rename QtOpcUa's logging category from lcSsl to
 # lcOpcUaSsl because QtNetwork also defines a global lcSsl() symbol; the public
 # logging category string remains qt.opcua.ssl. Applies to pristine Qt 6.8.4.
-diff --git a/qtopcua/src/opcua/x509/openssl_symbols.cpp b/qtopcua/src/opcua/x509/openssl_symbols.cpp
 --- a/qtopcua/src/opcua/x509/openssl_symbols.cpp
 +++ b/qtopcua/src/opcua/x509/openssl_symbols.cpp
 @@ -45,7 +45,9 @@
@@ -62,7 +61,6 @@ diff --git a/qtopcua/src/opcua/x509/openssl_symbols.cpp b/qtopcua/src/opcua/x509
 +} // namespace QOpcUaOpenSsl
 +
  QT_END_NAMESPACE
-diff --git a/qtopcua/src/opcua/x509/openssl_symbols_p.h b/qtopcua/src/opcua/x509/openssl_symbols_p.h
 --- a/qtopcua/src/opcua/x509/openssl_symbols_p.h
 +++ b/qtopcua/src/opcua/x509/openssl_symbols_p.h
 @@ -64,7 +64,9 @@
@@ -86,7 +84,6 @@ diff --git a/qtopcua/src/opcua/x509/openssl_symbols_p.h b/qtopcua/src/opcua/x509
  QT_END_NAMESPACE
  
  #endif
-diff --git a/qtopcua/src/opcua/x509/qopcuakeypair_openssl.cpp b/qtopcua/src/opcua/x509/qopcuakeypair_openssl.cpp
 --- a/qtopcua/src/opcua/x509/qopcuakeypair_openssl.cpp
 +++ b/qtopcua/src/opcua/x509/qopcuakeypair_openssl.cpp
 @@ -47,20 +47,20 @@
@@ -198,7 +195,6 @@ diff --git a/qtopcua/src/opcua/x509/qopcuakeypair_openssl.cpp b/qtopcua/src/opcu
          return QByteArray();
      }
  
-diff --git a/qtopcua/src/opcua/x509/qopcuakeypair_p.h b/qtopcua/src/opcua/x509/qopcuakeypair_p.h
 --- a/qtopcua/src/opcua/x509/qopcuakeypair_p.h
 +++ b/qtopcua/src/opcua/x509/qopcuakeypair_p.h
 @@ -22,7 +22,7 @@
@@ -210,7 +206,6 @@ diff --git a/qtopcua/src/opcua/x509/qopcuakeypair_p.h b/qtopcua/src/opcua/x509/q
  
  class QOpcUaKeyPairPrivate : public QObjectPrivate
  {
-diff --git a/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.cpp b/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.cpp
 --- a/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.cpp
 +++ b/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.cpp
 @@ -78,12 +78,12 @@
@@ -552,7 +547,7 @@ diff --git a/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.
          return QByteArray();
      }
      Deleter<BIO> bioDeleter(bio, q_BIO_free_all);
-@@ -457,6 +457,6 @@
+@@ -457,7 +457,7 @@
          result = q_i2d_X509_bio(bio, x509);
      }
      if (result != 1) {
@@ -560,3 +555,4 @@ diff --git a/qtopcua/src/opcua/x509/qopcuax509certificatesigningrequest_openssl.
 +        qCWarning(lcOpcUaSsl) << "Failed to export certificate";
          return QByteArray();
      }
+ 

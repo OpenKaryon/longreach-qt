@@ -3,11 +3,9 @@
 #
 # Qt 6.8.4 bundled Assimp in Qt 3D and Qt Quick 3D: MSVCRT does not export _fstat32.
 # Use the 64-bit variant that LLVM-MinGW's MSVCRT import library provides.
-diff --git a/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp b/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
 --- a/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
 +++ b/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
-@@ -156,10 +156,10 @@ size_t DefaultIOStream::FileSize() const {
-         if (0 != err)
+@@ -157,9 +157,9 @@
              return 0;
          mCachedSize = (size_t)(fileStat.st_size);
  #elif defined _WIN32
@@ -19,11 +17,9 @@ diff --git a/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp b
          if (0 != err)
              return 0;
          mCachedSize = (size_t)(fileStat.st_size);
-diff --git a/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp b/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
 --- a/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
 +++ b/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
-@@ -156,10 +156,10 @@ size_t DefaultIOStream::FileSize() const {
-         if (0 != err)
+@@ -157,9 +157,9 @@
              return 0;
          mCachedSize = (size_t)(fileStat.st_size);
  #elif defined _WIN32

@@ -5,6 +5,9 @@
 
     fetch.py <url> <file> <sha256>          download unless present, then verify
     fetch.py --check <file> <sha256>        verify a file that is already there
+    fetch.py --locked <file> <command>...   run a command that makes <file>,
+                                            unless it is there, under the same
+                                            lock as a download of <file>
 
 Every archive the kit builds from is pinned this way in the Makefile, so a
 changed upstream file, a truncated download or a swapped mirror stops the
@@ -20,6 +23,7 @@ tries <url> first, for a new pin before its file is copied.
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -153,6 +157,12 @@ def download(url, path, order=None):
 def main(argv):
     if len(argv) == 3 and argv[0] == '--check':
         verify(argv[1], argv[2])
+        return
+    if len(argv) >= 3 and argv[0] == '--locked':
+        path, command = argv[1], argv[2:]
+        with downloading(path):
+            if not os.path.exists(path):
+                sys.exit(subprocess.call(command))
         return
     if len(argv) != 3:
         sys.exit(__doc__)

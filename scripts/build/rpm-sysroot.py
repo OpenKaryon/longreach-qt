@@ -27,6 +27,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -35,8 +36,16 @@ COMMON = '{http://linux.duke.edu/metadata/common}'
 
 
 def fetch(url):
-    with urllib.request.urlopen(url, timeout=120) as response:
-        return response.read()
+    """The body at url; three tries, as one failed request should not end a build."""
+    for attempt in range(1, 4):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as response:
+                return response.read()
+        except OSError as error:
+            if attempt == 3 or getattr(error, 'code', None) == 404:
+                raise
+            print(f'{url}: {error}; retrying', file=sys.stderr)
+            time.sleep(30 * attempt)
 
 
 def rpmvercmp(a, b):

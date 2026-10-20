@@ -21,13 +21,18 @@ shift 2
 export GIT_TERMINAL_PROMPT=0
 rm -rf "${dir:?}"
 git init -q "$dir"
+# Three tries per repository, half a minute apart: one failed request should
+# not end an image build.
 for url in "$@"; do
-    if git -C "$dir" fetch -q --depth 1 "$url" "$ref"; then
-        git -C "$dir" checkout -q FETCH_HEAD
-        echo "git-fetch-pinned: $(basename "$dir") at $(git -C "$dir" rev-parse HEAD) from $url"
-        exit 0
-    fi
-    echo "git-fetch-pinned: $ref not fetched from $url" >&2
+    for try in 1 2 3; do
+        if git -C "$dir" fetch -q --depth 1 "$url" "$ref"; then
+            git -C "$dir" checkout -q FETCH_HEAD
+            echo "git-fetch-pinned: $(basename "$dir") at $(git -C "$dir" rev-parse HEAD) from $url"
+            exit 0
+        fi
+        echo "git-fetch-pinned: $ref not fetched from $url (try $try of 3)" >&2
+        [ "$try" = 3 ] || sleep 30
+    done
 done
 echo "git-fetch-pinned: no repository had $ref" >&2
 exit 1

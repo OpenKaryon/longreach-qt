@@ -17,12 +17,14 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 
 # The posix threading alternative, as in the Qt 5 Windows images.
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt -y update && \
+    sh /usr/local/bin/apt-update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python perl git wget nano ca-certificates xz-utils \
@@ -72,7 +74,7 @@ RUN \
     mv $QT4_SRC_DIR Qt-4.8 && \
     rm -f $QT4_DISTRO && \
     cd /opt/Qt-4.8/ && \
-    for p in /tmp/patches/qt4/all/*.patch /tmp/patches/qt4/windows/*.patch; do echo "applying $p"; patch -p1 < "$p"; done && \
+    for p in /tmp/patches/qt4/all/*.patch /tmp/patches/qt4/windows/*.patch; do echo "applying $p"; patch -p1 --fuzz=0 < "$p" || exit 1; done && \
     OPENSSL_LIBS="-L/opt/openssl-3/lib64 -L/opt/openssl-3/lib -lssl -lcrypto -lcrypt32 -lws2_32 -lgdi32 -luser32 -ladvapi32" \
     ./configure -prefix "/usr/local/Qt-4.8" \
     -opensource -confirm-license -release -static \
@@ -123,6 +125,6 @@ COPY scripts/build/qt4-tests.sh scripts/audit/qt4-check-deps.sh /tmp/qt4-build/
 # in /opt/qt4-smoke-bin run on Windows (make qt4-extract-tests).
 RUN bash /tmp/qt4-build/qt4-tests.sh /usr/local/Qt-4.8 /tmp/qt4-smoke-tests /opt/qt4-smoke-bin "$(nproc)" \
         -spec /usr/local/Qt-4.8/mkspecs/win32-g++ -unix && \
-    for f in /opt/qt4-smoke-bin/*; do bash /tmp/qt4-build/qt4-check-deps.sh "$f"; done
+    for f in /opt/qt4-smoke-bin/*; do bash /tmp/qt4-build/qt4-check-deps.sh "$f" || exit 1; done
 
 ENTRYPOINT ["/bin/bash", "-l", "-c"]

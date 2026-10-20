@@ -23,6 +23,8 @@
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG SARGE_PLATFORM=amd64
 FROM --platform=linux/${SARGE_PLATFORM} ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 ARG SARGE_ARCH=amd64
 ENV SARGE_ARCH=${SARGE_ARCH}
 
@@ -33,7 +35,7 @@ ENV SARGE_ARCH=${SARGE_ARCH}
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt -y update && \
+    sh /usr/local/bin/apt-update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python perl git wget nano ca-certificates xz-utils \
@@ -48,7 +50,7 @@ RUN \
     exit 0
 
 # mkfontdir generates the font indexes Debian's post-install would create.
-RUN apt-get update && apt-get install -y --no-install-recommends xfonts-utils && \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends xfonts-utils && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------

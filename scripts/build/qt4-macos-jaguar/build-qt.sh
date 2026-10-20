@@ -13,7 +13,7 @@ bin=/opt/osxcross-ppc/target/bin
 mkdir -p "$source"
 tar -xzf /archives/qt-everywhere-opensource-src-4.8.7.tar.gz --strip-components=1 -C "$source"
 cd "$source"
-for p in /patches/all/*.patch /patches/macos/*.patch; do patch -p1 < "$p" || exit 1; done
+for p in /patches/all/*.patch /patches/macos/*.patch; do patch -p1 --fuzz=0 < "$p" || exit 1; done
 mkdir -p "mkspecs/$spec"
 cp mkspecs/macx-g++/qplatformdefs.h "mkspecs/$spec/"
 cp /scripts/qmake.conf "mkspecs/$spec/"

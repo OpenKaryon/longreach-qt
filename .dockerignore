@@ -37,6 +37,5 @@ docs/
 downloads/jaguar/
 downloads/lion/
 
-# Local test material and backup archives: no Dockerfile COPYs them.
-lab/
+# Backup archives at the top: no Dockerfile COPYs them.
 /*.zip

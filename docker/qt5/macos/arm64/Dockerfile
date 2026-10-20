@@ -131,7 +131,7 @@ RUN \
     mv $QT_SRC_DIR Qt-5.15 && \
     rm -f $QT_DISTRO && \
     cd /opt/Qt-5.15/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; git apply "$p"; done && \
+    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done && \
     sed -i "s|^QMAKE_MACOSX_DEPLOYMENT_TARGET = .*|QMAKE_MACOSX_DEPLOYMENT_TARGET = $MACOS_DEPLOYMENT_TARGET|" \
         qtbase/mkspecs/common/macx.conf && \
     grep -q "^QMAKE_MACOSX_DEPLOYMENT_TARGET = $MACOS_DEPLOYMENT_TARGET\$" qtbase/mkspecs/common/macx.conf && \

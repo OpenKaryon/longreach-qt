@@ -14,15 +14,14 @@ mkdir -p "$source"
 # only while it was made from this archive and exactly these patches; with
 # one removed, renamed or changed it starts again, since a patch no longer
 # here would otherwise stay applied.
-tree_key=$( { echo qt-everywhere-opensource-src-4.8.7.tar.gz;
+tree_key=$( { sha256sum /archives/qt-everywhere-opensource-src-4.8.7.tar.gz;
               cd /patches && sha256sum all/*.patch macos/*.patch; } | sha256sum | cut -d" " -f1)
 if [ -f "$source/configure" ] && [ "$(cat "$source/.kit-tree-key" 2>/dev/null || true)" != "$tree_key" ]; then
-    echo "build-qt.sh: the patches changed since this tree was made; starting from a clean tree"
+    echo "build-qt.sh: the archive or the patches changed, or patching stopped halfway; starting from a clean tree"
     find "$source" -mindepth 1 -delete
 fi
 if [ ! -f "$source/configure" ]; then
     tar -xzf /archives/qt-everywhere-opensource-src-4.8.7.tar.gz --strip-components=1 -C "$source"
-    printf '%s\n' "$tree_key" > "$source/.kit-tree-key"
 fi
 cd "$source"
 apply_patch() {
@@ -30,12 +29,16 @@ apply_patch() {
     key=${patch_file#/patches/}
     previous="$source/.kit-applied/$key"
     if [ -f "$previous" ] && cmp -s "$previous" "$patch_file"; then return; fi
-    if [ -f "$previous" ]; then patch -R -p1 < "$previous"; fi
-    patch -p1 < "$patch_file"
+    if [ -f "$previous" ]; then patch -R -p1 --fuzz=0 < "$previous"; fi
+    patch -p1 --fuzz=0 < "$patch_file"
     mkdir -p "$(dirname "$previous")"
     cp "$patch_file" "$previous"
 }
+# The key only once every patch is on: a run stopped halfway leaves none, and
+# the next one starts from a clean tree instead of patching a half-patched one.
+rm -f "$source/.kit-tree-key"
 for p in /patches/all/*.patch /patches/macos/*.patch; do apply_patch "$p"; done
+printf '%s\n' "$tree_key" > "$source/.kit-tree-key"
 mkdir -p "mkspecs/$qmake_spec"
 cp mkspecs/macx-g++/qplatformdefs.h "mkspecs/$qmake_spec/"
 cp /scripts/qmake.conf "mkspecs/$qmake_spec/"

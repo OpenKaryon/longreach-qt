@@ -51,7 +51,7 @@ RUN echo '530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87  /arc
 ENV PATH=/opt/osxcross-ppc/target/bin:$PATH
 ENV DISABLE_ANNOYING_LD64_ASSERTION=1
 COPY scripts/build/qt4-macos-ppc/gcc55-objcxx-legacy-eh.patch /scripts/gcc55-objcxx-legacy-eh.patch
-RUN cd /work/ppc-gcc-source && patch -p1 < /scripts/gcc55-objcxx-legacy-eh.patch
+RUN cd /work/ppc-gcc-source && patch -p1 --fuzz=0 < /scripts/gcc55-objcxx-legacy-eh.patch
 RUN cd /work/ppc-gcc-build \
     && CXXFLAGS='-O2 -std=gnu++98' /work/ppc-gcc-source/configure \
        --target=powerpc-apple-darwin8 --prefix=/opt/osxcross-ppc/target \

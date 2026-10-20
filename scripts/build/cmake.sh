@@ -44,8 +44,17 @@ echo "cmake.sh: version=$version host=$host_triple prefix=$prefix source=$use_so
 # The OpenKaryonLab copy of the file (scripts/fetch/sources.json). Kitware's
 # release is on GitHub too, so it would be no fallback.
 mirror=${LONGREACH_MIRROR:-https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/}
+# Five tries, half a minute apart: one failed request should not end an
+# image build that has compiled Qt for an hour.
 release() {
-    fetch "${mirror%/}/$1" "$2"
+    try=1
+    until fetch "${mirror%/}/$1" "$2"; do
+        rm -f "$2"
+        [ "$try" -lt 5 ] || { echo "cmake.sh: could not download $1" >&2; exit 1; }
+        echo "cmake.sh: downloading $1 failed (try $try of 5); retrying" >&2
+        try=$((try + 1))
+        sleep 30
+    done
 }
 
 # Every archive is checked against Kitware's published SHA-256 list. Another

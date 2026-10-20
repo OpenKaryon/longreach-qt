@@ -4,9 +4,9 @@
 """Build an SDK image only when its own inputs have changed.
 
 An image's fingerprint covers exactly what goes into its `docker build`
-commands (as `make -n <target>` prints them): each Dockerfile, its build
-arguments, --platform and --target, and every file of the build context it
-COPYs, ADDs or bind-mounts, read with the ARG values substituted. A target
+commands (as `make -n <target>` prints them): each Dockerfile, the build
+arguments it declares, --platform and --target, and every file of the build
+context it COPYs, ADDs or bind-mounts, read with the ARG values substituted. A target
 that builds FROM another SDK image (`--needs`, qt6-host for the Qt 6 cross
 targets) adds that image's fingerprint. So a patch under patches/qt6/macos
 changes the macOS images only, and a Makefile edit only the images whose
@@ -213,8 +213,13 @@ class Hashes:
 
 def docker_builds(make: str, target: str) -> list[list[str]]:
     """The docker build commands `make <target>` would run, in order."""
-    printed = subprocess.run([make, "-n", "--no-print-directory", target, "DOCKER_BUILD_FLAGS="],
-                             cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    result = subprocess.run([make, "-n", "--no-print-directory", target, "DOCKER_BUILD_FLAGS="],
+                            cwd=ROOT, capture_output=True, text=True, check=False)
+    if result.returncode:
+        # make's own message, for example the licence profile guard.
+        sys.stderr.write(result.stderr)
+        raise SystemExit(result.returncode)
+    printed = result.stdout
     return [words for words in (shlex.split(line) for line in printed.splitlines() if "docker build" in line)
             if words[:2] == ["docker", "build"]]
 
@@ -299,6 +304,12 @@ def instructions(dockerfile: Path):
         logical = ""
 
 
+def declared_args(dockerfile: Path) -> set[str]:
+    """The build arguments a Dockerfile declares; docker build ignores the rest."""
+    return {item.partition("=")[0] for keyword, rest in instructions(dockerfile) if keyword == "ARG"
+            for item in shlex.split(rest)}
+
+
 def context_sources(dockerfile: Path, build_args: dict[str, str]) -> list[str]:
     """The build-context paths a Dockerfile copies or bind-mounts."""
     values = dict(build_args)
@@ -368,7 +379,8 @@ def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> t
         context = (ROOT / build["context"]).resolve()
         dockerfile = context / build["dockerfile"] if not Path(build["dockerfile"]).is_absolute() \
             else Path(build["dockerfile"])
-        args = {k: v for k, v in build["args"].items() if k not in SPEED_ARGS | SOURCE_ARGS}
+        declared = declared_args(dockerfile)
+        args = {k: v for k, v in build["args"].items() if k in declared and k not in SPEED_ARGS | SOURCE_ARGS}
         digest.update(json.dumps({"dockerfile": dockerfile.relative_to(ROOT).as_posix(), "args": args,
                                   "target": build["target"], "platform": build["platform"]},
                                  sort_keys=True).encode() + b"\0")
@@ -432,7 +444,13 @@ def main() -> int:
     if args.print:
         print(expected)
         return 0
-    with target_lock(args.target), build_lock():
+    if os.environ.get(NESTED) != "1":
+        # A second build of the same target stops here, before it waits for
+        # the build lock. Held while waiting, the target lock could block a
+        # build that holds the build lock and needs this target (qt6-host).
+        with target_lock(args.target):
+            pass
+    with build_lock(), target_lock(args.target):
         if not force and complete and image_fingerprint(args.image) == expected:
             print(f"{args.image}: image is current ({expected[:12]})", flush=True)
         else:

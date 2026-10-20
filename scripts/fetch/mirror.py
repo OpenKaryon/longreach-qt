@@ -102,7 +102,7 @@ def pinned_text() -> str:
 def online_problems() -> list[str]:
     """What the build would not find in the copies: it takes them first."""
     problems = []
-    present = release_assets()
+    present = release_assets() or {}
     for archive in SOURCES['archives']:
         if archive['file'] not in present:
             problems.append(f"{archive['file']}: not in the {RELEASE_TAG} release of {RELEASE_REPO}")
@@ -172,6 +172,13 @@ def check(args) -> int:
             if not source.startswith('${BASE_REGISTRY}/') or '@sha256:' not in source:
                 problems.append(f'{path.relative_to(ROOT).as_posix()}: FROM {source} is not '
                                 '${BASE_REGISTRY}/<image>@<digest>')
+    # Commits the build pins that no repository here lists (one in an
+    # archive's URL is that archive's pin).
+    commits = {c for r in SOURCES['repositories'] for c in r['pins']}
+    urls = ' '.join(a['url'] for a in SOURCES['archives'])
+    for found in sorted(set(re.findall(r'(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])', text)) - commits):
+        if found not in urls:
+            problems.append(f'pinned commit {found[:12]} is in no repository of sources.json')
     # SHA256 pins in the build that this list does not know (Debian and Ubuntu
     # packages live in scripts/fetch/locks/, which is not searched).
     for found in sorted(set(re.findall(r'(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])', text)) - listed):
@@ -189,6 +196,13 @@ def repo_exists(name: str) -> bool:
     return subprocess.run(['gh', 'repo', 'view', name], capture_output=True).returncode == 0
 
 
+def repo_empty(name: str) -> bool:
+    """The repository exists and has no commit yet."""
+    listing = subprocess.run(['git', 'ls-remote', f'https://github.com/{name}.git'], capture_output=True, text=True,
+                             env=dict(os.environ, GIT_TERMINAL_PROMPT='0'))
+    return listing.returncode == 0 and not listing.stdout.strip()
+
+
 def remote_tags(url: str) -> set[str]:
     listing = subprocess.run(['git', 'ls-remote', '--tags', url], capture_output=True, text=True,
                              env=dict(os.environ, GIT_TERMINAL_PROMPT='0'))
@@ -198,7 +212,7 @@ def remote_tags(url: str) -> set[str]:
 
 def repos(args) -> int:
     publisher(args.apply)
-    tagger = identity()
+    tagger = identity() if args.apply else []
     refused = []
     for repository in SOURCES['repositories']:
         target = f"{LAB}/{repository['name']}"
@@ -232,12 +246,15 @@ def repos(args) -> int:
     return 0
 
 
-def release_assets() -> dict[str, str]:
-    """The release's files, each with the SHA256 GitHub computed on upload ('' if none)."""
+def release_assets() -> dict[str, str] | None:
+    """The release's files, each with the SHA256 GitHub computed on upload ('' if
+    none); None when there is no such release (or repository) yet."""
     result = subprocess.run(['gh', 'api', f'repos/{RELEASE_REPO}/releases/tags/{RELEASE_TAG}',
                              '--jq', '.assets[] | .name + " " + (.digest // "")'], capture_output=True, text=True)
     if result.returncode != 0:
-        return {}
+        if 'HTTP 404' in result.stderr:
+            return None
+        raise SystemExit(f'gh api could not list the {RELEASE_TAG} release: {result.stderr.strip()}')
     assets = {}
     for line in result.stdout.splitlines():
         name, _, digest = line.partition(' ')
@@ -250,7 +267,7 @@ def seed(apply: bool) -> None:
     with tempfile.TemporaryDirectory(prefix='openkaryonlab-sources-') as scratch:
         if apply:
             Path(scratch, 'README.md').write_text(SOURCES_README, encoding='utf-8', newline='\n')
-        git = ['git', *identity(), '-c', 'core.autocrlf=false', '-C', scratch]
+        git = ['git', *(identity() if apply else []), '-c', 'core.autocrlf=false', '-C', scratch]
         run(git + ['init', '-q', '-b', 'main'], apply)
         run(git + ['add', 'README.md'], apply)
         run(git + ['commit', '-q', '-m', 'What this repository holds'], apply)
@@ -265,11 +282,15 @@ def archives(args) -> int:
         run(['gh', 'repo', 'create', RELEASE_REPO, '--public', '--disable-issues', '--disable-wiki',
              '--description', 'Source archives longreach-qt builds from, pinned by SHA256'], args.apply)
         seed(args.apply)
+    elif repo_empty(RELEASE_REPO):
+        # Created by an earlier run that stopped before its first commit.
+        seed(args.apply)
     present = release_assets()
-    if not present:
+    if present is None:
         run(['gh', 'release', 'create', RELEASE_TAG, '--repo', RELEASE_REPO, '--title', 'Sources',
              '--notes', 'Each file is the upstream one, checked against the SHA256 longreach-qt pins.'],
             args.apply)
+        present = {}
     # The release only grows: a new version is a new file name, and the files
     # older longreach-qt tags name stay. A file whose name is there but whose
     # content is not the pin (upstream rolled it again) stops the run.
@@ -291,16 +312,21 @@ def archives(args) -> int:
         if not local.is_file():
             print(f"{archive['file']}: downloading from upstream first")
             if args.apply:
-                # From upstream itself: the copy is what this fills.
-                part = Path(fetch.download(archive['url'], str(local), [archive['url']]))
-                if sha256(part) != archive['sha256']:
-                    part.unlink()
-                    print(f"{archive['file']}: upstream's SHA256 differs from the pin; not kept")
-                    mismatched.append(archive['file'])
-                    continue
-                part.replace(local)
+                local.parent.mkdir(parents=True, exist_ok=True)
+                # Under the lock a build's download of the same file takes.
+                with fetch.downloading(str(local)):
+                    if not local.is_file():
+                        # From upstream itself: the copy is what this fills.
+                        part = Path(fetch.download(archive['url'], str(local), [archive['url']]))
+                        if sha256(part) != archive['sha256']:
+                            part.unlink()
+                            print(f"{archive['file']}: upstream's SHA256 differs from the pin; not kept")
+                            mismatched.append(archive['file'])
+                            continue
+                        part.replace(local)
         if args.apply and sha256(local) != archive['sha256']:
-            print(f"{archive['file']}: SHA256 differs from the pin; not uploaded")
+            print(f"{local.relative_to(ROOT).as_posix()}: SHA256 differs from the pin; not uploaded")
+            mismatched.append(archive['file'])
             continue
         run(['gh', 'release', 'upload', RELEASE_TAG, str(local), '--repo', RELEASE_REPO], args.apply)
     if mismatched:

@@ -63,7 +63,8 @@ def main():
     parser.add_argument('--arch', choices=['i386', 'amd64'], default='i386')
     parser.add_argument('--vm', action='store_true', help='also fetch Sarge kernel/VM utilities (i386)')
     parser.add_argument('--verify-only', action='store_true',
-                        help='check what is already downloaded, for every architecture; fetch nothing')
+                        help='check the packages already downloaded, for every architecture and the VM; '
+                             'fetch nothing (make verify-downloads checks the archives)')
     args = parser.parse_args()
     if args.verify_only:
         global VERIFY_ONLY
@@ -72,8 +73,9 @@ def main():
             lock = json.loads((LOCKS / f'qt4-sarge-{arch}-packages.json').read_text(encoding='utf-8'))
             for item in lock['packages']:
                 fetch(item, args.download_dir / f'debian-sarge-{arch}')
-        for item in SOURCES:
-            fetch(item, args.download_dir)
+        vm_lock = json.loads((LOCKS / 'qt4-sarge-vm-packages.json').read_text(encoding='utf-8'))
+        for item in vm_lock['packages']:
+            fetch(item, args.download_dir / 'debian-sarge-kernel')
         print(f"qt4-sarge-fetch.py: {COUNTS['verified']} verified, {COUNTS['absent']} not downloaded")
         return
     lock = json.loads((LOCKS / f'qt4-sarge-{args.arch}-packages.json').read_text(encoding='utf-8'))

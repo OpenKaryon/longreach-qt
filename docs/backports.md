@@ -28,9 +28,12 @@ patches/qt6/{all,macos,windows}/
 A build applies `qt<N>/all` and then its OS series, every patch in order;
 nothing depends on the deployment target or the architecture. Each patch
 starts with an SPDX line and a comment header saying what it changes, why,
-and how it was checked. Qt 5 patches apply with `git apply`, Qt 4 and Qt 6
-ones with `patch -p1`, from the root of the unpacked source archive. All
-series are checked against pristine Qt 4.8.7, 5.15.19 and 6.8.4.
+and how it was checked. Qt 5 patches (and Qt 6's `all` series in the Linux
+images) apply with `git apply`, Qt 4 and Qt 6 ones with `patch -p1
+--fuzz=0`, from the root of the unpacked source archive: a patch whose
+context does not match exactly stops the build instead of landing
+somewhere near. All series are checked against pristine Qt 4.8.7, 5.15.19
+and 6.8.4.
 
 ## Qt 4.8.7
 

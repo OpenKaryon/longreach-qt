@@ -3,8 +3,9 @@
 Every file a build downloads is pinned: archives by SHA256 (in the Makefile,
 `mk/*.mk`, the Dockerfiles and `scripts/fetch/`), Git projects by commit,
 base images by digest, distribution packages by lock (Sarge, Lucid, CentOS 7
-aarch64) or by archive snapshot date (Debian 12, Ubuntu 22.04). A pin stops the build when upstream changes a file; it
-does not help when upstream deletes it, and a busy upstream (download.qt.io,
+aarch64) or by archive snapshot date (Debian 12, Ubuntu 22.04); the older
+releases (Ubuntu 14.04-18.04, CentOS 7.9) no longer change. A pin stops the
+build when upstream changes a file; it does not help when upstream deletes it, and a busy upstream (download.qt.io,
 Docker Hub) rate-limits parallel builds. So the GitHub organisation
 [OpenKaryonLab](https://github.com/OpenKaryonLab) keeps a copy of everything
 that may be redistributed, and the build takes it from there. Where upstream
@@ -25,8 +26,9 @@ accepted from either.
   a warning, since it means the copy lacks the file. The SHA256 is checked
   either way. Files that are not copied (Apple SDKs, Debian and Ubuntu
   packages) come from upstream only. `LONGREACH_MIRROR` names another copy;
-  `LONGREACH_UPSTREAM_FIRST=1` tries upstream first, for a new pin whose file
-  is not copied yet.
+  `LONGREACH_UPSTREAM_FIRST=1` makes `fetch.py` and `qt6-fetch-source.py`
+  try upstream first, for a new pin whose file is not copied yet (CMake is on
+  GitHub, so `cmake.sh` takes the copy only).
 - osxcross and its projects are fetched by commit from the OpenKaryonLab
   copies only, `LAB_GIT/<project>.git` (`scripts/build/git-fetch-pinned.sh`).
   `scripts/build/osxcross-sources.sh` lays the projects out and osxcross'
@@ -40,10 +42,15 @@ accepted from either.
       make qt5-linux-amd64 BASE_REGISTRY=docker.io/library
 
 - The packages Debian 12 and Ubuntu 22.04 install come from the archive as it
-  was at `APT_SNAPSHOT` (snapshot.debian.org, snapshot.ubuntu.com:
-  `scripts/build/apt-snapshot.sh`); a later date is a deliberate update and
-  rebuilds those images, `APT_SNAPSHOT=none` takes the live archive. The older
-  releases (Ubuntu 14.04-18.04, CentOS 7.9) no longer change.
+  was at the date in `scripts/build/apt-snapshot.sh` (snapshot.debian.org,
+  snapshot.ubuntu.com), Ubuntu's CA certificates included. A later date there
+  is a deliberate update and rebuilds the images that use it;
+  `APT_SNAPSHOT=<YYYYMMDDTHHMMSSZ>` tries another date, `APT_SNAPSHOT=none`
+  takes the live archive. snapshot.ubuntu.com has no ubuntu-ports, so the
+  Ubuntu 22.04 stages (and the run.py QEMU helper) run as linux/amd64. The
+  Ubuntu 14.04-18.04 stages, whose archives no longer change, update through
+  `scripts/build/apt-update.sh`. In every image an index apt could not fetch
+  stops the build, where apt would install older packages from the rest.
 - Where an input comes from (`BASE_REGISTRY`, `LAB_GIT`, `LONGREACH_MIRROR`)
   is not part of an image's fingerprint
   (`scripts/build/ensure-image.py`), so switching sources rebuilds nothing.

@@ -105,7 +105,7 @@ RUN \
     mv $QT_SRC_DIR Qt-5.15 && \
     rm -f $QT_DISTRO && \
     cd /opt/Qt-5.15/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; git apply "$p"; done && \
+    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done && \
     ./configure -v -prefix "/usr/local/Qt-5.15" \
     -xplatform win32-clang-g++ -device-option CROSS_COMPILE="$TARGET_PREFIX" \
     -c++std c++14 -static -static-runtime -optimize-size -release -opensource -confirm-license \

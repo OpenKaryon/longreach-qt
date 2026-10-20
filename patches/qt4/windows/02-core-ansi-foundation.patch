@@ -91,7 +91,6 @@
 -    SwitchToThread();
 -#else
 -    ::Sleep(0);
--#endif
 +    if (QSysInfo::WindowsVersion & QSysInfo::WV_NT_based) {
 +        typedef BOOL (WINAPI *SwitchThread)();
 +        SwitchThread switchThread = (SwitchThread)GetProcAddress(GetModuleHandleA("kernel32.dll"), "SwitchToThread");
@@ -100,7 +99,7 @@
 +            return;
 +        }
 +    }
-+#endif
+ #endif
 +        ::Sleep(0);
  }
  
@@ -238,10 +237,10 @@
 +    LONG res;
 +    QT_WA( {
 +        res = RegOpenKeyExW(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()),
-                             0, perms, &resultHandle);
++                            0, perms, &resultHandle);
 +    } , {
 +        res = RegOpenKeyExA(parentHandle, rSubKey.toLocal8Bit(),
-+                            0, perms, &resultHandle);
+                             0, perms, &resultHandle);
 +    } );
  
      if (res == ERROR_SUCCESS)
@@ -254,10 +253,10 @@
 +    LONG res;
 +    QT_WA( {
 +        res = RegCreateKeyExW(parentHandle, reinterpret_cast<const wchar_t *>(rSubKey.utf16()), 0, 0,
-                               REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
++                              REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
 +    } , {
 +        res = RegCreateKeyExA(parentHandle, rSubKey.toLocal8Bit(), 0, 0,
-+                              REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
+                               REG_OPTION_NON_VOLATILE, perms, 0, &resultHandle, 0);
 +    } );
  
      if (res == ERROR_SUCCESS)
@@ -551,12 +550,12 @@
 +    LONG res;
 +    QT_WA( {
 +        res = RegSetValueExW(handle, reinterpret_cast<const wchar_t *>(keyName(rKey).utf16()), 0, type,
-                              reinterpret_cast<const unsigned char*>(regValueBuff.constData()),
-                              regValueBuff.size());
-+    }, {
-+        res = RegSetValueExA(handle, keyName(rKey).toLocal8Bit(), 0, type,
 +                             reinterpret_cast<const unsigned char*>(regValueBuff.constData()),
 +                             regValueBuff.size());
++    }, {
++        res = RegSetValueExA(handle, keyName(rKey).toLocal8Bit(), 0, type,
+                              reinterpret_cast<const unsigned char*>(regValueBuff.constData()),
+                              regValueBuff.size());
 +    } );
  
      if (res == ERROR_SUCCESS) {
@@ -629,7 +628,7 @@
              ret = QString::fromLatin1("The specified module could not be found.");
 --- a/src/corelib/global/qglobal.h
 +++ b/src/corelib/global/qglobal.h
-@@ -1811,12 +1811,17 @@
+@@ -1811,13 +1811,18 @@
  
  #if defined(Q_WS_WIN) || defined(Q_OS_CYGWIN)
  #if defined(QT3_SUPPORT)
@@ -648,3 +647,4 @@
 +#endif
  
  #endif /* Q_WS_WIN */
+ 

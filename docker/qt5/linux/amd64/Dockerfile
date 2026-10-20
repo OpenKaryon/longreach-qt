@@ -25,10 +25,12 @@
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG LUCID_PLATFORM=amd64
 FROM --platform=linux/${LUCID_PLATFORM} ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 ARG LUCID_ARCH=amd64
 ARG PARALLEL_JOBS=6
 ENV LUCID_JOBS=${PARALLEL_JOBS} DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends \
         build-essential python3 xz-utils file ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 COPY downloads/ubuntu-lucid-${LUCID_ARCH} /packages
@@ -44,7 +46,7 @@ LABEL org.openkaryon.longreach-qt.platform="ubuntu-lucid-${LUCID_ARCH}" \
 FROM toolchain AS xdeps
 ARG PARALLEL_JOBS=6
 ENV LUCID_JOBS=${PARALLEL_JOBS}
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends \
         pkg-config python bison flex bzip2 libwayland-dev libasound2-dev libpulse-dev \
         libglib2.0-dev libspeechd-dev libbluetooth-dev libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-dev && rm -rf /var/lib/apt/lists/*
@@ -67,7 +69,7 @@ ARG QT_SRC_DIR="qt-everywhere-src-${QT_FULL_VERSION}"
 ARG OPENSSL_VERSION="3.5.7"
 ARG OPENSSL_DISTRO="openssl-${OPENSSL_VERSION}.tar.gz"
 
-RUN apt-get update && apt-get install -y --no-install-recommends perl git && \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends perl git && \
     rm -rf /var/lib/apt/lists/*
 
 COPY downloads/${QT_DISTRO} /opt/${QT_DISTRO}
@@ -85,7 +87,7 @@ RUN set -eux; cd /opt; \
     CC=lucid-gcc PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO "$(case "$(gcc -dumpmachine)" in x86_64*) echo linux-x86_64;; *) echo linux-elf;; esac)" /opt/openssl-3 \
         no-async no-shared no-tests > /tmp/openssl.log 2>&1 || { tail -40 /tmp/openssl.log; exit 1; }; \
     tar -xJf $QT_DISTRO; mv $QT_SRC_DIR Qt-5.15; rm -f $QT_DISTRO; cd /opt/Qt-5.15; \
-    for p in /tmp/patches/all/*.patch /tmp/patches/linux/*.patch; do echo "applying $p"; git apply "$p"; done; \
+    for p in /tmp/patches/all/*.patch /tmp/patches/linux/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done; \
     cp -r /tmp/linux-lucid-g++ qtbase/mkspecs/; \
     ./configure -v -platform linux-lucid-g++ -prefix /usr/local/Qt-5.15 -pkg-config \
         OPENSSL_PATH=/opt/openssl-3 \
@@ -116,7 +118,7 @@ ENV PATH="/usr/local/Qt-5.15/bin:${PATH}" \
 
 # CMake for the tests/ suite (Qt 5.15's static plugin import needs 3.15+).
 ARG CMAKE_VERSION="3.28.6"
-RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 # From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
 ARG LONGREACH_MIRROR

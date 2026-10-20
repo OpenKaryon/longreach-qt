@@ -233,3 +233,9 @@ $(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD
 $(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,qt6-host))
 $(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,qt6-host))
 $(eval $(call simple-build-targets,qt6-macos-arm64,qt6-macos-arm64,QT6_MACOS_ARM64_IMAGE,qt6-macos-arm64-smoke,,qt6-host))
+
+# QT6_SOURCE goes into downloads/ before ensure-image.py fingerprints the
+# archive there; otherwise an image built from the old one would look current.
+ifneq ($(QT6_SOURCE),)
+build-qt6-host $(foreach t,win-amd64 win-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64,build-qt6-$(t) build-qt6-$(t)-examples): $(QT6_ARCHIVE_PATH)
+endif

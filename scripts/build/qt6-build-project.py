@@ -19,10 +19,12 @@ Examples:
     python scripts/build/qt6-build-project.py linux64 --project /path/to/app
     python scripts/build/qt6-build-project.py macos-arm64 --project . --jobs 8
 
-Paths are resolved against the repository root, so it can be run from anywhere.
+--project and --output are relative to the current directory; the kit is
+found from this script's own path, so it can be run from anywhere.
 """
 
 import argparse
+import os
 import platform
 import subprocess
 import sys
@@ -42,9 +44,8 @@ PLATFORMS = {
     "macos-arm64": "macos-arm64",
 }
 
-# Image names match the Makefile's QT6_*_IMAGE variables, and the Dockerfile
-# paths follow this repository's docker/<kit>/<platform>/<arch>/ layout. Keep
-# both in step with the Makefile - the two entry points build the same images.
+# Image names match mk/qt6.mk's QT6_*_IMAGE variables for the default licence
+# profile; another profile adds -<profile>, as there.
 PLATFORM_CONFIG = {
     "win-amd64": {
         "image": "qt6-win-amd64",
@@ -116,12 +117,11 @@ def check_docker():
 
 
 def build_project(
-    project_dir: Path, output_dir: Path, platform_name: str, config: dict
+    project_dir: Path, output_dir: Path, platform_name: str, config: dict, image_name: str
 ):
     """Build the user's project using the Qt Docker image."""
     print_step(f"Building project for {platform_name}...")
 
-    image_name = config["image"]
     qt_path = config["qt_path"]
 
     # Create output directory
@@ -224,6 +224,12 @@ Examples:
         help="Number of parallel build jobs (default: auto)",
     )
     parser.add_argument(
+        "--license-profile",
+        choices=["gpl-enabled", "lgpl-friendly", "commercial-qt"],
+        default=os.environ.get("LICENSE_PROFILE", "gpl-enabled"),
+        help="the Qt image's licence profile, as make's LICENSE_PROFILE (default: gpl-enabled)",
+    )
+    parser.add_argument(
         "--rebuild-qt",
         action="store_true",
         help="Force rebuild of Qt Docker image",
@@ -231,9 +237,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # The repository root, two levels up from scripts/build/. It is both the
-    # Docker build context and where downloads/ lives, so every path below is
-    # relative to it rather than to the caller's working directory.
+    # The repository root, two levels up from scripts/build/, where make runs.
+    # The project and output paths are the caller's, relative to its directory.
     kit_dir = Path(__file__).resolve().parents[2]
     project_dir = Path(args.project).resolve()
 
@@ -248,6 +253,8 @@ Examples:
     # Resolve platform
     platform_name = PLATFORMS[args.platform]
     config = PLATFORM_CONFIG[platform_name]
+    profile = args.license_profile
+    image_name = config["image"] + ("" if profile == "gpl-enabled" else f"-{profile}")
 
     # Determine output directory
     if args.output:
@@ -260,6 +267,7 @@ Examples:
     print(f"  Project:    {project_dir}")
     print(f"  Output:     {output_dir}")
     print(f"  Kit:        {kit_dir}")
+    print(f"  Image:      {image_name}")
 
     # Check Docker
     print_step("Checking Docker...")
@@ -270,7 +278,7 @@ Examples:
     # Dockerfile copies, checks their SHA256, builds qt6-host where needed and
     # skips an image whose inputs have not changed.
     print_step(f"Preparing the Qt image (make build-qt6-{platform_name})...")
-    command = ["make", f"build-qt6-{platform_name}"]
+    command = ["make", f"build-qt6-{platform_name}", f"LICENSE_PROFILE={profile}"]
     if args.jobs:
         command.append(f"PARALLEL_JOBS={args.jobs}")
     if args.rebuild_qt:
@@ -279,7 +287,7 @@ Examples:
         print_error(f"Failed to prepare Qt image for {platform_name}")
 
     # Build the project
-    build_project(project_dir, output_dir, platform_name, config)
+    build_project(project_dir, output_dir, platform_name, config, image_name)
 
     print_step("Build successful!")
     print(f"Artifacts are in: {output_dir}")

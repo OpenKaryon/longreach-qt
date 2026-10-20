@@ -24,6 +24,11 @@ LICENSE_SUFFIX := $(if $(filter gpl-enabled,$(LICENSE_PROFILE)),,-$(LICENSE_PROF
 # only (docs/licensing.md); elsewhere the image would carry the name and
 # still contain them, so those recipes refuse it.
 LICENSE_ENFORCED_ONLY_ON_LINUX = $(if $(filter lgpl-friendly,$(LICENSE_PROFILE)),$(error $(1): LICENSE_PROFILE=lgpl-friendly is enforced for the Linux Qt 5/6 targets only (docs/licensing.md)))
+# Named on the command line, they stop before any download or prerequisite.
+LICENSE_REFUSED_GOALS := $(if $(filter lgpl-friendly,$(LICENSE_PROFILE)),$(filter $(foreach t,qt5-win qt5-macos qt6-win qt6-macos,$(t)-% build-$(t)-%),$(MAKECMDGOALS)))
+ifneq ($(LICENSE_REFUSED_GOALS),)
+$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$(LICENSE_REFUSED_GOALS))
+endif
 
 # Compiler jobs inside one image build; Qt links can take several GB each.
 PARALLEL_JOBS ?= 6
@@ -80,10 +85,11 @@ BASE_REGISTRY ?= ghcr.io/openkaryonlab
 LONGREACH_MIRROR ?= https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/
 export LONGREACH_MIRROR
 # Debian 12 and Ubuntu 22.04 install their packages from the archive as it was
-# at this moment (scripts/build/apt-snapshot.sh); none: the live archive.
-APT_SNAPSHOT ?= 20261019T000000Z
+# at the date in scripts/build/apt-snapshot.sh; APT_SNAPSHOT=<YYYYMMDDTHHMMSSZ>
+# takes another date, APT_SNAPSHOT=none the live archive.
+APT_SNAPSHOT ?=
 SOURCE_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) --build-arg LONGREACH_MIRROR=$(LONGREACH_MIRROR) \
-              --build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)
+              $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT))
 
 # Recipes run under whatever SHELL is: sh in Git Bash (where OS is still
 # Windows_NT), cmd.exe on some Windows installs.
@@ -163,8 +169,10 @@ help:
 VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE QT6_ARCHIVE OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_WIN7_LLVM_MINGW \
                    QT5_LLVM_SRC QT6_NINJA QT6_XCB_CURSOR QT6_OS_VERSION_CHECK \
                    TIGER_SDK JAGUAR_SDK QT5_MACOS_I386_LINK_SDK QT6_MACOS_SDK QT6_MACOS_ARM64_SDK
+VERIFY_PINS = $(sort $(foreach f,$(VERIFY_DOWNLOADS),$(if $($(f)_SHA256),$($(f)_PATH)=$($(f)_SHA256))))
+VERIFY_PRESENT = $(foreach p,$(VERIFY_PINS),$(if $(wildcard $(firstword $(subst =, ,$(p)))),$(p)))
 verify-downloads:
-	$(foreach f,$(foreach f,$(VERIFY_DOWNLOADS),$(if $(and $($(f)_SHA256),$(wildcard $($(f)_PATH))),$(f))),$(PYTHON) scripts/fetch/fetch.py --check "$($(f)_PATH)" "$($(f)_SHA256)" &&) echo "verify-downloads: $(words $(foreach f,$(VERIFY_DOWNLOADS),$(if $(and $($(f)_SHA256),$(wildcard $($(f)_PATH))),$(f)))) of $(words $(VERIFY_DOWNLOADS)) pinned files verified, the rest not downloaded"
+	$(foreach p,$(VERIFY_PRESENT),$(PYTHON) scripts/fetch/fetch.py --check $(subst =, ,$(p)) &&) echo "verify-downloads: $(words $(VERIFY_PRESENT)) of $(words $(VERIFY_PINS)) pinned files verified, the rest not downloaded"
 	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --verify-only
 	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --verify-only
 

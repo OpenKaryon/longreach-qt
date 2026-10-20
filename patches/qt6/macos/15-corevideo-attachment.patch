@@ -4,10 +4,9 @@
 # macOS before 12: CVBufferGetAttachment with a retain, keeping the result
 # contract of CVBufferCopyAttachment (12).
 #
-diff --git a/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm b/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm
 --- a/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm
 +++ b/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm
-@@ -13,5 +13,16 @@ namespace {
+@@ -13,6 +13,17 @@
  using PixelFormat = QVideoFrameFormat::PixelFormat;
  using ColorRange = QVideoFrameFormat::ColorRange;
  
@@ -24,14 +23,17 @@ diff --git a/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm b/qtmultimedia/sr
 +
  // clang-format off
  constexpr std::tuple<CvPixelFormat, PixelFormat, ColorRange> PixelFormatMap[] = {
-@@ -87,5 +98,5 @@ QVideoFrameFormat QAVFHelpers::videoFormatForImageBuffer(CVImageBufferRef buf
+     { kCVPixelFormatType_32ARGB, PixelFormat::Format_ARGB8888, ColorRange::ColorRange_Unknown },
+@@ -87,7 +98,7 @@
      auto colorTransfer = QVideoFrameFormat::ColorTransfer_Unknown;
  
      if (auto cSpace =
 -                QCFString(CVBufferCopyAttachment(buffer, kCVImageBufferYCbCrMatrixKey, nullptr))) {
 +                QCFString(copyBufferAttachment(buffer, kCVImageBufferYCbCrMatrixKey))) {
          if (CFEqual(cSpace, kCVImageBufferYCbCrMatrix_ITU_R_709_2)) {
-@@ -99,6 +110,6 @@ QVideoFrameFormat QAVFHelpers::videoFormatForImageBuffer(CVImageBufferRef buf
+             colorSpace = QVideoFrameFormat::ColorSpace_BT709;
+         } else if (CFEqual(cSpace, kCVImageBufferYCbCrMatrix_ITU_R_601_4)
+@@ -99,7 +110,7 @@
      }
  
      if (auto cTransfer = QCFString(
@@ -39,9 +41,13 @@ diff --git a/qtmultimedia/src/multimedia/darwin/qavfhelpers.mm b/qtmultimedia/sr
 +                copyBufferAttachment(buffer, kCVImageBufferTransferFunctionKey))) {
  
          using QCFNumber = QCFType<CFNumberRef>;
-@@ -112,4 +123,4 @@ QVideoFrameFormat QAVFHelpers::videoFormatForImageBuffer(CVImageBufferRef buf
+ 
+@@ -111,7 +122,7 @@
+             colorTransfer = QVideoFrameFormat::ColorTransfer_Gamma22;
          } else if (CFEqual(cTransfer, kCVImageBufferTransferFunction_UseGamma)) {
              auto gamma =
 -                    QCFNumber(CVBufferCopyAttachment(buffer, kCVImageBufferGammaLevelKey, nullptr));
 +                    QCFNumber(copyBufferAttachment(buffer, kCVImageBufferGammaLevelKey));
              double g;
+             CFNumberGetValue(gamma, kCFNumberFloat32Type, &g);
+             // These are best fit values given what we have in our enum

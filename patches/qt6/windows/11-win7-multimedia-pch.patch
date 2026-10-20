@@ -4,11 +4,9 @@
 # Windows 7 headers: no precompiled header for qwindowsmultimediautils.cpp,
 # which raises WINVER before Media Foundation to reach newer format GUIDs.
 #
-diff --git a/qtmultimedia/src/multimedia/CMakeLists.txt b/qtmultimedia/src/multimedia/CMakeLists.txt
 --- a/qtmultimedia/src/multimedia/CMakeLists.txt
 +++ b/qtmultimedia/src/multimedia/CMakeLists.txt
-@@ -333,7 +333,14 @@
-         windows/qwindowsaudiosource.cpp
+@@ -334,6 +334,13 @@
          windows/qwindowsaudioutils.cpp
      )
  
@@ -22,7 +20,6 @@ diff --git a/qtmultimedia/src/multimedia/CMakeLists.txt b/qtmultimedia/src/multi
  # define INITGUID for unity builds to ensure guids are emitted in the translation units
  target_compile_definitions(Multimedia
      PRIVATE $<$<BOOL:$<TARGET_PROPERTY:Multimedia,UNITY_BUILD>>:INITGUID>)
-diff --git a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
 --- a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
 @@ -1,6 +1,8 @@

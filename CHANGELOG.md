@@ -27,7 +27,6 @@
   Docker cache a new key for any change in the repository.
 - `make qt4-macos-ppc-examples` (and `qt4-macos-i386-examples`) no longer
   fails on Windows when an earlier run left its `imports/` folder.
-
 - What the build downloads has a copy in the OpenKaryonLab organisation,
   and the build takes it from there first, upstream only when the copy lacks
   it, if upstream is not on GitHub as well (docs/sources.md,
@@ -48,39 +47,55 @@
   Docker; a kept copy of the SDK now works by putting it there.
 - `LICENSE_PROFILE=lgpl-friendly` is refused by the Windows and macOS Qt 5/6
   targets, which do not leave the GPL-only modules out yet; before, they built
-  an image under that name with the modules in it.
-- The Qt 6 images stop at a patch that does not apply; the loop used to go on
-  with the next one.
+  an image under that name with the modules in it. Named on the make command
+  line they stop before any download; `make build-all` skips them with that
+  profile.
+- Every image stops at a patch that does not apply; the loops of the Qt 4
+  Windows, Qt 5 Windows and macOS and Qt 6 images used to go on with the next
+  one. qt4-win-amd64 checks the DLLs of every test application, not only the
+  last one's. `patch` runs with `--fuzz=0`, so a patch whose context has
+  moved stops the build too, like `git apply`; the twelve Qt 4 Windows and
+  Qt 6 patches that needed fuzz are written again to apply exactly, with the
+  same result.
 - `manifest.json` named the kit's licence MIT; it is GPL-3.0-or-later.
 - `make qt5-linux-arm64` fetches the X sources it copies
   (`qt5-lucid-fetch.py --sources-only`); a fresh clone failed there.
 - `qt6-linux-arm64` builds the OpenSSL version make fetched; `QT6_SOURCE`
-  replaces an archive already in `downloads/`; the Qt 6 `-examples` targets
-  no longer need CMake on the host.
+  replaces an archive already in `downloads/`, with `make build-qt6-*` too,
+  which took an image built from the old one as current; the Qt 6
+  `-examples` targets no longer need CMake on the host.
 - `LONGREACH_MIRROR` reaches the CMake downloads inside the images, and the
   Qt 6 source fetch goes on to the Qt sites when the copy fails in any way, not
   only with a 404.
-- `make verify-downloads` checks every pinned file in `downloads/`, and the
-  Sarge and Lucid packages against their locks (`--verify-only`), and says how
-  many it checked.
-- The Qt 5 macOS SDK is packed in the digest-pinned Ubuntu 22.04 image, and the
-  run.py QEMU helper is built from it; `fetch-macos-sdk.sh` fails instead of
+- `make verify-downloads` checks every pinned file in `downloads/` once, and
+  the Sarge and Lucid packages against their locks (`--verify-only`), and says
+  how many it checked; `make build-all` runs it before it starts.
+- The Qt 5 macOS SDK is packed in the digest-pinned Ubuntu 22.04 image (as
+  linux/amd64, under the download lock), and the run.py QEMU helper is built
+  from it (as linux/amd64 on any host, showing Docker's output when that
+  fails); `fetch-macos-sdk.sh` fails instead of
   keeping a short archive, and `qt5-extract-tests` fails when a binary could
   not be copied.
 - `mirror.py`: `repos` can run again (existing `longreach/` tags are kept, a
   refused push is reported); `archives` checks a download before keeping it
   and reports a release file GitHub gives no SHA256 for; `check` matches each
   image's tag and digest together, looks at every Dockerfile and the scripts
-  in subfolders, and finds images named by tag only in make.
+  in subfolders, and finds images named by tag only in make and commit pins
+  `sources.json` does not list. `archives` creates the `downloads/` folders,
+  downloads under the build's lock, goes on after a run that stopped between
+  creating the repository or release and the first upload, and fails on a
+  local file that does not match its pin. A dry run needs no git identity.
 - `scripts/build/qt6-build-project.py` prepares the Qt image of every platform
-  with `make build-qt6-<platform>`; for Linux and macOS it used to run its own
+  with `make build-qt6-<platform>`, for the licence profile it then builds in
+  (`--license-profile`, or `LICENSE_PROFILE`); for Linux and macOS it used to run its own
   `docker build` without the inputs make fetches, and `--download` (gone)
   fetched a wrongly named archive without a SHA256.
 - A `QT6_VERSION` other than 6.8.4 is not downloaded without
   `QT6_ARCHIVE_SHA256` (or a `QT6_SOURCE` archive); it used to be taken unchecked.
-- One build of a target at a time on a machine: a second `make` or
-  `build-all.py` of the same target stops with an error (an image built as a
-  prerequisite, qt6-host, waits instead). Two targets that need the same input
+- One build of a target at a time on a machine: a second `make
+  build-<target>` (or `<target>-examples`, or `build-all.py`) of the same
+  target stops with an error (an image built as a prerequisite, qt6-host,
+  waits instead). Two targets that need the same input
   no longer download it into the same `.part`: the second waits for the first
   (locks under `build/locks/`).
 - `DOWNLOAD_DIR` is fixed to `downloads/`, which the Dockerfiles copy from;
@@ -94,8 +109,9 @@
   each checked against its SHA256; a `.deb` an older lock left in
   `downloads/` used to be extracted too.
 - The Qt 4 macOS i386 build reuses its source tree (a cache mount, which
-  outlasts `--no-cache`) only while the archive and the patches are the same;
-  a patch removed or renamed used to stay applied.
+  outlasts `--no-cache`) only while the archive and the patches are the same,
+  and only once every patch went on; a patch removed or renamed used to stay
+  applied.
 - The CentOS 7 aarch64 sysroot of qt6-linux-arm64 comes from a lock
   (`scripts/fetch/locks/qt6-centos7-aarch64-packages.json`, written with
   `rpm-sysroot.py --write-lock`): 72 packages by https URL and SHA256. It
@@ -103,12 +119,26 @@
   index fetched with them.
 - qt4-macos-ppc takes xar from the OpenKaryonLab copy at its pinned commit; the
   ppc-test branch of osxcross cloned xar's master from upstream.
-- `qt5-lucid-lock.py` reads the Lucid indexes over https.
+- `qt5-lucid-lock.py` reads the Lucid indexes over https; the locks written
+  again that way name the same packages and SHA256s, now by https URL.
 - The Debian 12 and Ubuntu 22.04 stages install their packages from the
-  archive as it was at `APT_SNAPSHOT` (20261019T000000Z, through
-  snapshot.debian.org and snapshot.ubuntu.com:
-  `scripts/build/apt-snapshot.sh`), so an image built later gets the same
-  versions; `APT_SNAPSHOT=none` takes the live archive.
+  archive as it was at the date in `scripts/build/apt-snapshot.sh`
+  (20261019T000000Z, through snapshot.debian.org and snapshot.ubuntu.com), so
+  an image built later gets the same versions; `APT_SNAPSHOT=<date>` takes
+  another date, `APT_SNAPSHOT=none` the live archive. An index apt cannot
+  fetch stops the build (`APT::Update::Error-Mode`); `apt-get update` only
+  warned and the install took older packages from the indexes it had. An
+  image's fingerprint takes only the build arguments its Dockerfile declares.
+- The Ubuntu 14.04-18.04 stages update apt through
+  `scripts/build/apt-update.sh`, which fails when an index could not be
+  fetched; their apt reported it as a warning and installed older packages.
+- Downloads inside the images are tried again before a build fails: CMake
+  (`cmake.sh`, qt6-linux-amd64) five times, the osxcross projects
+  (`git-fetch-pinned.sh`) and the CentOS 7 aarch64 packages three times. One
+  failed request ended an image build an hour in.
+- A `QT6_SOURCE` archive already in place is not copied again by each make
+  of a build, and one with other content is not put in place while a Qt 6
+  target is being built from the archive there.
 - `make download-qt-mobility` and `scripts/fetch/fetch-git-archive.py` are
   gone: no target used Qt Mobility.
 

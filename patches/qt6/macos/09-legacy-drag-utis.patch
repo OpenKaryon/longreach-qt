@@ -4,7 +4,6 @@
 # macOS before 11: drag and drop names the file URL and vCard types by their
 # UTI strings instead of the UTType constants (11).
 #
-diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
 --- a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
 +++ b/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm
 @@ -162,7 +162,7 @@
@@ -21,10 +20,9 @@ diff --git a/qtbase/src/plugins/platforms/cocoa/qcocoadrag.mm b/qtbase/src/plugi
  
  QT_END_NAMESPACE
 -
-diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
 --- a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
 +++ b/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm
-@@ -16,6 +16,6 @@
+@@ -16,7 +16,7 @@
                     NSPasteboardTypeRTF, NSPasteboardTypeTabularText, NSPasteboardTypeFont,
                     NSPasteboardTypeRuler, NSFileContentsPboardType,
                     NSPasteboardTypeRTFD , NSPasteboardTypeHTML,
@@ -32,3 +30,4 @@ diff --git a/qtbase/src/plugins/platforms/cocoa/qnsview_dragging.mm b/qtbase/src
 +                   NSPasteboardTypeURL, NSPasteboardTypePDF, @"public.vcard",
                     (NSString *)kPasteboardTypeFileURLPromise,
                     NSPasteboardTypeMultipleTextSelection, mimeTypeGeneric]];
+ 

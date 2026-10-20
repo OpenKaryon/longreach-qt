@@ -197,6 +197,13 @@ def main() -> int:
     targets = [t for t in TARGETS
                if (not args.only or any(fnmatch.fnmatch(t, p) for p in args.only))
                and not any(fnmatch.fnmatch(t, p) for p in args.skip)]
+    # lgpl-friendly is enforced for the Linux Qt 5/6 targets only; make refuses
+    # it for the others (docs/licensing.md).
+    refused = [t for t in targets if args.license_profile == 'lgpl-friendly'
+               and TARGETS[t][0] and '-linux-' not in t]
+    if refused:
+        print('LICENSE_PROFILE=lgpl-friendly: skipping ' + ', '.join(refused) + ' (Linux Qt 5/6 only)')
+        targets = [t for t in targets if t not in refused]
     if not targets:
         parser.error('no target left after --only/--skip')
     if args.list:
@@ -227,6 +234,13 @@ def main() -> int:
         if input('Continue? [y/N] ').strip().lower() not in ('y', 'yes'):
             print('Not started.')
             return 1
+
+    # The files already in downloads/ against their pins: make fetches only
+    # what is missing, so a file from an earlier pin would otherwise be used.
+    if subprocess.run([args.make, '--no-print-directory', 'verify-downloads'], cwd=ROOT).returncode:
+        print('Not started: a file in downloads/ does not match its pin (make verify-downloads).',
+              file=sys.stderr)
+        return 1
 
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M')
     log_dir = args.log_dir or ROOT / 'build' / f'build-all-{stamp}'

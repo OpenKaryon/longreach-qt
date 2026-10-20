@@ -4,10 +4,9 @@
 # macOS before 10.14: camera and microphone permissions are granted, as
 # AVCaptureDevice has no authorization API there (none is asked for).
 #
-diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
 --- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
 +++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.mm
-@@ -11,8 +11,12 @@
+@@ -12,8 +12,12 @@
  @implementation QDarwinCameraPermissionHandler
  - (Qt::PermissionStatus)checkPermission:(QPermission)permission
  {
@@ -22,7 +21,7 @@ diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.m
  }
  
  - (QStringList)usageDescriptionsFor:(QPermission)permission
-@@ -29,12 +33,17 @@
+@@ -30,12 +34,17 @@
  @implementation QDarwinCameraPermissionHandler (Request)
  - (void)requestPermission:(QPermission)permission withCallback:(PermissionCallback)callback
  {
@@ -46,10 +45,9 @@ diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_camera.m
  }
  @end
  
-diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
 --- a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
 +++ b/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_microphone.mm
-@@ -11,8 +11,12 @@
+@@ -12,8 +12,12 @@
  @implementation QDarwinMicrophonePermissionHandler
  - (Qt::PermissionStatus)checkPermission:(QPermission)permission
  {
@@ -64,7 +62,7 @@ diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_micropho
  }
  
  - (QStringList)usageDescriptionsFor:(QPermission)permission
-@@ -29,11 +33,16 @@
+@@ -30,12 +34,17 @@
  @implementation QDarwinMicrophonePermissionHandler (Request)
  - (void)requestPermission:(QPermission)permission withCallback:(PermissionCallback)callback
  {
@@ -87,3 +85,4 @@ diff --git a/qtbase/src/corelib/platform/darwin/qdarwinpermissionplugin_micropho
 +    }
  }
  @end
+ 

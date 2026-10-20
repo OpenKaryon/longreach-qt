@@ -19,6 +19,8 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM ${BASE_REGISTRY}/ubuntu:14.04@sha256:64483f3496c1373bfd55348e88694d1c4d0c9b660dee6bfef5e12f43b9933b30 AS sysroot
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 COPY scripts/build/qt5-linux-arm64/packages.txt /tmp/packages.txt
 # The arm64 packages come from ports.ubuntu.com, verified by apt; the
 # architecture-independent ones (protocol headers) from the amd64 archive.
@@ -28,7 +30,7 @@ RUN set -eux; \
     for pocket in trusty trusty-updates trusty-security; do \
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $pocket main universe" >> /etc/apt/sources.list; \
     done; \
-    apt-get update; \
+    sh /usr/local/bin/apt-update; \
     mkdir -p /debs /sysroot; cd /debs; \
     for p in $(grep -v '^#' /tmp/packages.txt); do \
         if apt-cache show --no-all-versions "$p" | grep -q '^Architecture: all'; then echo "$p"; else echo "$p:arm64"; fi; \
@@ -39,11 +41,13 @@ RUN set -eux; \
 
 # ---------------------------------------------------------------------------
 FROM ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 ARG PARALLEL_JOBS=6
 ENV JOBS=${PARALLEL_JOBS} DEBIAN_FRONTEND=noninteractive
 # The -dev packages give the headers and the function names of the optional
 # libraries; nothing of the build image's own architecture is linked.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends \
         g++-5-aarch64-linux-gnu binutils-aarch64-linux-gnu build-essential \
         python python3 perl git bison flex pkg-config xz-utils bzip2 autotools-dev file ca-certificates \
         libwayland-dev libasound2-dev libpulse-dev libglib2.0-dev libspeechd-dev libbluetooth-dev \
@@ -107,7 +111,7 @@ RUN set -eux; cd /opt; \
         bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO linux-aarch64 /opt/openssl-3 \
         no-async no-shared no-tests > /tmp/openssl.log 2>&1 || { tail -40 /tmp/openssl.log; exit 1; }; \
     tar -xJf $QT_DISTRO; mv $QT_SRC_DIR Qt-5.15; rm -f $QT_DISTRO; cd /opt/Qt-5.15; \
-    for p in /tmp/patches/all/*.patch /tmp/patches/linux/*.patch; do echo "applying $p"; git apply "$p"; done; \
+    for p in /tmp/patches/all/*.patch /tmp/patches/linux/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done; \
     cp -r /tmp/linux-trusty-aarch64-g++ qtbase/mkspecs/; \
     ./configure -v -xplatform linux-trusty-aarch64-g++ -prefix /usr/local/Qt-5.15 -pkg-config \
         OPENSSL_PATH=/opt/openssl-3 \
@@ -139,7 +143,7 @@ ENV PATH="/usr/local/Qt-5.15/bin:${PATH}" \
 
 # CMake for the tests/ suite (Qt 5.15's static plugin import needs 3.15+).
 ARG CMAKE_VERSION="3.28.6"
-RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
+RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 # From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
 ARG LONGREACH_MIRROR

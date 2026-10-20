@@ -108,7 +108,7 @@ RUN tar -xJf qt-src.tar.xz --wildcards \
 # patches/qt6/all for every Qt 6 target, patches/qt6/windows for Windows: the
 # Windows 7 backport, which selects newer APIs at run time.
 RUN cd ${QT_SRC_DIR} && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 < "$p" || exit 1; done
+    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 --fuzz=0 < "$p" || exit 1; done
 
 RUN cd ${QT_SRC_DIR} && \
     find . \( -name "configure" -o -name "*.sh" -o -name "*.pl" \) -print0 \

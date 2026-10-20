@@ -7,8 +7,8 @@
 --- a/src/corelib/io/qprocess_win.cpp
 +++ b/src/corelib/io/qprocess_win.cpp
 @@ -61,6 +61,14 @@
- #include <errno.h>
- #include <stdlib.h>
+ 
+ #ifndef QT_NO_PROCESS
  
 +// MinGW-w64 exposes the ANSI entry under its original unsuffixed name.
 +// UNICODE otherwise aliases that name to W and leaves no A declaration.
@@ -20,4 +20,4 @@
 +
  QT_BEGIN_NAMESPACE
  
- #define NOTIFYTIMEOUT 50
+ //#define QPROCESS_DEBUG

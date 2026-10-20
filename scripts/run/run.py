@@ -255,8 +255,14 @@ def run_docker(host, suite, out, runner_args):
 def run_qemu(host, suite, out, runner_args):
     image, family = QEMU[host['distro']]
     tools = 'longreach-run-qemu'
-    subprocess.run(['docker', 'build', '-q', '-t', tools, str(Path(__file__).with_name('qemu'))],
-                   check=True, capture_output=True)
+    # The base image and the apt snapshot as for the build images.
+    args = [arg for name in ('BASE_REGISTRY', 'APT_SNAPSHOT') if os.environ.get(name)
+            for arg in ('--build-arg', f'{name}={os.environ[name]}')]
+    built = subprocess.run(['docker', 'build', '-q', *args, '--build-context',
+                            f'build-scripts={ROOT / "scripts/build"}', '-t', tools,
+                            str(Path(__file__).with_name('qemu'))], capture_output=True, text=True)
+    if built.returncode:
+        sys.exit(f'building the {tools} image failed:\n{built.stdout}{built.stderr}')
     data, _ = pack(suite)
     (out / 'suite.tar.gz').write_bytes(data)
     (out / 'setup.sh').write_text(QEMU_SETUP[family], encoding='utf-8', newline='\n')

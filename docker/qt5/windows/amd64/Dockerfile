@@ -19,11 +19,13 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:18.04@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    apt -y update && \
+    sh /usr/local/bin/apt-update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python perl git wget nano ca-certificates xz-utils \
@@ -66,7 +68,7 @@ RUN \
     mv $QT_SRC_DIR Qt-5.15 && \
     rm -f $QT_DISTRO && \
     cd /opt/Qt-5.15/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; git apply "$p"; done && \
+    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done && \
     ./configure -v -prefix "/usr/local/Qt-5.15" \
     OPENSSL_PATH=/opt/openssl-3 \
     OPENSSL_LIBS="-L/opt/openssl-3/lib64 -lssl -lcrypto -lcrypt32 -lws2_32 -lgdi32 -luser32 -ladvapi32" \

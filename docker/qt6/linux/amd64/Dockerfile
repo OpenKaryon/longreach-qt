@@ -48,7 +48,10 @@ ARG CMAKE_SHA256=72b01478eeb312bf1a0136208957784fe55a7b587f8d9f9142a7fc9b0b9e9a2
 ARG LONGREACH_MIRROR=https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/
 RUN set -eu; \
     archive="cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz"; \
-    wget -q "${LONGREACH_MIRROR%/}/${archive}" -O "/tmp/${archive}"; \
+    for try in 1 2 3 4 5; do \
+        wget -q "${LONGREACH_MIRROR%/}/${archive}" -O "/tmp/${archive}" && break; \
+        [ "$try" -lt 5 ] || exit 1; sleep 30; \
+    done; \
     echo "${CMAKE_SHA256}  /tmp/${archive}" | sha256sum -c -; \
     tar -xzf "/tmp/${archive}" -C /opt; \
     rm "/tmp/${archive}"

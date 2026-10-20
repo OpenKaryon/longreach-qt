@@ -6,15 +6,15 @@
 #
 --- a/src/corelib/io/qprocess_win.cpp
 +++ b/src/corelib/io/qprocess_win.cpp
-@@ -56,6 +56,7 @@
- #include <qdebug.h>
+@@ -57,6 +57,7 @@
+ #include <cstring>
  
  #include "private/qfsfileengine_p.h" // for longFileName
 +#include "qwin95file_p.h"
  
  
  #ifndef QT_NO_PROCESS
-@@ -123,14 +124,13 @@
+@@ -132,14 +133,13 @@
          if (&channel == &stdinChannel) {
              // try to open in read-only mode
              channel.pipe[1] = INVALID_Q_PIPE;
@@ -36,7 +36,7 @@
  
              if (channel.pipe[0] != INVALID_Q_PIPE)
                  return true;
-@@ -139,14 +139,13 @@
+@@ -148,14 +148,13 @@
          } else {
              // open in write mode
              channel.pipe[0] = INVALID_Q_PIPE;

@@ -135,12 +135,14 @@ qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(QT5_LLVM_SRC_PATH)
 
 # Unpacked in a container: the SDK is thousands of symlinks a Windows
 # filesystem cannot hold. The command is one `bash -c` string so that Git Bash
-# does not rewrite /scripts/... into a Windows path.
+# does not rewrite /scripts/... into a Windows path. amd64, since
+# snapshot.ubuntu.com has no ubuntu-ports; under the download lock, since
+# every Qt 5 macOS target needs the SDK.
 download-qt5-macos-sdk: $(QT5_MACOS_SDK_PATH)
 
 $(QT5_MACOS_SDK_PATH):
 	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(DOWNLOAD_DIR)"
-	docker run --rm -v "$(CURDIR):/work" -v "$(CURDIR)/scripts:/scripts:ro" \
+	$(PYTHON) scripts/fetch/fetch.py --locked "$@" docker run --rm --platform linux/amd64 -v "$(CURDIR):/work" -v "$(CURDIR)/scripts:/scripts:ro" \
 		-e SDK_TARBALL="$(QT5_MACOS_SDK_PATH)" -e SDK_DIR="$(QT5_MACOS_SDK_DIR)" \
 		-e SDK_PKG_URL="$(QT5_MACOS_SDK_PKG_URL)" -e SDK_PKG_SHA256="$(QT5_MACOS_SDK_PKG_SHA256)" \
 		-e APT_SNAPSHOT="$(APT_SNAPSHOT)" \

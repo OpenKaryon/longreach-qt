@@ -20,6 +20,8 @@
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+# An apt-get update that fails on an index it could not fetch.
+COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 
 # The win32 threading model: the posix one pulls in winpthreads, which needs
 # APIs Windows 95 does not have.
@@ -27,7 +29,7 @@ RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
     echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries && \
-    apt -y update && \
+    sh /usr/local/bin/apt-update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python perl git wget nano ca-certificates xz-utils \
@@ -112,7 +114,7 @@ RUN \
     mv $QT4_SRC_DIR Qt-4.8 && \
     rm -f $QT4_DISTRO && \
     cd /opt/Qt-4.8/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 < "$p"; done && \
+    for p in /tmp/patches/all/*.patch /tmp/patches/windows/*.patch; do echo "applying $p"; patch -p1 --fuzz=0 < "$p" || exit 1; done && \
     printf '\nQMAKE_LFLAGS += -static -Wl,--major-subsystem-version,4,--minor-subsystem-version,0\nQMAKE_LIBS += /opt/win95-cxx14/exe-exit.o /opt/win95-cxx14/gthr-win95.o\n' \
         >> mkspecs/win32-g++/qmake.conf && \
     OPENSSL_LIBS="-L/opt/openssl-1.0.2u/lib -lssl -lcrypto -lws2_32 -lgdi32 -ladvapi32" \

@@ -1,7 +1,7 @@
 {
   "distribution": "Ubuntu 10.04 LTS (Lucid Lynx)",
   "architecture": "i386",
-  "archive": "http://old-releases.ubuntu.com/ubuntu/",
+  "archive": "https://old-releases.ubuntu.com/ubuntu/",
   "pockets": [
     "lucid",
     "lucid-updates",
@@ -12,7 +12,7 @@
       "package": "libc6",
       "version": "2.11.1-0ubuntu7.21",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/e/eglibc/libc6_2.11.1-0ubuntu7.21_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/e/eglibc/libc6_2.11.1-0ubuntu7.21_i386.deb",
       "file": "libc6_2.11.1-0ubuntu7.21_i386.deb",
       "bytes": 3910404,
       "sha256": "7b7b09870a4446dd199019df35938f0221c37c73d4e157505aa7cea8c6ee1ad3"
@@ -21,7 +21,7 @@
       "package": "libc6-dev",
       "version": "2.11.1-0ubuntu7.21",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/e/eglibc/libc6-dev_2.11.1-0ubuntu7.21_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/e/eglibc/libc6-dev_2.11.1-0ubuntu7.21_i386.deb",
       "file": "libc6-dev_2.11.1-0ubuntu7.21_i386.deb",
       "bytes": 4902910,
       "sha256": "64177cbad01e8eaaba2b4a8a9924a07db8c34a1353954da9d4ed5132b706c27f"
@@ -30,7 +30,7 @@
       "package": "linux-libc-dev",
       "version": "2.6.32-74.142",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_2.6.32-74.142_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_2.6.32-74.142_i386.deb",
       "file": "linux-libc-dev_2.6.32-74.142_i386.deb",
       "bytes": 875982,
       "sha256": "40a442ea5d9b569e605ea5d230ac24d67b19c34fba3e6798b0d79d60e1ae0e50"
@@ -39,7 +39,7 @@
       "package": "zlib1g",
       "version": "1:1.2.3.3.dfsg-15ubuntu1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/z/zlib/zlib1g_1.2.3.3.dfsg-15ubuntu1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/z/zlib/zlib1g_1.2.3.3.dfsg-15ubuntu1_i386.deb",
       "file": "zlib1g_1.2.3.3.dfsg-15ubuntu1_i386.deb",
       "bytes": 75926,
       "sha256": "76448677f00312141cbacf170af5353967f92a8a5ab154bd6e30dfa92931fafc"
@@ -48,7 +48,7 @@
       "package": "zlib1g-dev",
       "version": "1:1.2.3.3.dfsg-15ubuntu1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/z/zlib/zlib1g-dev_1.2.3.3.dfsg-15ubuntu1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/z/zlib/zlib1g-dev_1.2.3.3.dfsg-15ubuntu1_i386.deb",
       "file": "zlib1g-dev_1.2.3.3.dfsg-15ubuntu1_i386.deb",
       "bytes": 162368,
       "sha256": "e1041b3a4fff2c094f2364bc28d7624e50b4da38aab91f2a43f2e732ceb2b699"
@@ -57,7 +57,7 @@
       "package": "libx11-6",
       "version": "2:1.3.2-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.3.2-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.3.2-1ubuntu3.1_i386.deb",
       "file": "libx11-6_1.3.2-1ubuntu3.1_i386.deb",
       "bytes": 817146,
       "sha256": "73e795a1e0919896e8602ddcf1a8ec70abee51b4c296c9f156a55024f868c582"
@@ -66,7 +66,7 @@
       "package": "libx11-dev",
       "version": "2:1.3.2-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.3.2-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.3.2-1ubuntu3.1_i386.deb",
       "file": "libx11-dev_1.3.2-1ubuntu3.1_i386.deb",
       "bytes": 3518890,
       "sha256": "841a61b360bffe4c1212a4b988f10c1de9f264e127d63ec1bbbc9a6b3909ae3e"
@@ -75,7 +75,7 @@
       "package": "libx11-xcb1",
       "version": "2:1.3.2-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.3.2-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.3.2-1ubuntu3.1_i386.deb",
       "file": "libx11-xcb1_1.3.2-1ubuntu3.1_i386.deb",
       "bytes": 92264,
       "sha256": "8438452ca8078445865142a496683481f83cc1c8b4cdbfd6461856b190f0ca3e"
@@ -84,7 +84,7 @@
       "package": "libx11-xcb-dev",
       "version": "2:1.3.2-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.3.2-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.3.2-1ubuntu3.1_i386.deb",
       "file": "libx11-xcb-dev_1.3.2-1ubuntu3.1_i386.deb",
       "bytes": 94342,
       "sha256": "4ee01374aea3afa8bc06167ba7059c2536c83022109d682043a062679a60464c"
@@ -93,7 +93,7 @@
       "package": "libxau6",
       "version": "1:1.0.5-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.5-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.5-1_i386.deb",
       "file": "libxau6_1.0.5-1_i386.deb",
       "bytes": 13936,
       "sha256": "481aeb03698d62643af3dd2f1b236cd0be92df6067d8dd7e9dde56ca3b3ee984"
@@ -102,7 +102,7 @@
       "package": "libxau-dev",
       "version": "1:1.0.5-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.5-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.5-1_i386.deb",
       "file": "libxau-dev_1.0.5-1_i386.deb",
       "bytes": 17086,
       "sha256": "f44a6b7ab73f41c759951d3ec740938077fe5550e97862327d55fc38c5c7163c"
@@ -111,7 +111,7 @@
       "package": "libxdmcp6",
       "version": "1:1.0.3-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.0.3-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.0.3-1_i386.deb",
       "file": "libxdmcp6_1.0.3-1_i386.deb",
       "bytes": 18196,
       "sha256": "9846458a449dae8da229859e750c198360ca4a8eb3212c6555e916f7cd192315"
@@ -120,7 +120,7 @@
       "package": "libxdmcp-dev",
       "version": "1:1.0.3-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.0.3-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.0.3-1_i386.deb",
       "file": "libxdmcp-dev_1.0.3-1_i386.deb",
       "bytes": 21228,
       "sha256": "31cf69270dd6b110e2131fcf6e334887f2dc4cf759fd095eb580385211b44594"
@@ -129,7 +129,7 @@
       "package": "libxcb1",
       "version": "1.5-2ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.5-2ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.5-2ubuntu0.1_i386.deb",
       "file": "libxcb1_1.5-2ubuntu0.1_i386.deb",
       "bytes": 39642,
       "sha256": "a61a647facd006e8945f9beccbcc2da303af1c161e254152640999c342fc6d23"
@@ -138,7 +138,7 @@
       "package": "libxcb1-dev",
       "version": "1.5-2ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.5-2ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.5-2ubuntu0.1_i386.deb",
       "file": "libxcb1-dev_1.5-2ubuntu0.1_i386.deb",
       "bytes": 74836,
       "sha256": "4410dc9a005d231f49cb3435ec99c263a845ea091ab0c04bc1f1e5b737f9998e"
@@ -147,7 +147,7 @@
       "package": "libxext6",
       "version": "2:1.1.1-2ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.1.1-2ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.1.1-2ubuntu0.1_i386.deb",
       "file": "libxext6_1.1.1-2ubuntu0.1_i386.deb",
       "bytes": 40012,
       "sha256": "fc16e2a702c72acc9404996d7671bd333c3afcee206c5fb3596f7b4858d4b12d"
@@ -156,7 +156,7 @@
       "package": "libxext-dev",
       "version": "2:1.1.1-2ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.1.1-2ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.1.1-2ubuntu0.1_i386.deb",
       "file": "libxext-dev_1.1.1-2ubuntu0.1_i386.deb",
       "bytes": 101914,
       "sha256": "ae4af8534d6062e1f42882b8df5fa497940b37e91732c1f655fc3aecfc427288"
@@ -165,7 +165,7 @@
       "package": "libxrender1",
       "version": "1:0.9.5-1ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.5-1ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.5-1ubuntu0.1_i386.deb",
       "file": "libxrender1_0.9.5-1ubuntu0.1_i386.deb",
       "bytes": 27410,
       "sha256": "c5b6bb6b2dc4ba028bd97eb4e93b56adeab30ad5cd1a3936fe53f743f743cf32"
@@ -174,7 +174,7 @@
       "package": "libxrender-dev",
       "version": "1:0.9.5-1ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.5-1ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.5-1ubuntu0.1_i386.deb",
       "file": "libxrender-dev_0.9.5-1ubuntu0.1_i386.deb",
       "bytes": 35622,
       "sha256": "053e9c31bbaf86b0db0071c3c88c05fc6abdbfa8afb2c8eaac3f772d4864aef4"
@@ -183,7 +183,7 @@
       "package": "libxfixes3",
       "version": "1:4.0.4-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_4.0.4-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_4.0.4-1_i386.deb",
       "file": "libxfixes3_4.0.4-1_i386.deb",
       "bytes": 15220,
       "sha256": "10623a95f2175a7f988be8189fad119d187453abaab34619c1b411b28c5d4bf2"
@@ -192,7 +192,7 @@
       "package": "libxdamage1",
       "version": "1:1.1.2-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdamage/libxdamage1_1.1.2-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxdamage/libxdamage1_1.1.2-1_i386.deb",
       "file": "libxdamage1_1.1.2-1_i386.deb",
       "bytes": 11724,
       "sha256": "d2eb05b31fc066dc37adb42a8ac4d6ef27d2174d966edb2f71d7655b715df621"
@@ -201,7 +201,7 @@
       "package": "libxxf86vm1",
       "version": "1:1.1.0-2ubuntu0.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxxf86vm/libxxf86vm1_1.1.0-2ubuntu0.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libx/libxxf86vm/libxxf86vm1_1.1.0-2ubuntu0.1_i386.deb",
       "file": "libxxf86vm1_1.1.0-2ubuntu0.1_i386.deb",
       "bytes": 15438,
       "sha256": "f565ba8b963e582c6e6b9849a4caf7c244659944794e59b6bafd6c529a982482"
@@ -210,7 +210,7 @@
       "package": "libdrm2",
       "version": "2.4.18-1ubuntu3",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libd/libdrm/libdrm2_2.4.18-1ubuntu3_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libd/libdrm/libdrm2_2.4.18-1ubuntu3_i386.deb",
       "file": "libdrm2_2.4.18-1ubuntu3_i386.deb",
       "bytes": 410332,
       "sha256": "e1e21b7c85e229aa30f992edc059fc886d9878a5d0cb67dcccf259f997f6e751"
@@ -219,7 +219,7 @@
       "package": "x11proto-core-dev",
       "version": "7.0.16-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-core/x11proto-core-dev_7.0.16-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-core/x11proto-core-dev_7.0.16-1_all.deb",
       "file": "x11proto-core-dev_7.0.16-1_all.deb",
       "bytes": 92204,
       "sha256": "c40f1d6850d6b3941cee6494318a77bf112a0ec22f684889a324f11cf78de78f"
@@ -228,7 +228,7 @@
       "package": "x11proto-xext-dev",
       "version": "7.1.1-2",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-xext/x11proto-xext-dev_7.1.1-2_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-xext/x11proto-xext-dev_7.1.1-2_all.deb",
       "file": "x11proto-xext-dev_7.1.1-2_all.deb",
       "bytes": 27160,
       "sha256": "d5c80b7fc9dd8b5a94505f44ce142fa8a67f2afe2692a579bdfcfb944470e52c"
@@ -237,7 +237,7 @@
       "package": "x11proto-kb-dev",
       "version": "1.0.4-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-kb/x11proto-kb-dev_1.0.4-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-kb/x11proto-kb-dev_1.0.4-1_all.deb",
       "file": "x11proto-kb-dev_1.0.4-1_all.deb",
       "bytes": 27310,
       "sha256": "b53e903c4582c70966ae1b288b64eeaa6f7e25f98934806dbdfacd12d816a8a0"
@@ -246,7 +246,7 @@
       "package": "x11proto-input-dev",
       "version": "2.0-2",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-input/x11proto-input-dev_2.0-2_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-input/x11proto-input-dev_2.0-2_all.deb",
       "file": "x11proto-input-dev_2.0-2_all.deb",
       "bytes": 62492,
       "sha256": "8060124900ac065148ba58e14d5bbc56583f5c89a307443a6c040b1df8882d1e"
@@ -255,7 +255,7 @@
       "package": "x11proto-render-dev",
       "version": "2:0.11-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-render/x11proto-render-dev_0.11-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-render/x11proto-render-dev_0.11-1_all.deb",
       "file": "x11proto-render-dev_0.11-1_all.deb",
       "bytes": 7404,
       "sha256": "43b0a3163fa5df2977ad19cfe701e9480e8f33d9275ac73abc3eac7d575b3af1"
@@ -264,7 +264,7 @@
       "package": "x11proto-gl-dev",
       "version": "1.4.11-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-gl/x11proto-gl-dev_1.4.11-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-gl/x11proto-gl-dev_1.4.11-1_all.deb",
       "file": "x11proto-gl-dev_1.4.11-1_all.deb",
       "bytes": 24828,
       "sha256": "41bfbfd49e12ace2f56681bda550d910e53e1bef12b18e38a86b64cd7d0c52ba"
@@ -273,7 +273,7 @@
       "package": "x11proto-dri2-dev",
       "version": "2.2-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-dri2/x11proto-dri2-dev_2.2-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/x11proto-dri2/x11proto-dri2-dev_2.2-1_all.deb",
       "file": "x11proto-dri2-dev_2.2-1_all.deb",
       "bytes": 14594,
       "sha256": "e23d98024d7c80ce7db1963ccce8aac320f0ec17c5ce574b4b1e0b1651a0c405"
@@ -282,7 +282,7 @@
       "package": "xtrans-dev",
       "version": "1.2.5-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/x/xtrans/xtrans-dev_1.2.5-1_all.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/x/xtrans/xtrans-dev_1.2.5-1_all.deb",
       "file": "xtrans-dev_1.2.5-1_all.deb",
       "bytes": 68478,
       "sha256": "2bf3ec0033b456e82e4f7940e0aee592d57fd19c46a4d100ddd64c4be14d8f1d"
@@ -291,7 +291,7 @@
       "package": "libgl1-mesa-glx",
       "version": "7.7.1-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-glx_7.7.1-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-glx_7.7.1-1ubuntu3.1_i386.deb",
       "file": "libgl1-mesa-glx_7.7.1-1ubuntu3.1_i386.deb",
       "bytes": 122874,
       "sha256": "0de6fc954b2ba137871e8943ecfe9f8345ccb1c63abff6b70f35067bfde28c3b"
@@ -300,7 +300,7 @@
       "package": "libgl1-mesa-dev",
       "version": "7.7.1-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_7.7.1-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_7.7.1-1ubuntu3.1_i386.deb",
       "file": "libgl1-mesa-dev_7.7.1-1ubuntu3.1_i386.deb",
       "bytes": 31640,
       "sha256": "566228f367d35af0a5a3362612d29733f58372f2079f6f2b38396f409f2abb1b"
@@ -309,7 +309,7 @@
       "package": "mesa-common-dev",
       "version": "7.7.1-1ubuntu3.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_7.7.1-1ubuntu3.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_7.7.1-1ubuntu3.1_i386.deb",
       "file": "mesa-common-dev_7.7.1-1ubuntu3.1_i386.deb",
       "bytes": 2341162,
       "sha256": "b21746f9f9b1f1788cbc477c65a348166fdc44ed93fb60ba27685dd9bd9da349"
@@ -318,7 +318,7 @@
       "package": "libfontconfig1",
       "version": "2.8.0-2ubuntu1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/f/fontconfig/libfontconfig1_2.8.0-2ubuntu1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/f/fontconfig/libfontconfig1_2.8.0-2ubuntu1_i386.deb",
       "file": "libfontconfig1_2.8.0-2ubuntu1_i386.deb",
       "bytes": 98946,
       "sha256": "107d336cd66faaf8d183618e16cbed9a3b55497b8ddd2095976a98a6c2522bf7"
@@ -327,7 +327,7 @@
       "package": "libfontconfig1-dev",
       "version": "2.8.0-2ubuntu1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/f/fontconfig/libfontconfig1-dev_2.8.0-2ubuntu1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/f/fontconfig/libfontconfig1-dev_2.8.0-2ubuntu1_i386.deb",
       "file": "libfontconfig1-dev_2.8.0-2ubuntu1_i386.deb",
       "bytes": 819880,
       "sha256": "125710bea14ee104ff6b93e1f76126bcb5a9dae3621804558582e3d5c8c7723e"
@@ -336,7 +336,7 @@
       "package": "libexpat1",
       "version": "2.0.1-7ubuntu1.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/e/expat/libexpat1_2.0.1-7ubuntu1.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/e/expat/libexpat1_2.0.1-7ubuntu1.1_i386.deb",
       "file": "libexpat1_2.0.1-7ubuntu1.1_i386.deb",
       "bytes": 139298,
       "sha256": "c02b3e707d9ff9f5b4d22cfa4a0f9075fefc955aec42557ace98b944caded275"
@@ -345,7 +345,7 @@
       "package": "libexpat1-dev",
       "version": "2.0.1-7ubuntu1.1",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/e/expat/libexpat1-dev_2.0.1-7ubuntu1.1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/e/expat/libexpat1-dev_2.0.1-7ubuntu1.1_i386.deb",
       "file": "libexpat1-dev_2.0.1-7ubuntu1.1_i386.deb",
       "bytes": 214944,
       "sha256": "545b934972b04c9eae0633679d03f2d63048a8f22635adbcd5f11d89182c6938"
@@ -354,7 +354,7 @@
       "package": "libfreetype6",
       "version": "2.3.11-1ubuntu2.8",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6_2.3.11-1ubuntu2.8_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6_2.3.11-1ubuntu2.8_i386.deb",
       "file": "libfreetype6_2.3.11-1ubuntu2.8_i386.deb",
       "bytes": 422670,
       "sha256": "79174bb8410fad3d3988019e383fb0a1d0df930c2caa3694ac6f3069203ea9b4"
@@ -363,7 +363,7 @@
       "package": "libfreetype6-dev",
       "version": "2.3.11-1ubuntu2.8",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6-dev_2.3.11-1ubuntu2.8_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/f/freetype/libfreetype6-dev_2.3.11-1ubuntu2.8_i386.deb",
       "file": "libfreetype6-dev_2.3.11-1ubuntu2.8_i386.deb",
       "bytes": 707176,
       "sha256": "c63269cd3cbe340a281fded22a70fe82ec437f1aa2db3feeb21d07a42d4ae20d"
@@ -372,7 +372,7 @@
       "package": "libice6",
       "version": "2:1.0.6-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libi/libice/libice6_1.0.6-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libi/libice/libice6_1.0.6-1_i386.deb",
       "file": "libice6_1.0.6-1_i386.deb",
       "bytes": 50476,
       "sha256": "ca8112e23a5d129f57de474a7bb1fc3d20b3dbdf4100223e91fbeabb25bb1446"
@@ -381,7 +381,7 @@
       "package": "libice-dev",
       "version": "2:1.0.6-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libi/libice/libice-dev_1.0.6-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libi/libice/libice-dev_1.0.6-1_i386.deb",
       "file": "libice-dev_1.0.6-1_i386.deb",
       "bytes": 60050,
       "sha256": "ebaf11e42547d378558b7280e87bf86b773fdd8228c5971ee1601893f0fc80a6"
@@ -390,7 +390,7 @@
       "package": "libsm6",
       "version": "2:1.1.1-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libs/libsm/libsm6_1.1.1-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libs/libsm/libsm6_1.1.1-1_i386.deb",
       "file": "libsm6_1.1.1-1_i386.deb",
       "bytes": 24256,
       "sha256": "0358ffe2e373238848e3ab257d4066fc0319e1102e32d0e3245893fcfc438fbc"
@@ -399,7 +399,7 @@
       "package": "libsm-dev",
       "version": "2:1.1.1-1",
       "pocket": "lucid",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/libs/libsm/libsm-dev_1.1.1-1_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/libs/libsm/libsm-dev_1.1.1-1_i386.deb",
       "file": "libsm-dev_1.1.1-1_i386.deb",
       "bytes": 26574,
       "sha256": "aa8af190f737b3e2ea4b9f7f5ce852ed5c4102d27375286076b5b4b5956d3ed4"
@@ -408,7 +408,7 @@
       "package": "libuuid1",
       "version": "2.17.2-0ubuntu1.10.04.2",
       "pocket": "lucid-updates",
-      "url": "http://old-releases.ubuntu.com/ubuntu/pool/main/u/util-linux/libuuid1_2.17.2-0ubuntu1.10.04.2_i386.deb",
+      "url": "https://old-releases.ubuntu.com/ubuntu/pool/main/u/util-linux/libuuid1_2.17.2-0ubuntu1.10.04.2_i386.deb",
       "file": "libuuid1_2.17.2-0ubuntu1.10.04.2_i386.deb",
       "bytes": 61832,
       "sha256": "f73dec03af554677cb619c70657e7119e6557c2f0d0da9a218c648d4931dc28f"

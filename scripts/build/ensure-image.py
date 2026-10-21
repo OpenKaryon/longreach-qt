@@ -47,6 +47,9 @@ INPUT_PREFIXES = ("scripts/build/", "scripts/audit/", "scripts/fetch/", "tests/"
 # Set for the make that builds an image, so that an image it depends on
 # (qt6-host) is checked without waiting on the lock or being forced again.
 NESTED = "LONGREACH_NESTED_IMAGE_BUILD"
+# And the targets whose locks it and the builds around it hold, comma-separated
+# (qt6-fetch-source.py leaves those out).
+TARGET = "LONGREACH_IMAGE_TARGET"
 
 
 def try_lock(stream) -> bool:
@@ -365,34 +368,63 @@ def context_files(context: Path, sources: list[str]) -> list[tuple[str, Path | N
     return sorted(files.items())
 
 
-def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> tuple[str, bool]:
-    """A target's fingerprint, and whether every input it names exists."""
+MISSING = "<missing>"
+
+
+def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> tuple[str, bool, dict[str, str]]:
+    """A target's fingerprint, whether every input it names exists, and the
+    inputs one by one (name: hash, or MISSING), for comparing them later."""
     digest = hashlib.sha256(b"longreach-qt-image-v2\0")
     complete = True
+    items: dict[str, str] = {}
     builds = docker_builds(make, target)
     if not builds:
         raise SystemExit(f"make -n {target} runs no docker build")
     ignore = ROOT / ".dockerignore"
-    digest.update(ignore.read_bytes() if ignore.is_file() else b"")
-    for words in builds:
+    ignored = ignore.read_bytes() if ignore.is_file() else b""
+    digest.update(ignored)
+    items[".dockerignore"] = hashlib.sha256(ignored).hexdigest()
+    for number, words in enumerate(builds):
         build = parse_build(words)
         context = (ROOT / build["context"]).resolve()
         dockerfile = context / build["dockerfile"] if not Path(build["dockerfile"]).is_absolute() \
             else Path(build["dockerfile"])
         declared = declared_args(dockerfile)
         args = {k: v for k, v in build["args"].items() if k in declared and k not in SPEED_ARGS | SOURCE_ARGS}
-        digest.update(json.dumps({"dockerfile": dockerfile.relative_to(ROOT).as_posix(), "args": args,
-                                  "target": build["target"], "platform": build["platform"]},
-                                 sort_keys=True).encode() + b"\0")
+        options = json.dumps({"dockerfile": dockerfile.relative_to(ROOT).as_posix(), "args": args,
+                              "target": build["target"], "platform": build["platform"]}, sort_keys=True)
+        digest.update(options.encode() + b"\0")
         digest.update(hashes.of(dockerfile).encode() + b"\0")
+        items[f"docker build {number}"] = options + " " + hashes.of(dockerfile)
         for relative, path in context_files(context, context_sources(dockerfile, build["args"])):
             digest.update(relative.encode("utf-8") + b"\0")
             if path is None:
                 complete = False
-            digest.update((hashes.of(path) if path else "<missing>").encode() + b"\0")
+            value = hashes.of(path) if path else MISSING
+            digest.update(value.encode() + b"\0")
+            items[relative] = value
     for need in needs:
-        digest.update(f"needs {need} ".encode() + target_inputs(make, need, [], hashes)[0].encode() + b"\0")
-    return digest.hexdigest(), complete
+        need_digest, _, need_items = target_inputs(make, need, [], hashes)
+        digest.update(f"needs {need} ".encode() + need_digest.encode() + b"\0")
+        items.update({f"{need}: {name}": value for name, value in need_items.items()})
+    return digest.hexdigest(), complete, items
+
+
+# Where make puts what it fetches; nothing else may appear during a build.
+FETCHED = "downloads/"
+
+
+def changed_inputs(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    """Inputs that differ between before and after a build: changed, gone,
+    or new. New is fine in downloads/, which is what the make fetched; so is
+    a .part gone from there (an earlier version's, which fetch.py removes)."""
+    def fetched(name: str) -> bool:  # "qt6-host: <path>" for an input of --needs
+        return name.split(": ", 1)[-1].startswith(FETCHED)
+    changed = [name for name, value in before.items()
+               if value != MISSING and after.get(name) != value
+               and not (name not in after and name.endswith(".part") and fetched(name))]
+    changed += [name for name in after if name not in before and not fetched(name)]
+    return sorted(changed)
 
 
 def relabel(image: str, value: str) -> None:
@@ -438,19 +470,27 @@ def main() -> int:
     # A nested build inherits the outer image's label in DOCKER_BUILD_FLAGS.
     flags = " ".join(f for f in args.docker_build_flags.split() if not f.startswith(f"--label={LABEL}="))
     force = args.force and os.environ.get(NESTED) != "1"
-    hashes = Hashes()
-    expected, complete = target_inputs(args.make, args.target, args.needs, hashes)
-    hashes.save()
     if args.print:
-        print(expected)
+        hashes = Hashes()
+        print(target_inputs(args.make, args.target, args.needs, hashes)[0])
+        hashes.save()
         return 0
     if os.environ.get(NESTED) != "1":
+        # make's own errors (a Qt 6 version without a pin, the licence
+        # profile) now, not after waiting for the build lock.
+        docker_builds(args.make, args.target)
         # A second build of the same target stops here, before it waits for
         # the build lock. Held while waiting, the target lock could block a
         # build that holds the build lock and needs this target (qt6-host).
         with target_lock(args.target):
             pass
     with build_lock(), target_lock(args.target):
+        # The inputs are read under the locks: no other build replaces one
+        # (qt6-fetch-source.py and QT6_SOURCE) between this and the build.
+        # Loaded here: builds that ran while this one waited added to it.
+        hashes = Hashes()
+        expected, complete, inputs = target_inputs(args.make, args.target, args.needs, hashes)
+        hashes.save()
         if not force and complete and image_fingerprint(args.image) == expected:
             print(f"{args.image}: image is current ({expected[:12]})", flush=True)
         else:
@@ -458,17 +498,27 @@ def main() -> int:
             result = subprocess.run(
                 [args.make, "--no-print-directory", "-j1", args.target,
                  f"DOCKER_BUILD_FLAGS={flags} --label={LABEL}={expected}"],
-                cwd=ROOT, check=False, env=dict(os.environ, **{NESTED: "1"}),
+                cwd=ROOT, check=False,
+                env=dict(os.environ, **{NESTED: "1", TARGET: ",".join(
+                    t for t in (os.environ.get(TARGET, ""), args.target) if t)}),
             )
             if result.returncode:
                 return result.returncode
-            if not complete:
+            built, _, after = target_inputs(args.make, args.target, args.needs, hashes)
+            hashes.save()
+            changed = changed_inputs(inputs, after)
+            if changed:
+                # Something the build reads changed while it ran (BuildKit reads
+                # the context step by step): the image may hold old and new, and
+                # the label would name inputs it was not built from.
+                relabel(args.image, "inputs-changed-during-build")
+                print(f"{args.image}: changed while it was built: {', '.join(changed[:5])}"
+                      f"{' ...' if len(changed) > 5 else ''}; build it again", file=sys.stderr)
+                return 1
+            if built != expected and image_fingerprint(args.image) == expected:
                 # The make fetched inputs that were missing: label what they are now.
-                fetched, _ = target_inputs(args.make, args.target, args.needs, hashes)
-                hashes.save()
-                if fetched != expected and image_fingerprint(args.image) == expected:
-                    relabel(args.image, fetched)
-                    expected = fetched
+                relabel(args.image, built)
+                expected = built
             if image_fingerprint(args.image) != expected:
                 print(f"{args.image}: built image has no matching input label", file=sys.stderr)
                 return 1

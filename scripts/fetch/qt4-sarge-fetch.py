@@ -42,8 +42,10 @@ def fetch(item, directory):
             if not path.is_file():
                 # fetch.py: the OpenKaryonLab copy for a file sources.json lists, else upstream.
                 pending = Path(fetch_py.download(item['url'], str(path)))
-                verify(pending, item)
-                pending.replace(path)
+                fetch_py.checked(str(pending), lambda p: verify(Path(p), item))
+                fetch_py.finish(str(pending), str(path))
+    elif not VERIFY_ONLY:
+        fetch_py.tidy(str(path))
     verify(path, item)
     COUNTS['verified'] += 1
     if not VERIFY_ONLY:

@@ -25,7 +25,9 @@ LICENSE_SUFFIX := $(if $(filter gpl-enabled,$(LICENSE_PROFILE)),,-$(LICENSE_PROF
 # still contain them, so those recipes refuse it.
 LICENSE_ENFORCED_ONLY_ON_LINUX = $(if $(filter lgpl-friendly,$(LICENSE_PROFILE)),$(error $(1): LICENSE_PROFILE=lgpl-friendly is enforced for the Linux Qt 5/6 targets only (docs/licensing.md)))
 # Named on the command line, they stop before any download or prerequisite.
-LICENSE_REFUSED_GOALS := $(if $(filter lgpl-friendly,$(LICENSE_PROFILE)),$(filter $(foreach t,qt5-win qt5-macos qt6-win qt6-macos,$(t)-% build-$(t)-%),$(MAKECMDGOALS)))
+LICENSE_LINUX_ONLY_REFUSED := qt5-win-i386 qt5-win-amd64 qt5-win-arm64 qt5-macos-amd64 qt5-macos-i386 \
+                              qt5-macos-arm64 qt6-win-amd64 qt6-win-arm64 qt6-macos-amd64 qt6-macos-arm64
+LICENSE_REFUSED_GOALS := $(if $(filter lgpl-friendly,$(LICENSE_PROFILE)),$(filter $(foreach t,$(LICENSE_LINUX_ONLY_REFUSED),$(t) $(t)-examples build-$(t) build-$(t)-examples),$(MAKECMDGOALS)))
 ifneq ($(LICENSE_REFUSED_GOALS),)
 $(call LICENSE_ENFORCED_ONLY_ON_LINUX,$(LICENSE_REFUSED_GOALS))
 endif
@@ -165,8 +167,8 @@ help:
 
 # Re-check the pinned inputs already in downloads/, and the Sarge and Lucid
 # packages against their locks; what is not downloaded yet is counted, not
-# failed.
-VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE QT6_ARCHIVE OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_WIN7_LLVM_MINGW \
+# failed. A QT6_SOURCE archive is not the pinned one, so it is left out.
+VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE $(if $(QT6_SOURCE),,QT6_ARCHIVE) OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_WIN7_LLVM_MINGW \
                    QT5_LLVM_SRC QT6_NINJA QT6_XCB_CURSOR QT6_OS_VERSION_CHECK \
                    TIGER_SDK JAGUAR_SDK QT5_MACOS_I386_LINK_SDK QT6_MACOS_SDK QT6_MACOS_ARM64_SDK
 VERIFY_PINS = $(sort $(foreach f,$(VERIFY_DOWNLOADS),$(if $($(f)_SHA256),$($(f)_PATH)=$($(f)_SHA256))))

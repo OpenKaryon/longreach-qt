@@ -18,6 +18,11 @@ set -eu
 # Moving this date is a deliberate update: it rebuilds the images that run
 # this script.
 snapshot=${1:-20261019T000000Z}
+# apt-get update only warns about an index it could not fetch and exits 0;
+# the install would then take older packages from the indexes it did get.
+# Error-Mode makes that an error, after retries with a growing delay. For
+# the live archive too.
+printf 'Acquire::Retries "10";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/99longreach-update
 [ "$snapshot" = none ] && { echo "apt-snapshot: the live archive"; exit 0; }
 . /etc/os-release
 case "${VERSION_CODENAME:-}" in
@@ -44,11 +49,7 @@ if ! grep -q "/$snapshot" "$sources" || grep -qE "$live" "$sources"; then
     grep -E '^(deb|URIs)' "$sources" >&2
     exit 1
 fi
-# apt-get update only warns about an index it could not fetch and exits 0;
-# the install would then take older packages from the indexes it did get.
-# Error-Mode makes that an error, after retries with a growing delay.
-printf 'Acquire::Check-Valid-Until "false";\nAcquire::Retries "10";\nAPT::Update::Error-Mode "any";\n' \
-    > /etc/apt/apt.conf.d/99longreach-snapshot
+printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99longreach-snapshot
 if [ "$VERSION_CODENAME" = jammy ] && [ ! -s /etc/ssl/certs/ca-certificates.crt ]; then
     # snapshot.ubuntu.com is https only, and the base image has no CA
     # certificates. They come from the snapshot too, fetched once without

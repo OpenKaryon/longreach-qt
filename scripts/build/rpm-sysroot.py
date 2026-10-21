@@ -22,6 +22,7 @@ import json
 import argparse
 import gzip
 import hashlib
+import http.client
 import os
 import re
 import subprocess
@@ -41,7 +42,7 @@ def fetch(url):
         try:
             with urllib.request.urlopen(url, timeout=120) as response:
                 return response.read()
-        except OSError as error:
+        except (OSError, http.client.HTTPException) as error:
             if attempt == 3 or getattr(error, 'code', None) == 404:
                 raise
             print(f'{url}: {error}; retrying', file=sys.stderr)

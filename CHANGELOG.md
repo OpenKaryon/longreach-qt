@@ -69,7 +69,8 @@
   only with a 404.
 - `make verify-downloads` checks every pinned file in `downloads/` once, and
   the Sarge and Lucid packages against their locks (`--verify-only`), and says
-  how many it checked; `make build-all` runs it before it starts.
+  how many it checked; `make build-all` runs it before it starts. A
+  `QT6_SOURCE` archive is the user's, so it is not held to the 6.8.4 pin.
 - The Qt 5 macOS SDK is packed in the digest-pinned Ubuntu 22.04 image (as
   linux/amd64, under the download lock), and the run.py QEMU helper is built
   from it (as linux/amd64 on any host, showing Docker's output when that
@@ -137,8 +138,23 @@
   (`git-fetch-pinned.sh`) and the CentOS 7 aarch64 packages three times. One
   failed request ended an image build an hour in.
 - A `QT6_SOURCE` archive already in place is not copied again by each make
-  of a build, and one with other content is not put in place while a Qt 6
-  target is being built from the archive there.
+  of a build, and one with other content does not replace it while another
+  Qt 6 target is being built from it through `make build-<target>`,
+  `<target>-examples` or `make build-all` (their build locks are held during
+  the replacement, which is one rename; a plain `make qt6-<target>` is a bare
+  docker build and takes no lock). An image's inputs are read under its
+  target's lock and again after the build: one that was there and changed
+  or went, or a file new outside `downloads/`, fails the build instead of
+  labelling the image with inputs it was not built from; what the make
+  fetched into `downloads/` is added to the label. Downloads are written to
+  `build/partial/` (`downloads/.partial/` when `downloads/` is linked to
+  another drive; beside the file only in a folder linked to a drive of its
+  own) until they are complete, and `fetch.py` moves them in only once their
+  SHA256 matches; the Qt 6 archive is checked by make once it is in place.
+  A `.part` an earlier version left beside a file is removed. A
+  connection cut mid-file, also one the server just closes before the length
+  it announced, is retried by `fetch.py`; `qt6-fetch-source.py` goes on to
+  the next source.
 - `make download-qt-mobility` and `scripts/fetch/fetch-git-archive.py` are
   gone: no target used Qt Mobility.
 

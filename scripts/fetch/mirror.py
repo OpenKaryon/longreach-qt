@@ -323,7 +323,7 @@ def archives(args) -> int:
                             print(f"{archive['file']}: upstream's SHA256 differs from the pin; not kept")
                             mismatched.append(archive['file'])
                             continue
-                        part.replace(local)
+                        fetch.finish(str(part), str(local))
         if args.apply and sha256(local) != archive['sha256']:
             print(f"{local.relative_to(ROOT).as_posix()}: SHA256 differs from the pin; not uploaded")
             mismatched.append(archive['file'])

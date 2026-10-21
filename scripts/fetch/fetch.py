@@ -11,8 +11,11 @@
 
 Every archive the kit builds from is pinned this way in the Makefile, so a
 changed upstream file, a truncated download or a swapped mirror stops the
-build instead of reaching it. The download goes to <file>.part and is renamed
-only once it verifies.
+build instead of reaching it. The download goes to a <file>.part outside the
+folders an image COPYs whole (downloads/debian-sarge-*, where a leftover would
+be built in): build/partial/, or downloads/.partial/ when downloads/ is linked
+to another drive; only a folder linked to a drive of its own gets it beside
+the file. It is moved into place in one rename once it verifies.
 
 A file sources.json lists as copied comes from the OpenKaryonLab copy, then
 from <url> unless <url> is on GitHub too (the copy is, so that would be no
@@ -21,6 +24,7 @@ fallback). Anything else (Apple SDKs, Debian and Ubuntu packages) comes from
 tries <url> first, for a new pin before its file is copied.
 """
 import hashlib
+import http.client
 import json
 import os
 import subprocess
@@ -105,7 +109,7 @@ def held(path: Path, wait: bool, busy: str):
 def downloading(path):
     """Held while <path> is downloaded: two targets that need the same input
     (qt6-host and qt6-linux-amd64, both the Qt archive) do not both write
-    <path>.part; the second waits, then finds the file there."""
+    its partial(); the second waits, then finds the file there."""
     # Under build/locks/, not beside the file: downloads/ folders are COPYed
     # into images whole.
     lock = Path(__file__).resolve().parents[2] / 'build' / 'locks' / f'download-{os.path.basename(path)}.lock'
@@ -125,10 +129,73 @@ def sources(url, path):
     return [copy, url]
 
 
+def complete(response, received):
+    """A connection closed before the end of a sized response is an error:
+    response.read(n) just returns what came, without IncompleteRead.
+    response.length is what http.client still expected (None when chunked)."""
+    remaining = getattr(response, 'length', None)
+    if remaining:
+        raise ConnectionError(f'the connection closed after {received} bytes, {remaining} short')
+
+
+ROOT = Path(__file__).resolve().parents[2]
+# Folders no image COPYs, tried in order: the first on the drive of the file
+# keeps finish() one rename.
+PARTIALS = (ROOT / 'build' / 'partial', ROOT / 'downloads' / '.partial')
+
+
+def partial(path):
+    """Where a file for path is written until it is complete and checked."""
+    folder = os.path.dirname(os.path.abspath(path))
+    os.makedirs(folder, exist_ok=True)
+    for candidate in PARTIALS:
+        candidate.mkdir(parents=True, exist_ok=True)
+        if os.stat(candidate).st_dev == os.stat(folder).st_dev:
+            return str(candidate / (os.path.basename(path) + '.part'))
+    # A folder linked to a drive of its own: beside the file is the only rename.
+    return path + '.part'
+
+
+def tidy(path, locked=False):
+    """Remove a <path>.part an earlier version left beside the file: in a
+    folder an image COPYs whole it would be built in. Under the download
+    lock of path (locked: the caller holds it already; taking it again in
+    the same process would wait for ever on Windows). Leftovers only: a
+    file that cannot be removed is reported, the build goes on."""
+    legacy = path + '.part'
+    if not os.path.exists(legacy):
+        return
+    if not locked:
+        with downloading(path):
+            tidy(path, locked=True)
+        return
+    try:
+        if os.path.exists(legacy) and legacy != partial(path):
+            os.remove(legacy)
+    except OSError as error:
+        print(f'WARNING: {legacy} was not removed ({error}); delete it by hand', flush=True)
+
+
+def checked(part, check):
+    """check(part); a part that fails it is removed before the error goes on."""
+    try:
+        check(part)
+    except BaseException:
+        if os.path.exists(part):
+            os.remove(part)
+        raise
+
+
+def finish(part, path):
+    """Put a checked part in place, in one rename."""
+    os.replace(part, path)
+
+
 def download(url, path, order=None):
-    """Download to <path>.part from the sources(), or the URLs in order; exits
+    """Download to partial(path) from the sources(), or the URLs in order; exits
     when none works."""
-    part = path + '.part'
+    part = partial(path)
+    tidy(path, locked=True)  # every caller holds downloading(path)
     errors = []
     order = order or sources(url, path)
     for source in order:
@@ -138,11 +205,17 @@ def download(url, path, order=None):
         for attempt in range(1, 4):
             try:
                 print(f'downloading {source}')
+                # A .part left behind may be a hard link to another file
+                # (qt6-fetch-source.py links QT6_SOURCE there): replace, never
+                # write into it.
+                if os.path.exists(part):
+                    os.remove(part)
                 with urllib.request.urlopen(source, timeout=120) as response, open(part, 'wb') as out:
                     for chunk in iter(lambda: response.read(1 << 20), b''):
                         out.write(chunk)
+                    complete(response, out.tell())
                 return part
-            except OSError as error:
+            except (OSError, http.client.HTTPException) as error:
                 if os.path.exists(part):
                     os.remove(part)
                 # A missing file stays missing: go on to the next source.
@@ -168,14 +241,15 @@ def main(argv):
         sys.exit(__doc__)
     url, path, expected = argv
     if os.path.exists(path):
+        tidy(path)
         verify(path, expected)
         return
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
     with downloading(path):
         if not os.path.exists(path):
             part = download(url, path)
-            verify(part, expected)
-            os.replace(part, path)
+            checked(part, lambda p: verify(p, expected))
+            finish(part, path)
     verify(path, expected)
 
 

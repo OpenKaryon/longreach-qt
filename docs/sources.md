@@ -23,8 +23,9 @@ accepted from either.
 - Archives: `scripts/fetch/fetch.py` (and `qt6-fetch-source.py`,
   `scripts/build/cmake.sh`) take a file `sources.json` lists from the copy;
   upstream is the fallback only when it is not on GitHub, and taking it prints
-  a warning, since it means the copy lacks the file. The SHA256 is checked
-  either way. Files that are not copied (Apple SDKs, Debian and Ubuntu
+  a warning, since it means the copy lacks the file (for the Qt 6 archive
+  also when the copy's file does not match the pin). The SHA256 is checked
+  either way, before the file is put in place. Files that are not copied (Apple SDKs, Debian and Ubuntu
   packages) come from upstream only. `LONGREACH_MIRROR` names another copy;
   `LONGREACH_UPSTREAM_FIRST=1` makes `fetch.py` and `qt6-fetch-source.py`
   try upstream first, for a new pin whose file is not copied yet (CMake is on

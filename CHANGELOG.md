@@ -135,8 +135,20 @@
   fetched; their apt reported it as a warning and installed older packages.
 - Downloads inside the images are tried again before a build fails: CMake
   (`cmake.sh`, qt6-linux-amd64) five times, the osxcross projects
-  (`git-fetch-pinned.sh`) and the CentOS 7 aarch64 packages three times. One
-  failed request ended an image build an hour in.
+  (`git-fetch-pinned.sh`) and the CentOS 7 aarch64 packages three times, the
+  packages apt installs five times (Ubuntu 14.04-18.04) or ten (Debian 12,
+  Ubuntu 22.04). One failed request ended an image build an hour in.
+- Stopping `make build-all` (Ctrl-C, Ctrl-Break, SIGTERM, a closed
+  terminal on Linux and macOS) stops every build it started, with all their
+  processes, also the ones whose parent has gone: each gets a minute to end
+  by itself (docker cancels its build; interrupting again ends them at
+  once), then it is killed; build-all exits 130. So does any error that
+  ends build-all, with its own exit. The summary lists what finished and
+  what was stopped either way. On Windows build-all holds its builds in a
+  job object, so they end with it however it ends (a closed console or a
+  killed build-all ends them at once). A signal that was ignored when
+  build-all started (`nohup`) stays ignored. Stopping make alone left
+  ensure-image.py and docker build running.
 - A `QT6_SOURCE` archive already in place is not copied again by each make
   of a build, and one with other content does not replace it while another
   Qt 6 target is being built from it through `make build-<target>`,
@@ -146,12 +158,13 @@
   target's lock and again after the build: one that was there and changed
   or went, or a file new outside `downloads/`, fails the build instead of
   labelling the image with inputs it was not built from; what the make
-  fetched into `downloads/` is added to the label. Downloads are written to
-  `build/partial/` (`downloads/.partial/` when `downloads/` is linked to
-  another drive; beside the file only in a folder linked to a drive of its
-  own) until they are complete, and `fetch.py` moves them in only once their
-  SHA256 matches; the Qt 6 archive is checked by make once it is in place.
-  A `.part` an earlier version left beside a file is removed. A
+  fetched into `downloads/` is added to the label. What `fetch.py`, the
+  Sarge, Lucid and Qt 6 fetchers download is written to `build/partial/`
+  (`downloads/.partial/` when `downloads/` is linked to another drive;
+  beside the file only in a folder linked to a drive of its own) and moved
+  in only once its SHA256 matches the pin; a wrong local Qt 6 archive is
+  named. A `.part` an earlier version of them left beside a file is
+  removed. A
   connection cut mid-file, also one the server just closes before the length
   it announced, is retried by `fetch.py`; `qt6-fetch-source.py` goes on to
   the next source.

@@ -35,7 +35,7 @@ ARG TARGET_PREFIX="aarch64-w64-mingw32-"
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get -y update && \
+    sh /usr/local/bin/apt-snapshot "${APT_SNAPSHOT:-}" && apt-get -y update && \
     apt-get -y upgrade && \
     apt-get -y install \
         build-essential python3 python-is-python3 perl git wget ca-certificates \

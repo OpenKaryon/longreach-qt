@@ -56,7 +56,7 @@ ARG LLVM_SRC="llvm-project-14.0.6.src.tar.xz"
 RUN \
     set -eux && \
     export DEBIAN_FRONTEND=noninteractive && \
-    sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt -y update && \
+    sh /usr/local/bin/apt-snapshot "${APT_SNAPSHOT:-}" && apt -y update && \
     apt -y upgrade && \
     apt -y install \
         build-essential python3 perl git patch wget nano ca-certificates \

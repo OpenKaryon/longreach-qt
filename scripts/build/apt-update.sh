@@ -7,11 +7,14 @@
 # and the install then takes older packages from the indexes it did get. (The
 # Debian 12 and Ubuntu 22.04 stages get the same from apt-snapshot.sh, with
 # apt's own APT::Update::Error-Mode.) Up to five tries, half a minute apart.
+# apt retries a failed request itself too, for the packages that the install
+# after this fetches as well: one dropped connection ended an image build.
 set -u
+printf 'Acquire::Retries "5";\n' > /etc/apt/apt.conf.d/99longreach-retries
 log=/tmp/apt-update.log
 try=1
 while :; do
-    if apt-get -o Acquire::Retries=3 update "$@" > "$log" 2>&1 &&
+    if apt-get update "$@" > "$log" 2>&1 &&
         ! grep -qE '^(Err|[WE]: Failed to fetch|[WE]: Some index files failed|[WE]: GPG error|E: )' "$log"; then
         cat "$log"
         rm -f "$log"

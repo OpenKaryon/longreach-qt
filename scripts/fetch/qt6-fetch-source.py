@@ -38,7 +38,10 @@ Whether every future delayed LTS patch follows that pattern is not something to
 guess at, so both names are simply tried.
 
 Usage:
-    qt6-fetch-source.py <version> <download-dir> [--source PATH]
+    qt6-fetch-source.py <version> <download-dir> [--source PATH | --sha256 HASH]
+
+With --sha256 (make passes the pin) an archive is checked before it is put
+in place; a QT6_SOURCE archive (--source) is the user's and is not.
 
 On success the archive is at <download-dir>/qt-everywhere-src-<version>.tar.xz,
 under that canonical name whichever way it arrived, so nothing downstream has to
@@ -213,8 +216,9 @@ def place(src, dest):
         put(src, dest)
 
 
-def try_download(url, dest):
-    """-> True if it downloaded. A 404 is an answer, not a failure to report."""
+def try_download(url, dest, sha256=None):
+    """-> True if it downloaded. A 404 is an answer, not a failure to report.
+    With sha256, a download that does not match it is not put in place."""
     part = fetch.partial(dest)
     try:
         print("trying %s" % url)
@@ -240,6 +244,8 @@ def try_download(url, dest):
         if total:
             sys.stdout.write("\n")
         fetch.complete(response, done)
+        if sha256:
+            fetch.checked(part, lambda p: check(p, sha256, url))
         fetch.finish(part, dest)
         return True
     except urllib.error.HTTPError as e:
@@ -260,13 +266,26 @@ def try_download(url, dest):
 ERRORS = []
 
 
-def attempt(url, dest):
+# Sources whose file did not match the pin, for the messages below.
+MISMATCHED = []
+
+
+def check(path, sha256, name):
+    actual = content_hash(path)
+    if actual != sha256:
+        MISMATCHED.append(name)
+        raise ValueError("%s: SHA256 %s, expected %s" % (name, actual, sha256))
+
+
+def attempt(url, dest, sha256=None):
     """try_download, with any failure an answer too: the next source is tried."""
     try:
-        return try_download(url, dest)
+        return try_download(url, dest, sha256)
     except Exception as error:
         print("  failed: %s" % error)
-        ERRORS.append("%s: %s" % (url, error))
+        message = str(error)
+        # check() names the source already.
+        ERRORS.append(message if message.startswith(url) else "%s: %s" % (url, message))
         return False
 
 
@@ -276,7 +295,11 @@ def main():
     parser.add_argument("download_dir")
     parser.add_argument("--source", default=os.environ.get("QT6_SOURCE", ""),
                         help="path to a source archive to use instead of downloading")
+    parser.add_argument("--sha256", default="",
+                        help="the pinned SHA256: an archive is checked before it is put in place")
     args = parser.parse_args()
+    # As fetch.py --check: Get-FileHash prints it in capitals.
+    args.sha256 = args.sha256.strip().lower()
 
     os.makedirs(args.download_dir, exist_ok=True)
     canonical = os.path.join(args.download_dir,
@@ -284,6 +307,7 @@ def main():
     # Another build fetching the same archive (qt6-host next to a cross
     # target) finishes first; this one then finds it in step 2.
     with fetch.downloading(canonical):
+        fetch.tidy(canonical, locked=True)  # a .part an earlier version left
         obtain(args, canonical)
 
 
@@ -301,13 +325,19 @@ def obtain(args, canonical):
         local = os.path.join(args.download_dir, name)
         if os.path.isfile(local):
             print("using local %s" % local)
+            if args.sha256:
+                try:
+                    check(local, args.sha256, local)
+                except ValueError as error:
+                    sys.exit("%s; delete it, or give QT6_SOURCE=%s if it is the archive you mean"
+                             % (error, local))
             place(local, canonical)
             return
 
     # 3. the OpenKaryonLab copy, kept under the canonical name (not with
     #    LONGREACH_UPSTREAM_FIRST=1, for a version not copied yet).
     upstream_first = os.environ.get("LONGREACH_UPSTREAM_FIRST") == "1"
-    if not upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical):
+    if not upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical, args.sha256):
         print("saved %s" % canonical)
         return
 
@@ -318,20 +348,25 @@ def obtain(args, canonical):
         for name in archive_names(args.version):
             url = "%s/%s/%s/single/%s" % (host, series(args.version),
                                           args.version, name)
-            if attempt(url, canonical):
-                if not upstream_first:
+            if attempt(url, canonical, args.sha256):
+                if MIRROR_COPY + os.path.basename(canonical) in MISMATCHED:
+                    print("WARNING: the OpenKaryonLab copy of %s does not match the pin; replace it "
+                          "there (python scripts/fetch/mirror.py archives)" % os.path.basename(canonical))
+                elif not upstream_first:
                     print("WARNING: %s is not in the OpenKaryonLab copy "
                           "(python scripts/fetch/mirror.py archives)" % os.path.basename(canonical))
                 print("saved %s" % canonical)
                 return
 
     # 3b. the copy, when upstream went first.
-    if upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical):
+    if upstream_first and attempt(MIRROR_COPY + os.path.basename(canonical), canonical, args.sha256):
         print("saved %s" % canonical)
         return
 
     if ERRORS:
-        sys.exit("Qt %s could not be downloaded:\n  " % args.version + "\n  ".join(ERRORS))
+        hint = ("\nNo archive that came matched the pin: if this version's QT6_ARCHIVE_SHA256 "
+                "was typed in, check it against the Qt release." if MISMATCHED else "")
+        sys.exit("Qt %s could not be downloaded:\n  " % args.version + "\n  ".join(ERRORS) + hint)
 
     # 4. It is not public. Say what to do, without claiming to know why - the
     #    same 404 covers a commercial-only LTS patch and a typo in the version.

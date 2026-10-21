@@ -160,14 +160,17 @@ def tidy(path, locked=False):
     """Remove a <path>.part an earlier version left beside the file: in a
     folder an image COPYs whole it would be built in. Under the download
     lock of path (locked: the caller holds it already; taking it again in
-    the same process would wait for ever on Windows). Leftovers only: a
-    file that cannot be removed is reported, the build goes on."""
+    the same process would wait for ever). Leftovers only: one that cannot
+    be removed, or locked, is reported and the build goes on."""
     legacy = path + '.part'
     if not os.path.exists(legacy):
         return
     if not locked:
-        with downloading(path):
-            tidy(path, locked=True)
+        try:
+            with downloading(path):
+                tidy(path, locked=True)
+        except OSError as error:
+            print(f'WARNING: {legacy} was not removed ({error}); delete it by hand', flush=True)
         return
     try:
         if os.path.exists(legacy) and legacy != partial(path):

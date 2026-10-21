@@ -92,7 +92,7 @@ endif
 
 $(QT6_ARCHIVE_PATH):
 	$(if $(or $(QT6_ARCHIVE_SHA256),$(QT6_SOURCE)),,$(error Qt $(QT6_VERSION) has no pinned SHA256: give QT6_ARCHIVE_SHA256=<sha256> (from the Qt release), or QT6_SOURCE=<archive> you trust))
-	$(PYTHON) scripts/fetch/qt6-fetch-source.py "$(QT6_VERSION)" "$(DOWNLOAD_DIR)" $(if $(QT6_SOURCE),--source "$(QT6_SOURCE)",)
+	$(PYTHON) scripts/fetch/qt6-fetch-source.py "$(QT6_VERSION)" "$(DOWNLOAD_DIR)" $(if $(QT6_SOURCE),--source "$(QT6_SOURCE)",$(if $(QT6_ARCHIVE_SHA256),--sha256 "$(QT6_ARCHIVE_SHA256)"))
 	$(if $(and $(QT6_ARCHIVE_SHA256),$(if $(QT6_SOURCE),,1)),$(PYTHON) scripts/fetch/fetch.py --check "$@" "$(QT6_ARCHIVE_SHA256)")
 
 QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(QT6_ARCHIVE) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg LICENSE_PROFILE=$(LICENSE_PROFILE)

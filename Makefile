@@ -32,6 +32,11 @@ ifneq ($(LICENSE_REFUSED_GOALS),)
 $(call LICENSE_ENFORCED_ONLY_ON_LINUX,$(LICENSE_REFUSED_GOALS))
 endif
 
+# A plain image target (make qt5-win-amd64) runs docker build itself: while
+# another build runs (build-all, make build-<target>) it stops as those do,
+# pointing at build-all --jobs. Skipped inside them, which hold the lock.
+ONE_BUILD_CHECK = $(if $(LONGREACH_NESTED_IMAGE_BUILD)$(LONGREACH_BUILDS_COORDINATED),,$(PYTHON) scripts/build/ensure-image.py --check-lock)
+
 # Compiler jobs inside one image build; Qt links can take several GB each.
 PARALLEL_JOBS ?= 6
 

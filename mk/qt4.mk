@@ -45,10 +45,12 @@ QT4_BUILD_ARGS = --build-arg QT4_VERSION=$(QT4_VERSION) --build-arg OPENSSL_VERS
 
 # Linux i386 and amd64 from the pinned Debian 3.1 Sarge packages.
 qt4-linux-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+	$(ONE_BUILD_CHECK)
 	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch i386
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/386 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/i386/Dockerfile -t $(QT4_LINUX_I386_IMAGE) .
 
 qt4-linux-amd64: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+	$(ONE_BUILD_CHECK)
 	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch amd64
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/amd64/Dockerfile -t $(QT4_LINUX_AMD64_IMAGE) .
 
@@ -62,6 +64,7 @@ GCC55_URL ?= https://ftp.gnu.org/gnu/gcc/gcc-5.5.0/gcc-5.5.0.tar.xz
 GCC55_SHA256 := 530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87
 
 qt4-macos-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(GCC55_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg LAB_GIT=$(LAB_GIT) -f docker/qt4/macos/i386/Dockerfile -t $(QT4_MACOS_I386_IMAGE) .
 
 $(TIGER_SDK_PATH):
@@ -83,6 +86,7 @@ $(JAGUAR_SDK_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(JAGUAR_SDK_URL)" "$@" "$(JAGUAR_SDK_SHA256)"
 
 qt4-macos-ppc: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(JAGUAR_SDK_PATH) $(GCC55_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg JOBS=$(PARALLEL_JOBS) --build-arg LAB_GIT=$(LAB_GIT) -f docker/qt4/macos/ppc/Dockerfile -t $(QT4_MACOS_PPC_IMAGE) .
 
 qt4-macos-ppc-extract-tests:
@@ -90,10 +94,12 @@ qt4-macos-ppc-extract-tests:
 
 # Windows 95 OSR2 and later: the Win9x backport, one configure.
 qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/windows/i386/Dockerfile -t $(QT4_WIN_I386_IMAGE) .
 
 # 64-bit Windows starts at XP x64 and needs no backport.
 qt4-win-amd64: $(QT4_ARCHIVE_PATH) $(OPENSSL_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT4_BUILD_ARGS) -f docker/qt4/windows/amd64/Dockerfile -t $(QT4_WIN_AMD64_IMAGE) .
 
 # The test suite into artifacts/tests-<image>/: Windows i386 and Sarge build it

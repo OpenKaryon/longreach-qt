@@ -99,6 +99,7 @@ QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(
 
 # Host Qt tools (moc, rcc, ...), which every cross target copies from this image.
 qt6-host: $(QT6_ARCHIVE_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) -f docker/qt6/host/Dockerfile -t $(QT6_HOST_IMAGE) .
 
 # What the cross targets depend on: qt6-host only when its inputs changed. A
@@ -108,19 +109,23 @@ build-qt6-host:
 
 # Windows x86_64 is the Windows 7 backport, built against MSVCRT.
 qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) build-qt6-host
+	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(QT6_WIN7_LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
 
 qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
+	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(LLVM_MINGW_SHA256) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
 # image.
 qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH)
+	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
 
 qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) build-qt6-host
+	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
@@ -139,10 +144,12 @@ $(QT6_MACOS_ARM64_SDK_PATH):
 endif
 
 qt6-macos-amd64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_SDK_PATH) build-qt6-host
+	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
 
 qt6-macos-arm64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_ARM64_SDK_PATH) build-qt6-host
+	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_ARM64_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_ARM64_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_ARM64_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/arm64/Dockerfile -t $(QT6_MACOS_ARM64_IMAGE) .
 

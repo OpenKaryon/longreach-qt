@@ -42,6 +42,11 @@ SPEED_ARGS = {"PARALLEL_JOBS", "JOBS"}
 SOURCE_ARGS = {"BASE_REGISTRY", "LAB_GIT", "LONGREACH_MIRROR"}
 # Content hashes of large inputs (the downloads), by path, size and mtime.
 HASH_CACHE = ROOT / "build" / ".input-hashes.json"
+# Held by a build started on its own and by build-all for its whole run.
+BUILD_LOCK = ROOT / "build" / ".sdk-build.lock"
+ONE_BUILD = ("another build is running on this machine (build-all or make build-<target>); "
+             "to build several targets at once, run one build-all with --jobs N "
+             "(make build-all BUILD_ALL_JOBS=N)")
 # For fingerprint() below, which the Qt 4 -examples scripts use for their stamp.
 INPUT_PREFIXES = ("scripts/build/", "scripts/audit/", "scripts/fetch/", "tests/", "licenses/")
 # Set for the make that builds an image, so that an image it depends on
@@ -103,17 +108,19 @@ def held(path: Path, wait: bool, busy: str):
 
 @contextmanager
 def build_lock():
-    """Serialize SDK and example builds started through the short targets.
+    """One build at a time on this machine: a second one stops with an error
+    that points at build-all --jobs, which runs several at once and keeps
+    them within the memory.
 
-    scripts/build/build-all.py sets LONGREACH_BUILDS_COORDINATED=1: it limits
-    concurrent builds itself, so each one skips the lock. So does an image
-    built as a prerequisite of another (NESTED), under that one's lock.
+    scripts/build/build-all.py holds this lock for its whole run and sets
+    LONGREACH_BUILDS_COORDINATED=1 for its builds, so each one skips it. So
+    does an image built as a prerequisite of another (NESTED), under that
+    one's lock.
     """
     if "1" in (os.environ.get("LONGREACH_BUILDS_COORDINATED"), os.environ.get(NESTED)):
         yield
         return
-    with held(ROOT / "build" / ".sdk-build.lock", wait=True,
-              busy="another SDK or example build is running"):
+    with held(BUILD_LOCK, wait=False, busy=ONE_BUILD):
         yield
 
 
@@ -124,7 +131,8 @@ def target_lock(target: str):
     image built as another's prerequisite (NESTED: qt6-host) waits instead,
     since the target that needs it cannot go on without it."""
     with held(ROOT / "build" / "locks" / f"{target}.lock", wait=os.environ.get(NESTED) == "1",
-              busy=f"{target} is already being built on this machine"):
+              busy=f"{target} is already being built on this machine; to build several "
+                   "targets at once, run one build-all with --jobs N (make build-all BUILD_ALL_JOBS=N)"):
         yield
 
 
@@ -453,7 +461,21 @@ def image_fingerprint(image: str) -> str | None:
         return None
 
 
+def check_lock() -> int:
+    """For a plain image target, which runs docker build itself: stop when
+    another build holds the build lock (it is not held here)."""
+    BUILD_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with BUILD_LOCK.open("a+b") as stream:
+        if not try_lock(stream):
+            print(ONE_BUILD, file=sys.stderr)
+            return 1
+        unlock(stream)
+    return 0
+
+
 def main() -> int:
+    if sys.argv[1:] == ["--check-lock"]:
+        return check_lock()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
     parser.add_argument("--target", required=True, help="the make target that runs the docker build")
@@ -475,59 +497,64 @@ def main() -> int:
         print(target_inputs(args.make, args.target, args.needs, hashes)[0])
         hashes.save()
         return 0
-    if os.environ.get(NESTED) != "1":
-        # make's own errors (a Qt 6 version without a pin, the licence
-        # profile) now, not after waiting for the build lock.
-        docker_builds(args.make, args.target)
-        # A second build of the same target stops here, before it waits for
-        # the build lock. Held while waiting, the target lock could block a
-        # build that holds the build lock and needs this target (qt6-host).
-        with target_lock(args.target):
-            pass
-    with build_lock(), target_lock(args.target):
-        # The inputs are read under the locks: no other build replaces one
-        # (qt6-fetch-source.py and QT6_SOURCE) between this and the build.
-        # Loaded here: builds that ran while this one waited added to it.
+    with target_lock(args.target):
+        # The inputs are read under the target's lock: no other build
+        # replaces one (qt6-fetch-source.py and QT6_SOURCE take every Qt 6
+        # target's lock to do that) between this and the build. Loaded here:
+        # builds that ran while this one waited added to the cache.
         hashes = Hashes()
         expected, complete, inputs = target_inputs(args.make, args.target, args.needs, hashes)
         hashes.save()
-        if not force and complete and image_fingerprint(args.image) == expected:
+        current = not force and complete and image_fingerprint(args.image) == expected
+        if current and not args.examples_target:
+            # Nothing to build: no need for the build lock, so a project can
+            # be built against a current image while build-all runs.
             print(f"{args.image}: image is current ({expected[:12]})", flush=True)
-        else:
-            print(f"{args.image}: building from current inputs ({expected[:12]})", flush=True)
-            result = subprocess.run(
-                [args.make, "--no-print-directory", "-j1", args.target,
-                 f"DOCKER_BUILD_FLAGS={flags} --label={LABEL}={expected}"],
-                cwd=ROOT, check=False,
-                env=dict(os.environ, **{NESTED: "1", TARGET: ",".join(
-                    t for t in (os.environ.get(TARGET, ""), args.target) if t)}),
-            )
-            if result.returncode:
-                return result.returncode
-            built, _, after = target_inputs(args.make, args.target, args.needs, hashes)
-            hashes.save()
-            changed = changed_inputs(inputs, after)
-            if changed:
-                # Something the build reads changed while it ran (BuildKit reads
-                # the context step by step): the image may hold old and new, and
-                # the label would name inputs it was not built from.
-                relabel(args.image, "inputs-changed-during-build")
-                print(f"{args.image}: changed while it was built: {', '.join(changed[:5])}"
-                      f"{' ...' if len(changed) > 5 else ''}; build it again", file=sys.stderr)
-                return 1
-            if built != expected and image_fingerprint(args.image) == expected:
-                # The make fetched inputs that were missing: label what they are now.
-                relabel(args.image, built)
-                expected = built
-            if image_fingerprint(args.image) != expected:
-                print(f"{args.image}: built image has no matching input label", file=sys.stderr)
-                return 1
-        if args.examples_target:
-            return subprocess.run(
-                [args.make, "--no-print-directory", "-j1", args.examples_target,
-                 *args.examples_args.split()], cwd=ROOT, check=False
-            ).returncode
-        return 0
+            return 0
+        with build_lock():
+            return build_and_examples(args, flags, expected, complete, inputs, hashes, current)
+
+
+def build_and_examples(args, flags, expected, complete, inputs, hashes, current) -> int:
+    """Under the target and build locks: build the image unless it is current,
+    then the -examples target if one is given."""
+    if current:
+        print(f"{args.image}: image is current ({expected[:12]})", flush=True)
+    else:
+        print(f"{args.image}: building from current inputs ({expected[:12]})", flush=True)
+        result = subprocess.run(
+            [args.make, "--no-print-directory", "-j1", args.target,
+             f"DOCKER_BUILD_FLAGS={flags} --label={LABEL}={expected}"],
+            cwd=ROOT, check=False,
+            env=dict(os.environ, **{NESTED: "1", TARGET: ",".join(
+                t for t in (os.environ.get(TARGET, ""), args.target) if t)}),
+        )
+        if result.returncode:
+            return result.returncode
+        built, _, after = target_inputs(args.make, args.target, args.needs, hashes)
+        hashes.save()
+        changed = changed_inputs(inputs, after)
+        if changed:
+            # Something the build reads changed while it ran (BuildKit reads
+            # the context step by step): the image may hold old and new, and
+            # the label would name inputs it was not built from.
+            relabel(args.image, "inputs-changed-during-build")
+            print(f"{args.image}: changed while it was built: {', '.join(changed[:5])}"
+                  f"{' ...' if len(changed) > 5 else ''}; build it again", file=sys.stderr)
+            return 1
+        if built != expected and image_fingerprint(args.image) == expected:
+            # The make fetched inputs that were missing: label what they are now.
+            relabel(args.image, built)
+            expected = built
+        if image_fingerprint(args.image) != expected:
+            print(f"{args.image}: built image has no matching input label", file=sys.stderr)
+            return 1
+    if args.examples_target:
+        return subprocess.run(
+            [args.make, "--no-print-directory", "-j1", args.examples_target,
+             *args.examples_args.split()], cwd=ROOT, check=False
+        ).returncode
+    return 0
 
 
 if __name__ == "__main__":

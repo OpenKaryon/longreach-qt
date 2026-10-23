@@ -46,7 +46,11 @@ no more than Docker's memory holds at about 2 GB per compiler job
 (`PARALLEL_JOBS` 6 makes 12 GB a build, so a 31 GB Docker VM runs two), one
 start every five minutes and only while 12 GB is free. The failed ones are
 built again one at a time, and the logs and a summary go to
-`build/build-all-<time>/`.
+`build/build-all-<time>/`. One build runs on a machine at a time: a second
+`make build-all` or `make build-<target>` started next to one stops with an
+error, so several targets at once are one build-all with `BUILD_ALL_JOBS`.
+A plain `make <target>` stops in the same way, but does not keep a build
+started after it out.
 `BUILD_ALL_ARGS` passes more options to `scripts/build/build-all.py`
 (`--only`, `--skip`, `--min-free-gb`, `--gb-per-job`, `--start-gap`, `--retries`; see its
 `--help`).

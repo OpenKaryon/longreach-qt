@@ -448,6 +448,23 @@ def main() -> int:
     print(f'{len(targets)} targets will be built ({what}), {parallel} at a time:')
     print('  ' + ' '.join(targets))
     print('Without the Docker cache that is hours per target, the whole set a day or more.')
+    # One build at a time on this machine; several targets at once are this
+    # build-all with --jobs, which keeps them within the memory. Held to the
+    # end (the system lets go of it when build-all ends, however it ends).
+    sys.path.insert(0, str(ROOT / 'scripts' / 'fetch'))
+    import fetch  # noqa: E402 - its lock helpers, as ensure-image.py uses them
+    build_lock = ROOT / 'build' / '.sdk-build.lock'
+    build_lock.parent.mkdir(parents=True, exist_ok=True)
+    lock_stream = build_lock.open('a+b')
+    if lock_stream.seek(0, os.SEEK_END) == 0:
+        lock_stream.write(b'0')
+        lock_stream.flush()
+    if not fetch.try_lock(lock_stream):
+        print('Not started: another build is running on this machine (build-all or make '
+              'build-<target>). To build several targets at once, run one build-all with '
+              '--jobs N (make build-all BUILD_ALL_JOBS=N).', file=sys.stderr)
+        return 1
+
     if not args.yes:
         if not sys.stdin.isatty():
             print('Not starting: no terminal to confirm on; pass --yes (make ... YES=1).', file=sys.stderr)
@@ -618,6 +635,9 @@ def main() -> int:
     except (StopRequested, KeyboardInterrupt):
         outcome = 'interrupted'
     finally:
+        # The jobs whose make had ended before the stop: they keep PASS or
+        # FAIL. The others end because of it, and are STOPPED.
+        ended_before = {id(job) for job in jobs if job.status == 'running' and job.proc.poll() is not None}
         # Stop first, talk after: nothing build-all started is left behind,
         # whatever ended the runs, and a message that cannot be written
         # does not keep it from that.
@@ -633,11 +653,12 @@ def main() -> int:
         for job in jobs:  # the ones still running when the runs ended
             if job.status != 'running':
                 continue
-            try:
-                # One that finished just before the stop keeps its PASS or FAIL.
-                finished = job.poll(start_next=False)
-            except OSError:
-                finished = False
+            finished = False
+            if id(job) in ended_before:
+                try:
+                    finished = job.poll(start_next=False)
+                except OSError:
+                    pass
             if not finished:
                 job.status, job.failed_step, job.finished = 'STOPPED', 'stopped', time.time()
                 try:

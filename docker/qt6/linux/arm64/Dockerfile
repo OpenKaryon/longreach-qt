@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 for Linux arm64 from RHEL/CentOS 7 aarch64 (glibc 2.17), the floor
+# Qt 6.8.5 for Linux arm64 from RHEL/CentOS 7 aarch64 (glibc 2.17), the floor
 # of the amd64 build. Cross-built on Debian 12 with its aarch64 GCC 11 against
 # a sysroot of CentOS 7.9 aarch64 packages (scripts/build/rpm-sysroot.py) and
 # Developer Toolset 10's C++ library, linked as Developer Toolset links it:
@@ -13,7 +13,7 @@
 # Base images are pinned by digest; BASE_REGISTRY is where they are pulled
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
-ARG QT_VERSION=6.8.4
+ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
 # The host Qt image by its tag, which carries the licence profile.

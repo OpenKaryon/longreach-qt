@@ -27,8 +27,8 @@
 #       define QT_USE_APPLE_UNIFIED_LOGGING only from 10.12
 #
 # Adapted from patches/qt5/macos/03-unified-logging-pre-10.12.patch in this kit.
-# The same hunk applies to the pristine Qt 6.8.4 qcore_mac_p.h.
-# Apply: patch -p1, from the Qt source root (qt-everywhere-src-6.8.4/)
+# The same hunk applies to the pristine Qt 6.8.5 qcore_mac_p.h.
+# Apply: patch -p1, from the Qt source root (qt-everywhere-src-6.8.5/)
 diff --git a/qtbase/src/corelib/kernel/qcore_mac_p.h b/qtbase/src/corelib/kernel/qcore_mac_p.h
 --- a/qtbase/src/corelib/kernel/qcore_mac_p.h
 +++ b/qtbase/src/corelib/kernel/qcore_mac_p.h

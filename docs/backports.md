@@ -33,7 +33,7 @@ images) apply with `git apply`, Qt 4 and Qt 6 ones with `patch -p1
 --fuzz=0`, from the root of the unpacked source archive: a patch whose
 context does not match exactly stops the build instead of landing
 somewhere near. All series are checked against pristine Qt 4.8.7, 5.15.19
-and 6.8.4.
+and 6.8.5.
 
 ## Qt 4.8.7
 
@@ -87,24 +87,26 @@ and 6.8.4.
   instance variables into `@interface` for the 32-bit (fragile) runtime of
   the i386 build.
 
-## Qt 6.8.4
+## Qt 6.8.5
 
 - `all/` (4): OpenSSL symbol clash between QtOpcUa and QtNetwork in static
   builds; the D-Bus tray menu without a session bus; fonts without fontconfig;
   legacy libGL on Linux.
-- `windows/` (15): the Windows 7 backport, from the diffs of
+- `windows/` (14): the Windows 7 backport, from the diffs of
   [crystalidea/qt6windows7](https://github.com/crystalidea/qt6windows7) at
   `3df3aac7` (QtCore, QtGui, the platform plugin, networking, widgets,
   multimedia, Schannel), the Windows 7 API level with its header fixes,
   MSVCRT (`_fstat64` in Assimp), and no Windows 8 import libraries
   (`synchronization`, `shcore`) in the CMake link interface.
-- `macos/` (19): macOS 12 down to 10.13 (11.0 on arm64): OpenXR's POSIX file
+- `macos/` (20): macOS 12 down to 10.13 (11.0 on arm64): OpenXR's POSIX file
   system and camera APIs before 10.15; aligned allocation, file system, icon,
   key map, UTI, drag, permission and QML JIT (`MAP_JIT`) fallbacks before
   10.14; IOKit port, safe area and CoreVideo attachments before 12; os_activity
   and unified logging before 10.12; Metal, save dialog and text-to-speech
   calls guarded by version where the availability audit found them unguarded;
-  QtNfc's PC/SC lookup made to work in projects that use the SDK.
+  QtNfc's PC/SC lookup made to work in projects that use the SDK; the
+  Darwin media plugin without precompiled headers, which CMake cannot
+  build for it in a cross build since 6.8.5.
 
 ## Writing a patch
 

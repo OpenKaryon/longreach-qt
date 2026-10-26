@@ -4,7 +4,7 @@
 
 `MAJOR.MINOR.PATCH`. Until 1.0 a minor version may change target names,
 image layouts and patch numbering; a patch version only fixes. The Qt versions
-built (4.8.7, 5.15.19, 6.8.4) are part of a release's description, not of its
+built (4.8.7, 5.15.19, 6.8.5) are part of a release's description, not of its
 number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 
 ## What a release contains

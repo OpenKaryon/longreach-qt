@@ -5,118 +5,11 @@
 # (the default camera first, as the newer path does), and Metal frame capture
 # only where it exists.
 #
---- a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
-+++ b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
-@@ -31,6 +31,9 @@
- // Thread-safe
- [[nodiscard]] QList<AVCaptureDevice*> qEnumerateAVCaptureDevices()
- {
-+#ifdef Q_OS_MACOS
-+    if (@available(macOS 10.15, *)) {
-+#endif
-     // List of all capture device types that we want to discover. Seems that this is the
-     // only way to discover all types. This filter is mandatory and has no "unspecified"
-     // option like AVCaptureDevicePosition(Unspecified) has. Order of the list is important
-@@ -78,6 +81,21 @@
-     for (AVCaptureDevice* device in discoverySession.devices)
-         avCaptureDevices.push_back(device);
-     return avCaptureDevices;
-+#ifdef Q_OS_MACOS
-+    } else {
-+        // Discovery sessions were introduced on macOS after High Sierra.
-+        // Keep the system's default camera first, as the newer path does.
-+        QList<AVCaptureDevice *> devices;
-+        AVCaptureDevice *defaultDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-+        if (defaultDevice)
-+            devices.push_back(defaultDevice);
-+        for (AVCaptureDevice *device in [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
-+            if (!defaultDevice || ![device.uniqueID isEqualToString:defaultDevice.uniqueID])
-+                devices.push_back(device);
-+        }
-+        return devices;
-+    }
-+#endif
- }
- 
- // Given a list of AVCaptureDevices, returns a list of all the QCameraDevices
---- a/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
-+++ b/qtmultimedia/src/plugins/multimedia/darwin/camera/qavfcamerabase.mm
-@@ -97,6 +97,28 @@
- 
- #endif // defined(Q_OS_IOS)
- 
-+bool qt_flash_available(AVCaptureDevice *captureDevice)
-+{
-+#ifdef Q_OS_MACOS
-+    if (@available(macOS 10.15, *))
-+        return [captureDevice isFlashAvailable];
-+    return captureDevice.hasFlash;
-+#else
-+    return [captureDevice isFlashAvailable];
-+#endif
-+}
-+
-+bool qt_torch_available(AVCaptureDevice *captureDevice)
-+{
-+#ifdef Q_OS_MACOS
-+    if (@available(macOS 10.15, *))
-+        return [captureDevice isTorchAvailable];
-+    return captureDevice.hasTorch;
-+#else
-+    return [captureDevice isTorchAvailable];
-+#endif
-+}
-+
- } // Unnamed namespace.
- 
- QAVFCameraBase::QAVFCameraBase(QCamera *camera)
-@@ -631,7 +653,7 @@
-     // AVCaptureDevice's docs:
-     // "The flash may become unavailable if, for example,
-     //  the device overheats and needs to cool off."
--    return [captureDevice isFlashAvailable];
-+    return qt_flash_available(captureDevice);
- }
- 
- void QAVFCameraBase::setTorchMode(QCamera::TorchMode mode)
-@@ -704,7 +726,15 @@
-         return false;
- 
-     AVCaptureDevice *captureDevice = device();
--    return captureDevice && [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
-+    if (!captureDevice)
-+        return false;
-+#ifdef Q_OS_MACOS
-+    if (@available(macOS 10.15, *))
-+        return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
-+    return false;
-+#else
-+    return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
-+#endif
- }
- 
- void QAVFCameraBase::applyFlashSettings()
-@@ -732,7 +762,7 @@
-         if (mode == QCamera::FlashOff) {
-             setAvFlashModeSafe(AVCaptureFlashModeOff);
-         } else {
--            if ([captureDevice isFlashAvailable]) {
-+            if (qt_flash_available(captureDevice)) {
-                 if (mode == QCamera::FlashOn)
-                     setAvFlashModeSafe(AVCaptureFlashModeOn);
-                 else if (mode == QCamera::FlashAuto)
-@@ -756,7 +786,7 @@
-         if (mode == QCamera::TorchOff) {
-             setAvTorchModeSafe(AVCaptureTorchModeOff);
-         } else {
--            if ([captureDevice isTorchAvailable]) {
-+            if (qt_torch_available(captureDevice)) {
-                 if (mode == QCamera::TorchOn)
-                     setAvTorchModeSafe(AVCaptureTorchModeOn);
-                 else if (mode == QCamera::TorchAuto)
+diff --git a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
+index fcf71dd7f..327a6aa2d 100644
 --- a/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
 +++ b/qtbase/src/gui/util/qgraphicsframecapturemetal.mm
-@@ -22,7 +22,8 @@
+@@ -22,7 +22,8 @@ QGraphicsFrameCaptureMetal::QGraphicsFrameCaptureMetal()
  {
      qputenv("METAL_CAPTURE_ENABLED", QByteArrayLiteral("1"));
  
@@ -126,7 +19,7 @@
  }
  
  QGraphicsFrameCaptureMetal::~QGraphicsFrameCaptureMetal()
-@@ -41,37 +42,39 @@
+@@ -41,37 +42,39 @@ void QGraphicsFrameCaptureMetal::setRhi(QRhi *rhi)
      if (!rhi)
          return;
  
@@ -193,7 +86,7 @@
          }
      }
  }
-@@ -91,9 +94,11 @@
+@@ -91,9 +94,11 @@ void QGraphicsFrameCaptureMetal::startCaptureFrame()
  
      updateCaptureFileName();
      NSError *error;
@@ -208,3 +101,116 @@
      }
  }
  
+diff --git a/qtmultimedia/src/multimedia/darwin/qavfcamerabase.mm b/qtmultimedia/src/multimedia/darwin/qavfcamerabase.mm
+index 7fe5302d8..6f6306570 100644
+--- a/qtmultimedia/src/multimedia/darwin/qavfcamerabase.mm
++++ b/qtmultimedia/src/multimedia/darwin/qavfcamerabase.mm
+@@ -97,6 +97,28 @@ bool qt_convert_exposure_mode(AVCaptureDevice *captureDevice, QCamera::ExposureM
+ 
+ #endif // defined(Q_OS_IOS)
+ 
++bool qt_flash_available(AVCaptureDevice *captureDevice)
++{
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isFlashAvailable];
++    return captureDevice.hasFlash;
++#else
++    return [captureDevice isFlashAvailable];
++#endif
++}
++
++bool qt_torch_available(AVCaptureDevice *captureDevice)
++{
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isTorchAvailable];
++    return captureDevice.hasTorch;
++#else
++    return [captureDevice isTorchAvailable];
++#endif
++}
++
+ } // Unnamed namespace.
+ 
+ QAVFCameraBase::QAVFCameraBase(QCamera *camera)
+@@ -631,7 +653,7 @@ bool QAVFCameraBase::isFlashReady() const
+     // AVCaptureDevice's docs:
+     // "The flash may become unavailable if, for example,
+     //  the device overheats and needs to cool off."
+-    return [captureDevice isFlashAvailable];
++    return qt_flash_available(captureDevice);
+ }
+ 
+ void QAVFCameraBase::setTorchMode(QCamera::TorchMode mode)
+@@ -704,7 +726,15 @@ bool QAVFCameraBase::isExposureModeSupported(QCamera::ExposureMode mode) const
+         return false;
+ 
+     AVCaptureDevice *captureDevice = device();
+-    return captureDevice && [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++    if (!captureDevice)
++        return false;
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *))
++        return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++    return false;
++#else
++    return [captureDevice isExposureModeSupported:AVCaptureExposureModeCustom];
++#endif
+ }
+ 
+ void QAVFCameraBase::applyFlashSettings()
+@@ -732,7 +762,7 @@ void QAVFCameraBase::applyFlashSettings()
+         if (mode == QCamera::FlashOff) {
+             setAvFlashModeSafe(AVCaptureFlashModeOff);
+         } else {
+-            if ([captureDevice isFlashAvailable]) {
++            if (qt_flash_available(captureDevice)) {
+                 if (mode == QCamera::FlashOn)
+                     setAvFlashModeSafe(AVCaptureFlashModeOn);
+                 else if (mode == QCamera::FlashAuto)
+@@ -756,7 +786,7 @@ void QAVFCameraBase::applyFlashSettings()
+         if (mode == QCamera::TorchOff) {
+             setAvTorchModeSafe(AVCaptureTorchModeOff);
+         } else {
+-            if ([captureDevice isTorchAvailable]) {
++            if (qt_torch_available(captureDevice)) {
+                 if (mode == QCamera::TorchOn)
+                     setAvTorchModeSafe(AVCaptureTorchModeOn);
+                 else if (mode == QCamera::TorchAuto)
+diff --git a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
+index c5ea8e4dc..bd0afb710 100644
+--- a/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
++++ b/qtmultimedia/src/multimedia/darwin/qavfvideodevices.mm
+@@ -32,6 +32,9 @@ namespace {
+ // Thread-safe
+ [[nodiscard]] QList<AVCaptureDevice*> qEnumerateAVCaptureDevices()
+ {
++#ifdef Q_OS_MACOS
++    if (@available(macOS 10.15, *)) {
++#endif
+     // List of all capture device types that we want to discover. Seems that this is the
+     // only way to discover all types. This filter is mandatory and has no "unspecified"
+     // option like AVCaptureDevicePosition(Unspecified) has. Order of the list is important
+@@ -79,6 +82,21 @@ namespace {
+     for (AVCaptureDevice* device in discoverySession.devices)
+         avCaptureDevices.push_back(device);
+     return avCaptureDevices;
++#ifdef Q_OS_MACOS
++    } else {
++        // Discovery sessions were introduced on macOS after High Sierra.
++        // Keep the system's default camera first, as the newer path does.
++        QList<AVCaptureDevice *> devices;
++        AVCaptureDevice *defaultDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
++        if (defaultDevice)
++            devices.push_back(defaultDevice);
++        for (AVCaptureDevice *device in [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
++            if (!defaultDevice || ![device.uniqueID isEqualToString:defaultDevice.uniqueID])
++                devices.push_back(device);
++        }
++        return devices;
++    }
++#endif
+ }
+ 
+ // Given a list of AVCaptureDevices, returns a list of all the QCameraDevices

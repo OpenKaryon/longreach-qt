@@ -3,7 +3,7 @@
 # Copyright (C) 2026 OpenKaryon
 """Print the targets `make help` lists: each SDK target next to its -examples.
 
-    python scripts/build/make-help.py qt4=4.8.7 qt5=5.15.19 qt6=6.8.4 TARGET...
+    python scripts/build/make-help.py qt4=4.8.7 qt5=5.15.19 qt6=6.8.5 TARGET...
 
 The Makefile passes its Qt versions and the targets its simple-build-targets
 definitions made.

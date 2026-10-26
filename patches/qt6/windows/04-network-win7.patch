@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 Windows 7: Restore DNS lookup through the pre-Windows-8 API.
+# Qt 6.8.5 Windows 7: Restore DNS lookup through the pre-Windows-8 API.
 #
 # Derived from crystalidea/qt6windows7, commit
 # 3df3aac758177b28843c4d1511a2bd7751fe82b6.
-# Compared file by file with the pristine Qt 6.8.4 source archive.
-# Applies from the root of qt-everywhere-src-6.8.4 with patch -p1.
+# Compared file by file with the pristine Qt 6.8.4 source archive; applies to 6.8.5.
+# Applies from the root of qt-everywhere-src-6.8.5 with patch -p1.
 diff --git a/qtbase/src/network/kernel/qdnslookup_win.cpp b/qtbase/src/network/kernel/qdnslookup_win.cpp
 index 1b07776..5410eda 100644
 --- a/qtbase/src/network/kernel/qdnslookup_win.cpp

@@ -1,4 +1,4 @@
-# Qt 6.8.4 for macOS
+# Qt 6.8.5 for macOS
 
 | Target | Image | Floor |
 |--------|-------|-------|
@@ -27,8 +27,8 @@ MacBook Pro, for one) cannot get 10.14.
 
 ## Results
 
-macOS 10.13.6 in VMware, installed clean from the 10.13.6 installer: 8/8,
-504 checks, none failed ([platforms](../platforms.md#qt-684)). arm64 builds
+macOS 10.13.6 in VMware, installed clean from the 10.13.6 installer, with
+Qt 6.8.4: 8/8, 504 checks, none failed ([platforms](../platforms.md#qt-684)). arm64 builds
 all 8 applications and is audited (`make qt6-macos-arm64-audit`: every
 binary declares 11.0), not run.
 
@@ -36,7 +36,7 @@ binary declares 11.0), not run.
 
 - Real High Sierra hardware and Apple silicon have not run the builds.
 - The availability audit (`scripts/audit/qt6-macos-availability-report.py`)
-  reported 144 uses of APIs newer than 10.13 without an `@available` check.
+  of Qt 6.8.4 reported 144 uses of APIs newer than 10.13 without an `@available` check.
   All were reviewed: the ones that would fail at run time (Metal, the save
   dialog, text-to-speech) are guarded by `patches/qt6/macos/18`, which leaves
   123; those are enum values and types, calls reached only through an object

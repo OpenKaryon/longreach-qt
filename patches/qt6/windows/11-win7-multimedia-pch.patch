@@ -1,33 +1,48 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 #
-# Windows 7 headers: no precompiled header for qwindowsmultimediautils.cpp,
-# which raises WINVER before Media Foundation to reach newer format GUIDs.
+# Windows 7 headers: qwindowsmultimediautils.cpp raises WINVER itself before
+# Media Foundation to reach newer format GUIDs (Qt 6.8.5 asserts Windows 10
+# there), without the precompiled header that would include those first.
 #
+diff --git a/qtmultimedia/src/multimedia/CMakeLists.txt b/qtmultimedia/src/multimedia/CMakeLists.txt
+index 7713459ae..48945189e 100644
 --- a/qtmultimedia/src/multimedia/CMakeLists.txt
 +++ b/qtmultimedia/src/multimedia/CMakeLists.txt
-@@ -334,6 +334,13 @@
+@@ -335,6 +335,13 @@ qt_internal_extend_target(Multimedia CONDITION WIN32
          windows/qwindowsaudioutils.cpp
      )
  
-+if(QT_FEATURE_wmf)
++if(WIN32)
 +    # This file raises WINVER before including Media Foundation to expose
 +    # newer audio format GUIDs. A target PCH would include those headers first.
 +    set_source_files_properties(windows/qwindowsmultimediautils.cpp
 +        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 +endif()
 +
- # define INITGUID for unity builds to ensure guids are emitted in the translation units
- target_compile_definitions(Multimedia
-     PRIVATE $<$<BOOL:$<TARGET_PROPERTY:Multimedia,UNITY_BUILD>>:INITGUID>)
+ set(source_with_init_guid
+     windows/qwindows_wasapi_warmup_client.cpp
+     windows/qwindowsmuldimediautils.cpp
+diff --git a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
+index 58d3f3fcd..ac88f32a8 100644
 --- a/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsmultimediautils.cpp
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,18 @@
  // Copyright (C) 2021 The Qt Company Ltd.
  // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
  
++// Windows 7 backport: Qt is compiled against the Windows 7 headers
++// (WINVER 0x0601); this file alone raises WINVER before any Windows header,
++// as Qt 6.8.4 did, to reach the newer Media Foundation format GUIDs. Only
++// GUID constants come from them, so nothing newer is called at run time.
 +#include <sdkddkver.h>
++#if defined(WINVER) && WINVER < _WIN32_WINNT_WIN10
++#  undef WINVER
++#endif
++#if !defined(WINVER)
++#  define WINVER _WIN32_WINNT_WIN10
++#endif
 +
- #if defined(WINVER) && WINVER < _WIN32_WINNT_WIN10
- #  undef WINVER
- #endif
+ #include <QtCore/qt_windows.h>
+ static_assert(WINVER >= _WIN32_WINNT_WIN10, "Win10 required for newer audio formats.");
+ 

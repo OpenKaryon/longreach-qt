@@ -5,7 +5,7 @@
 # Put QtOpcUa's wrappers in a private namespace while preserving its call sites
 # through a using directive. Rename QtOpcUa's logging category from lcSsl to
 # lcOpcUaSsl because QtNetwork also defines a global lcSsl() symbol; the public
-# logging category string remains qt.opcua.ssl. Applies to pristine Qt 6.8.4.
+# logging category string remains qt.opcua.ssl. Applies to pristine Qt 6.8.5.
 --- a/qtopcua/src/opcua/x509/openssl_symbols.cpp
 +++ b/qtopcua/src/opcua/x509/openssl_symbols.cpp
 @@ -45,7 +45,9 @@

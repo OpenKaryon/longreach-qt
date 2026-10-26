@@ -1,4 +1,4 @@
-# Qt 6.8.4 for Linux
+# Qt 6.8.5 for Linux
 
 | Target | Image | Floor |
 |--------|-------|-------|

@@ -11,7 +11,7 @@
 # QT_QPA_FONTDIR). When that variable is unset and the directory is absent,
 # scan the system and user font directories recursively. Builds with
 # fontconfig override this function and are unaffected. Applies to pristine
-# Qt 6.8.4.
+# Qt 6.8.5.
 diff --git a/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp b/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp
 index 018e590..fcbbc72 100644
 --- a/qtbase/src/gui/text/freetype/qfreetypefontdatabase.cpp

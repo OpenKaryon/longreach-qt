@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Qt 6 moves from 6.8.4 to 6.8.5, the LTS patch release published as open
+  source in October 2026: about 690 fixes, among them CVE-2025-10728 and
+  CVE-2025-10729 (Qt SVG), and newer bundled libpng, FreeType, libjpeg-turbo,
+  libtiff, libwebp, HarfBuzz, PCRE2 and SQLite. The Windows 7 multimedia
+  patches and the macOS camera patch follow the reworked Qt Multimedia
+  sources; `windows/13` (Qt::Concurrent) is gone, Qt links it itself, and
+  Qt 3D's Assimp no longer needs `_fstat64`. `macos/20` builds the Darwin
+  media plugin without precompiled headers: since 6.8.5 it links
+  Qt::Concurrent, and CMake then writes no rule for the C++ header its
+  moc file expects, so the cross build stopped at once.
+
 ## 0.1.0 - 2026-10-23
 
 First public pre-release, source only.

@@ -12,7 +12,7 @@ business redistributing them.
 
 So the version and the source are two separate questions:
 
-    QT6_VERSION   what to build      6.8.4
+    QT6_VERSION   what to build      6.8.5
     QT6_SOURCE    where to get it    /path/to/qt-everywhere-src-6.8.8.tar.xz
 
 and the resolution order is
@@ -30,10 +30,11 @@ Two upstream naming schemes have to be tried, which is not a detail that can be
 derived from the version number:
 
     qt-everywhere-src-6.8.3.tar.xz              6.8.0 - 6.8.3, 6.10.x, 6.11.x
-    qt-everywhere-opensource-src-6.8.4.tar.xz   6.8.4
+    qt-everywhere-opensource-src-6.8.5.tar.xz   6.8.4, 6.8.5
 
-6.8.4 is the LTS patch that was commercial-only first and later released to
-everyone; it carries "opensource" in the name the way the Qt 5 archives do.
+6.8.4 and 6.8.5 are LTS patches that were commercial-only first and later
+released to everyone; they carry "opensource" in the name the way the Qt 5
+archives do.
 Whether every future delayed LTS patch follows that pattern is not something to
 guess at, so both names are simply tried.
 

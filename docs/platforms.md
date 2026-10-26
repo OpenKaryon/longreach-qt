@@ -60,6 +60,8 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 
 ### Qt 6.8.4
 
+Run with Qt 6.8.4, before the move to 6.8.5.
+
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
 | `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261010.json)) |

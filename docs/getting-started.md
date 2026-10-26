@@ -61,7 +61,7 @@ Useful variables:
 |----------|---------|---|
 | `PARALLEL_JOBS` | 6 | compiler jobs inside the build |
 | `LICENSE_PROFILE` | `gpl-enabled` | `lgpl-friendly` leaves out the GPL-only Qt modules, on the Linux Qt 5/6 targets ([licensing](licensing.md)); another profile is added to the image name (`qt5-linux-amd64-lgpl-friendly`) |
-| `QT4_VERSION`, `QT5_VERSION`, `QT6_VERSION` | 4.8.7, 5.15.19, 6.8.4 | another version also needs its `*_SHA256` (and patches that apply to it) |
+| `QT4_VERSION`, `QT5_VERSION`, `QT6_VERSION` | 4.8.7, 5.15.19, 6.8.5 | another version also needs its `*_SHA256` (and patches that apply to it) |
 | `QT5_MACOS_TARGET_AMD64` | 10.6 | a higher Qt 5 macOS deployment target leaves out the static OpenSSL and libc++ the old systems need |
 | `QT6_SOURCE` | | a Qt 6 source archive of your own, for LTS releases not yet public |
 

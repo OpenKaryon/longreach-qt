@@ -1,4 +1,4 @@
-# Qt 6.8.4 for Windows
+# Qt 6.8.5 for Windows
 
 | Target | Image | Floor | Toolchain |
 |--------|-------|-------|-----------|
@@ -15,11 +15,11 @@ SHCore, WaitOnAddress, GetDpiForMonitor and similar imports).
 
 `patches/qt6/windows` is the Windows 7 backport. 01-07 are the diffs of
 [crystalidea/qt6windows7](https://github.com/crystalidea/qt6windows7) at
-`3df3aac7` against pristine 6.8.4 (31 QtBase and six QtMultimedia files,
+`3df3aac7` against pristine 6.8.4, carried to 6.8.5 (31 QtBase and six QtMultimedia files,
 QtWebEngine left out): the newer APIs are resolved at run time with fallbacks.
-08-13 compile Qt against the Windows 7 headers (`_WIN32_WINNT=0x0601`) and fix
-what that exposes; 14 replaces `_fstat32`, absent from MSVCRT, in the bundled
-Assimp; 15 drops the `synchronization` and `shcore` import libraries from
+08-12 compile Qt against the Windows 7 headers (`_WIN32_WINNT=0x0601`) and fix
+what that exposes; 13 replaces `_fstat32`, absent from MSVCRT, in the bundled
+Assimp in Qt Quick 3D; 14 drops the `synchronization` and `shcore` import libraries from
 Qt's CMake link interface, so no application built with the SDK can import
 from a Windows 8 DLL by accident.
 

@@ -1,25 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 bundled Assimp in Qt 3D and Qt Quick 3D: MSVCRT does not export _fstat32.
+# Qt 6.8.5 bundled Assimp in Qt Quick 3D: MSVCRT does not export _fstat32.
 # Use the 64-bit variant that LLVM-MinGW's MSVCRT import library provides.
+# (Qt 3D's copy uses _fstat since 6.8.5.)
+diff --git a/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp b/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
+index e423eae4f..bd2a82c74 100644
 --- a/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
 +++ b/qtquick3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
-@@ -157,9 +157,9 @@
-             return 0;
-         mCachedSize = (size_t)(fileStat.st_size);
- #elif defined _WIN32
--        struct _stat32 fileStat;
-+        struct _stat64 fileStat;
-         //using fileno + fstat avoids having to handle the filename
--        int err = _fstat32(_fileno(mFile), &fileStat);
-+        int err = _fstat64(_fileno(mFile), &fileStat);
-         if (0 != err)
-             return 0;
-         mCachedSize = (size_t)(fileStat.st_size);
---- a/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
-+++ b/qt3d/src/3rdparty/assimp/src/code/Common/DefaultIOStream.cpp
-@@ -157,9 +157,9 @@
+@@ -157,9 +157,9 @@ size_t DefaultIOStream::FileSize() const {
              return 0;
          mCachedSize = (size_t)(fileStat.st_size);
  #elif defined _WIN32

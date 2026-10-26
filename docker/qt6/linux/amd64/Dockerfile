@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 for Linux amd64 from RHEL/CentOS 7.6 (glibc 2.17), built on CentOS 7
+# Qt 6.8.5 for Linux amd64 from RHEL/CentOS 7.6 (glibc 2.17), built on CentOS 7
 # from the vault.centos.org archive with Developer Toolset's GCC 11, which links
 # the newer parts of libstdc++ statically: the result needs only RHEL 7's own
 # libraries. xcb-util-cursor (not in RHEL 7) is built statically too.
@@ -12,7 +12,7 @@ ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 FROM ${BASE_REGISTRY}/centos:7.9.2009@sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4
 
 ARG PARALLEL_JOBS=8
-ARG QT_VERSION=6.8.4
+ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG LICENSE_PROFILE="gpl-enabled"
 

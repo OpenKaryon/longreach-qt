@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 Windows 7: Use the DPI-aware style APIs when available and Win7 fallbacks otherwise.
+# Qt 6.8.5 Windows 7: Use the DPI-aware style APIs when available and Win7 fallbacks otherwise.
 #
 # Derived from crystalidea/qt6windows7, commit
 # 3df3aac758177b28843c4d1511a2bd7751fe82b6.
-# Compared file by file with the pristine Qt 6.8.4 source archive.
-# Applies from the root of qt-everywhere-src-6.8.4 with patch -p1.
+# Compared file by file with the pristine Qt 6.8.4 source archive; applies to 6.8.5.
+# Applies from the root of qt-everywhere-src-6.8.5 with patch -p1.
 diff --git a/qtbase/src/widgets/styles/qwindowsstyle.cpp b/qtbase/src/widgets/styles/qwindowsstyle.cpp
 index a8407ad..a809733 100644
 --- a/qtbase/src/widgets/styles/qwindowsstyle.cpp

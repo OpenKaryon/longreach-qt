@@ -25,7 +25,7 @@
 # -Wunused-variable.
 #
 # Adapted from patches/qt5/macos/02-os-activity-pre-10.12.patch in this kit.
-# The same hunks apply to the pristine Qt 6.8.4 qcore_mac_p.h; the Qt 6
+# The same hunks apply to the pristine Qt 6.8.5 qcore_mac_p.h; the Qt 6
 # macOS 10.11 probe failed here with both SDK 11.3 and SDK 14.0.
 #
 # This patch is not Intel-specific despite what the floor suggests - Apple
@@ -36,7 +36,7 @@
 #   qtbase/src/corelib/kernel/qcore_mac_p.h
 #       compile the os_activity block only from 10.12, with no-op equivalents
 #
-# Apply: patch -p1, from the Qt source root (qt-everywhere-src-6.8.4/)
+# Apply: patch -p1, from the Qt source root (qt-everywhere-src-6.8.5/)
 diff --git a/qtbase/src/corelib/kernel/qcore_mac_p.h b/qtbase/src/corelib/kernel/qcore_mac_p.h
 --- a/qtbase/src/corelib/kernel/qcore_mac_p.h
 +++ b/qtbase/src/corelib/kernel/qcore_mac_p.h

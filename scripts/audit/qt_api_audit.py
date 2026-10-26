@@ -25,7 +25,7 @@ for i, a in enumerate(sys.argv):
 SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 OUT = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "tests"))
 
-# The version, from the directory name (qt-everywhere-src-6.8.4 and so on).
+# The version, from the directory name (qt-everywhere-src-6.8.5 and so on).
 QT_MAJOR = None
 for i, a in enumerate(sys.argv):
     if a == "--qt" and i + 1 < len(sys.argv):

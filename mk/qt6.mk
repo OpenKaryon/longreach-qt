@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 LTS: Windows from 7 SP1, Linux from RHEL/CentOS 7, macOS from 10.13
+# Qt 6.8.5 LTS: Windows from 7 SP1, Linux from RHEL/CentOS 7, macOS from 10.13
 # (11.0 on Apple silicon). CMake-based, with its own Dockerfiles and patches.
 #
 # QT6_VERSION picks the patch release; QT6_SOURCE uses an archive of your own,
 # such as a commercial LTS release that is not public yet:
 #   make qt6-linux-amd64 QT6_VERSION=6.8.8 QT6_SOURCE=/path/to/qt-everywhere-src-6.8.8.tar.xz
-QT6_VERSION ?= 6.8.4
+QT6_VERSION ?= 6.8.5
 QT6_SOURCE ?=
 QT6_SERIES := $(basename $(QT6_VERSION))
 
@@ -24,7 +24,7 @@ QT6_MACOS_ARM64_IMAGE := qt6-macos-arm64$(LICENSE_SUFFIX)
 # one name. The SHA256 is pinned for the default version; another one needs
 # QT6_ARCHIVE_SHA256, or QT6_SOURCE, to be downloaded at all.
 QT6_ARCHIVE := qt-everywhere-src-$(QT6_VERSION).tar.xz
-QT6_ARCHIVE_SHA256 ?= $(if $(filter 6.8.4,$(QT6_VERSION)),1da37a32a583e7856d6fc13357c8ff6ad3ef7b877b8d276713b85026426d5246,)
+QT6_ARCHIVE_SHA256 ?= $(if $(filter 6.8.5,$(QT6_VERSION)),c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9,)
 QT6_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT6_ARCHIVE)
 
 # The MSVCRT build of LLVM-MinGW for Windows 7 (the UCRT one needs Windows 10).

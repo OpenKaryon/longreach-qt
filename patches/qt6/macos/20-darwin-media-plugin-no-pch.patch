@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt 6.8.5 cross-built for macOS: QDarwinMediaPlugin without precompiled
+# headers. Since 6.8.5 it links Qt::Concurrent, and CMake then expects a C++
+# precompiled header for AUTOMOC's mocs_compilation.cpp in this otherwise
+# Objective-C++ target but writes no rule to build it; Ninja stops with
+# "missing and no known rule to make it". Qt 6.12 limits the plugin's header
+# to OBJCXX. Applies to pristine Qt 6.8.5.
+diff --git a/qtmultimedia/src/plugins/multimedia/darwin/CMakeLists.txt b/qtmultimedia/src/plugins/multimedia/darwin/CMakeLists.txt
+index c5e541384..74903dbaf 100644
+--- a/qtmultimedia/src/plugins/multimedia/darwin/CMakeLists.txt
++++ b/qtmultimedia/src/plugins/multimedia/darwin/CMakeLists.txt
+@@ -38,6 +38,12 @@ qt_internal_add_plugin(QDarwinMediaPlugin
+         -Wno-c++20-extensions
+ )
+ 
++# Linking Qt::Concurrent (new in 6.8.5) gives this all-Objective-C++ plugin a
++# C++ precompiled header that only AUTOMOC's mocs_compilation.cpp uses, and
++# CMake writes no rule to build it ("missing and no known rule"). Qt 6.12
++# limits the header to OBJCXX; without one the plugin builds the same.
++set_property(TARGET QDarwinMediaPlugin PROPERTY DISABLE_PRECOMPILE_HEADERS ON)
++
+ qt_internal_extend_target(QDarwinMediaPlugin CONDITION NOT TVOS
+     SOURCES
+         camera/avfcamera.mm camera/avfcamera_p.h

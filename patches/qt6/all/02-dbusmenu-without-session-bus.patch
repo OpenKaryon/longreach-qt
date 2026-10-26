@@ -11,7 +11,7 @@
 # Found by the forward check on 2026-10-04 (widgets-gallery,
 # docs/results/linux-forward-20261004.json). With the check, no bus
 # means no StatusNotifierWatcher, so Qt falls back as for a desktop without a
-# tray. Applies to pristine Qt 6.8.4.
+# tray. Applies to pristine Qt 6.8.5.
 diff --git a/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp b/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp
 index 1023b16..dba0887 100644
 --- a/qtbase/src/gui/platform/unix/dbusmenu/qdbusmenuconnection.cpp

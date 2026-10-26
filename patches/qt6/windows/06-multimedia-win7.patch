@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.4 Windows 7: Windows audio and capture fallbacks for Qt Multimedia.
+# Qt 6.8.5 Windows 7: Windows audio and capture fallbacks for Qt Multimedia.
 #
 # Derived from crystalidea/qt6windows7, commit
 # 3df3aac758177b28843c4d1511a2bd7751fe82b6.
-# Compared file by file with the pristine Qt 6.8.4 source archive.
-# Applies from the root of qt-everywhere-src-6.8.4 with patch -p1.
+# Compared file by file with the pristine Qt 6.8.4 source archive, rebased on 6.8.5.
+# Applies from the root of qt-everywhere-src-6.8.5 with patch -p1.
 diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
-index aca5102..3b465b2 100644
+index 8215a7d05..9e4c1210d 100644
 --- a/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsaudiosink_p.h
-@@ -84,7 +84,8 @@ private:
+@@ -90,7 +90,8 @@ private:
  
      void handleAudioClientError();
  
@@ -22,11 +22,11 @@ index aca5102..3b465b2 100644
  
      QWindowsAudioUtils::reference_time m_periodSize;
 diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
-index 8f517a6..4755772 100644
+index 221d2e09e..4b82f0148 100644
 --- a/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsaudiosource_p.h
-@@ -72,7 +72,8 @@ private:
-     bool process() noexcept QT_MM_NONBLOCKING;
+@@ -79,7 +79,8 @@ private:
+     bool processCallback() noexcept QT_MM_NONBLOCKING;
      void handleAudioClientError();
  
 -    ComPtr<IAudioClient3> m_audioClient;
@@ -36,7 +36,7 @@ index 8f517a6..4755772 100644
  
      QWindowsAudioUtils::reference_time m_periodSize;
 diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
-index 6150a03..c556158 100644
+index 6150a03f8..c556158b2 100644
 --- a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils.cpp
 @@ -214,7 +214,7 @@ ComPtr<IMFMediaType> formatToMediaType(QWindowsMediaFoundation &wmf, const QAudi
@@ -162,7 +162,7 @@ index 6150a03..c556158 100644
      ComPtr<IAudioClockAdjustment> clockAdjustment;
  
 diff --git a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
-index 6524307..4e2fa3f 100644
+index 65243070c..4e2fa3fe3 100644
 --- a/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
 +++ b/qtmultimedia/src/multimedia/windows/qwindowsaudioutils_p.h
 @@ -26,6 +26,10 @@
@@ -214,11 +214,11 @@ index 6524307..4e2fa3f 100644
  // wasapi thread helper
  void setMCSSForPeriodSize(reference_time);
 diff --git a/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt b/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
-index dd9347d..f026c9a 100644
+index 7bf5f872e..c3cd2540c 100644
 --- a/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
 +++ b/qtmultimedia/src/plugins/multimedia/ffmpeg/CMakeLists.txt
-@@ -164,6 +164,21 @@ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION WIN32
-         mfreadwrite
+@@ -156,13 +156,27 @@ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION WIN32
+         mfuuid
  )
  
 +# Windows 7 backport: windowsapp (WindowsApp.lib) removed from LIBRARIES.
@@ -239,16 +239,15 @@ index dd9347d..f026c9a 100644
  qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_cpp_winrt
      SOURCES
          qffmpegwindowcapture_uwp.cpp qffmpegwindowcapture_uwp_p.h
-@@ -172,7 +187,6 @@ qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_cpp_
      LIBRARIES
          Dwmapi
          Dxva2
 -        windowsapp
  )
  
- qt_internal_extend_target(FFmpegMediaPluginImplPrivate CONDITION QT_FEATURE_xlib
+ if(QT_FEATURE_cpp_winrt)
 diff --git a/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp b/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
-index 24abc9c..98015da 100644
+index 5a83a630a..a15895b4c 100644
 --- a/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
 +++ b/qtmultimedia/src/plugins/multimedia/ffmpeg/qffmpegwindowcapture_uwp.cpp
 @@ -59,6 +59,36 @@ namespace {

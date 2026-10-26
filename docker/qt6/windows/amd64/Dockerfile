@@ -7,7 +7,7 @@
 # Base images are pinned by digest; BASE_REGISTRY is where they are pulled
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
-ARG QT_VERSION=6.8.4
+ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG QT6_HOST_IMAGE=qt6-host
 ARG LLVM_MINGW_VERSION=20241217

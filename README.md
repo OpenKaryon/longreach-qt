@@ -1,7 +1,7 @@
 # Longreach Qt
 
 Static Qt SDKs that reach old operating systems. Longreach Qt builds Qt 4.8.7,
-Qt 5.15.19 and Qt 6.8.4 in Docker for Windows, Linux and macOS, and backports
+Qt 5.15.19 and Qt 6.8.5 in Docker for Windows, Linux and macOS, and backports
 each one far enough that an application built with it runs on the systems the
 previous Qt generation supported - and on every newer one, from the same
 binary.
@@ -10,7 +10,7 @@ binary.
 |----|---------|-------|-------|
 | 4.8.7 | Windows 95 OSR2 (i386); XP x64* (amd64) | Debian 3.1 Sarge, glibc 2.3.2 (i386; amd64*) | Mac OS X 10.2 Jaguar (PowerPC); 10.4 Tiger (Intel) |
 | 5.15.19 | Windows XP SP3 (i386); XP x64* (amd64); Windows 10* (arm64) | Ubuntu 10.04 Lucid, glibc 2.11 (amd64, i386); Ubuntu 14.04, glibc 2.19 (arm64) | Mac OS X 10.6 Snow Leopard (x86_64, i386); 11.0* (arm64) |
-| 6.8.4 | Windows 7 SP1 (amd64); Windows 10* (arm64) | RHEL/CentOS 7, glibc 2.17 (amd64, arm64) | macOS 10.13 High Sierra (x86_64); 11.0* (arm64) |
+| 6.8.5 | Windows 7 SP1 (amd64); Windows 10* (arm64) | RHEL/CentOS 7, glibc 2.17 (amd64, arm64) | macOS 10.13 High Sierra (x86_64); 11.0* (arm64) |
 
 \* built and audited, not yet run on that system.
 
@@ -40,7 +40,7 @@ Every target, one per Qt version, OS and architecture, each from its floor:
 |----|---------|-------|-------|
 | 4.8.7 | `qt4-win-i386`, `qt4-win-amd64` | `qt4-linux-i386`, `qt4-linux-amd64` | `qt4-macos-i386`, `qt4-macos-ppc` |
 | 5.15.19 | `qt5-win-i386`, `qt5-win-amd64`, `qt5-win-arm64` | `qt5-linux-i386`, `qt5-linux-amd64`, `qt5-linux-arm64` | `qt5-macos-i386`, `qt5-macos-amd64`, `qt5-macos-arm64` |
-| 6.8.4 | `qt6-win-amd64`, `qt6-win-arm64` | `qt6-linux-amd64`, `qt6-linux-arm64` | `qt6-macos-amd64`, `qt6-macos-arm64` |
+| 6.8.5 | `qt6-win-amd64`, `qt6-win-arm64` | `qt6-linux-amd64`, `qt6-linux-arm64` | `qt6-macos-amd64`, `qt6-macos-arm64` |
 
 Each name works with `make <target>` and `make <target>-examples` (`make help`
 lists them in pairs); the floors

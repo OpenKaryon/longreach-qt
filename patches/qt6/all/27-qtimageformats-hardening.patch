@@ -1,0 +1,105 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt Image Formats: hardening of the TIFF and ICNS readers Qt made after
+# 6.8.5, from Qt's 6.12 branch (https://github.com/qt/qtimageformats, all
+# marked Pick-to: 6.8):
+#   8ad2b3812c QTiffHandler: fix nullptr deref on read() after certain failed read()s
+#   672cc69be9 Harden the icns handler
+#   627c5880c7 Harden tiff handler: only the reading side (planar files rejected
+#              on the direct-read path, the image zero-filled before partial
+#              scanlines or tiles) and the empty colour table when writing
+# Applies to pristine Qt 6.8.5.
+diff --git a/qtimageformats/src/plugins/imageformats/icns/qicnshandler.cpp b/qtimageformats/src/plugins/imageformats/icns/qicnshandler.cpp
+index 501394dee..425dd2ace 100644
+--- a/qtimageformats/src/plugins/imageformats/icns/qicnshandler.cpp
++++ b/qtimageformats/src/plugins/imageformats/icns/qicnshandler.cpp
+@@ -587,6 +587,7 @@ static QImage read32bitIcon(const ICNSEntry &icon, QDataStream &stream)
+             }
+         }
+     } else {
++        img.fill(Qt::black); // rle data may not cover all, ensure initialized
+         const quint32 estPxsNum = icon.width * icon.height;
+         const QByteArray &bytes = stream.device()->peek(4);
+         if (bytes.isEmpty())
+@@ -712,7 +713,8 @@ bool QICNSHandler::read(QImage *outImage)
+         else if (icon.dataFormat == ICNSEntry::JP2)
+             format = "jp2";
+         // Even if JP2 or PNG magic is not detected, try anyway for unknown formats
+-        img = QImage::fromData(device()->read(icon.dataLength), format);
++        if (qint64(icon.dataLength) <= device()->bytesAvailable())
++            img = QImage::fromData(device()->read(icon.dataLength), format);
+         if (img.isNull()) {
+             if (format == 0)
+                 format = "unknown";
+@@ -789,7 +791,7 @@ QVariant QICNSHandler::option(ImageOption option) const
+         return QVariant();
+ 
+     if (option == SubType) {
+-        if (imageCount() > 0 && m_currentIconIndex <= imageCount()) {
++        if (imageCount() > 0 && m_currentIconIndex < imageCount()) {
+             const ICNSEntry &icon = m_icons.at(m_currentIconIndex);
+             if (icon.variant != 0)
+                 return QByteArray(nameFromOSType(icon.variant) + '-' + nameFromOSType(icon.ostype));
+@@ -948,7 +950,8 @@ bool QICNSHandler::scanDevice()
+             for (uint i = 0, count = blockDataLength / ICNSBlockHeaderSize; i < count; i++) {
+                 ICNSBlockHeader tocEntry;
+                 stream >> tocEntry;
+-                if (!isBlockHeaderValid(tocEntry)) {
++                if (imgDataOffset > filelength
++                    || !isBlockHeaderValid(tocEntry, quint64(filelength - imgDataOffset))) {
+                     // TOC contains incorrect header, we should skip TOC since we can't trust it
+                     qWarning("QICNSHandler::scanDevice(): Warning! Table of contents contains a bad " \
+                              "entry! Stop at device pos: %s bytes. This file may be corrupted.",
+diff --git a/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp b/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp
+index c71dc32c7..9e523598d 100644
+--- a/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp
++++ b/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp
+@@ -120,6 +120,7 @@ public:
+     uint16_t photometric;
+     bool grayscale;
+     bool floatingPoint;
++    bool separatePlanes = false;
+     bool headersRead;
+     int currentDirectory;
+     int directoryCount;
+@@ -196,6 +197,7 @@ void QTiffHandlerPrivate::close()
+     if (tiff)
+         TIFFClose(tiff);
+     tiff = 0;
++    headersRead = false;
+ }
+ 
+ TIFF *QTiffHandlerPrivate::openInternal(const char *mode, QIODevice *device)
+@@ -334,6 +336,11 @@ bool QTiffHandlerPrivate::readHeaders(QIODevice *device)
+         sampleFormat = SAMPLEFORMAT_VOID;
+     floatingPoint = (sampleFormat == SAMPLEFORMAT_IEEEFP);
+ 
++    uint16_t planarConfig;
++    if (!TIFFGetField(tiff, TIFFTAG_PLANARCONFIG, &planarConfig))
++        planarConfig = PLANARCONFIG_CONTIG;
++    separatePlanes = planarConfig == PLANARCONFIG_SEPARATE && samplesPerPixel > 1;
++
+     grayscale = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE;
+ 
+     if (grayscale && bitPerSample == 1 && samplesPerPixel == 1)
+@@ -496,6 +503,10 @@ bool QTiffHandler::read(QImage *image)
+ 
+     // Formats we read directly, instead of over RGBA32:
+     if (format8bit || format16bit || formatCmyk32bit || format64bit || format64fp || format128fp) {
++        if (d->separatePlanes)
++            return false; // the direct-read path assumes interleaved samples
++        image->fill(0); // scanlines or tiles may fill partially, so ensure initialized
++
+         int bytesPerPixel = image->depth() / 8;
+         if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4)
+             bytesPerPixel = d->photometric == PHOTOMETRIC_RGB ? 6 : 2;
+@@ -713,7 +724,7 @@ bool QTiffHandler::write(const QImage &image)
+     const QImage::Format format = image.format();
+     if (format == QImage::Format_Mono || format == QImage::Format_MonoLSB) {
+         uint16_t photometric = PHOTOMETRIC_MINISBLACK;
+-        if (image.colorTable().at(0) == 0xffffffff)
++        if (image.colorTable().value(0) == 0xffffffff)
+             photometric = PHOTOMETRIC_MINISWHITE;
+         if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, photometric)
+             || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_LZW)

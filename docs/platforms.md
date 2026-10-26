@@ -58,19 +58,20 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 496 passed, 0 failed ([10.6](results/qt5-macos-i386-snowleopard-vmware-20261010.json), [10.7](results/qt5-macos-i386-lion-vmware-20261009.json), [10.13](results/qt5-macos-i386-highsierra-vmware-20261014.json)) |
 | `qt5-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
-### Qt 6.8.4
+### Qt 6.8.5
 
-Run with Qt 6.8.4, before the move to 6.8.5.
+With the security patches (`patches/qt6/all/05`-`27`). The rows marked
+6.8.4 were run before the move and not repeated.
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
-| `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261010.json)) |
-| | | Windows 11 (the build host) | 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-host-20261010.json)) |
+| `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261027.json)) |
+| | | Windows 11 (the build host) | 6.8.4: 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-host-20261010.json)) |
 | `qt6-win-arm64` | Windows 10 on ARM | - | built, not run |
-| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261014.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261014.json)) |
-| | | Linux Mint 22.3 (VMware) | 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
-| `qt6-linux-arm64` | RHEL/CentOS 7 aarch64 (glibc 2.17) | stock CentOS 7 and Debian 12 arm64 (containers, emulated) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-arm64-centos-7-arm64-docker-20261014.json), [Debian 12](results/qt6-linux-arm64-debian-12-arm64-docker-20261014.json)) |
-| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 8/8, 504 passed, 0 failed ([json](results/qt6-macos-amd64-highsierra-vmware-20261014.json)) |
+| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261027.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261027.json)) |
+| | | Linux Mint 22.3 (VMware) | 6.8.4: 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
+| `qt6-linux-arm64` | RHEL/CentOS 7 aarch64 (glibc 2.17) | stock CentOS 7 arm64 (container, emulated) | 8/8, 528 passed, 0 failed, QtWayland included ([json](results/qt6-linux-arm64-centos-7-arm64-docker-20261027.json)); 6.8.4 also on Debian 12 arm64 ([json](results/qt6-linux-arm64-debian-12-arm64-docker-20261014.json)) |
+| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 8/8, 505 passed, 0 failed ([json](results/qt6-macos-amd64-highsierra-vmware-20261027.json)) |
 | `qt6-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
 ## Current systems

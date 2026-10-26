@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-27",
+  "target": "tests-qt6-win-amd64",
+  "status": "PASS",
+  "image": "qt6-win-amd64",
+  "guest": {
+    "os": "",
+    "system": "",
+    "vm": "Windows 7 SP1 x64 in VMware",
+    "method": "suite copied with vmrun; smoke-runner.exe run in the logged-in session"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 508,
+    "checks_failed": 0,
+    "checks_skipped": 56
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 265,
+      "failed": 0,
+      "skipped": 43
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 34,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery.exe": "df9f156091e3203953ef6b7b91f75e27dc0e2f91fd199fe721777b3dde239a38",
+    "graphics-gallery.exe": "02bf8ae947b16c6471d388d7b435a37e28eafe5353b21a5160d9feee22ceae68",
+    "multimedia-lab.exe": "6f3b536d8154a5cdb087f0ffd2aaf8bf94a8e590f196978feefdbf8d37741324",
+    "network-gui.exe": "ffcfbb547ae39db182a974e45a3b429dc9f410b3a21193ce88989bf761a3a591",
+    "painting-lab.exe": "6552249a0c3c8e2f4c950fbfee731c2c1043d38a9d364ac797a9874bb1301e0b",
+    "qt-selftest.exe": "4712debb0d05b4c974b9bc57678639f119aa98bf3d2569bfbf552b04cbc239e8",
+    "quick-qml-gallery.exe": "881a6dc57e5a7e29c62cfbc2a403048c25d49bb2b1a447d46d8c4443003e6fa5",
+    "smoke-runner.exe": "723288b504eba017ba3cbf34fc9661c7a0f38f8ea5e665a5d32aea7513eb1861",
+    "widgets-gallery.exe": "db249e9db46e2849a0fe4bed60434805b7aa0f1b1303dbe5fbdace1190b009d4"
+  }
+}

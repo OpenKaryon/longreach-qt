@@ -89,9 +89,19 @@ and 6.8.5.
 
 ## Qt 6.8.5
 
-- `all/` (4): OpenSSL symbol clash between QtOpcUa and QtNetwork in static
+- `all/` (27): OpenSSL symbol clash between QtOpcUa and QtNetwork in static
   builds; the D-Bus tray menu without a session bus; fonts without fontconfig;
-  legacy libGL on Linux.
+  legacy libGL on Linux. 05-24 are security fixes 6.8.5 does not have, one
+  patch per CVE, from the diffs Qt publishes for 6.8 under
+  https://download.qt.io/archive/qt/6.8/ (each header names its files and
+  their SHA256; the tests are left out, and the few hunks that needed
+  adapting say so); 25 the Qt MQTT parser fixes of August 2026 from Qt's 6.12
+  branch, CVE-2026-107457 among them; 26 and 27 a few more memory-safety
+  fixes from that branch for untrusted input that have no CVE diff (QDom,
+  QXmlStreamReader, qUncompress, CBOR, HTTP/2, the TIFF and ICNS readers).
+  CVE-2025-10728, -10729 and -5683 are
+  in 6.8.5 already, CVE-2025-14575, -3512, -4211, -5455, -5992, -6338,
+  -23050 and CVE-2026-11573 in 6.8.4.
 - `windows/` (14): the Windows 7 backport, from the diffs of
   [crystalidea/qt6windows7](https://github.com/crystalidea/qt6windows7) at
   `3df3aac7` (QtCore, QtGui, the platform plugin, networking, widgets,

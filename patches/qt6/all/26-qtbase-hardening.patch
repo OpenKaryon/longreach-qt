@@ -1,0 +1,204 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtCore, QtXml, QtNetwork: memory-safety fixes Qt made after 6.8.5 for
+# data an application may not trust, from Qt's 6.12 branch
+# (https://github.com/qt/qtbase, all marked Pick-to: 6.8), without a
+# published CVE diff:
+#   f11897abb9 QDomElement: fix O(N^2) behavior and unbounded recursion in text()
+#   ce3249e287 QXmlStreamReader: prevent entityLimit from overflowing
+#   eadb0676ed QByteArray: fix crash if zlib returns Z_BUF_ERROR (qUncompress)
+#   6ff5fd594b Avoid recursion in QCborContainerPrivate d-tor (deeply nested CBOR)
+#   dd2e8303a6 QHttp2Connection: fix use-after-free on re-entrant stream teardown
+# The tests are left out. The QHttp2Connection change is adapted to 6.8.5,
+# which has no download-buffer option in handleDATA() and already looks
+# streams up by id in handleGOAWAY(). Applies to pristine Qt 6.8.5.
+diff --git a/qtbase/src/corelib/serialization/qcborvalue.cpp b/qtbase/src/corelib/serialization/qcborvalue.cpp
+index 284b8a551..6d03a0780 100644
+--- a/qtbase/src/corelib/serialization/qcborvalue.cpp
++++ b/qtbase/src/corelib/serialization/qcborvalue.cpp
+@@ -916,10 +916,61 @@ static inline int typeOrder(QCborValue::Type e1, QCborValue::Type  e2)
+ 
+ QCborContainerPrivate::~QCborContainerPrivate()
+ {
+-    // delete our elements
+-    for (Element &e : elements) {
+-        if (e.flags & Element::IsContainer)
+-            e.container->deref();
++    // Do the depth-first search of all containers, and delete them
++    // bottom-to-top, so that the d-tor never recurses.
++    // We cannot use an approach with storing the elements to be removed in
++    // a container, because the container itself may throw on reallocation, and
++    // we do not want it in the d-tor.
++    // So, use the nextToDelete member of QCborContainerPrivate to first create
++    // a linked list of containers to be checked, and then build another linked
++    // list of the elements to be removed.
++    QCborContainerPrivate *pendingContainers = nullptr;
++    QCborContainerPrivate *toBeDeleted = nullptr;
++
++    auto appendNestedContainers = [&pendingContainers](QCborContainerPrivate *priv) {
++        for (const Element &e : std::as_const(priv->elements)) {
++            // only append if it actually has to be deleted
++            if ((e.flags & Element::IsContainer) == 0)
++                continue; // not a container
++            if (e.container->ref.deref())
++                continue; // still referenced
++            if (e.container->elements.isEmpty()) {
++                // empty container - delete immediately
++                delete e.container;
++            } else {
++                e.container->nextToDelete = pendingContainers;
++                pendingContainers = e.container;
++            }
++        }
++    };
++
++    // first, add our nested containers
++    appendNestedContainers(this);
++
++    // then try do descend deeper into the tree
++    while (pendingContainers) {
++        QCborContainerPrivate *priv = pendingContainers;
++        pendingContainers = priv->nextToDelete;
++
++        // Move priv into the list of containers that can now be deleted.
++        priv->nextToDelete = toBeDeleted;
++        toBeDeleted = priv;
++
++        // collect priv's children
++        appendNestedContainers(priv);
++    }
++
++    // Now actually delete everything
++    while (toBeDeleted) {
++        QCborContainerPrivate *priv = toBeDeleted;
++        toBeDeleted = priv->nextToDelete;
++
++        // Clear the elements, so that we do not recurse again.
++        // We cannot use QList::clear(), because it might allocate.
++        // Use move-assignment instead.
++        priv->elements = QList<Element>();
++
++        delete priv;
+     }
+ }
+ 
+diff --git a/qtbase/src/corelib/serialization/qcborvalue_p.h b/qtbase/src/corelib/serialization/qcborvalue_p.h
+index ecedc6441..445ac6562 100644
+--- a/qtbase/src/corelib/serialization/qcborvalue_p.h
++++ b/qtbase/src/corelib/serialization/qcborvalue_p.h
+@@ -105,7 +105,10 @@ class QCborContainerPrivate : public QSharedData
+ public:
+     enum ContainerDisposition { CopyContainer, MoveContainer };
+ 
+-    QByteArray::size_type usedData = 0;
++    union {
++        QByteArray::size_type usedData = 0;
++        QCborContainerPrivate *nextToDelete; // only used in d-tor
++    };
+     QByteArray data;
+     QList<QtCbor::Element> elements;
+ 
+diff --git a/qtbase/src/corelib/serialization/qxmlstream_p.h b/qtbase/src/corelib/serialization/qxmlstream_p.h
+index 1ff657a4b..85693d044 100644
+--- a/qtbase/src/corelib/serialization/qxmlstream_p.h
++++ b/qtbase/src/corelib/serialization/qxmlstream_p.h
+@@ -270,7 +270,7 @@ public:
+     };
+     QXmlStreamSimpleStack<QEntityReference> entityReferenceStack;
+     int entityExpansionLimit = 4096;
+-    int entityLength = 0;
++    qsizetype entityLength = 0;
+     inline bool referenceEntity(QHash<QStringView, Entity> *hash, Entity &entity)
+     {
+         Q_ASSERT(hash);
+diff --git a/qtbase/src/corelib/text/qbytearray.cpp b/qtbase/src/corelib/text/qbytearray.cpp
+index 4df393f77..0aa64a122 100644
+--- a/qtbase/src/corelib/text/qbytearray.cpp
++++ b/qtbase/src/corelib/text/qbytearray.cpp
+@@ -679,9 +679,6 @@ static QByteArray xxflate(ZLibOp op, QArrayDataPointer<char> out, QByteArrayView
+         return tooMuchData(op);
+ 
+     case Z_BUF_ERROR:
+-        Q_UNREACHABLE(); // cannot happen - we supply a buffer that can hold the result,
+-                         // or else error out early
+-
+     case Z_DATA_ERROR:   // can only happen on decompression
+         Q_ASSERT(op == ZLibOp::Decompression);
+         return invalidCompressedData();
+diff --git a/qtbase/src/network/access/qhttp2connection.cpp b/qtbase/src/network/access/qhttp2connection.cpp
+index e2ca96e51..34d73dd5c 100644
+--- a/qtbase/src/network/access/qhttp2connection.cpp
++++ b/qtbase/src/network/access/qhttp2connection.cpp
+@@ -656,7 +656,10 @@ void QHttp2Stream::handleDATA(const Frame &inboundFrame)
+                             inboundFrame.dataSize());
+         if (endStream)
+             transitionState(StateTransition::CloseRemote);
++        QPointer<QHttp2Stream> self(this);
+         emit dataReceived(fragment, endStream);
++        if (!self)
++            return;
+         m_downloadBuffer.append(std::move(fragment));
+     }
+ 
+@@ -1177,8 +1180,9 @@ bool QHttp2Connection::readClientPreface()
+ void QHttp2Connection::handleConnectionClosure()
+ {
+     const auto errorString = QCoreApplication::translate("QHttp", "Connection closed");
+-    for (auto it = m_streams.cbegin(), end = m_streams.cend(); it != end; ++it) {
+-        const QPointer<QHttp2Stream> &stream = it.value();
++    const QList<quint32> streamIDs = m_streams.keys();
++    for (quint32 streamID : streamIDs) {
++        QHttp2Stream *stream = m_streams.value(streamID, nullptr);
+         if (stream && stream->isActive())
+             stream->finishWithError(PROTOCOL_ERROR, errorString);
+     }
+@@ -1212,7 +1216,9 @@ void QHttp2Connection::connectionError(Http2Error errorCode, const char *message
+     sendGOAWAY(errorCode);
+     auto messageView = QLatin1StringView(message);
+ 
+-    for (QHttp2Stream *stream : std::as_const(m_streams)) {
++    const QList<quint32> streamIDs = m_streams.keys();
++    for (quint32 streamID : streamIDs) {
++        QHttp2Stream *stream = m_streams.value(streamID, nullptr);
+         if (stream && stream->isActive())
+             stream->finishWithError(errorCode, messageView);
+     }
+diff --git a/qtbase/src/xml/dom/qdom.cpp b/qtbase/src/xml/dom/qdom.cpp
+index 9cb1e6444..119a68500 100644
+--- a/qtbase/src/xml/dom/qdom.cpp
++++ b/qtbase/src/xml/dom/qdom.cpp
+@@ -4022,15 +4022,25 @@ QString QDomElementPrivate::text()
+ {
+     QString t(u""_s);
+ 
+-    QDomNodePrivate* p = first;
+-    while (p) {
+-        if (p->isText() || p->isCDATASection())
+-            t += p->nodeValue();
+-        else if (p->isElement())
+-            t += static_cast<QDomElementPrivate *>(p)->text();
+-        p = p->next;
+-    }
++    // pre-order depth-first-search; visitation is t += nodeValue()
++    if (QDomNodePrivate* p = first) {
++        while (true) {
++            if (p->isText() || p->isCDATASection()) {
++                t += p->nodeValue();
++            } else if (p->isElement() && p->first) {
++                p = p->first;    // descend into Elements
++                continue;
++            }
+ 
++            while (!p->next) {
++                p = p->parent(); // ascend into visited parent (pre-order DFS)
++                if (p == this)
++                    return t; // done
++            }
++
++            p = p->next;
++        }
++    }
+     return t;
+ }
+ 

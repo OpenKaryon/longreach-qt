@@ -33,7 +33,7 @@ runs the extracted suite on stock distributions.
 8/8 (508 checks) on stock CentOS 7.6 and 8/8 on Linux Mint 22.3 in VMware;
 with QtWayland, 8/8 (528) on CentOS 7 and Debian 13 in containers, the live
 Wayland client check included
-([platforms](../platforms.md#qt-684)). arm64: 8/8 (528 checks, QtWayland
+([platforms](../platforms.md#qt-685)). arm64: 8/8 (528 checks, QtWayland
 included) on stock CentOS 7 and Debian 12 arm64 in emulated containers.
 
 ## Limits

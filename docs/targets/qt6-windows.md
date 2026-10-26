@@ -30,7 +30,7 @@ check finds the newer API.
 
 ## Results
 
-8/8 (508 checks) on Windows 7 SP1 in VMware ([platforms](../platforms.md#qt-684)).
+8/8 (508 checks) on Windows 7 SP1 in VMware ([platforms](../platforms.md#qt-685)).
 arm64 is built, not run.
 
 ## Limits

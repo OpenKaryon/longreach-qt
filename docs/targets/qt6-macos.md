@@ -28,7 +28,8 @@ MacBook Pro, for one) cannot get 10.14.
 ## Results
 
 macOS 10.13.6 in VMware, installed clean from the 10.13.6 installer, with
-Qt 6.8.4: 8/8, 504 checks, none failed ([platforms](../platforms.md#qt-684)). arm64 builds
+Qt 6.8.5 with the security patches: 8/8, 505 checks, none failed
+([platforms](../platforms.md#qt-685)). arm64 builds
 all 8 applications and is audited (`make qt6-macos-arm64-audit`: every
 binary declares 11.0), not run.
 

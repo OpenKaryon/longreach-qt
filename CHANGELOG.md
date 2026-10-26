@@ -12,6 +12,15 @@
   media plugin without precompiled headers: since 6.8.5 it links
   Qt::Concurrent, and CMake then writes no rule for the C++ header its
   moc file expects, so the cross build stopped at once.
+- Qt 6: the security fixes Qt has published for 6.8 since 6.8.5, as
+  `patches/qt6/all/05`-`24`, one per CVE: CVE-2025-12385, CVE-2025-14576,
+  CVE-2026-101201, -105923, -105924, -105946, -107157, -107472, -107590,
+  -13326, -16762, -6210, -76151, -78253, -79616, -8168, -9499, -96432,
+  -19248 and -82292 (QtCore, QtXml, QtNetwork, Qt SVG, Qt Quick, Qt 5 Core
+  Compatibility, Qt NFC); `25` the Qt MQTT parser fixes with
+  CVE-2026-107457; `26` and `27` memory-safety fixes from Qt's 6.12 branch
+  for untrusted input without a CVE diff: QDom, QXmlStreamReader,
+  qUncompress, CBOR, HTTP/2, the TIFF and ICNS readers.
 
 ## 0.1.0 - 2026-10-23
 

@@ -32,12 +32,14 @@ Backends in hosts.local.json:
                "ssh_options": ["-i", "key", ...]}
     vmware    {"backend": "vmware", "os": "linux"|"windows", "vmx": "...",
                "user": "...", "password_env": "VAR"}; "direct": true on
-               Windows 9x and NT 4 starts smoke-runner.exe without a shell
+               Windows 9x and NT 4 starts smoke-runner.exe without a shell;
+               "encrypted": true, "vm_password_env": "VAR" for a VM
+               encrypted in VMware (a Windows 11 guest with a virtual TPM)
     virtualbox{"backend": "virtualbox", "os": "linux"|"windows", "vm": "name",
                "user": "...", "password_env": "VAR"}
 
-A guest password is never stored: it is read from the environment variable
-password_env names, or asked for on the terminal.
+A guest or VM password is never stored: it is read from the environment
+variable password_env (vm_password_env) names, or asked for on the terminal.
 """
 import argparse
 import datetime
@@ -217,13 +219,13 @@ def pack(suite):
     return buffer.getvalue(), ''.join(sums)
 
 
-def password(host):
-    name = host.get('password_env')
+def password(host, key='password_env', prompt=None):
+    name = host.get(key)
     if name and os.environ.get(name):
         return os.environ[name]
     if not sys.stdin.isatty():
-        raise SystemExit(f'set {name or "the password_env variable"} or run on a terminal')
-    return getpass.getpass(f"password of {host.get('user')} in the guest: ")
+        raise SystemExit(f'set {name or f"the {key} variable"} or run on a terminal')
+    return getpass.getpass(prompt or f"password of {host.get('user')} in the guest: ")
 
 
 def run_docker(host, suite, out, runner_args):
@@ -302,7 +304,8 @@ def run_ssh(host, suite, out, runner_args):
 
 def vmrun(host, *args, check=True):
     tool = host.get('vmrun', r'C:\Program Files\VMware\VMware Workstation\vmrun.exe')
-    cmd = [tool, '-T', 'ws', '-gu', host['user'], '-gp', host['_password'], *args]
+    cmd = [tool, '-T', 'ws', *(['-vp', host['_vm_password']] if host.get('_vm_password') else []),
+           '-gu', host['user'], '-gp', host['_password'], *args]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise SystemExit(f'vmrun {args[0]} failed: {result.stdout.strip()} {result.stderr.strip()}')
@@ -310,6 +313,8 @@ def vmrun(host, *args, check=True):
 
 
 def run_vmware(host, suite, out, runner_args):
+    if host.get('encrypted'):
+        host['_vm_password'] = password(host, 'vm_password_env', 'password of the encrypted VM: ')
     host['_password'] = password(host)
     vmx = host['vmx']
     if host.get('os') == 'windows':

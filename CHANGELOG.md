@@ -36,6 +36,9 @@
   Its preview-pages check skips the zoom without a default printer, as the
   printer checks do, not only without any printer: Qt 4 on Windows 11 can
   list printers and still have no default one.
+- `scripts/run/run.py` opens a VMware VM that is encrypted, as a Windows 11
+  guest with a virtual TPM is: `"encrypted": true` and `vm_password_env` in
+  `hosts.local.json`, or the password asked for on the terminal.
 
 ## 0.1.0 - 2026-10-23
 

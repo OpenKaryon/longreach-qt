@@ -61,9 +61,20 @@ and 6.8.5.
 
 ## Qt 5.15.19
 
-- `all/` (8): upstream crashes found by the suite (OpenGL timer queries,
+- `all/` (28): upstream crashes found by the suite (OpenGL timer queries,
   QtScript frames, gamepad, D-Bus server, DataVisualization on Mesa) and a
-  mapbox build fix.
+  mapbox build fix. 09-26 are the security fixes Qt has published for 6.8
+  but not for 5.15, one patch per CVE, ported to 5.15: QtCore, QtXml,
+  QtNetwork, Qt SVG, Qt Quick, Qt NFC and the ICNS reader (each header names
+  the 6.8 diffs, their SHA256, and what differs in Qt 5). 27 and 28 are the
+  fixes of Qt 6's `all/26` and `all/27` that 5.15 needs too (QDom text, the
+  TIFF and ICNS readers). Since CVE-2026-8168 a document drawn by Qt SVG
+  stops at 32 nested groups, as in Qt 6.8, and Qt 5 has no option to lift
+  that. The fixes Qt published for 5.15 itself, up to CVE-2025-30348, -4211
+  and -5455, are in 5.15.19 already. Not ported, because 5.15 lacks the code:
+  CVE-2025-14576 and CVE-2026-105923 (VectorImage), -6210 (SVG markers),
+  -96432 and the HTTP/2 fix (Qt 6's QHttp2Connection), -76151 (Qt 5's
+  lengths are int), and Qt MQTT, which the 5.15 archive does not include.
 - `windows/` (17): MinGW build fixes for every Windows target (01-04) and the
   Windows XP backport (05-17, prefixed `xp-`): the XP API level, then each
   Vista/7 API Qt uses resolved at run time - QtCore, networking, fonts,

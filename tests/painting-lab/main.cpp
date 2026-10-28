@@ -19,6 +19,7 @@
 #include <QPainterPath>
 #include <QPaintEvent>
 #include <QPixmap>
+#include <QProcess>
 #ifndef QT_NO_PRINTER
 #include <QPrinter>
 #include <QPrinterInfo>
@@ -133,7 +134,16 @@ public:
             WaitForSingleObject(thread_, 5000);
             CloseHandle(thread_);
         }
+        // A PrintDialog.exe can outlive its dialog, and Windows hands the
+        // next dialog to it; see printDialogRunning().
+        printDialogProcesses(&started_, true);
     }
+    // A PrintDialog.exe that is already running: Windows 11 hands it the next
+    // dialog, the driver cannot tell it from another program's, and
+    // PrintDlgEx may then never return, even after that process is ended.
+    // The check then skips.
+    static bool printDialogRunning() { return printDialogProcesses(0, false) > 0; }
+    static void endPrintDialogsSince(const FILETIME &since) { printDialogProcesses(&since, true); }
     bool observed() const { return observed_ != 0; }
     // Windows 11 shows the PrintDlgEx dialog from PrintDialog.exe, outside
     // this process. It has no dialog items to post to, so the driver closes
@@ -148,11 +158,14 @@ private:
     {
         NativePrintDialogDriver *driver = static_cast<NativePrintDialogDriver *>(context);
         for (int polls = 0; !driver->stop_; ++polls) {
-            if (polls == 250)
+            if (polls == 250) {
                 InterlockedExchange(&driver->timedOut_, 1);
+                std::printf("no answer within 20 s: closing the dialog, ending PrintDialog.exe\n");
+                std::fflush(stdout);
+            }
             if (driver->timedOut_) {
                 EnumThreadWindows(driver->guiThread_, closeDialog, 0);
-                driver->endPrintDialogProcesses();
+                printDialogProcesses(&driver->started_, true);
             } else if (!driver->done_) {
                 // The GUI thread's own dialog first: a PrintDialog.exe left
                 // over from an earlier run can still have a window up.
@@ -201,15 +214,20 @@ private:
         CloseHandle(process);
         if (!match) return TRUE;
         InterlockedExchange(&driver->observed_, 1);
-        InterlockedExchange(&driver->outOfProcess_, 1);
+        if (!InterlockedExchange(&driver->outOfProcess_, 1)) {
+            std::printf("dialog found in PrintDialog.exe %lu\n", pid);
+            std::fflush(stdout);
+        }
         // Repeated on every poll until the dialog returns: the window may not
         // take WM_CLOSE before it has finished loading.
         PostMessageA(window, WM_CLOSE, 0, 0);
         return TRUE;
     }
     // By process rather than by window: PrintDialog.exe can have no top-level
-    // window that EnumWindows sees. Only processes started after the driver.
-    void endPrintDialogProcesses()
+    // window that EnumWindows sees. Counts the PrintDialog.exe processes (with
+    // since, only those started since then) and with end, ends them and waits
+    // until they have gone.
+    static int printDialogProcesses(const FILETIME *since, bool end)
     {
         typedef BOOL (WINAPI *ProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
         static const ProcessTimes times = reinterpret_cast<ProcessTimes>(
@@ -221,22 +239,29 @@ private:
         static const Snapshot snap = reinterpret_cast<Snapshot>(GetProcAddress(kernel, "CreateToolhelp32Snapshot"));
         static const Walk first = reinterpret_cast<Walk>(GetProcAddress(kernel, "Process32First"));
         static const Walk next = reinterpret_cast<Walk>(GetProcAddress(kernel, "Process32Next"));
-        if (!times || !snap || !first || !next) return;
+        if (!times || !snap || !first || !next) return 0;
         HANDLE snapshot = snap(TH32CS_SNAPPROCESS, 0);
-        if (snapshot == INVALID_HANDLE_VALUE) return;
+        if (snapshot == INVALID_HANDLE_VALUE) return 0;
+        int found = 0;
         PROCESSENTRY32 entry;
         entry.dwSize = sizeof(entry);
         for (BOOL more = first(snapshot, &entry); more; more = next(snapshot, &entry)) {
             if (lstrcmpiA(entry.szExeFile, "PrintDialog.exe") != 0) continue;
-            HANDLE process = OpenProcess(PROCESS_TERMINATE | 0x1000, FALSE, entry.th32ProcessID);
+            HANDLE process = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE | 0x1000, FALSE, entry.th32ProcessID);
             if (!process) continue;
             FILETIME created, exited, kernel, user;
-            if (times(process, &created, &exited, &kernel, &user)
-                    && CompareFileTime(&created, &started_) >= 0)
-                TerminateProcess(process, 1);
+            const bool counted = WaitForSingleObject(process, 0) == WAIT_TIMEOUT
+                    && (!since || (times(process, &created, &exited, &kernel, &user)
+                                   && CompareFileTime(&created, since) >= 0));
+            if (counted) {
+                ++found;
+                if (end && TerminateProcess(process, 1))
+                    WaitForSingleObject(process, 5000);
+            }
             CloseHandle(process);
         }
         CloseHandle(snapshot);
+        return found;
     }
     static BOOL CALLBACK closeDialog(HWND window, LPARAM)
     {
@@ -271,6 +296,166 @@ private:
     volatile LONG outOfProcess_;
     volatile LONG timedOut_;
 };
+
+// The native dialog checks. Each runs in a child painting-lab (see
+// runNativeDialogCheck()) and returns 0 on a pass, 1 on a failure and 77 on
+// a skip, with the detail or the reason in d. Each step is printed first, so
+// a child that has to be ended shows where it stopped.
+static void nativeDialogStep(const char *step)
+{
+    std::printf("%s\n", step);
+    std::fflush(stdout);
+}
+
+// Whether a native dialog check can run here; if not, the reason is in d.
+static bool nativeDialogPossible(const QPrinter &printer, QString &d)
+{
+    if (qt4OnOutOfProcessPrintDialogs())
+        d = QStringLiteral("Qt 4's native print dialogs open in Windows 11's PrintDialog.exe and do not always return");
+    else if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat)
+        d = QStringLiteral("no configured native printer");
+    else if (NativePrintDialogDriver::printDialogRunning())
+        d = QStringLiteral("a PrintDialog.exe started before this check is running, and Windows would hand it the dialog");
+    else
+        return true;
+    return false;
+}
+
+static int nativeDialogCancel(QString &d)
+{
+    QPrinter printer;
+    if (!nativeDialogPossible(printer, d)) return 77;
+    nativeDialogStep("print dialog, to be cancelled");
+    QPrintDialog dialog(&printer);
+    NativePrintDialogDriver driver(IDCANCEL);
+    const int result = dialog.exec();
+    if (driver.timedOut()) {
+        d = QStringLiteral("the native print dialog did not respond within 20 s");
+        return 77;
+    }
+    d = QStringLiteral("observed=%1 result=%2").arg(driver.observed()).arg(result);
+    return driver.observed() && result == QDialog::Rejected && printer.isValid() ? 0 : 1;
+}
+
+static int nativeDialogAcceptAndFile(QString &d)
+{
+    QPrinter printer;
+    if (!nativeDialogPossible(printer, d)) return 77;
+    {
+        nativeDialogStep("page setup dialog, to be accepted");
+        QPageSetupDialog setup(&printer);
+        NativePrintDialogDriver driver(IDOK);
+        const int result = setup.exec();
+        if (driver.timedOut()) {
+            d = QStringLiteral("the native page setup dialog did not respond within 20 s");
+            return 77;
+        }
+        if (!driver.observed() || result != QDialog::Accepted) {
+            d = QStringLiteral("page setup observed=%1 result=%2").arg(driver.observed()).arg(result);
+            return 1;
+        }
+    }
+    {
+        nativeDialogStep("print dialog, to be accepted");
+        QPrintDialog dialog(&printer);
+        NativePrintDialogDriver driver(IDOK);
+        const int result = dialog.exec();
+        if (driver.timedOut() || driver.outOfProcess()) {
+            d = driver.timedOut()
+                ? QStringLiteral("the native print dialog did not respond within 20 s")
+                : QStringLiteral("the Windows 11 print dialog runs in PrintDialog.exe and cannot be accepted from here");
+            return 77;
+        }
+        if (!driver.observed() || result != QDialog::Accepted) {
+            d = QStringLiteral("print dialog observed=%1 result=%2").arg(driver.observed()).arg(result);
+            return 1;
+        }
+    }
+    const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("painting-dialog-native.prn");
+    if (QFile::exists(path) && !QFile::remove(path)) {
+        d = QStringLiteral("could not remove previous native output");
+        return 1;
+    }
+    nativeDialogStep("printing to a file");
+    printer.setOutputFileName(path); // only now submit a job, explicitly to a local file
+    if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat
+            || !paintPrintPage(&printer)) {
+        d = QStringLiteral("could not print to %1").arg(path);
+        return 1;
+    }
+    QFile output(path);
+    if (!output.open(QIODevice::ReadOnly)) {
+        d = QStringLiteral("could not open %1").arg(path);
+        return 1;
+    }
+    d = QStringLiteral("printer=%1 bytes=%2 state=%3")
+        .arg(printer.printerName()).arg(output.size()).arg(int(printer.printerState()));
+    return output.size() > 100 && printer.printerState() == QPrinter::Idle ? 0 : 1;
+}
+
+// The child's side: runs one check and prints its detail as the last line.
+static int runNativeDialogChild(const QString &name)
+{
+    QString d;
+    int result = 1;
+    if (name == QLatin1String("cancel"))
+        result = nativeDialogCancel(d);
+    else if (name == QLatin1String("accept-and-file"))
+        result = nativeDialogAcceptAndFile(d);
+    else
+        d = QStringLiteral("unknown native dialog check %1").arg(name);
+    std::printf("%s\n", qPrintable(d));
+    std::fflush(stdout);
+    return result;
+}
+
+// Windows 11's PrintDialog.exe can close its dialog and still never answer
+// PrintDlgEx, which then waits for good, even after PrintDialog.exe has been
+// ended. So each check runs in a child painting-lab, which is ended if it has
+// not finished within 60 s (the driver gives up on a dialog after about 20 s);
+// the check then skips.
+static bool runNativeDialogCheck(SmokeReporter &r, const QString &name, QString &d)
+{
+    FILETIME started;
+    GetSystemTimeAsFileTime(&started);
+    QProcess child;
+    child.setProcessChannelMode(QProcess::MergedChannels);
+    child.start(QCoreApplication::applicationFilePath(),
+                QStringList() << QStringLiteral("--native-dialog-check") << name);
+    if (!child.waitForStarted(30000)) {
+        d = QStringLiteral("could not start the check: %1").arg(child.errorString());
+        return false;
+    }
+    // Qt 4 returns false when waitForFinished() is called after the child has
+    // already exited.
+    const bool finished = child.state() == QProcess::NotRunning || child.waitForFinished(60000);
+    if (!finished) {
+        child.kill();
+        child.waitForFinished(5000);
+        NativePrintDialogDriver::endPrintDialogsSince(started);
+    }
+    QString output = QString::fromLocal8Bit(child.readAll());
+    output.replace(QLatin1String("\r\n"), QLatin1String("\n"));
+    output = output.trimmed();
+    if (!output.isEmpty())
+        qDebug("%s", qPrintable(output));
+    const QString last = output.section(QLatin1Char('\n'), -1);
+    if (!finished) {
+        r.skip(d, QStringLiteral("the native dialog did not return within 60 s, and its process was ended; last: %1")
+                      .arg(last.isEmpty() ? QStringLiteral("no output") : last));
+        return false;
+    }
+    if (child.exitStatus() != QProcess::NormalExit) {
+        d = QStringLiteral("the check crashed with 0x%1").arg(uint(child.exitCode()), 8, 16, QLatin1Char('0'));
+        return false;
+    }
+    if (child.exitCode() == 77) {
+        r.skip(d, last);
+        return false;
+    }
+    d = last;
+    return child.exitCode() == 0;
+}
 #endif
 
 class PaintCanvas : public QWidget
@@ -559,74 +744,10 @@ static int runSelfTest()
 #endif
 #if defined(Q_OS_WIN) && !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTDIALOG)
     r.check("painting/native-dialog-cancel", [&r](QString &d) {
-        if (qt4OnOutOfProcessPrintDialogs()) {
-            r.skip(d, QStringLiteral("Qt 4's native print dialogs open in Windows 11's PrintDialog.exe and do not always return"));
-            return false;
-        }
-        QPrinter printer;
-        if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat) {
-            r.skip(d, QStringLiteral("no configured native printer"));
-            return false;
-        }
-        QPrintDialog dialog(&printer);
-        NativePrintDialogDriver driver(IDCANCEL);
-        const int result = dialog.exec();
-        if (driver.timedOut()) {
-            r.skip(d, QStringLiteral("the native print dialog did not respond within 20 s"));
-            return false;
-        }
-        d = QStringLiteral("observed=%1 result=%2").arg(driver.observed()).arg(result);
-        return driver.observed() && result == QDialog::Rejected && printer.isValid();
+        return runNativeDialogCheck(r, QStringLiteral("cancel"), d);
     });
     r.check("painting/native-dialog-accept-and-file", [&r](QString &d) {
-        if (qt4OnOutOfProcessPrintDialogs()) {
-            r.skip(d, QStringLiteral("Qt 4's native print dialogs open in Windows 11's PrintDialog.exe and do not always return"));
-            return false;
-        }
-        QPrinter printer;
-        if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat) {
-            r.skip(d, QStringLiteral("no configured native printer"));
-            return false;
-        }
-        {
-            QPageSetupDialog setup(&printer);
-            NativePrintDialogDriver driver(IDOK);
-            const int result = setup.exec();
-            if (driver.timedOut()) {
-                r.skip(d, QStringLiteral("the native page setup dialog did not respond within 20 s"));
-                return false;
-            }
-            if (!driver.observed() || result != QDialog::Accepted) {
-                d = QStringLiteral("page setup observed=%1 result=%2").arg(driver.observed()).arg(result);
-                return false;
-            }
-        }
-        {
-            QPrintDialog dialog(&printer);
-            NativePrintDialogDriver driver(IDOK);
-            const int result = dialog.exec();
-            if (driver.timedOut() || driver.outOfProcess()) {
-                r.skip(d, driver.timedOut()
-                       ? QStringLiteral("the native print dialog did not respond within 20 s")
-                       : QStringLiteral("the Windows 11 print dialog runs in PrintDialog.exe and cannot be accepted from here"));
-                return false;
-            }
-            if (!driver.observed() || result != QDialog::Accepted) {
-                d = QStringLiteral("print dialog observed=%1 result=%2").arg(driver.observed()).arg(result);
-                return false;
-            }
-        }
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("painting-dialog-native.prn");
-        if (QFile::exists(path) && !QFile::remove(path)) return false;
-        printer.setOutputFileName(path); // only now submit a job, explicitly to a local file
-        if (!printer.isValid() || printer.outputFormat() != QPrinter::NativeFormat
-                || !paintPrintPage(&printer)) return false;
-        QFile output(path);
-        if (!output.open(QIODevice::ReadOnly)) return false;
-        d = QStringLiteral("printer=%1 bytes=%2 state=%3")
-            .arg(printer.printerName()).arg(output.size()).arg(int(printer.printerState()));
-        qDebug("%s", qPrintable(d));
-        return output.size() > 100 && printer.printerState() == QPrinter::Idle;
+        return runNativeDialogCheck(r, QStringLiteral("accept-and-file"), d);
     });
 #endif
 #if !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTPREVIEWDIALOG) && !defined(QT_NO_PRINTPREVIEWWIDGET)
@@ -685,10 +806,11 @@ static int runSelfTest()
         d = QStringLiteral("portrait=%1 landscape=%2 zoom=%3")
             .arg(portraitPages).arg(landscapePages).arg(preview->zoomFactor());
         const bool pagesOk = portraitPages == 1 && landscapePages == 1;
-        // The zoom factor comes from the printer's resolution, which is 0 without an
-        // installed printer. QPrinterInfo is asked rather than another QPrinter (a
-        // second printerless QPrinter corrupted the heap on Qt 4 / NT 4.0).
-        if (pagesOk && preview->zoomFactor() <= 0 && QPrinterInfo::availablePrinters().isEmpty()) {
+        // The zoom factor comes from the printer's resolution, which is 0 without a
+        // default printer (Qt 4 on Windows 11 can find printers but no default one).
+        // QPrinterInfo is asked rather than another QPrinter (a second printerless
+        // QPrinter corrupted the heap on Qt 4 / NT 4.0).
+        if (pagesOk && preview->zoomFactor() <= 0 && QPrinterInfo::defaultPrinter().isNull()) {
             r.skip(d, QStringLiteral("no configured native printer; pages checked, zoom needs its resolution"));
             return false;
         }
@@ -760,6 +882,11 @@ int main(int argc, char **argv)
     {
         QApplication app(argc, argv);
         selftest = app.arguments().contains("--selftest");
+#if defined(Q_OS_WIN) && !defined(QT_NO_PRINTER) && !defined(QT_NO_PRINTDIALOG)
+        const int nativeDialog = app.arguments().indexOf(QStringLiteral("--native-dialog-check"));
+        if (nativeDialog > 0 && nativeDialog + 1 < app.arguments().size())
+            return runNativeDialogChild(app.arguments().at(nativeDialog + 1));
+#endif
         if (selftest) {
             result = runSelfTest();
             std::printf("Painting selftest returned %d; destroying QApplication\n", result);

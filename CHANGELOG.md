@@ -28,6 +28,14 @@
   -82292 and -9499; `27` and `28` the QDom, TIFF and ICNS fixes of Qt 6's
   `all/26` and `all/27`. Qt SVG now draws at most 32 nested groups, as
   Qt 6.8 does since CVE-2026-8168.
+- painting-lab runs its two native print dialog checks in a child process
+  and skips one that has not finished within 60 s: Windows 11's
+  PrintDialog.exe, which shows Qt 5's print dialog, can close it and never
+  answer PrintDlgEx, which then waits for good. A PrintDialog.exe already
+  running, to which Windows would hand the dialog, also skips them.
+  Its preview-pages check skips the zoom without a default printer, as the
+  printer checks do, not only without any printer: Qt 4 on Windows 11 can
+  list printers and still have no default one.
 
 ## 0.1.0 - 2026-10-23
 

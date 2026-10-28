@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "date": "2026-10-10",
-  "target": "tests-qt5-macos-i386-gpl-enabled",
+  "date": "2026-10-28",
+  "target": "tests-qt5-macos-amd64",
   "status": "PASS",
-  "image": "qt5-macos-i386-gpl-enabled",
+  "image": "qt5-macos-amd64",
   "guest": {
     "os": "ProductName:\tMac OS X",
-    "system": "ProductName:\tMac OS X\nProductVersion:\t10.6.3\nBuildVersion:\t10D2235\nDarwin qts-Mac-mini.local 10.3.3 Darwin Kernel Version 10.3.3: Wed Apr  7 20:47:33 PDT 2010; root:xnu-1504.6.1~3/RELEASE_X86_64 x86_64",
-    "vm": "Mac OS X 10.6.3 in a virtual machine",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.6.3\nBuildVersion:\t10D2235\nDarwin 10.3.3 Darwin Kernel Version 10.3.3: Wed Apr  7 20:47:33 PDT 2010; root:xnu-1504.6.1~3/RELEASE_X86_64 x86_64",
+    "vm": "Mac OS X 10.6.3 in VMware",
     "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
   },
   "summary": {
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "0bcc38a24f27ece4dfc6b3b80d949a5d76896881d19aaa2df37553f507dcd863",
-    "graphics-gallery": "c119b4443a2f72f327249981213999763f00cfdba20da494a54f5c5f1b5e449b",
-    "multimedia-lab": "c1528def3bb3edd7c89f30d008b10e677f2d1b95bc4ed6910726b0d5d3abf3bd",
-    "network-gui": "eb062e6f10d05bd9ec77db683ea1a0a83196deef1f1a99cfa6c6cf313370698b",
-    "painting-lab": "b10791c5fb220dda38e778f7bc3944fadf65056f544cb9ca219e0b5ee999143e",
-    "qt-selftest": "23edea3542c808856189270b6938a72817a5d8307cb089eb89718e2b82a2d62e",
-    "quick-qml-gallery": "c5649ab173dd0cc42dfaa6bc9dee206a01ab5903ebb74ced4f4663cd209fc4bb",
-    "smoke-runner": "dc9f84644de10b8911041efc1434515dafe712e1de46da4466e9a7aef63b5962",
-    "widgets-gallery": "987b69dde251c47b2548850c6a1d855fac4642600e833dde01a602d4bf979115"
+    "gl-heavy-gallery": "9736af26ab960593d0128fcaacd5cbf5a87917f3febcf472050be11fac6c460d",
+    "graphics-gallery": "a00b068aa75f655bc42e0489d4576b1332295bd18556153b15622a1c2ec226a1",
+    "multimedia-lab": "40c3992f8a372aaaa2b2f18064f519fe56c335a7f53f23b409ccdb15f537e92e",
+    "network-gui": "6ad6b302b8e63c96109a3a13f170325a5a35367562a6b7f007272216a596bd87",
+    "painting-lab": "ec49f39e14dbc1b6415f0a7457bd00ce983e9ae83eacd1f3e7cb577198928b92",
+    "qt-selftest": "fad05679eb374dfa6986562dccdb9887ef239ea62ee42358b79cbb05a3495f65",
+    "quick-qml-gallery": "39acc471e13e3efb64165529216c50afd22008e25932118a0eed979e0c489ac7",
+    "smoke-runner": "af317b9b8c6cd0c8dcfb8a8a5f5def72a6da4e975bd9e55c5fc197761ea717e2",
+    "widgets-gallery": "c20784aa707640b0969998e7b1782ad3e402c7bc6ef0da5dc8ea99fa7b039821"
   }
 }

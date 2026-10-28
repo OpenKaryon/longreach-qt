@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "date": "2026-10-14",
-  "target": "tests-qt5-linux-i386-gpl-enabled",
+  "date": "2026-10-28",
+  "target": "tests-qt5-linux-i386",
   "status": "PASS",
-  "image": "qt5-linux-i386-gpl-enabled",
+  "image": "qt5-linux-i386",
   "guest": {
     "os": "DISTRIB_ID=Ubuntu",
     "system": "DISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=10.04\nDISTRIB_CODENAME=lucid\nDISTRIB_DESCRIPTION=\"Ubuntu 10.04 LTS\"\nldd (Ubuntu EGLIBC 2.11.1-0ubuntu7) 2.11.1",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "e35580c3de7a8cdb02e1398bb1f3c2ac806d7fcc6e9e276d8864922a51c282f2",
-    "graphics-gallery": "c8b45b7e2b8649cf31c5c5c8a735f57fbcd0c7a9411faa6c0f9655bd52fec7b0",
-    "multimedia-lab": "4ae5bedf86279cd208838b99db6af66e5b9e2789c8448add33a9e61f51f3a415",
-    "network-gui": "328ebf351440b8590014b845d30306dd4bb94ac615ecfb721779cc56c382cc72",
-    "painting-lab": "853a88e344f8bb4df35930d14ca86e1d6a543379fe3f9cd128accde3827eaeff",
-    "qt-selftest": "15db06183c92b3d71d20bf6fefc45e96f121c118e4165b5a2fb420bb49d2cf41",
-    "quick-qml-gallery": "5414ac4c691f020640e9b3d6a996662effcb8df3c16ded5696ea96de94a62f19",
-    "smoke-runner": "601cd59c59c70e73da24a7d00c79c90b38e7c3d39797564a88f37bbc2f666244",
-    "widgets-gallery": "a6d9c8658d8c8c19579bfa58d465d6c94c4484613f6fc425303022a5a8714df5"
+    "gl-heavy-gallery": "563306cdbfc6539116e7e1191f985b92bb269444da8d25fecb57063bdb58ae88",
+    "graphics-gallery": "d234a83db540bf828e51a9524e7ebc267df73163bc657479e4851dd2a8851673",
+    "multimedia-lab": "035ced53b1c080542486046233d932a3e478697164ff25404ae558b6994daa1c",
+    "network-gui": "f6de8c2f9ee0ca50bd0da3ce7e9181a0b0036606268e1f0cd10f12f8bfa41a31",
+    "painting-lab": "8188d2e576c5ffd3b4d3019cc0df03523742a31d79d20931d327dac5b03b3c06",
+    "qt-selftest": "480f074b6a083cae8142247840b08a2cd854863a9efe366cbf50736d8052104d",
+    "quick-qml-gallery": "e391ff2d67ff46c80ac4fed4fe148cead7e24f2866d36ff87a80ac1faadd3189",
+    "smoke-runner": "422cd6ffed0be0243ff839f9399b0a0ba876468ed97177cc8aedf3f3c2ab326b",
+    "widgets-gallery": "88966a5c242067fa6d19ce84e1a50ba482c61ae4e730016572107001e419553e"
   }
 }

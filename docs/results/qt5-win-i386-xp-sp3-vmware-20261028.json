@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "date": "2026-10-10",
-  "target": "tests-qt5-win-i386-gpl-enabled",
+  "date": "2026-10-28",
+  "target": "tests-qt5-win-i386",
   "status": "PASS",
-  "image": "qt5-win-i386-gpl-enabled",
+  "image": "qt5-win-i386",
   "guest": {
     "os": "",
     "system": "",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery.exe": "f2ee8e77c73f5e43849f1dd92d5827ff149fd30d5b49bc22f84a4abaac44d080",
-    "graphics-gallery.exe": "6b545abaa1534199cd7fd4735bd2dc96a48b55f70d632abb27f769d4af85bd52",
-    "multimedia-lab.exe": "e4323a645331ee3c4ff7e269c2e32fd0a7ec0f0fa9e5028749a8dff2da7e8c09",
-    "network-gui.exe": "7b5f237d7e66a7096e157ec5b36d2a702b171d4c7623c58b177b3bfb9193302b",
-    "painting-lab.exe": "cd15e98f8ab8e96cef304a012665effd9c19ae39960c5cac373a9a34e7e95c3e",
-    "qt-selftest.exe": "df52a53bdde30503799f8fc6f3c7c3cfbad964886d5337d358b16f280dca8e7f",
-    "quick-qml-gallery.exe": "187b743c6ddaaaaf45968ee9830a932555b1ca061ac8206e82c37d243265a4e5",
-    "smoke-runner.exe": "055873c35af66fce6f8321ebb57f7fba7d855eab5bd18ae7c2684aaf70582a09",
-    "widgets-gallery.exe": "718f493fd832ed6cfd1b3257663cf77de4ae989c637b689e59c1482df726b72e"
+    "gl-heavy-gallery.exe": "32cb470b5f1140afef206dba1ab41cabbd9b9f2208c918639dae2a61fa493816",
+    "graphics-gallery.exe": "9e03b9eb0554ace5dc22e8045da75755d4c7c84840252b44255e7b9d8c65c481",
+    "multimedia-lab.exe": "a04279a8cb6e8a93908fc89be64a49aa52a1b0a7d5d0c827bd3df97b6384dd18",
+    "network-gui.exe": "56a41e83614cfe932f371fd7ebfb9a42a98f86c31aae9b897d34e1dc171a8c60",
+    "painting-lab.exe": "b2cf059ee685aed3f5baca03e1827b3f900a30070f0cdac09ddd8407c84b6258",
+    "qt-selftest.exe": "78893cb69b23fb61e4d276dd0447cf482077ac3adf12dbb5c42cabd6c032f73b",
+    "quick-qml-gallery.exe": "95498bc4222773ec5d97a4bb7ca4447dcb0fe9343520874013d031de0881adb2",
+    "smoke-runner.exe": "f9bb6d61c3eb5ecc30d82c71319ee668e9ec2cd6e64eac2aab2ac95db13cbbaa",
+    "widgets-gallery.exe": "03d034fc179380ac26481f75d651f5b1ded313288b6e5cc6157cd41ac986a6bb"
   }
 }

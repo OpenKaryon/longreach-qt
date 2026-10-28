@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-28",
+  "target": "tests-qt5-macos-amd64",
+  "status": "PASS",
+  "image": "qt5-macos-amd64",
+  "guest": {
+    "os": "ProductName:\tMac OS X",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.7.5\nBuildVersion:\t11G63\nDarwin 11.4.2 Darwin Kernel Version 11.4.2: Thu Aug 23 16:25:48 PDT 2012; root:xnu-1699.32.7~1/RELEASE_X86_64 x86_64",
+    "vm": "OS X 10.7.5 Lion in VMware",
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 496,
+    "checks_failed": 0,
+    "checks_skipped": 85
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 267,
+      "failed": 0,
+      "skipped": 63
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 13
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery": "9736af26ab960593d0128fcaacd5cbf5a87917f3febcf472050be11fac6c460d",
+    "graphics-gallery": "a00b068aa75f655bc42e0489d4576b1332295bd18556153b15622a1c2ec226a1",
+    "multimedia-lab": "40c3992f8a372aaaa2b2f18064f519fe56c335a7f53f23b409ccdb15f537e92e",
+    "network-gui": "6ad6b302b8e63c96109a3a13f170325a5a35367562a6b7f007272216a596bd87",
+    "painting-lab": "ec49f39e14dbc1b6415f0a7457bd00ce983e9ae83eacd1f3e7cb577198928b92",
+    "qt-selftest": "fad05679eb374dfa6986562dccdb9887ef239ea62ee42358b79cbb05a3495f65",
+    "quick-qml-gallery": "39acc471e13e3efb64165529216c50afd22008e25932118a0eed979e0c489ac7",
+    "smoke-runner": "af317b9b8c6cd0c8dcfb8a8a5f5def72a6da4e975bd9e55c5fc197761ea717e2",
+    "widgets-gallery": "c20784aa707640b0969998e7b1782ad3e402c7bc6ef0da5dc8ea99fa7b039821"
+  }
+}

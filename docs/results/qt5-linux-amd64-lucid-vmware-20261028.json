@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "date": "2026-10-14",
-  "target": "tests-qt5-linux-amd64-gpl-enabled",
+  "date": "2026-10-28",
+  "target": "tests-qt5-linux-amd64",
   "status": "PASS",
-  "image": "qt5-linux-amd64-gpl-enabled",
+  "image": "qt5-linux-amd64",
   "guest": {
     "os": "Linux ubuntu 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
     "system": "Linux ubuntu 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux\nDISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=10.04\nDISTRIB_CODENAME=lucid\nDISTRIB_DESCRIPTION=\"Ubuntu 10.04.4 LTS\"\nldd (Ubuntu EGLIBC 2.11.1-0ubuntu7.8) 2.11.1",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "9f644073e90c794f721836c10014c3e04cf9a6aef8f53e101b90f4e6f000e5e5",
-    "graphics-gallery": "17a647565c628e2d5bd1e7180f9f05498f051a04bf80c9249435ca96aa455ab6",
-    "multimedia-lab": "a3e728bffb8e6dd93981ff91e469b6babfe122c92df3d1d3abaa5da145419d70",
-    "network-gui": "e7c3617b5d94df9e582bfdf6b400ea93ea96095bed2cd81e220b3136b1d7caa6",
-    "painting-lab": "d0657d36b580ccafc946b856e2433872bcd8a729faa389db50b333a82db01d03",
-    "qt-selftest": "28c9ee76758d87e7966d6cb02b3e42dcd8bfa15091dd36e32292daaa1a79b1b8",
-    "quick-qml-gallery": "190023c330349d000b2b5eacb003c9e5e96a323b1452f9d04524266246a94579",
-    "smoke-runner": "980e555e53a35d6c06fe891d26b1f70d3eae68b302bf4415b5c1167b11becdff",
-    "widgets-gallery": "d3caeea78be5c9991377fb9f233bdac5fdb8085c2a792283c79ef33329709d4e"
+    "gl-heavy-gallery": "720583090d6727ccc8b30923099da73f583ec80cd31d494b6de12eda8cf9e6ac",
+    "graphics-gallery": "9eeb843ade810c208c0f3cbd3e252fbe67909d2b1e19e56b86c42b7b71800a4c",
+    "multimedia-lab": "38bf5e68c2c64551ac1552038a1ebb62e46f38a30fc67f51f321f1a667c1dc3a",
+    "network-gui": "d2584f68a621e6bea28915b884fb4422f481be78c1a2607d199bed087a3bb676",
+    "painting-lab": "45b799195fac263e6490902cc08c28e2909233d818090c2f01c1d56593687799",
+    "qt-selftest": "6d76fe4f7a43d16665fd8ca94c95f9b815ea9f369c8d7adc015e067b64000564",
+    "quick-qml-gallery": "e573cd06e2a828f9b2eb611b31d6cfae40de95147b6d49fa0a15587dd38f0420",
+    "smoke-runner": "f87158baaaa7dcafe72c8fff22ee06a8ea587566a9f29b9cca5901e66b56dee1",
+    "widgets-gallery": "e64c510c653402e8ce0e0100b6228d30d456041b93218fbc23e989f1a934d9cd"
   }
 }

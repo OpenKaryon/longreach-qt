@@ -29,8 +29,8 @@ run.
 |--------|-------|--------|--------|
 | `qt4-win-i386` | Windows 95 OSR2 | Windows 95 OSR2 (QEMU) | 8/8, 367 passed, 0 failed ([json](results/qt4-win-i386-win95-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-win95-openssl102u-qemu-20261002.json)) |
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
-| | | Windows 11 (the build host) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-host-20261010.json)); the two native print dialog checks skip there |
-| `qt4-win-amd64` | Windows XP x64 | Windows 11 (the build host) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-host-20261011.json)); not yet on XP x64 |
+| | | Windows 11 (VMware) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-vmware-20261029.json)); the two native print dialog checks skip there |
+| `qt4-win-amd64` | Windows XP x64 | Windows 11 (VMware) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-vmware-20261029.json)); not yet on XP x64 |
 | `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge, kernel 2.6.8 (QEMU) | 8/8, 361 passed, 0 failed ([json](results/qt4-linux-i386-sarge-qemu-20261013.json)); earlier 24/24 on a Sarge Xfce desktop ([json](results/qt4-sarge-desktop-20261002.json)) |
 | | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([Ubuntu](results/qt4-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [Debian](results/qt4-linux-i386-debian-12-i386-docker-20261011.json)) |
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
@@ -47,7 +47,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
 | `qt5-win-i386`, `qt5-win-amd64` | Windows XP SP3 (i386), XP x64 SP2 (amd64) | Windows XP SP3 (VMware, i386) | 8/8, 478 passed, 0 failed ([json](results/qt5-win-i386-xp-sp3-vmware-20261028.json)); earlier also on real XP hardware |
-| | | Windows 11 (the build host), amd64 | 8/8, 498 passed, 0 failed ([json](results/qt5-win-amd64-win11-host-20261010.json)); the two native print dialog checks skip there |
+| | | Windows 11 (VMware), amd64 | 8/8, 498 passed, 0 failed ([json](results/qt5-win-amd64-win11-vmware-20261029.json)); the two native print dialog checks skip when Windows 11's PrintDialog.exe does not answer, as here |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 498 passed, 0 failed ([json](results/qt5-linux-amd64-lucid-vmware-20261028.json)) |
 | | | CentOS 7, Debian 13 (containers) | 8/8, 511 passed, 0 failed ([CentOS 7](results/qt5-linux-amd64-centos-7-docker-20261028.json), [Debian 13](results/qt5-linux-amd64-debian-13-docker-20261028.json)); with GStreamer, PulseAudio, speech-dispatcher and BlueZ installed, 513 ([json](results/qt5-linux-amd64-debian-13-media-docker-20261028.json)) |
@@ -66,7 +66,7 @@ With the security patches (`patches/qt6/all/05`-`27`). The rows marked
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
 | `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261027.json)) |
-| | | Windows 11 (the build host) | 6.8.4: 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-host-20261010.json)) |
+| | | Windows 11 (VMware) | 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-vmware-20261029.json)) |
 | `qt6-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261027.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261027.json)) |
 | | | Linux Mint 22.3 (VMware) | 6.8.4: 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |

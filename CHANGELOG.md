@@ -20,14 +20,20 @@
   Compatibility, Qt NFC); `25` the Qt MQTT parser fixes with
   CVE-2026-107457; `26` and `27` memory-safety fixes from Qt's 6.12 branch
   for untrusted input without a CVE diff: QDom, QXmlStreamReader,
-  qUncompress, CBOR, HTTP/2, the TIFF and ICNS readers.
+  qUncompress, CBOR, HTTP/2, the TIFF and ICNS readers. `28`:
+  `QDomNode::save()` of an attribute, a doctype or a document fragment on
+  its own writes what it did before 6.8.4; Qt's CVE-2026-11573 fix made an
+  attribute repeat its value (`id="1"1`), a doctype its notations, and
+  moved a fragment's children one level deeper.
 - Qt 5: the security fixes Qt has published for 6.8 but not for 5.15,
   ported to 5.15.19 as `patches/qt5/all/09`-`26`, one per CVE:
   CVE-2025-12385, -14575, -5683, CVE-2026-101201, -105924, -105946, -107157,
   -107472, -107590, -11573, -13326, -16762, -19248, -78253, -79616, -8168,
   -82292 and -9499; `27` and `28` the QDom, TIFF and ICNS fixes of Qt 6's
   `all/26` and `all/27`. Qt SVG now draws at most 32 nested groups, as
-  Qt 6.8 does since CVE-2026-8168.
+  Qt 6.8 does since CVE-2026-8168. The CVE-2026-11573 port saves an
+  attribute, a doctype or a fragment on its own as 5.15 did (see Qt 6's
+  `28`).
 - Qt 4: security fixes, as `patches/qt4/all/07`-`44`. 07-25 are the ones
   Debian's LTS and Fedora carry for 4.8.7: CVE-2014-0190, CVE-2018-15518,
   -19869, -19870, -19871, -19872, -19873, CVE-2020-17507, -24741,

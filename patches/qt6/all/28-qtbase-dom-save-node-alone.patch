@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtXml: QDomNode::save() of an attribute, a doctype or a document fragment
+# writes what it did before 6.8.4.
+#
+# Qt's fix for CVE-2026-11573, in 6.8.4, saves a node with a walk that goes
+# into the children of every node; the recursive save() it replaced went
+# into those of elements and fragments only. Saved on its own, an attribute
+# then repeats its value (id="1"1), a doctype its notations, and the
+# children of a fragment move one level deeper. The walk now goes into
+# elements and fragments only, as the recursion did; documents and elements
+# are saved as before. Qt's 6.8 and dev branches still have the walk
+# unchanged.
+# Applies to Qt 6.8.5 after the patches before it.
+diff --git a/qtbase/src/xml/dom/qdom.cpp b/qtbase/src/xml/dom/qdom.cpp
+--- a/qtbase/src/xml/dom/qdom.cpp
++++ b/qtbase/src/xml/dom/qdom.cpp
+@@ -1355,21 +1355,30 @@ void QDomNodePrivate::normalize()
+     qNormalizeNode(this);
+ }
+ 
++// Whether saving n saves its children too, as the recursive save() did: an
++// element below its own tag, a fragment at its own depth. The other nodes
++// (attributes, the doctype, entities) write their children themselves or not
++// at all.
++static inline bool qSavesChildren(const QDomNodePrivate *n)
++{
++    return n->isElement() || n->isDocumentFragment();
++}
++
+ void QDomNodePrivate::saveSubTree(const QDomNodePrivate *n, QTextStream &s,
+                                   int depth, int indent) const
+ {
+     if (!n)
+         return;
+ 
+-    const QDomNodePrivate *root = n->first;
++    const QDomNodePrivate *root = qSavesChildren(n) ? n->first : nullptr;
+     n->save(s, depth, indent);
+     if (root) {
+-        const int branchDepth = depth + 1;
++        const int branchDepth = n->isElement() ? depth + 1 : depth;
+         int layerDepth = 0;
+         while (root) {
+             root->save(s, layerDepth + branchDepth, indent);
+             // A flattened (non-recursive) depth-first walk through the node tree.
+-            if (root->first) {
++            if (root->first && qSavesChildren(root)) {
+                 layerDepth ++;
+                 root = root->first;
+                 continue;

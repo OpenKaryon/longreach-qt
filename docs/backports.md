@@ -90,7 +90,8 @@ and 6.8.5.
   mapbox build fix. 09-26 are the security fixes Qt has published for 6.8
   but not for 5.15, one patch per CVE, ported to 5.15: QtCore, QtXml,
   QtNetwork, Qt SVG, Qt Quick, Qt NFC and the ICNS reader (each header names
-  the 6.8 diffs, their SHA256, and what differs in Qt 5). 27 and 28 are the
+  the 6.8 diffs, their SHA256, and what differs in Qt 5; 18 saves a node on
+  its own as 5.15 did, see Qt 6's `all/28`). 27 and 28 are the
   fixes of Qt 6's `all/26` and `all/27` that 5.15 needs too (QDom text, the
   TIFF and ICNS readers). Since CVE-2026-8168 a document drawn by Qt SVG
   stops at 32 nested groups, as in Qt 6.8, and Qt 5 has no option to lift
@@ -124,7 +125,7 @@ and 6.8.5.
 
 ## Qt 6.8.5
 
-- `all/` (27): OpenSSL symbol clash between QtOpcUa and QtNetwork in static
+- `all/` (28): OpenSSL symbol clash between QtOpcUa and QtNetwork in static
   builds; the D-Bus tray menu without a session bus; fonts without fontconfig;
   legacy libGL on Linux. 05-24 are security fixes 6.8.5 does not have, one
   patch per CVE, from the diffs Qt publishes for 6.8 under
@@ -134,6 +135,11 @@ and 6.8.5.
   branch, CVE-2026-107457 among them; 26 and 27 a few more memory-safety
   fixes from that branch for untrusted input that have no CVE diff (QDom,
   QXmlStreamReader, qUncompress, CBOR, HTTP/2, the TIFF and ICNS readers).
+  28 is our own: Qt's CVE-2026-11573 fix (6.8.4) saves with a walk that
+  goes into the children of every node, so `QDomNode::save()` of an
+  attribute, a doctype or a fragment on its own wrote the value, the
+  notations or the children wrongly; the walk now goes into elements and
+  fragments only, as the recursive save() did.
   CVE-2025-10728, -10729 and -5683 are
   in 6.8.5 already, CVE-2025-14575, -3512, -4211, -5455, -5992, -6338,
   -23050 and CVE-2026-11573 in 6.8.4.

@@ -10,7 +10,7 @@
 #
 --- a/src/xml/dom/qdom.cpp
 +++ b/src/xml/dom/qdom.cpp
-@@ -4600,15 +4600,25 @@ QString QDomElementPrivate::text()
+@@ -4609,15 +4609,25 @@ QString QDomElementPrivate::text()
  {
      QString t(QLatin1String(""));
  

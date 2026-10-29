@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Qt XML Patterns: the item mapping iterator loops instead of recursing, so
+# a large data set cannot exhaust the stack (QTBUG-40153).
+#
+# From Debian's Qt 4.8.7 (qt4-x11, LTS branch debian/buster),
+# xmlpatterns_stack_overflow_fix.diff:
+# https://salsa.debian.org/lts-team/packages/qt4-x11/-/raw/debian/buster/debian/patches/xmlpatterns_stack_overflow_fix.diff
+#   SHA256 5749d4026e51deac0521bc21cdcbf0dc8e9213eb44a3e017bc953f59df5ffe28
+# Upstream: Qt 5 commit d1b17740ed (Kamil Rojewski), "fix for stack
+# overflow".
+#
+--- a/src/xmlpatterns/iterators/qitemmappingiterator_p.h
++++ b/src/xmlpatterns/iterators/qitemmappingiterator_p.h
+@@ -117,24 +117,28 @@ namespace QPatternist
+          */
+         virtual TResult next()
+         {
+-            const TSource sourceItem(m_it->next());
+-
+-            if(qIsForwardIteratorEnd(sourceItem))
+-            {
+-                m_current = TResult();
+-                m_position = -1;
+-                return TResult();
+-            }
+-            else
++            while (true)
+             {
+-                m_current = m_mapper->mapToItem(sourceItem, m_context);
+-                if(qIsForwardIteratorEnd(m_current))
+-                    return next(); /* The mapper returned null, so continue with the next in the source. */
+-                else
++                const TSource &sourceItem = m_it->next();
++                if (qIsForwardIteratorEnd(sourceItem))
+                 {
+-                    ++m_position;
++                    m_current = TResult();
++                    m_position = -1;
+                     return m_current;
+                 }
++                else
++                {
++                    m_current = m_mapper->mapToItem(sourceItem, m_context);
++                    if (qIsForwardIteratorEnd(m_current))
++                    {
++                        continue; /* The mapper returned null, so continue with the next in the source. */
++                    }
++                    else
++                    {
++                        ++m_position;
++                        return m_current;
++                    }
++                }
+             }
+         }
+ 

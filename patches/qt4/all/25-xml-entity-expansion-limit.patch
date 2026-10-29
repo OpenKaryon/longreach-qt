@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QXmlSimpleReader: an entity may expand to 4096 characters, not 1024, as in
+# Qt 5 (QTBUG-35459). Qt 4.8.6 added the limit for CVE-2013-4549; at 1024 it
+# refused ordinary documents.
+#
+# From Fedora's Qt 4.8.7 (rpms/qt),
+# qt-everywhere-opensource-src-4.8.5-QTBUG-35459.patch:
+# https://src.fedoraproject.org/rpms/qt/raw/rawhide/f/qt-everywhere-opensource-src-4.8.5-QTBUG-35459.patch
+#   SHA256 d05c376c568176f7bf7507c82ff48dcf2092e999064391fd5b3fa9a2a96f23d3
+# Upstream: Fedora's fix for QTBUG-35459.
+#
+--- a/src/xml/sax/qxml.cpp
++++ b/src/xml/sax/qxml.cpp
+@@ -433,7 +433,7 @@ private:
+     // for the DTD currently being parsed.
+     static const int dtdRecursionLimit = 2;
+     // The maximum amount of characters an entity value may contain, after expansion.
+-    static const int entityCharacterLimit = 1024;
++    static const int entityCharacterLimit = 4096;
+ 
+     const QString &string();
+     void stringClear();

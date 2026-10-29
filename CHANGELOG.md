@@ -28,6 +28,18 @@
   -82292 and -9499; `27` and `28` the QDom, TIFF and ICNS fixes of Qt 6's
   `all/26` and `all/27`. Qt SVG now draws at most 32 nested groups, as
   Qt 6.8 does since CVE-2026-8168.
+- Qt 4: security fixes, as `patches/qt4/all/07`-`44`. 07-25 are the ones
+  Debian's LTS and Fedora carry for 4.8.7: CVE-2014-0190, CVE-2018-15518,
+  -19869, -19870, -19871, -19872, -19873, CVE-2020-17507, -24741,
+  CVE-2021-3481, -45930, CVE-2023-32573, -32763, -34410, -37369, -38197,
+  the Qt XML Patterns stack overflow, the font table checks and the
+  QXmlSimpleReader entity limit of Qt 5. 26-43 port the Qt 5 security
+  patches and Qt's own 5.15 fixes where Qt 4 has the code: CVE-2022-25255,
+  CVE-2023-43114, CVE-2025-14575, -30348, -5455, CVE-2026-105923, -105946,
+  -107472, -107590, -11573, -16762, -19248, -78253, -8168, -82292 and
+  -9499, the QDom text and TIFF writer fixes. 44: `QSsl::SecureProtocols`,
+  the default, no longer allows SSL 3.0. Qt SVG draws at most 32 nested
+  groups, as Qt 5 and Qt 6 do.
 - painting-lab runs its two native print dialog checks in a child process
   and skips one that has not finished within 60 s: Windows 11's
   PrintDialog.exe, which shows Qt 5's print dialog, can close it and never

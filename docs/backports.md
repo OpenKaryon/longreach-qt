@@ -37,10 +37,34 @@ and 6.8.5.
 
 ## Qt 4.8.7
 
-- `all/` (6): OpenSSL 1.1/3 API port, guarded on the version so 1.0.2 builds
+- `all/` (44): OpenSSL 1.1/3 API port, guarded on the version so 1.0.2 builds
   as upstream did; TLS 1.2/1.3 cipher selection by name; three upstream
   crashes (accessibility on item views, static animation registration,
-  JavaScriptCore frame tagging under clang).
+  JavaScriptCore frame tagging under clang). 07-25 are the security fixes
+  Debian (its LTS qt4-x11) and Fedora carry for 4.8.7, most of them Qt's own
+  fixes back-ported: QXmlStreamReader (CVE-2018-15518, CVE-2023-37369,
+  -38197), Qt SVG (CVE-2018-19869, CVE-2021-3481, -45930, CVE-2023-32573),
+  the GIF, TGA, PPM, BMP and XBM readers (CVE-2014-0190, CVE-2018-19870 to
+  -19873, CVE-2020-17507), QTextLayout (CVE-2023-32763), QSslSocket
+  (CVE-2023-34410), QLibrary (CVE-2020-24741), Qt XML Patterns, the font
+  engines' table checks (Qt's last 4.8 commit), and QXmlSimpleReader's
+  entity limit at 4096 characters, as in Qt 5 (QTBUG-35459; Fedora's first,
+  larger limit was CVE-2016-10040). Each header names the distribution's
+  file, its SHA256 and what differs here, which is C++98 for the floors'
+  compilers. 26-43 are the security fixes of `qt5/all` and the ones Qt
+  published for 5.15 itself, where Qt 4 has the code: QtCore, QtXml,
+  QtNetwork, Qt SVG, QTriangulator, QProcess (CVE-2022-25255), Windows
+  application fonts (CVE-2023-43114) and the TIFF writer; Qt SVG also gets
+  Qt 5's guards against a `<use>` of its own ancestor, and draws at most 32
+  nested groups. 44 takes SSL 3.0 out of `QSsl::SecureProtocols`, the
+  default, as Qt 5.4 did after POODLE (Qt 4 still links OpenSSL 1.0.2u).
+  Not ported, because Qt 4 lacks the code: JSON, CBOR, ICNS, NFC, HTTP/2,
+  HSTS, QDnsLookup, Qt Quick (QML 1 has neither images in StyledText nor an
+  SVG path parser), SVG markers and masks, and -76151 (Qt 4's lengths are
+  int); ODBC is not built. CVE-2022-25643 (crypt32 from the system
+  directory) and -4211 (GetTempPath2) are left out: both touch code the
+  Windows 9x series changes, for little gain. The bundled zlib, libpng,
+  libjpeg, libtiff, FreeType and SQLite are still the ones of 4.8.7.
 - `windows/` (27): the mkspec (static runtime, size flags, `QT_WIN95_SUPPORT`)
   and the Windows 95/98/ME restoration. Qt removed the Win9x code in 4.6; these
   patches bring back runtime ANSI/Unicode selection in QtCore, the file system,

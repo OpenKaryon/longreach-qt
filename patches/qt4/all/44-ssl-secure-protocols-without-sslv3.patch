@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QSslSocket: QSsl::SecureProtocols, the default, no longer allows SSL 3.0
+# (POODLE, CVE-2014-3566), as in Qt 5.4 and later. QSsl::TlsV1SslV3 and
+# QSsl::SslV3 still allow it when asked for.
+#
+# This matters where Qt 4 uses OpenSSL 1.0.2u, which still has SSL 3.0; with
+# OpenSSL 1.1 and 3 the option changes nothing.
+#
+--- a/src/network/ssl/qssl.cpp
++++ b/src/network/ssl/qssl.cpp
+@@ -111,7 +111,7 @@ QT_BEGIN_NAMESPACE
+     a TLS 1.0 Client Hello, enabling TLSv1 and SSLv3 connections.
+     On the server side, this will enable both SSLv3 and TLSv1 connections.
+     \value SecureProtocols The default option, using protocols known to be secure;
+-    currently behaves like TlsV1SslV3.
++    currently TLS only: SSLv2 and SSLv3 are disabled.
+ 
+     Note: most servers using SSL understand both versions (2 and 3),
+     but it is recommended to use the latest version only for security
+--- a/src/network/ssl/qsslsocket_openssl.cpp
++++ b/src/network/ssl/qsslsocket_openssl.cpp
+@@ -308,8 +308,14 @@ init_context:
+ 
+     // Enable bug workarounds.
+     long options;
+-    if (configuration.protocol == QSsl::TlsV1SslV3 || configuration.protocol == QSsl::SecureProtocols)
++    if (configuration.protocol == QSsl::TlsV1SslV3)
+         options = SSL_OP_ALL|SSL_OP_NO_SSLv2;
++    else if (configuration.protocol == QSsl::SecureProtocols)
++#ifdef SSL_OP_NO_SSLv3
++        options = SSL_OP_ALL|SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3;
++#else
++        options = SSL_OP_ALL|SSL_OP_NO_SSLv2;
++#endif
+     else
+         options = SSL_OP_ALL;
+ 

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# TIFF writer: no read past an empty color table of a monochrome or 8-bit
+# image.
+#
+# Ported from the Qt Image Formats hardening in patches/qt5/all/28 (Qt's 6.12
+# branch, https://github.com/qt/qtimageformats). No CVE.
+# In Qt 4 the TIFF handler is part of QtGui; its read path has no
+# counterpart of the other changes (separate planes are not read directly).
+#
+--- a/src/gui/image/qtiffhandler.cpp
++++ b/src/gui/image/qtiffhandler.cpp
+@@ -453,7 +453,7 @@ bool QTiffHandler::write(const QImage &image)
+     const QImage::Format format = image.format();
+     if (format == QImage::Format_Mono || format == QImage::Format_MonoLSB) {
+         uint16 photometric = PHOTOMETRIC_MINISBLACK;
+-        if (image.colorTable().at(0) == 0xffffffff)
++        if (image.colorTable().value(0) == 0xffffffff)
+             photometric = PHOTOMETRIC_MINISWHITE;
+         if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, photometric)
+             || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_CCITTRLE)
+@@ -486,7 +486,7 @@ bool QTiffHandler::write(const QImage &image)
+         bool isGrayscale = checkGrayscale(colorTable);
+         if (isGrayscale) {
+             uint16 photometric = PHOTOMETRIC_MINISBLACK;
+-            if (image.colorTable().at(0) == 0xffffffff)
++            if (image.colorTable().value(0) == 0xffffffff)
+                 photometric = PHOTOMETRIC_MINISWHITE;
+             if (!TIFFSetField(tiff, TIFFTAG_PHOTOMETRIC, photometric)
+                     || !TIFFSetField(tiff, TIFFTAG_COMPRESSION, compression == NoCompression ? COMPRESSION_NONE : COMPRESSION_PACKBITS)

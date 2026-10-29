@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtXml: QDomElement::text() walks the tree instead of recursing, and in
+# linear time.
+#
+# Ported from Qt's commit f11897abb9, "QDomElement: fix O(N^2) behavior and
+# unbounded recursion in text()", on Qt's 6.12 branch (https://github.com/qt/qtbase),
+# marked Pick-to: 6.8; Qt 5 gets it in patches/qt5/all/27. No CVE.
+#
+--- a/src/xml/dom/qdom.cpp
++++ b/src/xml/dom/qdom.cpp
+@@ -4600,15 +4600,25 @@ QString QDomElementPrivate::text()
+ {
+     QString t(QLatin1String(""));
+ 
+-    QDomNodePrivate* p = first;
+-    while (p) {
+-        if (p->isText() || p->isCDATASection())
+-            t += p->nodeValue();
+-        else if (p->isElement())
+-            t += ((QDomElementPrivate*)p)->text();
+-        p = p->next;
+-    }
++    // pre-order depth-first-search; visitation is t += nodeValue()
++    if (QDomNodePrivate* p = first) {
++        while (true) {
++            if (p->isText() || p->isCDATASection()) {
++                t += p->nodeValue();
++            } else if (p->isElement() && p->first) {
++                p = p->first;    // descend into Elements
++                continue;
++            }
+ 
++            while (!p->next) {
++                p = p->parent(); // ascend into visited parent (pre-order DFS)
++                if (p == this)
++                    return t; // done
++            }
++
++            p = p->next;
++        }
++    }
+     return t;
+ }
+ 

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-30",
+  "target": "tests-qt5-win-amd64",
+  "status": "PASS",
+  "image": "qt5-win-amd64",
+  "guest": {
+    "os": "Microsoft Windows [Version 6.1.7601]",
+    "system": "Microsoft Windows [Version 6.1.7601]",
+    "vm": "Windows 7 SP1 x64 in VMware",
+    "method": "suite copied with vmrun; smoke-runner.exe run in the logged-in session; fresh guest directory; all nine executables copied back and verified by SHA256"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 500,
+    "checks_failed": 0,
+    "checks_skipped": 88
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 264,
+      "failed": 0,
+      "skipped": 66
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 96,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 13
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    {
+      "application": "painting-lab",
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery.exe": "329aad75a8e70943c32d9149ef3f74f714d34c83ab518dacc589a402bcbcee72",
+    "graphics-gallery.exe": "cee357a3348095f85adf8cfc748c2e98aab969cabc5bfab6819c1e63a956e910",
+    "multimedia-lab.exe": "3d22eb025547e29f75a6f95d29edc2ee7138c3ecf66ea41353d3e529d4c68e3d",
+    "network-gui.exe": "6d0e2de8cbf477e6da6f0090aadc74a4872ff51847729fa76bdeb1399168a8d6",
+    "painting-lab.exe": "137ec63697b9d696688c987f2356f1cbaba3b3db6e1fc002813bc045e343f107",
+    "qt-selftest.exe": "f73249bdff79683b7453b10431279ad958b229950aa7005ca8f5f2bebad7712f",
+    "quick-qml-gallery.exe": "dfff19de70bf2cf712967b300e9474ce83e67768b2d849837c3733c4409fae2b",
+    "smoke-runner.exe": "a7be334c112c6feafae0eeb7e49eddec6e96c30f00a39758940259e869a3aa47",
+    "widgets-gallery.exe": "04ec75b096d5b9a345175964fd375d8e394ad8c49caba0f0042390c3a8b80450"
+  }
+}

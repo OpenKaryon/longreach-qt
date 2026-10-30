@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "date": "2026-10-27",
+  "date": "2026-10-30",
   "target": "tests-qt6-linux-amd64",
   "status": "PASS",
   "image": "qt6-linux-amd64",
   "guest": {
-    "os": "NAME=\"CentOS Linux\"",
-    "system": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\nldd (GNU libc) 2.17",
-    "vm": "container centos:7.9.2009",
+    "os": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"",
+    "system": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.7\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\nldd (Debian GLIBC 2.41-12+deb13u4) 2.41",
+    "vm": "container debian:trixie",
     "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb"
   },
   "summary": {
@@ -69,21 +69,21 @@
   ],
   "executables_sha256": {
     "GraphicalEffectsTab.qml": "9c01ad61c8904388166ab85476cba2424e34716b9ebaaead8907fa39591e267a",
-    "gl-heavy-gallery": "42bd1a82a487a4f4aa264ffb40dbad6318ec7cc270265625c5317775b8ead09c",
-    "graphics-gallery": "3d682a7073ab650df6ddf624e6bf361e9c767ea1aac49038ea910c1ed0cf3b0b",
+    "gl-heavy-gallery": "a7c15287b1451ea8e85434b7fc8a7522588c8417d170bb38d4e572ba11a752e9",
+    "graphics-gallery": "402ff40e8c88a03ef2763fd52c0eaa2e03bcc0152bc1b217f77b2af56652efe4",
     "graphics-gallery-pages.png": "21011326d10cafa5d6bb1b95c6b4c305f6fd176512cf802bca1fb8ae108eca5e",
     "graphics-shaped-window.png": "b3214b0132bcabbe8f7da209e16dc443834baf11d01dde427b5f9db877f79484",
-    "multimedia-lab": "6ae4812832e5827fbbc393161ba3f22a923a2b4b64e4dc14162fc1375e837022",
-    "network-gui": "0a2b4a76746169a3a219d57685ad84af796aba75cf5a86833213784559612117",
-    "painting-lab": "3e7013592282c0fb83e1af22acf8b630de180a0e5e098b96b8a902251d8c14b4",
+    "multimedia-lab": "fa2134c39074fa7b1d9846978e6dcadd5e374221e7a3f796d54d9485463d8ed6",
+    "network-gui": "d00af31e592b18c08d632c9ed0c74bce066266e198c1b22e130542cecf457580",
+    "painting-lab": "168cead03a9c067f0d59d76a076e917e703734b3fa38cb407f0b979aa0695ec3",
     "painting-lab-pages.png": "09ea3567db7a43d189cec7cb6dabb2125fd685c477bef1d9d4c53f3e7798224e",
     "painting-preview-dialog.png": "c8f9b1d56f1a5efeb34ae63beabfac9d7839e0b15e92dbf32b621c5cd00b64e0",
     "painting-preview.png": "d39a10b7878a6dfc4a23a1b8b442ebff1ca76bfa1a7e3559a09b3ac05514bb5d",
-    "painting-sample.pdf": "4641a75db055d897185b59ca6859d9e7858467f5c53ef48b17a433f2a6f61b6e",
-    "qt-selftest": "485f4e9593d50f377257facb61e30af0fe68df5126aef97b4d7094c89bbf12f4",
-    "quick-qml-gallery": "bc9d7a9ee86e4c38e20bf58c8e4dc7a1aecb0d8bdc15c106f61594dd65bd922c",
+    "painting-sample.pdf": "0bc21a18bccfcbd4978271b3df8c38b91a897568aadb53d61dbdf40951ab9820",
+    "qt-selftest": "727da87d66b52f24b261fd017daf2bbaf0eda09ecca8946f18e6679b21a951d1",
+    "quick-qml-gallery": "d7c59fe5769d3fb1205c4e5da4ee4533a74b08200abbceb1cfda66acdd51ed0c",
     "smoke-runner": "044e76a3e18370551fc0c79dedc54678061843ba887a83cf8061dd22f9614959",
-    "widgets-gallery": "50e7838aaae8809f8c1d580984acd8abbda7755b7c4493a933cebf64d580bbf0",
-    "widgets-gallery-pages.png": "3bf5aab508a92d97421d38f616093c8c0f262b7ff8cf04b21df75fa54f11ad03"
+    "widgets-gallery": "b9da5396a1c37957bb710a94321a4ddc253cc6bb39e670ab65bae3fbbab1bc21",
+    "widgets-gallery-pages.png": "69f6fff35e16e00809dbbda44a94a04a0a484b131807044f40e336cea75071a1"
   }
 }

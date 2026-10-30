@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "date": "2026-10-28",
+  "date": "2026-10-30",
   "target": "tests-qt5-linux-amd64",
   "status": "PASS",
   "image": "qt5-linux-amd64",
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "720583090d6727ccc8b30923099da73f583ec80cd31d494b6de12eda8cf9e6ac",
+    "gl-heavy-gallery": "65ff46ea1ea180166cfcdceee05db4d550f2ff704ce79cf93a527edc6992ee04",
     "graphics-gallery": "9eeb843ade810c208c0f3cbd3e252fbe67909d2b1e19e56b86c42b7b71800a4c",
-    "multimedia-lab": "38bf5e68c2c64551ac1552038a1ebb62e46f38a30fc67f51f321f1a667c1dc3a",
-    "network-gui": "d2584f68a621e6bea28915b884fb4422f481be78c1a2607d199bed087a3bb676",
-    "painting-lab": "45b799195fac263e6490902cc08c28e2909233d818090c2f01c1d56593687799",
-    "qt-selftest": "6d76fe4f7a43d16665fd8ca94c95f9b815ea9f369c8d7adc015e067b64000564",
-    "quick-qml-gallery": "e573cd06e2a828f9b2eb611b31d6cfae40de95147b6d49fa0a15587dd38f0420",
+    "multimedia-lab": "a916005c0a907b81cfc1a2e96f03a1c558840851b69cc53a39ed7e0799e7f909",
+    "network-gui": "c19d2b6b9f9b5a484fbcc2b8ab7385d5986f87cc4607b350431494e5f99f205b",
+    "painting-lab": "8b439a3caf2170ebeaa34022b7fdb39b6aa2c122ec5f64106d8e9730b3e0238b",
+    "qt-selftest": "bcbaeabce4d1ab2571069a65dee5ac70a644c386c033deabb831dd37b8c760cd",
+    "quick-qml-gallery": "94ae43c9e75a66a5e8e425bcdd4b5e352781ffb9675556869ed4c0478ee04fd9",
     "smoke-runner": "f87158baaaa7dcafe72c8fff22ee06a8ea587566a9f29b9cca5901e66b56dee1",
-    "widgets-gallery": "e64c510c653402e8ce0e0100b6228d30d456041b93218fbc23e989f1a934d9cd"
+    "widgets-gallery": "83d543873493520536ecc0343f114663a890da32ab6e81450599e1f23ba5b0e8"
   }
 }

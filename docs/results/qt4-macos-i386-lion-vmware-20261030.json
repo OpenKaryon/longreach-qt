@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-30",
+  "target": "tests-qt4-macos-i386",
+  "status": "PASS",
+  "image": "qt4-macos-i386",
+  "guest": {
+    "os": "ProductName:\tMac OS X",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.7.5\nBuildVersion:\t11G63\nDarwin 11.4.2 Darwin Kernel Version 11.4.2: Thu Aug 23 16:25:48 PDT 2012; root:xnu-1699.32.7~1/RELEASE_X86_64 x86_64",
+    "vm": "OS X 10.7.5 Lion in VMware",
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH; fresh guest directory"
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 366,
+    "checks_failed": 0,
+    "checks_skipped": 129
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 119,
+      "failed": 0,
+      "skipped": 116
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 9
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "application": "network-gui",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "executables_sha256": {
+    "gl-heavy-gallery.app/Contents/Info.plist": "0c187a5f854bfb205f98d712f31477dd1277053539091822aeef613f83b8679e",
+    "gl-heavy-gallery.app/Contents/MacOS/gl-heavy-gallery": "81e1defe9b2682cbd2ed67ec2e4a22fa15a5f2bd74ac60b88c83f4cd875715ea",
+    "gl-heavy-gallery.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "graphics-gallery.app/Contents/Info.plist": "b1b4cca09b78cadd739a54f8c7a1d302bbdf212638b59e3835cdeb8b8a039ad2",
+    "graphics-gallery.app/Contents/MacOS/graphics-gallery": "cb9aeba0dcdf774bdec90a09b8e01a4eafe46c9247d129c3faee9d67a6dc105a",
+    "graphics-gallery.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "multimedia-lab.app/Contents/Info.plist": "36abb36586c6d912446b12c2041a8c73567fc9fce4abd5414161db1b9d30eb7b",
+    "multimedia-lab.app/Contents/MacOS/multimedia-lab": "470f5717149021a695a5069b49ac6d61ab72c54f45eeddf70b704e6292948b92",
+    "multimedia-lab.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "network-gui.app/Contents/Info.plist": "636babd4408ec051d14f9b6a717a5ba1b6f78c1b6623ce53c79aed91ccbec81e",
+    "network-gui.app/Contents/MacOS/network-gui": "ff8ea5645f0a52da363c47a044671d5db7073aea35842a726036c1875cb10d92",
+    "network-gui.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "painting-lab.app/Contents/Info.plist": "23ec1da569115579332dca239999c70fecbbb561511506bc9b095b28dc3a9ad0",
+    "painting-lab.app/Contents/MacOS/painting-lab": "407d6c2c2390e75b162b9c1526ec87581e013ea46d2dbf602a6279c056c79650",
+    "painting-lab.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "qt-selftest.app/Contents/Info.plist": "c8f301d7fdcfa160068d3cf375495208adae38e5417bcdaaf26f3fe56910e081",
+    "qt-selftest.app/Contents/MacOS/qt-selftest": "8adbc4c82061e2f0fe8902934a26c45922b56e12a5a781933f1eabdfdb782f46",
+    "qt-selftest.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "quick-qml-gallery.app/Contents/Info.plist": "67f3b1226df8527c6909e41a07e328b31153621232af52fd25e962126e3a47a9",
+    "quick-qml-gallery.app/Contents/MacOS/quick-qml-gallery": "6cb8ef8c3ba01555171eac5d0ab263a1dbb272979b1b3a6007e87c39c267d4d9",
+    "quick-qml-gallery.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "smoke-runner": "994ac51f408d97598f63d77f407d405a779938fcfed43d8e3fe77408ef1c6947",
+    "smoke-runner.app/Contents/Info.plist": "2fd86afc83e8425070e29d4f5128e368d03aca918978399231721964583d05eb",
+    "smoke-runner.app/Contents/MacOS/smoke-runner": "994ac51f408d97598f63d77f407d405a779938fcfed43d8e3fe77408ef1c6947",
+    "smoke-runner.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "widgets-gallery.app/Contents/Info.plist": "715a211bdcc1374d9f92270751bee55f98bc4009fffa986d508c1e20f0463d44",
+    "widgets-gallery.app/Contents/MacOS/widgets-gallery": "40aed8d607b08696204c5700203b31e7423c005285ddb734891b9494971eee2b",
+    "widgets-gallery.app/Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+  }
+}

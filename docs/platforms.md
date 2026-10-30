@@ -23,20 +23,36 @@ checks, split differently); the Qt 4 numbers below count those. Each result
 links its record in [results/](results/); a system is listed with its latest
 run.
 
+The [2026-10-30 build and test report](results/qt5-qt6-build-and-tests-20261030.md)
+records the final Qt 5/6 suites at `ea9b0aa`: all 15 targets and the
+Qt 6 host tools built successfully, one target at a time. The current
+Linux amd64 suites pass on Debian 13 and CentOS 7; the Windows and macOS follow-up is recorded below.
+
+The [final Windows and macOS validation](results/windows-macos-final-20261030.md)
+records the 2026-10-30 runs of the current suites, including additional
+Windows XP/7/11 combinations. Results below link the latest run where
+it has been repeated; built-only ARM targets retain that status.
+
 ### Qt 4.8.7
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
 | `qt4-win-i386` | Windows 95 OSR2 | Windows 95 OSR2 (QEMU) | 8/8, 367 passed, 0 failed ([json](results/qt4-win-i386-win95-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-win95-openssl102u-qemu-20261002.json)) |
+| | | Windows 7 SP1 x64 (VMware, i386) | 8/8, 375 passed, 0 failed, 124 skipped ([json](results/qt4-win-i386-win7-vmware-20261030.json)) |
+| | | Windows XP SP3 (VMware, i386) | 8/8, 370 passed, 0 failed, 129 skipped ([json](results/qt4-win-i386-xp-sp3-vmware-20261030.json)) |
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
-| | | Windows 11 (VMware) | 8/8, 373 passed, 0 failed ([json](results/qt4-win-i386-win11-vmware-20261029.json)); the two native print dialog checks skip there |
-| `qt4-win-amd64` | Windows XP x64 | Windows 11 (VMware) | 8/8, 371 passed, 0 failed ([json](results/qt4-win-amd64-win11-vmware-20261029.json)); not yet on XP x64 |
+| | | Windows 11 (VMware) | 8/8, 373 passed, 0 failed, 126 skipped ([json](results/qt4-win-i386-win11-vmware-20261030.json)) |
+| `qt4-win-amd64` | Windows XP x64 | Windows 11 (VMware) | 8/8, 371 passed, 0 failed, 126 skipped ([json](results/qt4-win-amd64-win11-vmware-20261030.json)); not yet on XP x64 |
+| | | Windows 7 SP1 x64 (VMware, amd64) | 8/8, 373 passed, 0 failed, 124 skipped ([json](results/qt4-win-amd64-win7-vmware-20261030.json)) |
 | `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge, kernel 2.6.8 (QEMU) | 8/8, 361 passed, 0 failed ([json](results/qt4-linux-i386-sarge-qemu-20261013.json)); earlier 24/24 on a Sarge Xfce desktop ([json](results/qt4-sarge-desktop-20261002.json)) |
 | | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([Ubuntu](results/qt4-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [Debian](results/qt4-linux-i386-debian-12-i386-docker-20261011.json)) |
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
 | | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |
 | `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU, Core Duo) | 8/8, 364 passed, 0 failed ([json](results/qt4-macos-i386-tiger-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-tiger-i386-suite-20261003.json)) |
+| | | macOS 10.13.6 (VMware, i386) | 8/8, 369 passed, 0 failed, 126 skipped ([json](results/qt4-macos-i386-highsierra-vmware-20261030.json)) |
+| | | OS X 10.7.5 (VMware, i386) | 8/8, 366 passed, 0 failed, 129 skipped ([json](results/qt4-macos-i386-lion-vmware-20261030.json)) |
+| | | Mac OS X 10.6.3 (VMware, i386) | 8/8, 366 passed, 0 failed, 129 skipped ([json](results/qt4-macos-i386-snowleopard-vmware-20261030.json)) |
 | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU, G4) | 8/8 each, 361 passed, 0 failed ([10.2](results/qt4-macos-ppc-jaguar-10.2-qemu-20261014.json), [10.2.8](results/qt4-macos-ppc-jaguar-10.2.8-qemu-20261014.json)); earlier 24/24 also on an emulated G3 ([json](results/qt4-jaguar-suite-20261005.json)) |
 | | | Tiger 10.4.10 (QEMU, G4) | 8/8, 363 passed, 0 failed ([json](results/qt4-macos-ppc-tiger-qemu-20261014.json)) |
 
@@ -46,32 +62,35 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
-| `qt5-win-i386`, `qt5-win-amd64` | Windows XP SP3 (i386), XP x64 SP2 (amd64) | Windows XP SP3 (VMware, i386) | 8/8, 478 passed, 0 failed ([json](results/qt5-win-i386-xp-sp3-vmware-20261028.json)); earlier also on real XP hardware |
-| | | Windows 11 (VMware), amd64 | 8/8, 498 passed, 0 failed ([json](results/qt5-win-amd64-win11-vmware-20261029.json)); the two native print dialog checks skip when Windows 11's PrintDialog.exe does not answer, as here |
+| `qt5-win-i386`, `qt5-win-amd64` | Windows XP SP3 (i386), XP x64 SP2 (amd64) | Windows XP SP3 (VMware, i386) | 8/8, 478 passed, 0 failed, 97 skipped ([json](results/qt5-win-i386-xp-sp3-vmware-20261030.json)) |
+| | | Windows 7 SP1 x64 (VMware, i386) | 8/8, 500 passed, 0 failed, 88 skipped ([json](results/qt5-win-i386-win7-vmware-20261030.json)) |
+| | | Windows 11 x64 (VMware, i386) | 8/8, 498 passed, 0 failed, 90 skipped ([json](results/qt5-win-i386-win11-vmware-20261030.json)) |
+| | | Windows 7 SP1 x64 (VMware, amd64) | 8/8, 500 passed, 0 failed, 88 skipped ([json](results/qt5-win-amd64-win7-vmware-20261030.json)) |
+| | | Windows 11 (VMware), amd64 | 8/8, 498 passed, 0 failed, 90 skipped ([json](results/qt5-win-amd64-win11-vmware-20261030.json)) |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 498 passed, 0 failed ([json](results/qt5-linux-amd64-lucid-vmware-20261028.json)) |
-| | | CentOS 7, Debian 13 (containers) | 8/8, 511 passed, 0 failed ([CentOS 7](results/qt5-linux-amd64-centos-7-docker-20261028.json), [Debian 13](results/qt5-linux-amd64-debian-13-docker-20261028.json)); with GStreamer, PulseAudio, speech-dispatcher and BlueZ installed, 513 ([json](results/qt5-linux-amd64-debian-13-media-docker-20261028.json)) |
+| | | CentOS 7, Debian 13 (containers) | 8/8, 511 passed, 0 failed, 87 skipped on each ([CentOS 7](results/qt5-linux-amd64-centos-7-docker-20261030.json), [Debian 13](results/qt5-linux-amd64-debian-13-docker-20261030.json)); with GStreamer, PulseAudio, speech-dispatcher and BlueZ installed, 513 ([json](results/qt5-linux-amd64-debian-13-media-docker-20261028.json)) |
 | | | Ubuntu 16.04/24.04, Fedora 44, Arch (containers) | 8/8 on each, 474-490 passed, 0 failed ([json](results/linux-forward-20261010.json)) |
 | `qt5-linux-i386` | Ubuntu 10.04 i386 | Ubuntu 10.04 i386, 16.04 i386, Debian 12 i386 (containers) | 8/8, 494, 509 and 510 passed, 0 failed ([10.04](results/qt5-linux-i386-ubuntu-10.04-i386-docker-20261028.json), [16.04](results/qt5-linux-i386-ubuntu-16.04-i386-docker-20261028.json), [Debian 12](results/qt5-linux-i386-debian-12-i386-docker-20261028.json)) |
 | `qt5-linux-arm64` | Ubuntu 14.04 arm64 (glibc 2.19) | stock Ubuntu 14.04 and Debian 12 arm64 (containers, emulated) | 8/8, 510 and 511 passed, 0 failed ([14.04](results/qt5-linux-arm64-ubuntu-14.04-arm64-docker-20261028.json), [Debian 12](results/qt5-linux-arm64-debian-12-arm64-docker-20261028.json)) |
-| `qt5-macos-amd64` | Mac OS X 10.6 | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 497 passed, 0 failed ([10.6](results/qt5-macos-amd64-snowleopard-vmware-20261028.json), [10.7](results/qt5-macos-amd64-lion-vmware-20261028.json), [10.13](results/qt5-macos-amd64-highsierra-vmware-20261028.json)); a 10.11 build earlier on real OS X 10.11.6 |
-| `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 8/8 each, 494, 496 and 497 passed, 0 failed ([10.6](results/qt5-macos-i386-snowleopard-vmware-20261028.json), [10.7](results/qt5-macos-i386-lion-vmware-20261028.json), [10.13](results/qt5-macos-i386-highsierra-vmware-20261028.json)) |
+| `qt5-macos-amd64` | Mac OS X 10.6 | 10.6.3, 10.7.5, 10.13.6 (VMware) | 10.6.3: 8/8, 494 passed, 0 failed, 87 skipped ([json](results/qt5-macos-amd64-snowleopard-vmware-20261030.json)); 10.7.5: 8/8, 496 passed, 0 failed, 85 skipped ([json](results/qt5-macos-amd64-lion-vmware-20261030.json)); 10.13.6: 8/8, 497 passed, 0 failed, 84 skipped ([json](results/qt5-macos-amd64-highsierra-vmware-20261030.json)) |
+| `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 10.6.3: 8/8, 494 passed, 0 failed, 87 skipped ([json](results/qt5-macos-i386-snowleopard-vmware-20261030.json)); 10.7.5: 8/8, 496 passed, 0 failed, 85 skipped ([json](results/qt5-macos-i386-lion-vmware-20261030.json)); 10.13.6: 8/8, 497 passed, 0 failed, 84 skipped ([json](results/qt5-macos-i386-highsierra-vmware-20261030.json)) |
 | `qt5-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
 ### Qt 6.8.5
 
-With the security patches (`patches/qt6/all/05`-`27`). The rows marked
+With the security patches (`patches/qt6/all/05`-`28`). The rows marked
 6.8.4 were run before the move and not repeated.
 
 | Target | Floor | Run on | Result |
 |--------|-------|--------|--------|
-| `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed ([json](results/qt6-win7-vmware-20261027.json)) |
-| | | Windows 11 (VMware) | 8/8, 510 passed, 0 failed ([json](results/qt6-win-amd64-win11-vmware-20261029.json)) |
+| `qt6-win-amd64` | Windows 7 SP1 | Windows 7 SP1 (VMware) | 8/8, 508 passed, 0 failed, 56 skipped ([json](results/qt6-win-amd64-win7-vmware-20261030.json)) |
+| | | Windows 11 (VMware) | 8/8, 510 passed, 0 failed, 54 skipped ([json](results/qt6-win-amd64-win11-vmware-20261030.json)) |
 | `qt6-win-arm64` | Windows 10 on ARM | - | built, not run |
-| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261027.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261027.json)) |
+| `qt6-linux-amd64` | RHEL/CentOS 7.6 (glibc 2.17) | CentOS 7, Debian 13 (containers) | 8/8, 528 passed, 0 failed, 51 skipped on each, QtWayland included ([CentOS 7](results/qt6-linux-amd64-centos-7-docker-20261030.json), [Debian 13](results/qt6-linux-amd64-debian-13-docker-20261030.json)) |
 | | | Linux Mint 22.3 (VMware) | 6.8.4: 8/8, 510 passed, 0 failed ([json](results/qt6-linux-centos7-mint223-vmware-20261006.json)) |
 | `qt6-linux-arm64` | RHEL/CentOS 7 aarch64 (glibc 2.17) | stock CentOS 7 arm64 (container, emulated) | 8/8, 528 passed, 0 failed, QtWayland included ([json](results/qt6-linux-arm64-centos-7-arm64-docker-20261027.json)); 6.8.4 also on Debian 12 arm64 ([json](results/qt6-linux-arm64-debian-12-arm64-docker-20261014.json)) |
-| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 8/8, 505 passed, 0 failed ([json](results/qt6-macos-amd64-highsierra-vmware-20261027.json)) |
+| `qt6-macos-amd64` | macOS 10.13 | macOS 10.13.6 (VMware) | 8/8, 505 passed, 0 failed, 56 skipped ([json](results/qt6-macos-amd64-highsierra-vmware-20261030.json)) |
 | `qt6-macos-arm64` | macOS 11.0 | - | built and audited, not run |
 
 ## Current systems

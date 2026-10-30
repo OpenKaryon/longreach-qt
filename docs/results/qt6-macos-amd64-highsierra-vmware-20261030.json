@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "date": "2026-10-27",
+  "date": "2026-10-30",
   "target": "tests-qt6-macos-amd64",
   "status": "PASS",
   "image": "qt6-macos-amd64",
   "guest": {
     "os": "ProductName:\tMac OS X",
-    "system": "ProductName:\tMac OS X\nProductVersion:\t10.13.6\nBuildVersion:\t17G65\nDarwin Mac-Admin.local 17.7.0 Darwin Kernel Version 17.7.0: Thu Jun 21 22:53:14 PDT 2018; root:xnu-4570.71.2~1/RELEASE_X86_64 x86_64",
+    "system": "ProductName:\tMac OS X\nProductVersion:\t10.13.6\nBuildVersion:\t17G65\nDarwin 17.7.0 Darwin Kernel Version 17.7.0: Thu Jun 21 22:53:14 PDT 2018; root:xnu-4570.71.2~1/RELEASE_X86_64 x86_64",
     "vm": "macOS 10.13.6 High Sierra in VMware (clean install)",
-    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH"
+    "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH; fresh guest directory"
   },
   "summary": {
     "apps_passed": 8,
@@ -68,14 +68,14 @@
     }
   ],
   "executables_sha256": {
-    "gl-heavy-gallery": "fd483519fca54ae6116ea5678405e236b5017036e6f21210aa54b8b37c29037e",
-    "graphics-gallery": "43c1fbd3dad3406a3a7e97b1feab507c4fff28762d6e34b6a0ca49ef23a20237",
-    "multimedia-lab": "4c8032621939d4b794a3f3e9d68f529796ff1ad8aece6f4803f76c5ff88990bf",
-    "network-gui": "b653cc295d1bbfed7c8f92f6cc6d9648ce56baf30bc84fd6114c782591abfe97",
-    "painting-lab": "84073061701964c287301665c88e8fe51b81f797c5fb70e916add916fb1ea1b2",
-    "qt-selftest": "850ce96192127d1ad5cfc4f342ee50790c632d67fd24a4c19bdac2f0350f1f2d",
-    "quick-qml-gallery": "db9cd33ea9cc69315525b0347e67756d9c9eee49bdc0f63c9b4a8510df91766e",
+    "gl-heavy-gallery": "e88b84dc8c841b5f8c750582813272ded4c84c9d5f2574d0858d214b322e7e5b",
+    "graphics-gallery": "4f1ee77ba0e0b78f771326196f13bc70dff534c66f570f8a7b010426a279023e",
+    "multimedia-lab": "fd66544d0a2559713a0c15bd3e4ca55a3d53e5b55e99c7dbb917cd9cc0ab87c3",
+    "network-gui": "305ae4fc0f613c1ea63fe80ba6a68cb4af0c1045737b3f55e5d40149547a90a1",
+    "painting-lab": "2950fc199781a1cd2b72f48a2e4e7be85ffc6cb6374bcc96b11474432eec7cef",
+    "qt-selftest": "ddc8d52cc97eb9e7b4d6e9462427e9fd1ab69d97203776cee2d600a2f93c8c8f",
+    "quick-qml-gallery": "f0e39c434ed56c5a3ed6b5612791ac8f21726a9525d19c45a5503d1d2028f7a9",
     "smoke-runner": "75615b290c017797fd1de4d74d8194cf3f479a098caeee11ebd0a469febaba30",
-    "widgets-gallery": "152ddce7460b4670b14d50a7d68470f4d5383993a59d54ff75a9689d73d800c0"
+    "widgets-gallery": "4263d9c942beda5fb657096905b7f63cd9927ddb10ae80bc8d64cdb5733463cb"
   }
 }

@@ -12,12 +12,20 @@ eight; they count the same checks split over more executables. Files they
 name are local evidence of the run: only the file name is kept, next to its
 checksum.
 
+The [2026-10-30 Qt 5/6 build and test report](qt5-qt6-build-and-tests-20261030.md)
+records all 15 target builds plus the Qt 6 host tools, and the current
+Linux amd64 runtime evidence at source commit `ea9b0aa`.
+
+The [final Windows and macOS report](windows-macos-final-20261030.md)
+links every completed follow-up run, including combinations added
+since the baseline table below.
+
 | File | Target | System |
 |------|--------|--------|
 | `qt4-win-i386-win95-qemu-20261015.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU) |
 | `qt4-win95-openssl102u-qemu-20261002.json` | Qt 4 Windows i386 | Windows 95 OSR2 (QEMU), 24-application suite |
 | `qt4-win98se-vmware-20261010.json`, `qt4-nt4-sp6a-vmware-20261010.json`, `qt4-win2000-vmware-20261010.json` | Qt 4 Windows i386 | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) |
-| `qt4-win-i386-win11-vmware-20261029.json`, `qt4-win-amd64-win11-vmware-20261029.json` | Qt 4 Windows i386, amd64 | Windows 11 (VMware) |
+| `qt4-win-i386-win11-vmware-20261030.json`, `qt4-win-amd64-win11-vmware-20261030.json` | Qt 4 Windows i386, amd64 | Windows 11 (VMware) |
 | `qt4-linux-i386-sarge-qemu-20261013.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU) |
 | `qt4-sarge-public-sdk-qemu-20261002.json`, `qt4-sarge-desktop-20261002.json` | Qt 4 Linux i386 | Debian 3.1 Sarge (QEMU, desktop) |
 | `qt4-macos-i386-tiger-qemu-20261015.json` | Qt 4 macOS i386 | Mac OS X 10.4.10 (QEMU, Core Duo) |
@@ -29,16 +37,21 @@ checksum.
 | `qt4-linux-amd64-debian-13-docker-20261011.json` | Qt 4 Linux amd64 | Debian 13 (container) |
 | `qt4-linux-i386-{ubuntu-16.04-i386,debian-12-i386}-docker-20261011.json` | Qt 4 Linux i386 | Ubuntu 16.04 i386, Debian 12 i386 (containers) |
 | `linux-forward-20261010.json` | Qt 4 and Qt 5 Linux amd64 and i386 | CentOS 7, current distributions, 32-bit Ubuntu 16.04 and Debian 12 (containers) |
-| `qt5-win-i386-xp-sp3-vmware-20261028.json` | Qt 5 Windows i386 | Windows XP SP3 (VMware) |
-| `qt5-win-amd64-win11-vmware-20261029.json` | Qt 5 Windows amd64 | Windows 11 (VMware) |
+| `qt5-win-i386-xp-sp3-vmware-20261030.json` | Qt 5 Windows i386 | Windows XP SP3 (VMware) |
+| `qt5-win-amd64-win11-vmware-20261030.json` | Qt 5 Windows amd64 | Windows 11 (VMware) |
 | `qt5-linux-amd64-lucid-vmware-20261028.json` | Qt 5 Linux amd64 | Ubuntu 10.04.4 (VMware) |
-| `qt5-linux-amd64-{centos-7,debian-13,debian-13-media}-docker-20261028.json` | Qt 5 Linux amd64 | CentOS 7, Debian 13, Debian 13 with the media libraries (containers) |
+| `qt5-linux-amd64-{centos-7,debian-13}-docker-20261030.json` | Qt 5 Linux amd64 | CentOS 7, Debian 13 (containers) |
+| `qt5-linux-amd64-debian-13-media-docker-20261028.json` | Qt 5 Linux amd64 | Debian 13 with the media libraries (container; earlier build) |
 | `qt5-linux-i386-{ubuntu-10.04-i386,ubuntu-16.04-i386,debian-12-i386}-docker-20261028.json` | Qt 5 Linux i386 | Ubuntu 10.04 i386, Ubuntu 16.04 i386, Debian 12 i386 (containers) |
 | `qt5-linux-arm64-{ubuntu-14.04-arm64,debian-12-arm64}-docker-20261028.json` | Qt 5 Linux arm64 | Ubuntu 14.04 arm64, Debian 12 arm64 (containers, emulated) |
-| `qt5-macos-amd64-{snowleopard,lion,highsierra}-vmware-20261028.json` | Qt 5 macOS x86_64 | 10.6.3, 10.7.5, 10.13.6 (VMware) |
-| `qt5-macos-i386-{snowleopard,lion,highsierra}-vmware-20261028.json` | Qt 5 macOS i386 | 10.6.3, 10.7.5, 10.13.6 (VMware) |
-| `qt6-win7-vmware-20261010.json`, `qt6-win-amd64-win11-vmware-20261029.json` | Qt 6 Windows amd64 | Windows 7 SP1 (VMware); Windows 11 (VMware) |
-| `qt6-linux-amd64-{centos-7,debian-13}-docker-20261014.json` | Qt 6 Linux amd64 | CentOS 7, Debian 13 (containers) |
+| `qt5-macos-amd64-snowleopard-vmware-20261030.json` | Qt 5 macOS amd64 | 10.6.3 (VMware) |
+| `qt5-macos-amd64-lion-vmware-20261030.json` | Qt 5 macOS amd64 | 10.7.5 (VMware) |
+| `qt5-macos-amd64-highsierra-vmware-20261030.json` | Qt 5 macOS amd64 | 10.13.6 (VMware) |
+| `qt5-macos-i386-snowleopard-vmware-20261030.json` | Qt 5 macOS i386 | 10.6.3 (VMware) |
+| `qt5-macos-i386-lion-vmware-20261030.json` | Qt 5 macOS i386 | 10.7.5 (VMware) |
+| `qt5-macos-i386-highsierra-vmware-20261030.json` | Qt 5 macOS i386 | 10.13.6 (VMware) |
+| `qt6-win-amd64-win7-vmware-20261030.json`, `qt6-win-amd64-win11-vmware-20261030.json` | Qt 6 Windows amd64 | Windows 7 SP1 (VMware); Windows 11 (VMware) |
+| `qt6-linux-amd64-{centos-7,debian-13}-docker-20261030.json` | Qt 6 Linux amd64 | CentOS 7, Debian 13 (containers) |
 | `qt6-linux-centos7-mint223-vmware-20261006.json` | Qt 6 Linux amd64 | Linux Mint 22.3 (VMware) |
 | `qt6-linux-arm64-{centos-7-arm64,debian-12-arm64}-docker-20261014.json` | Qt 6 Linux arm64 | CentOS 7 aarch64, Debian 12 arm64 (containers, emulated) |
-| `qt6-macos-amd64-highsierra-vmware-20261014.json` | Qt 6 macOS x86_64 | macOS 10.13.6 (VMware) |
+| `qt6-macos-amd64-highsierra-vmware-20261030.json` | Qt 6 macOS x86_64 | macOS 10.13.6 (VMware) |

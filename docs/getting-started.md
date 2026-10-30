@@ -105,7 +105,8 @@ Images are built locally and tagged `qt<N>-<os>-<arch>` (`qt5-macos-i386`,
 `qt4-win-i386`); a `LICENSE_PROFILE` other than the default adds itself
 (`qt5-linux-i386-lgpl-friendly`). Qt 4 images carry no profile: every Qt 4
 module is under the LGPL. No prebuilt images are published for
-0.1.0; [releasing.md](releasing.md) says what later releases will publish.
+0.1.0, and the planned 0.2.0 pre-release is source-only too.
+[releasing.md](releasing.md) describes the scope of future SDK publication.
 
 ## Cleaning up
 

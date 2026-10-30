@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Planned as **0.2.0**, a source-only pre-release; prebuilt SDK images are
+deferred. See the [release notes](docs/releases/0.2.0.md) for the tested
+matrix and known limitations.
+
 - Qt 6 moves from 6.8.4 to 6.8.5, the LTS patch release published as open
   source in October 2026: about 690 fixes, among them CVE-2025-10728 and
   CVE-2025-10729 (Qt SVG), and newer bundled libpng, FreeType, libjpeg-turbo,
@@ -58,9 +62,16 @@
   guest with a virtual TPM is: `"encrypted": true` and `vm_password_env` in
   `hosts.local.json`, or the password asked for on the terminal.
 
+- Validation: 22 Windows/macOS suite runs, all 176 application runs
+  successful: 9934 checks passed, none failed, 2144 skipped. Current
+  Qt 5/6 Linux amd64 suites also pass on Debian 13 and CentOS 7.
+  Per-executable SHA256 records and the precise coverage limits are
+  linked from [platforms](docs/platforms.md).
+
 ## 0.1.0 - 2026-10-23
 
 First public pre-release, source only.
+See the [historical release notes](docs/releases/0.1.0.md).
 
 - Static Qt 4.8.7, 5.15.19 and 6.8.4 SDKs built in Docker for Windows, Linux
   and macOS.

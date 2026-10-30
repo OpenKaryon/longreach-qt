@@ -9,7 +9,8 @@ number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 
 ## What a release contains
 
-- 0.1.0: the source tree only, as a GitHub pre-release.
+- [0.1.0](releases/0.1.0.md): the source tree only, as a GitHub pre-release.
+- 0.2.0 (planned): source-only pre-release; prebuilt SDK images deferred.
 - Later: prebuilt Windows and Linux SDK images for the targets whose results
   are recorded for that release. macOS SDK images will not be published -
   they contain Apple's SDK, which may not be redistributed; build them
@@ -26,6 +27,30 @@ number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 3. The coverage gate passes and `scripts/audit/repo_scan.py --spdx` is clean.
 4. `CHANGELOG.md` lists what changed for users.
 5. Tag `vX.Y.Z`, push the tag, create the GitHub release from it.
+
+## 0.2.0 preparation
+
+The selected scope is a source-only pre-release. The
+[candidate notes](releases/0.2.0.md) describe its new validation and
+remaining gaps. This is a locally prepared candidate, not a published
+version; README and CHANGELOG retain that distinction.
+
+- [x] Qt 6 version change selects minor version 0.2.0.
+- [x] Record all 22 final Windows/macOS runs and current Qt 5/6 Linux
+  amd64 results, with executable SHA256 values.
+- [x] Keep ARM, PowerPC, older-floor gaps and NT4 investigation explicit.
+- [x] Prepare CHANGELOG and source-only release notes.
+- [ ] A fresh full build from empty downloads remains unverified by
+  this preparation; previous cached builds are identified in the notes.
+- [ ] Resolve the remaining runtime gaps or explicitly accept them as
+  pre-release limitations at publication review.
+- [ ] Set the release date, tag `v0.2.0`, push and publish only after
+  separate authorization.
+
+The local delivery consists of a Git source archive, release notes, a
+preflight report, a provenance manifest and SHA256SUMS. Packaging verifies
+archive contents against the candidate commit and excludes local
+downloads, build outputs, test artifacts and host configuration.
 
 ## Updates
 

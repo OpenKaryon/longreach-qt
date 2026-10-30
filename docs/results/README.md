@@ -15,6 +15,8 @@ checksum.
 The [2026-10-30 Qt 5/6 build and test report](qt5-qt6-build-and-tests-20261030.md)
 records all 15 target builds plus the Qt 6 host tools, and the current
 Linux amd64 runtime evidence at source commit `ea9b0aa`.
+The [release provenance table](../releases/0.2.0.md#build-provenance)
+maps the original build IDs to identical trees after the history cleanup.
 
 The [final Windows and macOS report](windows-macos-final-20261030.md)
 links every completed follow-up run, including combinations added

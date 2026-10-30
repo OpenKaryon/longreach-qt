@@ -88,6 +88,8 @@ keep theirs. Apple's SDKs are fetched for you and never redistributed.
 
 ## Status
 
-Version 0.1.0 is a source-only pre-release: no prebuilt SDK images are
-published yet. See [CHANGELOG.md](CHANGELOG.md) and
-[docs/releasing.md](docs/releasing.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+Version 0.1.0 was the first source-only pre-release. Version 0.2.0
+is being prepared as another source-only pre-release; prebuilt SDK
+images are deferred. See the [0.2.0 notes](docs/releases/0.2.0.md),
+[CHANGELOG.md](CHANGELOG.md) and [release process](docs/releasing.md).
+Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).

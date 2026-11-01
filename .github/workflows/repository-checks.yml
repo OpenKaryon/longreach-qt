@@ -20,6 +20,8 @@ jobs:
           python3 -c "import ast, pathlib;
           [ast.parse(p.read_text(encoding='utf-8'), filename=str(p))
           for p in pathlib.Path('scripts').rglob('*.py')]"
+      - name: Check tooling regressions
+        run: python3 -m unittest discover -s scripts/tests -p test_tooling.py
       - name: Check API coverage inventory
         run: python3 scripts/tests/check_coverage.py --gate
       - name: Check license matrix

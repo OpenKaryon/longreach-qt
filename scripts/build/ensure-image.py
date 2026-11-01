@@ -144,14 +144,37 @@ def build_input(relative: str, family: str) -> bool:
     return False
 
 
+def source_names() -> list[str]:
+    """Git's source inventory, or the shipped files in a source archive.
+
+    Do not consult a parent repository when an archive is unpacked inside
+    another checkout. Without Git metadata, ignore local output directories
+    and Python/editor caches, but retain all shipped resources and new files.
+    """
+    if (ROOT / ".git").exists():
+        return [name for name in subprocess.check_output(
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=ROOT, text=True, encoding="utf-8").split("\0") if name]
+    excluded = {".git", ".claude", ".idea", "build", "artifacts", "downloads", "references", "tmp"}
+    names = []
+    for folder, directories, files in os.walk(ROOT):
+        relative = Path(folder).relative_to(ROOT)
+        directories[:] = sorted(name for name in directories
+                                if name not in {".git", "__pycache__"}
+                                and not (relative == Path(".") and
+                                         (name in excluded or name.startswith("Qt-"))))
+        for name in sorted(files):
+            if name.endswith((".pyc", ".pyo", ".swp", ".orig", ".rej", "~")):
+                continue
+            names.append((relative / name).as_posix())
+    return names
+
+
 def fingerprint(config: str, family: str, source_files: list[str]) -> str:
     """A whole Qt generation's files: the stamp the Qt 4 -examples scripts
     keep next to their test applications. Includes local edits and new
     files, not just the last Git commit."""
-    names = subprocess.check_output(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT
-    ).split(b"\0")
-    paths = sorted({Path(name.decode("utf-8", "surrogateescape")) for name in names if name})
+    paths = sorted({Path(name) for name in source_names()})
     digest = hashlib.sha256()
     digest.update(b"longreach-qt-image-v1\0")
     digest.update(config.encode("utf-8"))
@@ -358,9 +381,7 @@ def context_files(context: Path, sources: list[str]) -> list[tuple[str, Path | N
     """Each source expanded to files. In folders Git tracks, only the files
     Git knows (not __pycache__ or editor droppings); elsewhere (downloads/)
     everything."""
-    known = {name for name in subprocess.check_output(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT,
-        text=True, encoding="utf-8").split("\0") if name}
+    known = set(source_names())
     tracked_tops = {name.split("/", 1)[0] for name in known}
     files: dict[str, Path | None] = {}
     for source in sources:

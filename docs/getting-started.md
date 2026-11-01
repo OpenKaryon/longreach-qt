@@ -14,6 +14,10 @@
 - Network access for the first build of each target: the inputs are fetched
   once into `downloads/` and checked against their pinned SHA256.
 
+Source archives work without a `.git` directory. Incremental build
+fingerprints use Git inventory in a checkout and the shipped files in
+an archive, excluding local build/download outputs and cache files.
+
 ## Building an SDK
 
 ```sh
@@ -82,7 +86,10 @@ one argument (their entrypoint is `bash -l -c`). The Qt 4 Linux images start
 Qt 4 and Qt 5 SDKs carry qmake (configured for the target: `qmake` in the
 image cross-compiles); Qt 5 and Qt 6 SDKs work with CMake through the
 toolchain files under `cmake/`. `scripts/build/qt6-build-project.py` builds a
-CMake project against a Qt 6 image.
+CMake project against a Qt 6 image. Its `--jobs N` limits both SDK
+preparation and the application build. Linux executables and macOS
+bundles are exported from nested CMake directories as well as the
+root; no application output or duplicate export names are errors.
 
 Everything is static, so the application links the Qt modules it uses and
 nothing has to be shipped beside it except the plugins Qt needs at run time

@@ -117,7 +117,7 @@ def check_docker():
 
 
 def build_project(
-    project_dir: Path, output_dir: Path, platform_name: str, config: dict, image_name: str
+    project_dir: Path, output_dir: Path, platform_name: str, config: dict, image_name: str, jobs: int = 0
 ):
     """Build the user's project using the Qt Docker image."""
     print_step(f"Building project for {platform_name}...")
@@ -136,14 +136,19 @@ def build_project(
         project_mount = str(project_dir)
         output_mount = str(output_dir)
 
-    # Build command - compile project and copy artifacts
+    # Recurse into CMake target directories, keeping bundles whole and
+    # excluding compiler probes. Stage first: duplicate output names or an
+    # empty collection must fail rather than look like a successful export.
     if config["artifact_pattern"] == "*.exe":
-        find_cmd = 'find /tmp/build -name "*.exe" ! -name "a.exe" -exec cp {} /out/ \\;'
+        predicate = '-type f -name "*.exe" ! -name "a.exe"'
     elif config["artifact_pattern"] == "*.app":
-        find_cmd = 'find /tmp/build -maxdepth 1 -name "*.app" -exec cp -r {} /out/ \\;'
+        predicate = '-type d -name "*.app" -prune'
     else:
-        # Linux executables (no extension)
-        find_cmd = 'find /tmp/build -maxdepth 1 -type f -executable ! -name "*.so" ! -name "*.a" -exec cp {} /out/ \\;'
+        predicate = ('-type f -executable ! -name "*.so" ! -name "*.so.*" '
+                     '! -name "*.a" ! -name "a.out"')
+    find_cmd = (r'find /tmp/build -path "*/CMakeFiles" -prune -o \( '
+                + predicate + r' \) -print0 > /tmp/artifact-list')
+    parallel = f" --parallel {jobs}" if jobs else ""
 
     build_script = f"""
         set -e
@@ -152,10 +157,26 @@ def build_project(
         cd /tmp/build
         {qt_path}/bin/qt-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release /src
         echo "Building project..."
-        cmake --build .
+        cmake --build .{parallel}
         echo "Copying artifacts..."
         {find_cmd}
-        echo "Build complete!"
+        mkdir /tmp/exported-artifacts
+        found=0
+        while IFS= read -r -d '' artifact; do
+            name=$(basename "$artifact")
+            if [ -e "/tmp/exported-artifacts/$name" ]; then
+                echo "Duplicate artifact name: $name" >&2
+                exit 1
+            fi
+            cp -R "$artifact" "/tmp/exported-artifacts/$name"
+            found=$((found + 1))
+        done < /tmp/artifact-list
+        if [ "$found" -eq 0 ]; then
+            echo "No application artifacts were produced" >&2
+            exit 1
+        fi
+        cp -R /tmp/exported-artifacts/. /out/
+        echo "Build complete: $found artifacts exported"
         ls -la /out/
     """
 
@@ -236,6 +257,8 @@ Examples:
     )
 
     args = parser.parse_args()
+    if args.jobs < 0:
+        parser.error("--jobs must be zero (auto) or positive")
 
     # The repository root, two levels up from scripts/build/, where make runs.
     # The project and output paths are the caller's, relative to its directory.
@@ -287,7 +310,7 @@ Examples:
         print_error(f"Failed to prepare Qt image for {platform_name}")
 
     # Build the project
-    build_project(project_dir, output_dir, platform_name, config, image_name)
+    build_project(project_dir, output_dir, platform_name, config, image_name, args.jobs)
 
     print_step("Build successful!")
     print(f"Artifacts are in: {output_dir}")

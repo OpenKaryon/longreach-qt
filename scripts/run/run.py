@@ -35,7 +35,7 @@ Backends in hosts.local.json:
                Windows 9x and NT 4 starts smoke-runner.exe without a shell;
                "encrypted": true, "vm_password_env": "VAR" for a VM
                encrypted in VMware (a Windows 11 guest with a virtual TPM)
-    virtualbox{"backend": "virtualbox", "os": "linux"|"windows", "vm": "name",
+    virtualbox{"backend": "virtualbox", "os": "linux", "vm": "name",
                "user": "...", "password_env": "VAR"}
 
 A guest or VM password is never stored: it is read from the environment
@@ -58,6 +58,7 @@ import sys
 import tarfile
 import tempfile
 import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 HOSTS = Path(__file__).with_name('hosts.local.json')
@@ -318,9 +319,13 @@ def run_vmware(host, suite, out, runner_args):
     host['_password'] = password(host)
     vmx = host['vmx']
     if host.get('os') == 'windows':
-        directory = host.get('dir', r'C:\qtkit-run')
+        base = host.get('dir', r'C:\qtkit-run').rstrip('\\/')
         cmd = host.get('cmd', r'C:\WINDOWS\system32\cmd.exe')
-        vmrun(host, 'createDirectoryInGuest', vmx, directory, check=False)
+        vmrun(host, 'createDirectoryInGuest', vmx, base, check=False)
+        # A fresh 8.3-compatible directory also works on Windows 9x/NT4.
+        # Never collect a previous run's report after a loader/Tools error.
+        directory = base + '\\r' + uuid.uuid4().hex[:7]
+        vmrun(host, 'createDirectoryInGuest', vmx, directory)
         for path in suite_files(suite):
             if path.is_file():
                 vmrun(host, 'copyFileFromHostToGuest', vmx, str(path), f'{directory}\\{path.name}')
@@ -328,14 +333,18 @@ def run_vmware(host, suite, out, runner_args):
             # Windows 9x has COMMAND.COM (no && or cd /d), and NT 4's Tools
             # return early from cmd /c: start the runner itself, which writes
             # smoke-report.txt next to its executable.
-            vmrun(host, 'runProgramInGuest', vmx, f'{directory}\\smoke-runner.exe', *runner_args.split(),
+            launched = vmrun(host, 'runProgramInGuest', vmx, f'{directory}\\smoke-runner.exe', *runner_args.split(),
                   check=False)  # a failed application is a non-zero exit, not a vmrun error
         else:
-            vmrun(host, 'runProgramInGuest', vmx, '-interactive', cmd,
-                  f'/c cd /d {directory} && smoke-runner.exe {runner_args} > runner.log 2>&1', check=False)
+            launched = vmrun(host, 'runProgramInGuest', vmx, '-interactive', cmd,
+                  f'/c cd /d "{directory}" && smoke-runner.exe {runner_args} > runner.log 2>&1', check=False)
         for name in ('smoke-report.txt', 'runner.log'):
             vmrun(host, 'copyFileFromGuestToHost', vmx, f'{directory}\\{name}', str(out / name), check=False)
-        return host.get('description', vmx), 'suite copied with vmrun; smoke-runner.exe run in the logged-in session'
+        (out / 'launch.log').write_text(
+            f'exit={launched.returncode}\n{launched.stdout}{launched.stderr}', encoding='utf-8')
+        if not (out / 'smoke-report.txt').is_file():
+            raise SystemExit(f'No report from the new VMware run (launch exit {launched.returncode}); see {out}')
+        return host.get('description', vmx), 'suite copied to a new guest directory with vmrun; smoke-runner.exe run in the logged-in session'
     data, _ = pack(suite)
     directory = host.get('dir', '/tmp/qtkit-run')
     with tempfile.TemporaryDirectory() as tmp:
@@ -353,24 +362,28 @@ def run_vmware(host, suite, out, runner_args):
     return host.get('description', vmx), 'suite copied with vmrun and checked by SHA256; smoke-runner on the logged-in X session'
 
 
-def vbox(host, *args, check=True):
-    cmd = ['VBoxManage', 'guestcontrol', host['vm'], *args, '--username', host['user'], '--password', host['_password']]
+def vbox(host, command, *args, check=True):
+    # Common options must precede the -- introducing the guest's argv.
+    cmd = ['VBoxManage', 'guestcontrol', host['vm'], command,
+           '--username', host['user'], '--password', host['_password'], *args]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if check and result.returncode != 0:
-        raise SystemExit(f'VBoxManage {args[0]} failed: {result.stderr.strip()}')
+        raise SystemExit(f'VBoxManage {command} failed: {result.stderr.strip()}')
     return result
 
 
 def run_virtualbox(host, suite, out, runner_args):
+    if host.get('os', 'linux') != 'linux':
+        raise SystemExit('The VirtualBox backend supports Linux guests; use VMware for Windows')
     host['_password'] = password(host)
     directory = host.get('dir', '/tmp/qtkit-run')
     data, _ = pack(suite)
     with tempfile.TemporaryDirectory() as tmp:
         archive = Path(tmp) / 'suite.tar.gz'
         archive.write_bytes(data)
-        vbox(host, 'run', '--exe', '/bin/sh', '--', '-c', f'rm -rf {directory} && mkdir -p {directory}')
+        vbox(host, 'run', '--exe', '/bin/sh', '--', '/bin/sh', '-c', f'rm -rf {directory} && mkdir -p {directory}')
         vbox(host, 'copyto', str(archive), f'{directory}/suite.tar.gz')
-    vbox(host, 'run', '--exe', '/bin/sh', '--', '-c',
+    vbox(host, 'run', '--exe', '/bin/sh', '--', '/bin/sh', '-c',
          f'cd {directory} && tar -xzf suite.tar.gz && sha256sum -c SHA256SUMS > checksums.log 2>&1; chmod -R u+x . && '
          + LINUX_RUN.replace('{args}', runner_args), check=False)
     for name in ('smoke-report.txt', 'runner.log', 'system.txt', 'checksums.log'):

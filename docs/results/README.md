@@ -1,5 +1,8 @@
 # Results
 
+The [post-v0.2.0 tooling validation](tooling-review-fixes-20261031.md)
+records the seven review fixes and their scoped checks.
+
 One record per run: what was run, where, and with what result. A runtime
 record (schema 1) has the date, target, image, guest system, a summary,
 per-application counts and the SHA256 of every executable it ran; a Linux

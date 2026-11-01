@@ -2,9 +2,24 @@
 
 ## Unreleased
 
-Planned as **0.2.0**, a source-only pre-release; prebuilt SDK images are
-deferred. See the [release notes](docs/releases/0.2.0.md) for the tested
-matrix and known limitations.
+Local fixes after the `v0.2.0` tag (not yet published):
+
+- Source archives support incremental/examples builds without Git metadata.
+- The Qt 6 project builder exports nested application outputs, rejects
+  empty or ambiguous exports, and applies `--jobs` to the application.
+- Windows VMware runs use fresh guest directories and require a new
+  report; VirtualBox authentication options precede guest arguments.
+  The VirtualBox backend explicitly supports Linux guests only.
+- The Linux forward matrix includes the Qt 6 / CentOS 7 package set.
+- Qt 6 Windows keeps upstream DNS-over-TLS and TLSA decoding while
+  resolving the newer standard-DNS API at run time for Windows 7.
+- Lightweight tooling regression checks run in CI.
+
+## 0.2.0
+
+Tagged as a source-only pre-release; prebuilt SDK images are deferred.
+See the [preparation notes](docs/releases/0.2.0.md) for the tested matrix
+and known limitations. The tag alone does not publish a GitHub Release.
 
 - Qt 6 moves from 6.8.4 to 6.8.5, the LTS patch release published as open
   source in October 2026: about 690 fixes, among them CVE-2025-10728 and

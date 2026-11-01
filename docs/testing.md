@@ -75,7 +75,11 @@ container host cannot run (64-bit glibc before 2.14 needs the vsyscall page,
 which current kernels leave out): `qemu:centos-5-x86_64`, `qemu:debian-4-amd64`. Other hosts are described in
 `scripts/run/hosts.local.json` (copy `scripts/run/hosts.example.json`; the file
 is not tracked): `ssh` for Linux and macOS machines, `vmware` (vmrun) for
-Linux and Windows guests, `virtualbox` (VBoxManage). A guest password is read
+Linux and Windows guests, `virtualbox` for Linux guests (VBoxManage).
+Windows VMware runs use a new subdirectory for every run, so a previous
+report cannot be accepted after a launch failure. Completed guest run
+directories can be removed when their logs are no longer needed.
+A guest password is read
 from the environment variable the host names, or asked for; it is never
 written down.
 
@@ -86,9 +90,21 @@ The old systems themselves (Windows 95, Mac OS X 10.2, Debian Sarge) were
 installed and driven with tools that are specific to one lab and are not part
 of Longreach Qt; [platforms](platforms.md) records what was run where.
 
+## Tooling regressions
+
+```sh
+python3 -m unittest discover -s scripts/tests -p test_tooling.py
+```
+
+These lightweight checks use temporary files and mocked backend commands;
+they start no builds, containers or guests. They cover source archives,
+consumer build settings, fresh VMware reports, VirtualBox arguments and
+the package configuration for the Linux forward matrix.
+
 ## CI
 
 `.github/workflows/repository-checks.yml` checks every push: Python syntax,
+the lightweight tooling regressions above,
 the coverage gate, the licence matrix, and `scripts/audit/repo_scan.py
 --spdx` (an SPDX line in every source file; no host paths, e-mail addresses,
 private keys, passwords or torrent links). Building the SDKs takes hours per

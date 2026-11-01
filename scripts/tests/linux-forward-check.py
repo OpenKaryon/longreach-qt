@@ -47,6 +47,9 @@ PACKAGES = {
                         'libxkbcommon0 libxkbcommon-x11-0'),
     ('fedora', 'xlib'): 'mesa-libGL libX11 libXext libXrender libSM libICE fontconfig freetype',
     ('rhel', 'xlib'): 'mesa-libGL libX11 libXext libXrender libSM libICE fontconfig freetype',
+    ('rhel', 'xcb'): ('mesa-libGL mesa-libEGL mesa-dri-drivers libX11 libXext libXrender libSM libICE '
+                      'fontconfig freetype libX11-xcb libxcb xcb-util-image xcb-util-keysyms '
+                      'xcb-util-renderutil xcb-util-wm libxkbcommon libxkbcommon-x11'),
     ('fedora', 'xcb'): ('mesa-libGL libglvnd-opengl libX11 libX11-xcb libxcb xcb-util-cursor xcb-util-image '
                         'xcb-util-keysyms xcb-util-renderutil xcb-util-wm libxkbcommon libxkbcommon-x11'),
     ('arch', 'xlib'): 'mesa libglvnd libx11 libxext libxrender libsm libice fontconfig freetype2',
@@ -167,6 +170,9 @@ def main():
     pairs = [(s, d) for s in (args.suite or sorted(SUITES)) for d in (args.distro or sorted(DISTROS))
              if not (SUITES[s][1] == 'i386' and DISTROS[d][1] == 'arch')
              and DISTROS[d][2] >= SUITES[s][3]]
+    missing = {(DISTROS[d][1], SUITES[s][2]) for s, d in pairs} - PACKAGES.keys()
+    if missing:
+        parser.error('no package configuration for: ' + ', '.join(map(str, sorted(missing))))
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         rows = list(pool.map(lambda p: run_pair(*p, out_root, args.set_fontdir), pairs))
     for row in rows:

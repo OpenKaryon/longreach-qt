@@ -174,7 +174,7 @@ help:
 # packages against their locks; what is not downloaded yet is counted, not
 # failed. A QT6_SOURCE archive is not the pinned one, so it is left out.
 VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE $(if $(QT6_SOURCE),,QT6_ARCHIVE) OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_WIN7_LLVM_MINGW \
-                   QT5_LLVM_SRC QT6_NINJA QT6_XCB_CURSOR QT6_OS_VERSION_CHECK \
+                   QT5_LLVM_SRC QT6_NINJA QT6_XCB_CURSOR QT6_OS_VERSION_CHECK QT6_CENTOS_CMAKE \
                    TIGER_SDK JAGUAR_SDK QT5_MACOS_I386_LINK_SDK QT6_MACOS_SDK QT6_MACOS_ARM64_SDK
 VERIFY_PINS = $(sort $(foreach f,$(VERIFY_DOWNLOADS),$(if $($(f)_SHA256),$($(f)_PATH)=$($(f)_SHA256))))
 VERIFY_PRESENT = $(foreach p,$(VERIFY_PINS),$(if $(wildcard $(firstword $(subst =, ,$(p)))),$(p)))

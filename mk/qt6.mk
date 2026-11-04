@@ -74,6 +74,15 @@ QT6_MACOS_ARM64_SDK_PATH := $(DOWNLOAD_DIR)/$(QT6_MACOS_ARM64_SDK)
 $(QT6_WIN7_LLVM_MINGW_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT6_WIN7_LLVM_MINGW_URL)" "$@" "$(QT6_WIN7_LLVM_MINGW_SHA256)"
 
+# CMake for the CentOS 7 build, downloaded from the Lab release via fetch.py.
+QT6_CENTOS_CMAKE_VERSION := 3.27.9
+QT6_CENTOS_CMAKE_ARCHIVE := cmake-$(QT6_CENTOS_CMAKE_VERSION)-linux-x86_64.tar.gz
+QT6_CENTOS_CMAKE_PATH := $(DOWNLOAD_DIR)/$(QT6_CENTOS_CMAKE_ARCHIVE)
+QT6_CENTOS_CMAKE_SHA256 := 72b01478eeb312bf1a0136208957784fe55a7b587f8d9f9142a7fc9b0b9e9a28
+
+$(QT6_CENTOS_CMAKE_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "https://github.com/Kitware/CMake/releases/download/v$(QT6_CENTOS_CMAKE_VERSION)/$(QT6_CENTOS_CMAKE_ARCHIVE)" "$@" "$(QT6_CENTOS_CMAKE_SHA256)"
+
 $(QT6_NINJA_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT6_NINJA_URL)" "$@" "$(QT6_NINJA_SHA256)"
 
@@ -120,8 +129,9 @@ qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
 
 # glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
 # image.
-qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH)
+qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH) $(QT6_CENTOS_CMAKE_PATH)
 	$(ONE_BUILD_CHECK)
+	$(PYTHON) scripts/fetch/qt6-centos7-fetch.py
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
 
 qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) build-qt6-host

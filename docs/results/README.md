@@ -1,5 +1,8 @@
 # Results
 
+The [Qt 6 Linux amd64 RPM lock validation](qt6-linux-amd64-centos7-rpm-lock-20261104.md)
+records the clean CentOS 7 build and consumer smoke test.
+
 The [post-v0.2.0 tooling validation](tooling-review-fixes-20261031.md)
 records the seven review fixes and their scoped checks.
 

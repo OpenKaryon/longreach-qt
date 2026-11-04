@@ -2,9 +2,9 @@
 
 Every file a build downloads is pinned: archives by SHA256 (in the Makefile,
 `mk/*.mk`, the Dockerfiles and `scripts/fetch/`), Git projects by commit,
-base images by digest, distribution packages by lock (Sarge, Lucid, CentOS 7
-aarch64) or by archive snapshot date (Debian 12, Ubuntu 22.04); the older
-releases (Ubuntu 14.04-18.04, CentOS 7.9) no longer change. A pin stops the
+base images by digest, distribution packages by lock (Sarge, Lucid, CentOS 7) or by archive
+snapshot date (Debian 12, Ubuntu 22.04); the Ubuntu 14.04-18.04 archives
+are frozen. A pin stops the
 build when upstream changes a file; it does not help when upstream deletes it, and a busy upstream (download.qt.io,
 Docker Hub) rate-limits parallel builds. So the GitHub organisation
 [OpenKaryonLab](https://github.com/OpenKaryonLab) keeps a copy of everything
@@ -63,10 +63,32 @@ where they are published (phracker/MacOSX-SDKs, joseluisq/macosx-sdks,
 swcdn.apple.com) and checks their SHA256 pins; keep your own copies, and put
 them back in `downloads/` under the same names when those go away.
 
-The Debian Sarge, Ubuntu Lucid and CentOS 7.9 aarch64 packages
+The Debian Sarge, Ubuntu Lucid and CentOS 7.9 packages
 (`scripts/fetch/locks/`) come from archive.debian.org, old-releases.ubuntu.com
-and vault.centos.org, which are archives themselves; each is pinned by SHA256
-in its lock.
+and vault.centos.org. Each package is pinned by SHA256 in its lock.
+
+For Qt 6 Linux amd64, [the RPM lock](../scripts/fetch/locks/qt6-centos7-x86_64-packages.json)
+records the three yum transactions on the pinned CentOS image: the SCL
+release package, the build dependencies (including devtoolset-11), and the
+remaining runtime dependencies. It includes the updates and dependencies
+yum selected in those transactions. Packages already in the base image are
+covered by its digest.
+
+`make qt6-linux-amd64` stages and verifies these RPMs under
+`downloads/centos7-x86_64/`. The Dockerfile rechecks their hashes and uses
+yum with package signatures enabled, all repositories disabled, and no
+network. It also takes CMake from `downloads/`, where make stages it from
+OpenKaryonLab.
+
+To restore the RPMs, copy the backed-up `.rpm` files to
+`downloads/centos7-x86_64/` and run
+`python scripts/fetch/qt6-centos7-fetch.py --check`. With the other archives
+already staged and the pinned base image available to Docker, use
+`make qt6-linux-amd64 NO_CACHE=1 DOCKER_BUILD_FLAGS=--network=none` for a
+clean build with networking disabled in the build steps. If the base
+image or package requirements change, resolve the full transactions again
+on the new base and check the RPM hashes against the repository metadata
+before updating the lock.
 
 Maintainers fill the copies with `scripts/fetch/mirror.py`, logged in to gh
 (and to ghcr.io, for images) as one of the `publishers` in `sources.json`,

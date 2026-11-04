@@ -14,6 +14,8 @@ Local fixes after the `v0.2.0` tag (not yet published):
 - Qt 6 Windows keeps upstream DNS-over-TLS and TLSA decoding while
   resolving the newer standard-DNS API at run time for Windows 7.
 - Lightweight tooling regression checks run in CI.
+- Qt 6 Linux amd64 installs the exact CentOS 7 RPMs recorded in its lock
+  from local files, including the GCC toolchain and runtime dependencies.
 
 ## 0.2.0
 

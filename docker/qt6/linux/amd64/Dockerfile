@@ -16,45 +16,27 @@ ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG LICENSE_PROFILE="gpl-enabled"
 
-RUN set -eux; \
-    sed -i -e 's|^mirrorlist=|#mirrorlist=|' \
-           -e 's|^#baseurl=http://mirror.centos.org/centos/\$releasever|baseurl=http://vault.centos.org/7.9.2009|' \
-        /etc/yum.repos.d/CentOS-*.repo; \
-    yum -y install centos-release-scl-rh; \
-    sed -i -e 's|^mirrorlist=|#mirrorlist=|' \
-           -e 's|^#\?baseurl=http://mirror.centos.org/centos/7/sclo/\$basearch/rh/|baseurl=http://vault.centos.org/7.9.2009/sclo/$basearch/rh/|' \
-        /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo; \
-    yum -y install \
-        devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-binutils devtoolset-11-make \
-        git perl perl-IPC-Cmd perl-Data-Dumper perl-Time-Piece python3 which xz wget \
-        ca-certificates m4 pkgconfig \
-        mesa-libGL-devel mesa-libEGL-devel fontconfig-devel freetype-devel \
-        libX11-devel libXext-devel libXfixes-devel libXi-devel libXrender-devel \
-        libxcb-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel \
-        xcb-util-renderutil-devel xcb-util-wm-devel \
-        libxkbcommon-devel libxkbcommon-x11-devel wayland-devel mesa-libwayland-egl-devel \
-        dejavu-sans-fonts xorg-x11-server-Xvfb xorg-x11-xauth; \
-    yum clean all; \
+# The RPMs are staged by make and installed with all repositories disabled.
+RUN --network=none \
+    --mount=type=bind,source=downloads/centos7-x86_64,target=/rpms \
+    --mount=type=bind,source=scripts/fetch/locks/qt6-centos7-x86_64-packages.json,target=/rpms.json \
+    --mount=type=bind,source=scripts/build/install-locked-rpms.py,target=/install-locked-rpms.py \
+    set -eux; \
+    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7; \
+    /usr/bin/python /install-locked-rpms.py /rpms.json /rpms scl-release; \
+    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-SCLo; \
+    /usr/bin/python /install-locked-rpms.py /rpms.json /rpms build; \
     rm -rf /var/cache/yum
 ENV PATH="/opt/rh/devtoolset-11/root/usr/bin:${PATH}" \
     LD_LIBRARY_PATH="/opt/rh/devtoolset-11/root/usr/lib64:/opt/rh/devtoolset-11/root/usr/lib" \
     CC=gcc CXX=g++
 
-# CMake from Kitware's release binaries, which run on glibc 2.17; checked
-# against the SHA256 from cmake-3.27.9-SHA-256.txt, kept here. From the
-# OpenKaryonLab copy (Kitware's release is on GitHub too).
+# Kitware's CMake binary for glibc 2.17, staged by make from OpenKaryonLab.
 ARG CMAKE_VERSION=3.27.9
 ARG CMAKE_SHA256=72b01478eeb312bf1a0136208957784fe55a7b587f8d9f9142a7fc9b0b9e9a28
-ARG LONGREACH_MIRROR=https://github.com/OpenKaryonLab/longreach-qt-sources/releases/download/sources/
-RUN set -eu; \
-    archive="cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz"; \
-    for try in 1 2 3 4 5; do \
-        wget -q "${LONGREACH_MIRROR%/}/${archive}" -O "/tmp/${archive}" && break; \
-        [ "$try" -lt 5 ] || exit 1; sleep 30; \
-    done; \
-    echo "${CMAKE_SHA256}  /tmp/${archive}" | sha256sum -c -; \
-    tar -xzf "/tmp/${archive}" -C /opt; \
-    rm "/tmp/${archive}"
+RUN --mount=type=bind,source=downloads/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz,target=/tmp/cmake.tar.gz \
+    echo "${CMAKE_SHA256}  /tmp/cmake.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/cmake.tar.gz -C /opt
 ENV PATH="/opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin:${PATH}"
 
 # Ninja, for Qt and for the tests/ suite (the smoke macro uses -G Ninja).
@@ -127,9 +109,11 @@ RUN mkdir -p /opt/qt6-linux-amd64/lib && ln -s /usr/share/fonts/dejavu /opt/qt6-
 # As a RHEL 7 desktop has them: Mesa's software rasterizer (Xvfb has no GLX
 # without swrast_dri.so) and a machine id (the image's is empty, and libdbus
 # aborts without one).
-RUN set -eux && \
-    yum -y install mesa-dri-drivers dbus && \
-    yum clean all && rm -rf /var/cache/yum && \
-    dbus-uuidgen > /etc/machine-id
+RUN --network=none \
+    --mount=type=bind,source=downloads/centos7-x86_64,target=/rpms \
+    --mount=type=bind,source=scripts/fetch/locks/qt6-centos7-x86_64-packages.json,target=/rpms.json \
+    --mount=type=bind,source=scripts/build/install-locked-rpms.py,target=/install-locked-rpms.py \
+    /usr/bin/python /install-locked-rpms.py /rpms.json /rpms runtime && \
+    rm -rf /var/cache/yum && dbus-uuidgen > /etc/machine-id
 
 CMD ["sh", "-c", "ldd --version | head -1; gcc --version | head -1"]

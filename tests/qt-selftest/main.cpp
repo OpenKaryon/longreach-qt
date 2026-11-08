@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
 
     SmokeReporter r("qt-selftest");
 
+    checkModernCpp(r);
     checkCore(r);
     checkTime(r);
     checkIo(r);

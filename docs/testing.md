@@ -39,6 +39,28 @@ binaries in `artifacts/tests-<image>/` for every target, with a
 `manifest.json`, except Qt 4 macOS: application bundles in a tar.gz with
 `build-inputs.json` and `macho-audit.json`.
 
+## C++ language and library checks
+
+`qt-selftest` includes 16 named checks for C++14, C++17, C++20 and C++23.
+They exercise generic lambdas, structured bindings, folds, optional values,
+string views, concepts, spans, ranges, threads, stop tokens/callbacks, formatting, constant
+evaluation, expected values, byteswapping, range conversion and printing.
+The language mode, feature-test macros and header availability decide
+which code is compiled. An unavailable facility produces a named SKIP.
+
+For a CMake suite build, `-DCMAKE_CXX_STANDARD=23` selects C++23.
+Without an explicit setting, the existing default is retained and Qt
+can raise it to the version it requires. Qt 4's qmake build keeps C++14.
+Selecting a newer mode requires a compiler that accepts that language
+mode; unavailable library facilities still produce SKIP. [toolchains.md](toolchains.md) lists the current compilers.
+
+The Linux amd64 [LLVM pilot script](../scripts/tests/qt6-linux-amd64-llvm/run-suite.sh)
+also builds and runs the complete console `qt-selftest` separately with
+`-fexperimental-library` at compile and link time. This exposes libc++ 19's
+experimental `std::jthread` and `std::stop_token`. Both named checks must
+report PASS in that run: a SKIP fails the script. The ordinary run retains
+its original flags and SKIP behaviour. No Qt/LLVM rebuild is needed.
+
 ## Coverage
 
 `scripts/tests/check_coverage.py` compares the Qt classes the suite references

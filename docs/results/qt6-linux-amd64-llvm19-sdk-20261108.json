@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-08",
+  "target": "tests-qt6-linux-amd64-llvm19",
+  "status": "PASS",
+  "image": "qt6-linux-amd64:llvm19-pilot",
+  "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+  "guest": {
+    "os": "CentOS Linux 7.9.2009",
+    "system": "CentOS 7 userland; glibc 2.17",
+    "vm": "Docker SDK container on the current host kernel",
+    "method": "Fresh C++23 suite build against the LLVM SDK; smoke-runner under Xvfb with QT_QPA_PLATFORM=offscreen. This full-suite run used the SDK container, not a stock runtime container."
+  },
+  "source": {
+    "source_head": "8a24b9d0abec467a05f3085bf5266563495c8500",
+    "source_dirty": true,
+    "captured_at": "2026-11-08T18:51:53.8719193Z",
+    "sha256": {
+      "tests/cmake/SmokeApp.cmake": "b2f63aa3ca3fefdb4851d21c5febbac09b8e96ab6469f59695b91032b86e70a4",
+      "tests/qt-selftest/CMakeLists.txt": "f9a42fd8206822bf6f40ae3ef51f9c59f8aaba84bc4b8cc6b508a30c7c10682e",
+      "tests/qt-selftest/checks.h": "83e1ff146fcaab5100042d4d975a02eda3407c32ae1501cc8c4ecdefc99876cb",
+      "tests/qt-selftest/main.cpp": "67ff11f90a0786d63ace15527134976775c381cc87da028a382c688543935ae6",
+      "tests/qt-selftest/checks_modern_cpp.cpp": "dc9bffc9513504fac9e4a9401b69bfed93b9cf4b5f2bd577af407021d34a0c46",
+      "tests/quick-qml-gallery/checks_quick3d.cpp": "6fb6ca3c91d5d42357a389e1fa24bdefbfbd166156a8476e6a47002ade252e55",
+      "docker/qt6/linux/amd64-llvm-pilot/clang-c": "e23e65ec3ae4c13c9a504a1c1401b9a114313cd9d4ecfe04137163f9679e4747",
+      "docker/qt6/linux/amd64-llvm-pilot/clang-cxx": "71500d66f0929eeefe7289e85dc4842b2e29cfb6d09eedde022d56fb99ba2bb1",
+      "docker/qt6/linux/amd64-llvm-pilot/Dockerfile": "6f56ded5f58a60f9f4747ffff50d150ae30ec03cfedf87c3d52efb6e9951f49e",
+      "docker/qt6/linux/amd64-llvm-pilot/modern-CMakeLists.txt": "06d73aa6197e71bd303989cbfc691e600f0a04622d7e6a7677c8a46bc312af35",
+      "docker/qt6/linux/amd64-llvm-pilot/modern-only.cpp": "4bcfdf698dbfcaf162ec57e5a2df6c1c55c040de5d2496b99b05d797b2279399",
+      "docker/qt6/linux/amd64-llvm-pilot/README.md": "cef5e904392d259b8a330d59494b06eda90d0950fbf959ad83a3edea25c61232",
+      "docker/qt6/linux/amd64-llvm-pilot/run-suite.sh": "c1a3d865ce7c616840362c814c884b7b2d4f897b63af9890a88418028c81e8d4"
+    }
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 542,
+    "checks_failed": 0,
+    "checks_skipped": 52
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 297,
+      "failed": 0,
+      "skipped": 39
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 91,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 41,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "executables_sha256": {
+    "qt-selftest": "50999bda986b402f1b83f67c4e3a6599f19fb9167cfa06fd91ad9f445d095577",
+    "widgets-gallery": "271773f3d440d1d34afc671034bb8684ec9b2a5783816e42a613f4ef9b445171",
+    "graphics-gallery": "f75fa13591226b5c38c0fb4398f38a7a5a4ee6ba4ecfb8f789ce963d641107ea",
+    "painting-lab": "99bce85bb74b4875fa1f166172aa7bee0d2f28b7616670df2925c872bd107621",
+    "multimedia-lab": "1824d8a79a3f77b350e580354b9c456d21f3bbe88b35e25a0f75a3765ee433ef",
+    "gl-heavy-gallery": "e661ff700449e7e3cae95cd33a34081ef591f70d0e01c8311c44e0edd08d5b3c",
+    "quick-qml-gallery": "ba09a961cc08be93817d5eaeb8ed313765112e517825b9c01c7ee3bc17993d23",
+    "network-gui": "8c151fdb99a2b66ad1a63ba11fb0e4af7f11ee764fbf01f9f36a81d3f172d7f4",
+    "smoke-runner": "1f60287214de071484344d581030d4058ec4695cc308c47aab75975b49d9e170",
+    "modern-cxx23": "e7715a21ec9dfb29010be5c4819c685752422916dca00dbe7b1a1c19b973d765"
+  },
+  "modern_cpp": {
+    "sdk_modes": [
+      {
+        "standard": "C++17",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 10
+      },
+      {
+        "standard": "C++20",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 6
+      },
+      {
+        "standard": "C++23",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 1
+      }
+    ],
+    "qt4_gcc5_cxx14": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 14
+    },
+    "runtime_binary": "modern-cxx23",
+    "stock_runtime_runs": [
+      {
+        "image": "centos:7.9.2009",
+        "image_id": "sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "image": "debian:trixie",
+        "image_id": "sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 1
+      }
+    ],
+    "unavailable": [
+      "std::jthread in the default libc++ 19 runtime configuration"
+    ],
+    "max_glibc": "2.16",
+    "needed": [
+      "libm.so.6",
+      "libdl.so.2",
+      "librt.so.1",
+      "libpthread.so.0",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ]
+  },
+  "build": {
+    "qt_version": "6.8.5",
+    "llvm_version": "19.1.6",
+    "llvm_archive_sha256": "e3f79317adaa9196d2cfffe1c869d7c100b7540832bc44fe0d3f44a12861fa34",
+    "qt_minutes": 55.9,
+    "ninja_steps": 12745,
+    "parallel_jobs": 4,
+    "license_profile": "gpl-enabled",
+    "consumer_exe_linker_flags": "-no-pie",
+    "max_suite_glibc": "2.17"
+  },
+  "source_layout_note": "Input paths and hashes describe the layout at run time, before the helpers were moved out of docker/. Current layout and commands: docs/targets/qt6-linux-llvm.md."
+}

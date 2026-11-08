@@ -32,6 +32,9 @@
 #include <QProcessEnvironment>
 #include <QThread>
 
+// The default unique_ptr argument in qssgrendercontextcore.h needs a complete
+// debug-draw type with libc++ in C++23 mode.
+#include <QtQuick3DRuntimeRender/private/qssgdebugdrawsystem_p.h>
 #include <ssg/qquick3dextensionhelpers.h>
 #include <ssg/qssgrendercontextcore.h>
 #include <ssg/qssgrenderextensions.h>

@@ -8,6 +8,7 @@
 
 class SmokeReporter;
 
+void checkModernCpp(SmokeReporter &r);
 void checkCore(SmokeReporter &r);        // strings, containers, variant, meta, datastream
 void checkTime(SmokeReporter &r);        // date/time/zone/locale/collator/easing
 void checkIo(SmokeReporter &r);          // files, dirs, settings, mimetype, storage

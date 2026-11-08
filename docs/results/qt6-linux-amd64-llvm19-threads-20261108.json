@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-08",
+  "status": "PASS",
+  "target": "tests-qt6-linux-amd64-llvm19-threads",
+  "image": "qt6-linux-amd64:llvm19-pilot",
+  "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+  "guest": {
+    "os": "CentOS Linux 7.9.2009",
+    "system": "glibc 2.17; Docker SDK container on current host kernel",
+    "method": "Ordinary eight-app suite under Xvfb/offscreen, then a separately built full console self-test with -fexperimental-library. Stock runtime containers run only the QtCore language probe."
+  },
+  "source": {
+    "source_head": "8a24b9d0abec467a05f3085bf5266563495c8500",
+    "source_dirty": true,
+    "captured_at": "2026-11-08T19:28:19.5224916Z",
+    "sha256": {
+      "tests/cmake/SmokeApp.cmake": "b2f63aa3ca3fefdb4851d21c5febbac09b8e96ab6469f59695b91032b86e70a4",
+      "tests/qt-selftest/CMakeLists.txt": "f9a42fd8206822bf6f40ae3ef51f9c59f8aaba84bc4b8cc6b508a30c7c10682e",
+      "tests/qt-selftest/checks.h": "83e1ff146fcaab5100042d4d975a02eda3407c32ae1501cc8c4ecdefc99876cb",
+      "tests/qt-selftest/main.cpp": "67ff11f90a0786d63ace15527134976775c381cc87da028a382c688543935ae6",
+      "tests/qt-selftest/checks_modern_cpp.cpp": "fe318160cdd03d796f37a36a9db001c332088adc354f809fe18e20246041d1c3",
+      "tests/quick-qml-gallery/checks_quick3d.cpp": "6fb6ca3c91d5d42357a389e1fa24bdefbfbd166156a8476e6a47002ade252e55",
+      "docker/qt6/linux/amd64-llvm-pilot/clang-c": "e23e65ec3ae4c13c9a504a1c1401b9a114313cd9d4ecfe04137163f9679e4747",
+      "docker/qt6/linux/amd64-llvm-pilot/clang-cxx": "71500d66f0929eeefe7289e85dc4842b2e29cfb6d09eedde022d56fb99ba2bb1",
+      "docker/qt6/linux/amd64-llvm-pilot/Dockerfile": "6f56ded5f58a60f9f4747ffff50d150ae30ec03cfedf87c3d52efb6e9951f49e",
+      "docker/qt6/linux/amd64-llvm-pilot/modern-CMakeLists.txt": "06d73aa6197e71bd303989cbfc691e600f0a04622d7e6a7677c8a46bc312af35",
+      "docker/qt6/linux/amd64-llvm-pilot/modern-only.cpp": "4bcfdf698dbfcaf162ec57e5a2df6c1c55c040de5d2496b99b05d797b2279399",
+      "docker/qt6/linux/amd64-llvm-pilot/README.md": "60be068563e57a1dbe33ebfa534b7ed6677b85bb4630af5ac90bcb9361a557bc",
+      "docker/qt6/linux/amd64-llvm-pilot/run-suite.sh": "eb5ff8ca1dc7840a2b474b9ca531233620d065d5f66b470cdb2e793ea55c3b38"
+    }
+  },
+  "summary": {
+    "apps_passed": 8,
+    "apps_failed": 0,
+    "checks_passed": 542,
+    "checks_failed": 0,
+    "checks_skipped": 53
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 297,
+      "failed": 0,
+      "skipped": 40
+    },
+    {
+      "application": "widgets-gallery",
+      "passed": 91,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "graphics-gallery",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "quick-qml-gallery",
+      "passed": 41,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "gl-heavy-gallery",
+      "passed": 55,
+      "failed": 0,
+      "skipped": 4
+    },
+    {
+      "application": "painting-lab",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "application": "multimedia-lab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 1
+    },
+    {
+      "application": "network-gui",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "experimental_console": {
+    "standard": "C++23",
+    "compile_flag": "-fexperimental-library",
+    "link_flags": "-no-pie -fexperimental-library",
+    "required_pass_checks": [
+      "C++20 std::jthread",
+      "C++20 std::stop_token and callbacks"
+    ],
+    "skip_is_failure_for_required_checks": true,
+    "max_glibc": "2.17",
+    "passed": 299,
+    "failed": 0,
+    "skipped": 38,
+    "required_thread_gate_ordinary_skip_rejected": true
+  },
+  "modern_cpp": {
+    "ordinary_modes": {
+      "C++17": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 11
+      },
+      "C++20": {
+        "passed": 9,
+        "failed": 0,
+        "skipped": 7
+      },
+      "C++23": {
+        "passed": 14,
+        "failed": 0,
+        "skipped": 2
+      }
+    },
+    "qt4_gcc5_cxx14": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 15
+    },
+    "experimental_cxx23": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "stock_runtime_runs": [
+      {
+        "image": "centos:7.9.2009",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "image": "debian:trixie",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      }
+    ],
+    "runtime_binary": "modern-cxx23-experimental",
+    "max_glibc": "2.16",
+    "needed": [
+      "libm.so.6",
+      "libdl.so.2",
+      "librt.so.1",
+      "libpthread.so.0",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ]
+  },
+  "executables_sha256": {
+    "qt-selftest": "82f773099cc6dbe421898483c1291201ae303904585b93239dfbbd7f3b81dddd",
+    "widgets-gallery": "271773f3d440d1d34afc671034bb8684ec9b2a5783816e42a613f4ef9b445171",
+    "graphics-gallery": "f75fa13591226b5c38c0fb4398f38a7a5a4ee6ba4ecfb8f789ce963d641107ea",
+    "painting-lab": "99bce85bb74b4875fa1f166172aa7bee0d2f28b7616670df2925c872bd107621",
+    "multimedia-lab": "1824d8a79a3f77b350e580354b9c456d21f3bbe88b35e25a0f75a3765ee433ef",
+    "gl-heavy-gallery": "e661ff700449e7e3cae95cd33a34081ef591f70d0e01c8311c44e0edd08d5b3c",
+    "quick-qml-gallery": "82639b6001d240bf5490f5b0947ed51b46599d18e17dee2b96df56660b8bb6b7",
+    "network-gui": "8c151fdb99a2b66ad1a63ba11fb0e4af7f11ee764fbf01f9f36a81d3f172d7f4",
+    "smoke-runner": "1f60287214de071484344d581030d4058ec4695cc308c47aab75975b49d9e170",
+    "modern-cxx23": "09ca6332f1323cfa87971250cb181c7cb8c343a5993610cd3fa9bf5fb39891ef",
+    "qt-selftest-experimental": "b2755ddbeb547f8fd9197be233257ff75a935424116fb7ec6a950a2d5c01a575",
+    "modern-cxx23-experimental": "70768bf73db882b924e65db46b415670133ddbf4aa75e21ea1e13977270c274c"
+  },
+  "source_layout_note": "Input paths and hashes describe the layout at run time, before the helpers were moved out of docker/. Current layout and commands: docs/targets/qt6-linux-llvm.md.",
+  "layout_recheck": {
+    "date": "2026-11-08",
+    "status": "PASS",
+    "base_commit": "8a24b9d0abec467a05f3085bf5266563495c8500",
+    "sdk_rebuilt": false,
+    "dockerfile_check": "PASS, no warnings",
+    "ordinary_checks": {
+      "passed": 542,
+      "failed": 0,
+      "skipped": 53
+    },
+    "experimental_console": {
+      "passed": 299,
+      "failed": 0,
+      "skipped": 38
+    },
+    "experimental_language": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "source_sha256": {
+      "tests/cmake/SmokeApp.cmake": "b2f63aa3ca3fefdb4851d21c5febbac09b8e96ab6469f59695b91032b86e70a4",
+      "tests/qt-selftest/CMakeLists.txt": "f9a42fd8206822bf6f40ae3ef51f9c59f8aaba84bc4b8cc6b508a30c7c10682e",
+      "tests/qt-selftest/checks.h": "83e1ff146fcaab5100042d4d975a02eda3407c32ae1501cc8c4ecdefc99876cb",
+      "tests/qt-selftest/main.cpp": "67ff11f90a0786d63ace15527134976775c381cc87da028a382c688543935ae6",
+      "tests/qt-selftest/checks_modern_cpp.cpp": "fe318160cdd03d796f37a36a9db001c332088adc354f809fe18e20246041d1c3",
+      "tests/quick-qml-gallery/checks_quick3d.cpp": "6fb6ca3c91d5d42357a389e1fa24bdefbfbd166156a8476e6a47002ade252e55",
+      "docker/qt6/linux/amd64/Dockerfile-llvm": "9ebaa92593846d85137b9ab3b6e934552ad8f2007cf5b1bee7ac958485433ccb",
+      "docs/targets/qt6-linux-llvm.md": "0fe5ae90414eab73826de1328d7531fce6ee0fbc4c032657999911c9ea29fff0",
+      "scripts/build/qt6-linux-amd64-llvm/clang-c": "e23e65ec3ae4c13c9a504a1c1401b9a114313cd9d4ecfe04137163f9679e4747",
+      "scripts/build/qt6-linux-amd64-llvm/clang-cxx": "71500d66f0929eeefe7289e85dc4842b2e29cfb6d09eedde022d56fb99ba2bb1",
+      "scripts/tests/qt6-linux-amd64-llvm/CMakeLists.txt": "e4e85f20dbf0a7dc14fb64f8b9c3cc6e3c9cb7a57b2608ee946dacad013ed45f",
+      "scripts/tests/qt6-linux-amd64-llvm/modern-only.cpp": "d123f2428615934d375c77398e905dfceb48b2cc803b82cb4aaddd3d5c567648",
+      "scripts/tests/qt6-linux-amd64-llvm/run-suite.sh": "e70cc804b1fc78fc7e6ce612d9efac410b125f52d413c15c473205f11e646069"
+    }
+  }
+}

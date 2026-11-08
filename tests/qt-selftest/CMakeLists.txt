@@ -10,6 +10,7 @@ smoke_add_app(qt-selftest
         ${SMOKE_CONSOLE_MODULES}
     SOURCES
         main.cpp
+        checks_modern_cpp.cpp
         checks_core.cpp
         checks_time.cpp
         checks_io.cpp

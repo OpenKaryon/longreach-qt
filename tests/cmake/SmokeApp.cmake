@@ -76,12 +76,19 @@ function(smoke_add_app target)
 
     add_executable(${target} ${ARG_SOURCES})
 
+    # A caller can select a newer language mode with -DCMAKE_CXX_STANDARD.
+    # The default stays compatible with the Qt 4/5 suite's C++14 sources.
+    set(smoke_cxx_standard 14)
+    if(CMAKE_CXX_STANDARD)
+        set(smoke_cxx_standard ${CMAKE_CXX_STANDARD})
+    endif()
+
     # qmake ran moc, uic and rcc automatically; CMake has to be told to.
     set_target_properties(${target} PROPERTIES
         AUTOMOC ON
         AUTOUIC ON
         AUTORCC ON
-        CXX_STANDARD 14
+        CXX_STANDARD ${smoke_cxx_standard}
         CXX_STANDARD_REQUIRED ON
 
         # A plain executable everywhere: no macOS bundle, which extract.sh would not

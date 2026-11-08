@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+exec /opt/llvm-19/bin/clang -Qunused-arguments --gcc-toolchain=/opt/rh/devtoolset-11/root/usr \
+    --rtlib=compiler-rt -fuse-ld=lld -Wl,--threads=2 "$@"

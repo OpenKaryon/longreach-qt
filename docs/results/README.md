@@ -1,5 +1,11 @@
 # Results
 
+The [LLVM experimental thread follow-up](qt6-linux-amd64-llvm-threads-20261108.md)
+checks jthread and stop tokens in a separate mandatory experimental run.
+
+The [Qt 6 Linux amd64 LLVM pilot](qt6-linux-amd64-llvm-20261108.md)
+records the Clang/libc++ build, C++23 smoke suite and guarded language checks.
+
 The [Qt 6 Linux amd64 RPM lock validation](qt6-linux-amd64-centos7-rpm-lock-20261104.md)
 records the clean CentOS 7 build and consumer smoke test.
 

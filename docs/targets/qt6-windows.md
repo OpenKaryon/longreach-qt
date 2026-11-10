@@ -39,3 +39,8 @@ arm64 is built, not run.
   software path).
 - The audit screens known Windows 8+ imports; it does not replace a review of
   every imported function.
+
+## LLVM consumer profile
+
+The [Windows LLVM consumer profile](qt6-windows-llvm.md) adds build tools
+and sequential C++23 checks to the existing LLVM-MinGW SDK without rebuilding Qt.

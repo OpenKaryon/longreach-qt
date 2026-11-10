@@ -1,5 +1,8 @@
 # Results
 
+The [Windows LLVM consumer validation](qt6-win-amd64-llvm-consumer-20261108.md)
+records the SDK console/language checks and local C++20 consumer build.
+
 The [LLVM experimental thread follow-up](qt6-linux-amd64-llvm-threads-20261108.md)
 checks jthread and stop tokens in a separate mandatory experimental run.
 

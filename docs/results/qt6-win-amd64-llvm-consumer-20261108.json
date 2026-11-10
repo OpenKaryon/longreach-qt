@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-08",
+  "status": "PASS",
+  "target": "qt6-win-amd64-llvm19-consumer-console",
+  "image": "qt6-win-amd64:llvm19-pilot",
+  "image_id": "sha256:037a7cc3652692c815853049bfcf8517742e8d1dfb29f315b4ff63e707a463b2",
+  "base_image_id": "sha256:08731131866b73b59f309164503503d263b46cfa57a2242efa41303d5bb352fc",
+  "source_base": "d20c11a8d2e327bfc76b8cb48d7210ff1c984898",
+  "source_dirty": true,
+  "source_sha256": {
+    "docker/qt6/windows/amd64/Dockerfile-llvm": "087925c9bef39374f3ab497100ed1886ede23a613a43e860844b947d93d03c3f",
+    "scripts/tests/qt6-win-amd64-llvm/CMakeLists.txt": "d57481127c25139b33c375d773842cd06d9d21878588a855108e8f3b812c0a82",
+    "scripts/tests/qt6-win-amd64-llvm/modern-only.cpp": "d123f2428615934d375c77398e905dfceb48b2cc803b82cb4aaddd3d5c567648",
+    "scripts/tests/qt6-win-amd64-llvm/build-suite.sh": "8e3bcd2cc5ff1979e4c13cf78a1f64df3548b0624bcc80bd95bf3cd35866fd45",
+    "scripts/tests/qt6-win-amd64-llvm/run-suite.py": "f5c71fc268442e9141cfdb98e773e07b1231f515524ee28bdf3e4aad0c6606af",
+    "tests/cmake/SmokeApp.cmake": "b2f63aa3ca3fefdb4851d21c5febbac09b8e96ab6469f59695b91032b86e70a4",
+    "tests/qt-selftest/CMakeLists.txt": "f9a42fd8206822bf6f40ae3ef51f9c59f8aaba84bc4b8cc6b508a30c7c10682e",
+    "tests/qt-selftest/checks_modern_cpp.cpp": "fe318160cdd03d796f37a36a9db001c332088adc354f809fe18e20246041d1c3",
+    "tests/qt-selftest/checks.h": "83e1ff146fcaab5100042d4d975a02eda3407c32ae1501cc8c4ecdefc99876cb",
+    "tests/qt-selftest/main.cpp": "67ff11f90a0786d63ace15527134976775c381cc87da028a382c688543935ae6",
+    "tests/quick-qml-gallery/checks_quick3d.cpp": "6fb6ca3c91d5d42357a389e1fa24bdefbfbd166156a8476e6a47002ade252e55"
+  },
+  "guest": {
+    "os": "Windows 11",
+    "build": "10.0.26200",
+    "method": "Native console checks on the host; windows QPA backend; sequential and stop on first failure."
+  },
+  "build": {
+    "qt": "6.8.5",
+    "compiler": "Clang/LLVM-MinGW 19.1.6, MSVCRT",
+    "cmake": "3.28.6",
+    "qt_and_llvm_rebuilt": false,
+    "ordinary_apps_cross_built": 8,
+    "pe_files_audited": 12,
+    "parallel_jobs": 4,
+    "cpus": 4,
+    "memory_gib": 8
+  },
+  "summary": {
+    "apps_passed": 1,
+    "apps_failed": 0,
+    "checks_passed": 279,
+    "checks_failed": 0,
+    "checks_skipped": 45
+  },
+  "applications": [
+    {
+      "application": "qt-selftest",
+      "passed": 279,
+      "failed": 0,
+      "skipped": 45
+    }
+  ],
+  "experimental_console": {
+    "passed": 281,
+    "failed": 0,
+    "skipped": 43
+  },
+  "modern_cpp": {
+    "ordinary_cxx23": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 2
+    },
+    "experimental_cxx23": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "required_pass_checks": [
+      "C++20 std::jthread",
+      "C++20 std::stop_token and callbacks"
+    ]
+  },
+  "runtime_scope": "Only ordinary/experimental console self-tests and QtCore language probes were rerun after correcting the backend. The seven GUI galleries and Windows 7 runtime were not rerun.",
+  "initial_failures": "Initial GUI startup requested an unlinked offscreen plugin. A trial offscreen import exposed an unsupported OpenGL check. Shared settings were restored and final native-console validation used windows QPA. Original diagnostic logs are preserved locally.",
+  "executables_sha256": {
+    "gl-heavy-gallery.exe": "45008a9f71eb01f1760047c091d21577a441e5260e7ab07b27918e05d025a448",
+    "graphics-gallery.exe": "cbeec73578c0f31699b82600d4590cabb30ea97e6eb99217d28b8c9c816b67e7",
+    "modern-cxx23-experimental.exe": "43a1c15be0e5ae987167d253aaa554460def3fa8f31d6af4e76d57b5f0943990",
+    "modern-cxx23-ordinary.exe": "5e9ebd03915666a274ffeb7443657ebafe16bd3aaebf33a514cac22df69891f9",
+    "multimedia-lab.exe": "231ce2571ca50b26e9580c9aa9b5a61bcd79a77a1da321fa19ee73490db16f69",
+    "network-gui.exe": "d70666b577fb0781a033c2807b0784c09f3459bd368a43a73277f7a693062354",
+    "painting-lab.exe": "d81d95473fd7f6b89665e30a9ff478eada42df94365f8fb70d9706a81e512b18",
+    "qt-selftest-experimental.exe": "509354ec787df578947345d6b3f68c94bb9db79ca35057fabe7a4d30e2d36ee6",
+    "qt-selftest.exe": "6d9fd18d9783c89ebd2ac7e278a80d124f88fac3b50cecc61a6dccf5283c15de",
+    "quick-qml-gallery.exe": "268397a3ee6ff05d2f3d39885dee04be7901647b502debf79cc5bcd4010d7db8",
+    "smoke-runner.exe": "97438f995d4c500f34439a16e185e47643f2a31d245dad7e92b94ea87f4ab4fe",
+    "widgets-gallery.exe": "7da242d1bb6a7ce5167b743baae1549aebb83db9aa483766386c93de61babd7b"
+  },
+  "local_consumer": {
+    "language": "C++20",
+    "qt_modules": [
+      "Widgets",
+      "Svg"
+    ],
+    "build_status": "PASS",
+    "built": [
+      "desktop",
+      "worker",
+      "cli"
+    ],
+    "build_minutes": 16.28,
+    "dependency_cache": "Existing pinned dependency sources/compatible objects copied from a read-only cache into a new volume; Qt and dependency pins unchanged.",
+    "cpp_source_changes_needed": false,
+    "build_script_change": "Honor PARALLEL_JOBS for host tools and target build.",
+    "tiny_solve": "optimal",
+    "historical_solve": "optimal",
+    "historical_elapsed_ms": 1196,
+    "historical_meetings": 952,
+    "historical_validation_errors": 0,
+    "historical_validation_warnings": 0,
+    "workers": 1,
+    "runtime_pe_files_audited": 102,
+    "desktop_gui_run": false,
+    "full_application_test_suite_run": false,
+    "source_and_detailed_receipts": "Kept in the consumer checkout; no private inputs or outputs are included here."
+  },
+  "refactor_validation": {
+    "native_checks_completed_utc": "2026-11-10T09:21:50Z",
+    "rebuild_log": "build/llvm-pilot/windows-refactor-build.log",
+    "console_runs": [
+      "qt-selftest",
+      "qt-selftest-experimental",
+      "modern-cxx23-ordinary",
+      "modern-cxx23-experimental"
+    ],
+    "counts_unchanged": true,
+    "runner_checks": [
+      "Experimental thread checks reject ordinary SKIP results",
+      "Process error mode restored after Python exception",
+      "No further executable dispatched after first failure (mocked process call)"
+    ]
+  }
+}

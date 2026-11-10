@@ -1,5 +1,9 @@
 # Results
 
+The [Qt 6 Linux amd64 LLVM 21.1.8 SDK run](qt6-linux-amd64-llvm21-sdk-20261110.md)
+records the complete Qt rebuild, required 25/25 C++23 checks through CMake
+and qmake, the ordinary Qt console run and stock CentOS 7 execution.
+
 The [six-target upstream LLVM 21.1.8 probes](qt6-llvm21-probes-20261110.md)
 record the C++23 preflight before rebuilding the Qt SDKs.
 

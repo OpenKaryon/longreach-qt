@@ -1,79 +1,29 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-
-FROM qt6-linux-amd64:centos7-rpm-lock-check AS toolchain
+# Build the shared compiler with docker/qt6/host/Dockerfile-llvm first.
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+FROM ${LLVM_COMPILER_IMAGE} AS toolchain
 ARG PARALLEL_JOBS=4
-ENV LLVM_ROOT=/opt/llvm-19
-RUN --mount=type=bind,source=downloads/llvm-project-19.1.6.src.tar.xz,target=/tmp/llvm.tar.xz \
-    echo 'e3f79317adaa9196d2cfffe1c869d7c100b7540832bc44fe0d3f44a12861fa34  /tmp/llvm.tar.xz' | sha256sum -c - && \
-    mkdir /opt/llvm-src && tar -xJf /tmp/llvm.tar.xz -C /opt/llvm-src --strip-components=1
-RUN cmake -S /opt/llvm-src/llvm -B /tmp/llvm-build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE='-O2 -DNDEBUG' \
-        -DCMAKE_CXX_FLAGS_RELEASE='-O2 -DNDEBUG' \
-        -DCMAKE_INSTALL_PREFIX=${LLVM_ROOT} \
-        -DLLVM_ENABLE_PROJECTS='clang;lld' -DLLVM_TARGETS_TO_BUILD=X86 \
-        -DLLVM_DISTRIBUTION_COMPONENTS='clang;clang-resource-headers;lld;llvm-ar;llvm-ranlib;llvm-nm;llvm-objcopy;llvm-strip;llvm-objdump;llvm-readobj' \
-        -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_INCLUDE_TESTS=OFF \
-        -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
-        -DLLVM_INCLUDE_DOCS=OFF -DCLANG_INCLUDE_TESTS=OFF \
-        -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_LIBEDIT=OFF \
-        -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF && \
-    cmake --build /tmp/llvm-build --target distribution --parallel "${PARALLEL_JOBS}" && \
-    cmake --build /tmp/llvm-build --target install-distribution --parallel 1 && \
-    rm -rf /tmp/llvm-build
-RUN cmake -S /opt/llvm-src/runtimes -B /tmp/llvm-runtime -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${LLVM_ROOT} \
-        -DCMAKE_C_COMPILER=${LLVM_ROOT}/bin/clang \
-        -DCMAKE_CXX_COMPILER=${LLVM_ROOT}/bin/clang++ \
-        -DCMAKE_C_COMPILER_TARGET=x86_64-unknown-linux-gnu \
-        -DCMAKE_CXX_COMPILER_TARGET=x86_64-unknown-linux-gnu \
-        -DCMAKE_C_FLAGS=--gcc-toolchain=/opt/rh/devtoolset-11/root/usr \
-        -DCMAKE_CXX_FLAGS=--gcc-toolchain=/opt/rh/devtoolset-11/root/usr \
-        -DLLVM_ENABLE_RUNTIMES='compiler-rt;libunwind;libcxxabi;libcxx' \
-        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
-        -DCOMPILER_RT_INSTALL_PATH=${LLVM_ROOT}/lib/clang/19 \
-        -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF \
-        -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF \
-        -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF -DCOMPILER_RT_BUILD_ORC=OFF \
-        -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_INCLUDE_TESTS=OFF \
-        -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
-        -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON \
-        -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBUNWIND_INCLUDE_TESTS=OFF \
-        -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON \
-        -DLIBCXXABI_USE_COMPILER_RT=ON -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-        -DLIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY=ON \
-        -DLIBCXXABI_INCLUDE_TESTS=OFF \
-        -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC=ON \
-        -DLIBCXX_USE_COMPILER_RT=ON -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON \
-        -DLIBCXX_INCLUDE_TESTS=OFF -DLIBCXX_INCLUDE_BENCHMARKS=OFF && \
-    cmake --build /tmp/llvm-runtime --parallel "${PARALLEL_JOBS}" && \
-    cmake --install /tmp/llvm-runtime && \
-    rm -rf /tmp/llvm-runtime /opt/llvm-src
-COPY scripts/build/qt6-linux-amd64/clang-c \
-     scripts/build/qt6-linux-amd64/clang-cxx /opt/longreach-llvm/bin/
-ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-19/bin:${PATH} \
+ENV LLVM_ROOT=/opt/llvm-21
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/tmp/llvm.tar.xz \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=cache,id=qt6-llvm21-linux-amd64,target=/work \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" \
+        bash /src/scripts/build/qt6-linux-amd64/prepare-toolchain.sh /tmp/llvm.tar.xz
+ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-21/bin:${PATH} \
     CC=/opt/longreach-llvm/bin/clang-c \
     CXX=/opt/longreach-llvm/bin/clang-cxx \
-    AR=/opt/llvm-19/bin/llvm-ar \
-    RANLIB=/opt/llvm-19/bin/llvm-ranlib \
-    NM=/opt/llvm-19/bin/llvm-nm
-RUN chmod +x /opt/longreach-llvm/bin/* && \
-    printf '#include <expected>\nint main() { std::expected<int,int> v(23); return *v == 23 ? 0 : 1; }\n' > /tmp/cxx23.cpp && \
-    "${CXX}" -std=c++23 /tmp/cxx23.cpp -o /tmp/cxx23 && /tmp/cxx23 && \
-    rm /tmp/cxx23.cpp /tmp/cxx23
+    AR=/opt/llvm-21/bin/llvm-ar \
+    RANLIB=/opt/llvm-21/bin/llvm-ranlib \
+    NM=/opt/llvm-21/bin/llvm-nm
 
 FROM toolchain AS qt
 ARG PARALLEL_JOBS=4
-RUN mkdir /opt/qt-build-llvm && cd /opt/qt-build-llvm && \
-    /opt/qt-everywhere-src-6.8.5/configure \
-        -opensource -confirm-license -prefix /opt/qt6-linux-amd64-llvm \
-        -release -optimize-size -static \
-        -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
-        -nomake examples -nomake tests -skip qtwebengine -skip qtwebview \
-        -openssl-linked \
-        -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
-           -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON && \
-    cmake --build . --parallel "${PARALLEL_JOBS}" && \
-    cmake --install . && cd / && rm -rf /opt/qt-build-llvm
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt6-linux-amd64/build-qt.sh,target=/tmp/build-qt.sh \
+    --mount=type=cache,id=qt6-llvm21-linux-amd64-qt,target=/opt/qt-build-llvm \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" bash /tmp/build-qt.sh
 ENV QT_INSTALL_DIR=/opt/qt6-linux-amd64-llvm
 CMD ["sh", "-c", "clang-cxx --version | head -1; /opt/qt6-linux-amd64-llvm/bin/qtpaths --qt-version"]

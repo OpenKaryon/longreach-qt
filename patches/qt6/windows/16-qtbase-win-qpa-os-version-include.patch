@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Declare QOperatingSystemVersion for the Win7 QPA compatibility checks when
+# Qt is built with precompiled headers disabled.
+--- a/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
++++ b/qtbase/src/plugins/platforms/windows/qwindowscontext.cpp
+@@ -43,6 +43,7 @@
+ #include <QtCore/qsysinfo.h>
+ #include <QtCore/qscopedpointer.h>
+ #include <QtCore/quuid.h>
++#include <QtCore/qoperatingsystemversion.h>
+ #include <QtCore/private/qsystemlibrary_p.h>
+ #include <QtCore/private/qwinregistry_p.h>
+ #if QT_CONFIG(cpp_winrt)

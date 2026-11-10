@@ -3,7 +3,22 @@
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
 target=${1:?target required}
-test "$target" = linux-arm64
+patches=(/src/patches/qt6/all/*.patch)
+platform_args=(-openssl-linked)
+platform_cmake=(-DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON)
+case "$target" in
+    linux-arm64) ;;
+    windows-amd64|windows-arm64)
+        patches+=(/src/patches/qt6/windows/*.patch)
+        processor=x86_64
+        if [ "$target" = windows-arm64 ]; then processor=aarch64; fi
+        platform_args=(-strip -platform linux-g++ -xplatform win32-clang-g++
+            -device-option "CROSS_COMPILE=$processor-w64-mingw32-"
+            -no-vulkan -no-dbus -skip qtwayland -skip qtactiveqt)
+        platform_cmake=(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+        ;;
+    *) exit 2 ;;
+esac
 archive=/src/downloads/qt-everywhere-src-6.8.5.tar.xz
 echo 'c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9  '"$archive" | sha256sum -c -
 source=/build/qt-everywhere-src-6.8.5
@@ -25,8 +40,10 @@ if [ -f "$source/.longreach-patched" ] && [ ! -d "$receipts" ]; then
     done
 fi
 mkdir -p "$receipts"
-for patch in /src/patches/qt6/all/*.patch; do
+for patch in "${patches[@]}"; do
+    group=$(basename "$(dirname "$patch")")
     receipt="$receipts/$(basename "$patch")"
+    if [ "$group" != all ]; then receipt="$receipts/$group-$(basename "$patch")"; fi
     signature=$(sha256sum "$patch" | cut -d' ' -f1)
     if [ -f "$receipt" ]; then
         if [ "$(cat "$receipt")" != "$signature" ]; then
@@ -42,19 +59,22 @@ for patch in /src/patches/qt6/all/*.patch; do
 done
 touch "$source/.longreach-patched"
 
-prefix=/opt/qt6-linux-arm64-llvm
+prefix=/opt/qt6-$target-llvm
 mkdir -p /build/qt
 cd /build/qt
 "$source/configure" -opensource -confirm-license -prefix "$prefix" \
     -qt-host-path /opt/qt6-host-llvm21 -release -optimize-size -static \
     -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
-    -nomake examples -nomake tests -skip qtwebengine -skip qtwebview -openssl-linked \
+    -nomake examples -nomake tests -skip qtwebengine -skip qtwebview "${platform_args[@]}" \
     -- -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-llvm/cmake/toolchain.cmake \
        -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
        -DCMAKE_JOB_POOLS=link_pool=1 -DCMAKE_JOB_POOL_LINK=link_pool \
-       -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON
+       "${platform_cmake[@]}"
+if [ "$target" = windows-amd64 ]; then
+    cmake --build . --target QWindowsMediaPlugin --parallel "${PARALLEL_JOBS:-4}"
+fi
 cmake --build . --parallel "${PARALLEL_JOBS:-4}"
 cmake --install .
-if grep -rIl 'usr/lib64/libwayland' "$prefix/lib/cmake"; then exit 1; fi
+if [ "$target" = linux-arm64 ] && grep -rIl 'usr/lib64/libwayland' "$prefix/lib/cmake"; then exit 1; fi
 mkdir -p "$prefix/share/longreach"
 cp config.summary CMakeCache.txt "$prefix/share/longreach/"

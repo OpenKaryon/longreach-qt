@@ -1,5 +1,9 @@
 # Results
 
+The [Qt 6 Windows amd64 LLVM 21.1.8 SDK run](qt6-windows-amd64-llvm21-sdk-20261111.md)
+records the static cross-build and 25/25 C++23 on native Windows 11 and
+in Windows 7 SP1 and Windows 11 guests.
+
 The [Qt 6 Linux arm64 LLVM 21.1.8 SDK run](qt6-linux-arm64-llvm21-sdk-20261111.md)
 records the static AArch64 build, required 25/25 C++23 runs under QEMU and
 the separate stock CentOS 7 user-space check. The [SDK queue](qt6-llvm21-sdk-queue-20261111.md)

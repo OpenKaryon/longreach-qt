@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Use the installed mingw-w64 Winsock header spelling on case-sensitive hosts.
+--- a/qtquick3dphysics/src/3rdparty/PhysX/source/foundation/src/windows/PsWindowsSocket.cpp
++++ b/qtquick3dphysics/src/3rdparty/PhysX/source/foundation/src/windows/PsWindowsSocket.cpp
+@@ -35,4 +35,4 @@
+ #include "PsArray.h"
+ 
+-#include <Winsock2.h>
++#include <winsock2.h>
+ #pragma comment(lib, "Ws2_32")

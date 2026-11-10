@@ -1,7 +1,32 @@
-# Qt 6 Windows amd64 LLVM consumer profile
+# Qt 6 Windows amd64 LLVM profiles
+
+## Upstream LLVM 21.1.8 SDK
+
+The current `docker/qt6/windows/amd64/Dockerfile-llvm` cross-builds
+Qt 6.8.5 with upstream Clang/LLD and the LLVM C++ runtimes. Its MSVCRT
+headers and import libraries come from the pinned mingw-w64 13.0.0 sources.
+The target is Windows amd64 with a Windows 7 SP1 floor.
+
+Stage the [pinned sources](../../scripts/build/qt6-llvm-probes/inputs.json)
+and the local compiler, Linux host Qt and Debian-based build images used
+by the [SDK queue](../results/qt6-llvm21-sdk-queue-20261111.md). From the
+repository root, with Docker idle:
+
+```powershell
+python scripts/build/qt6-llvm-sdk/run.py --target windows-amd64 --wait
+```
+
+The coordinator saves `qt6-win-amd64:llvm21` and checks C++17/20 and
+required C++23 consumers in sequence. The PE import and subsystem audit
+screens loader compatibility. A matching Windows host runs the console
+checks and requires 25 PASS with zero FAIL/SKIP in C++23 mode. A Windows 7
+SP1 runtime result requires its own guest run. The [SDK run report](../results/qt6-windows-amd64-llvm21-sdk-20261111.md)
+includes both Windows guest runs.
+
+## Historical LLVM-MinGW 19 consumer profile
 
 The ordinary Windows amd64 SDK already uses LLVM-MinGW 20241217 / Clang
-19.1.6 and libc++ with MSVCRT. `Dockerfile-llvm` reuses that installed Qt
+19.1.6 and libc++ with MSVCRT. The Dockerfile at commit `bd0cf0a9b86f` reuses that installed Qt
 6.8.5 SDK and adds Git, Python 3, a native host compiler (for tools such as
 protoc), and the pinned Kitware CMake 3.28.6 binary. Qt and LLVM are not
 rebuilt or replaced. The existing default target remains unchanged.
@@ -10,7 +35,7 @@ The SDK remains a Linux-hosted cross-compilation image that produces
 native Windows PE executables; no LLVM VM or runtime compiler is needed
 on the destination system.
 
-## Build
+### Build the historical profile
 
 From the repository root, prepare the ordinary SDK and the existing pinned
 CMake archive (`downloads/cmake-3.28.6-linux-x86_64.tar.gz`, SHA256
@@ -22,9 +47,8 @@ python scripts/fetch/fetch.py \
   https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-x86_64.tar.gz \
   downloads/cmake-3.28.6-linux-x86_64.tar.gz \
   931e3c0d546ee03ca72bb147ccd9b49e3b6252f765f66bf21b9d165519940458
-docker build --progress=plain \
-  -f docker/qt6/windows/amd64/Dockerfile-llvm \
-  -t qt6-win-amd64:llvm19-pilot .
+git show bd0cf0a9b86f:docker/qt6/windows/amd64/Dockerfile-llvm |
+  docker build --progress=plain -f - -t qt6-win-amd64:llvm19-pilot .
 ```
 
 Host build packages use the repository's Debian snapshot setup. The
@@ -32,7 +56,7 @@ compiler and Qt come from `QT6_WINDOWS_BASE_IMAGE` (default
 `qt6-win-amd64`); use the recorded image identity when reproducing a run.
 The Docker directory contains only Dockerfiles; helpers live in scripts/.
 
-## Sequential checks
+### Historical sequential checks
 
 After the image build finishes:
 

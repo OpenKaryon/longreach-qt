@@ -16,6 +16,8 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt6/linux/arm64/Dockerfile-llvm",
                              "prefix": "/opt/qt6-linux-arm64-llvm"}}
+PROFILES["windows-amd64"] = {"image": "qt6-win-amd64",
+    "dockerfile": "docker/qt6/windows/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-amd64-llvm"}
 
 
 def docker(*args: str) -> str:
@@ -36,6 +38,15 @@ def idle(wait: bool) -> None:
 def environment(image: str) -> dict[str, str]:
     values = json.loads(docker("image", "inspect", "--format", "{{json .Config.Env}}", image))
     return dict(item.split("=", 1) for item in values)
+
+
+def windows_runtime(target: str, suite: Path, toolchain: bool) -> dict:
+    path = ROOT / "scripts/tests/qt6-llvm-sdk/windows-host-run.py"
+    spec = importlib.util.spec_from_file_location("sdk_windows_host", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.run(target, suite, toolchain)
 
 
 def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dict:
@@ -62,11 +73,18 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
                      "--cpus", "4", "--memory", "8g", "--network", "none", "--entrypoint", "/bin/bash",
                      "--mount", f"type=bind,source={ROOT},target=/src,readonly",
                      "--mount", f"type=bind,source={suite},target=/out", image_id,
-                     "/src/scripts/tests/qt6-llvm-sdk/build-checks.sh", target]
+                     "/src/scripts/tests/qt6-llvm-sdk/" +
+                     ("build-windows-checks.sh" if target.startswith("windows-") else "build-checks.sh"), target]
         print(f"{target}: checking SDK; {log.name}", flush=True)
         with log.open("wb") as stream:
             subprocess.run(arguments, stdout=stream, stderr=subprocess.STDOUT, check=True)
-        result.update(status="PASS", image=tag, image_id=image_id, runtime="QEMU with CentOS 7 sysroot")
+        result.update(status="PASS", image=tag, image_id=image_id)
+        if target.startswith("windows-"):
+            result.update(windows_runtime(target, suite, False))
+            if result["runtime_status"] == "PENDING":
+                result["status"] = "BUILT_RUNTIME_PENDING"
+        else:
+            result["runtime"] = "QEMU with CentOS 7 sysroot"
     else:
         base = tag + ("-inputs" if phase == "toolchain" else "-toolchain")
         base_id = docker("image", "inspect", "--format", "{{.Id}}", base)
@@ -95,6 +113,8 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         state = json.loads(docker("inspect", name))[0]
         if state["State"]["ExitCode"] != 0 or state["State"]["OOMKilled"]:
             raise RuntimeError(f"{target} {phase} failed; see {log}")
+        if phase == "toolchain" and target.startswith("windows-"):
+            result.update(windows_runtime(target, suite, True))
         env = environment(base_id)
         env.update(LLVM_ROOT="/opt/llvm-21", QT_HOST_PATH="/opt/qt6-host-llvm21",
                    PATH="/opt/longreach-llvm/bin:/opt/llvm-21/bin:/opt/qt6-host-llvm21/bin:"+env["PATH"],
@@ -110,7 +130,7 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         result.update(status="PASS", image=output, image_id=image_id, base_image=base, base_image_id=base_id,
                       volume=volume, state={key:state["State"][key] for key in ["StartedAt","FinishedAt","ExitCode","OOMKilled"]})
     result["seconds"] = round(time.monotonic()-started, 3)
-    print(f"{target} {phase}: PASS", flush=True)
+    print(f"{target} {phase}: {result['status']}", flush=True)
     return result
 
 

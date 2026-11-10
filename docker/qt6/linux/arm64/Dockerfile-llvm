@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+ARG QT_HOST_IMAGE=qt6-linux-amd64:llvm21
+ARG TARGET_BASE_IMAGE=qt6-linux-arm64:latest
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+FROM ${QT_HOST_IMAGE} AS host
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt6-llvm-sdk/host-libs.sh,target=/tmp/host-libs.sh \
+    bash /tmp/host-libs.sh
+FROM ${TARGET_BASE_IMAGE} AS inputs
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=host /opt/qt6-linux-amd64-llvm /opt/qt6-host-llvm21
+COPY --from=host /opt/longreach-host-libs /opt/longreach-host-libs
+ENV LD_LIBRARY_PATH=/opt/longreach-host-libs
+
+FROM inputs AS toolchain
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/downloads/llvm-project-21.1.8.src.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-cross-runtime,target=/work \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" bash /src/scripts/build/qt6-llvm-sdk/prepare.sh linux-arm64
+ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-21/bin:/opt/qt6-host-llvm21/bin:${PATH} \
+    CC=/opt/longreach-llvm/bin/target-cc CXX=/opt/longreach-llvm/bin/target-cxx
+
+FROM toolchain AS qt
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=patches,target=/src/patches \
+    --mount=type=bind,source=downloads/qt-everywhere-src-6.8.5.tar.xz,target=/src/downloads/qt-everywhere-src-6.8.5.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-linux-arm64-qt,target=/build \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" bash /src/scripts/build/qt6-llvm-sdk/build-qt.sh linux-arm64
+ENV QT_INSTALL_DIR=/opt/qt6-linux-arm64-llvm

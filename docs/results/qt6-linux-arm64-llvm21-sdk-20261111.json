@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "target": "linux-arm64",
+  "status": "PASS",
+  "qt": "6.8.5",
+  "llvm": "21.1.8",
+  "updated_utc": "2026-11-10T22:22:35.852054+00:00",
+  "image": "qt6-linux-arm64:llvm21",
+  "image_id": "sha256:4f55dce38a2a03498a0482d66bfef604cdb8980af910ead2d3b202f408e820c5",
+  "stages": [
+    {
+      "target": "linux-arm64",
+      "phase": "inputs",
+      "cpus": 4,
+      "memory": "8g",
+      "network": "none",
+      "log": "qt6-linux-arm64-llvm21-inputs.log",
+      "status": "PASS",
+      "image": "qt6-linux-arm64:llvm21-inputs",
+      "image_id": "sha256:78dd348bb77c9834212698b5e9a57aa6d625e03de83135a337dbb5cbd8e5f24e",
+      "resource_scope": "Image assembly and host dependency inventory; no compiler process",
+      "seconds": 7.953
+    },
+    {
+      "target": "linux-arm64",
+      "phase": "toolchain",
+      "cpus": 4,
+      "memory": "8g",
+      "network": "none",
+      "log": "qt6-linux-arm64-llvm21-toolchain.log",
+      "status": "PASS",
+      "image": "qt6-linux-arm64:llvm21-toolchain",
+      "image_id": "sha256:5ae652c85d718792bcd6283bb6609c5bbc191bb35c6bb2d756b8188b4416bcab",
+      "base_image": "qt6-linux-arm64:llvm21-inputs",
+      "base_image_id": "sha256:78dd348bb77c9834212698b5e9a57aa6d625e03de83135a337dbb5cbd8e5f24e",
+      "volume": "longreach-llvm21-probes-build",
+      "state": {
+        "StartedAt": "2026-11-10T21:12:50.311215218Z",
+        "FinishedAt": "2026-11-10T21:12:58.659709885Z",
+        "ExitCode": 0,
+        "OOMKilled": false
+      },
+      "seconds": 26.898
+    },
+    {
+      "target": "linux-arm64",
+      "phase": "qt",
+      "cpus": 4,
+      "memory": "8g",
+      "network": "none",
+      "log": "qt6-linux-arm64-llvm21-qt.log",
+      "status": "PASS",
+      "image": "qt6-linux-arm64:llvm21",
+      "image_id": "sha256:4f55dce38a2a03498a0482d66bfef604cdb8980af910ead2d3b202f408e820c5",
+      "base_image": "qt6-linux-arm64:llvm21-toolchain",
+      "base_image_id": "sha256:5ae652c85d718792bcd6283bb6609c5bbc191bb35c6bb2d756b8188b4416bcab",
+      "volume": "longreach-qt6-linux-arm64-llvm21-build",
+      "state": {
+        "StartedAt": "2026-11-10T21:29:18.125746503Z",
+        "FinishedAt": "2026-11-10T22:21:26.028511681Z",
+        "ExitCode": 0,
+        "OOMKilled": false
+      },
+      "seconds": 3154.694
+    },
+    {
+      "target": "linux-arm64",
+      "phase": "checks",
+      "cpus": 4,
+      "memory": "8g",
+      "network": "none",
+      "log": "qt6-linux-arm64-llvm21-checks.log",
+      "status": "PASS",
+      "image": "qt6-linux-arm64:llvm21",
+      "image_id": "sha256:4f55dce38a2a03498a0482d66bfef604cdb8980af910ead2d3b202f408e820c5",
+      "runtime": "QEMU with CentOS 7 sysroot",
+      "seconds": 37.378
+    }
+  ],
+  "raw_build_records": {
+    "inputs": {
+      "target": "linux-arm64",
+      "source_base": "6a06046a6b2a18ae24db632969b4f2f493f82a3d",
+      "source_dirty": true,
+      "llvm": "21.1.8",
+      "qt": "6.8.5",
+      "stages": [
+        {
+          "target": "linux-arm64",
+          "phase": "inputs",
+          "cpus": 4,
+          "memory": "8g",
+          "network": "none",
+          "log": "qt6-linux-arm64-llvm21-inputs.log",
+          "status": "PASS",
+          "image": "qt6-linux-arm64:llvm21-inputs",
+          "image_id": "sha256:78dd348bb77c9834212698b5e9a57aa6d625e03de83135a337dbb5cbd8e5f24e",
+          "resource_scope": "Image assembly and host dependency inventory; no compiler process",
+          "seconds": 7.953
+        }
+      ],
+      "source_sha256": {
+        "scripts/build/qt6-llvm-sdk/build-qt.sh": "e7c233082dfac9467fa8444c6f57b65a626133c892185130e740887d7a3fce4f",
+        "scripts/build/qt6-llvm-sdk/host-libs.sh": "39d4745ac1f984772976379a34095ed6f0e34e3637dad336c1a794a6740c7b44",
+        "scripts/build/qt6-llvm-sdk/linux-arm64.cmake": "7688039c547c42419d35bbd9fa35892f941f0e413615b71eac8dbf9778ef0d6e",
+        "scripts/build/qt6-llvm-sdk/prepare.sh": "9be759cf420d0c37afbc879a50375dade20b0090fd24dd9bc9cf66311984d43a",
+        "scripts/build/qt6-llvm-sdk/run.py": "82050727ee0a015ee2721e3606ac55a617672c7a3453309b02515ef30299aa58",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "59653d270f050c94c6d030e89604fa7e598403799f9fcedb469b645debe5891a",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995"
+      },
+      "updated_utc": "2026-11-10T21:12:49.738094+00:00"
+    },
+    "toolchain": {
+      "target": "linux-arm64",
+      "source_base": "6a06046a6b2a18ae24db632969b4f2f493f82a3d",
+      "source_dirty": true,
+      "llvm": "21.1.8",
+      "qt": "6.8.5",
+      "stages": [
+        {
+          "target": "linux-arm64",
+          "phase": "inputs",
+          "cpus": 4,
+          "memory": "8g",
+          "network": "none",
+          "log": "qt6-linux-arm64-llvm21-inputs.log",
+          "status": "PASS",
+          "image": "qt6-linux-arm64:llvm21-inputs",
+          "image_id": "sha256:78dd348bb77c9834212698b5e9a57aa6d625e03de83135a337dbb5cbd8e5f24e",
+          "resource_scope": "Image assembly and host dependency inventory; no compiler process",
+          "seconds": 7.953
+        },
+        {
+          "target": "linux-arm64",
+          "phase": "toolchain",
+          "cpus": 4,
+          "memory": "8g",
+          "network": "none",
+          "log": "qt6-linux-arm64-llvm21-toolchain.log",
+          "status": "PASS",
+          "image": "qt6-linux-arm64:llvm21-toolchain",
+          "image_id": "sha256:5ae652c85d718792bcd6283bb6609c5bbc191bb35c6bb2d756b8188b4416bcab",
+          "base_image": "qt6-linux-arm64:llvm21-inputs",
+          "base_image_id": "sha256:78dd348bb77c9834212698b5e9a57aa6d625e03de83135a337dbb5cbd8e5f24e",
+          "volume": "longreach-llvm21-probes-build",
+          "state": {
+            "StartedAt": "2026-11-10T21:12:50.311215218Z",
+            "FinishedAt": "2026-11-10T21:12:58.659709885Z",
+            "ExitCode": 0,
+            "OOMKilled": false
+          },
+          "seconds": 26.898
+        }
+      ],
+      "source_sha256": {
+        "scripts/build/qt6-llvm-sdk/build-qt.sh": "e7c233082dfac9467fa8444c6f57b65a626133c892185130e740887d7a3fce4f",
+        "scripts/build/qt6-llvm-sdk/host-libs.sh": "39d4745ac1f984772976379a34095ed6f0e34e3637dad336c1a794a6740c7b44",
+        "scripts/build/qt6-llvm-sdk/linux-arm64.cmake": "7688039c547c42419d35bbd9fa35892f941f0e413615b71eac8dbf9778ef0d6e",
+        "scripts/build/qt6-llvm-sdk/prepare.sh": "9be759cf420d0c37afbc879a50375dade20b0090fd24dd9bc9cf66311984d43a",
+        "scripts/build/qt6-llvm-sdk/run.py": "82050727ee0a015ee2721e3606ac55a617672c7a3453309b02515ef30299aa58",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "59653d270f050c94c6d030e89604fa7e598403799f9fcedb469b645debe5891a",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995"
+      },
+      "updated_utc": "2026-11-10T21:13:16.704699+00:00"
+    },
+    "qt": {
+      "target": "linux-arm64",
+      "source_base": "6a06046a6b2a18ae24db632969b4f2f493f82a3d",
+      "source_dirty": true,
+      "llvm": "21.1.8",
+      "qt": "6.8.5",
+      "stages": [
+        {
+          "target": "linux-arm64",
+          "phase": "qt",
+          "cpus": 4,
+          "memory": "8g",
+          "network": "none",
+          "log": "qt6-linux-arm64-llvm21-qt.log",
+          "status": "PASS",
+          "image": "qt6-linux-arm64:llvm21",
+          "image_id": "sha256:4f55dce38a2a03498a0482d66bfef604cdb8980af910ead2d3b202f408e820c5",
+          "base_image": "qt6-linux-arm64:llvm21-toolchain",
+          "base_image_id": "sha256:5ae652c85d718792bcd6283bb6609c5bbc191bb35c6bb2d756b8188b4416bcab",
+          "volume": "longreach-qt6-linux-arm64-llvm21-build",
+          "state": {
+            "StartedAt": "2026-11-10T21:29:18.125746503Z",
+            "FinishedAt": "2026-11-10T22:21:26.028511681Z",
+            "ExitCode": 0,
+            "OOMKilled": false
+          },
+          "seconds": 3154.694
+        }
+      ],
+      "source_sha256": {
+        "scripts/build/qt6-llvm-sdk/build-qt.sh": "1b2cdc4f4464d163f4467219aded87f6157aa5161de588cd3cd807e0ec1814cf",
+        "scripts/build/qt6-llvm-sdk/host-libs.sh": "39d4745ac1f984772976379a34095ed6f0e34e3637dad336c1a794a6740c7b44",
+        "scripts/build/qt6-llvm-sdk/linux-arm64.cmake": "7688039c547c42419d35bbd9fa35892f941f0e413615b71eac8dbf9778ef0d6e",
+        "scripts/build/qt6-llvm-sdk/prepare.sh": "9be759cf420d0c37afbc879a50375dade20b0090fd24dd9bc9cf66311984d43a",
+        "scripts/build/qt6-llvm-sdk/run.py": "8f36686d2876b5765e86cb3270b49510de531a34de82fbf44eeaa9cbfb12a76f",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "59653d270f050c94c6d030e89604fa7e598403799f9fcedb469b645debe5891a",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/tests/qt6-llvm-sdk/build-checks.sh": "bfda13795a685c3f5d8f97f9e0e6bfa8b9127bdd285651f437793e85f8b1456a",
+        "scripts/tests/qt6-llvm-sdk/CMakeLists.txt": "04f75b11904e042b9e2e09d118749293df14d4a16fe17adb6ae8a93811eb5e84",
+        "scripts/tests/qt6-llvm-sdk/modern-only.cpp": "d123f2428615934d375c77398e905dfceb48b2cc803b82cb4aaddd3d5c567648",
+        "docker/qt6/linux/arm64/Dockerfile-llvm": "e7270fd82a2bdc0604cd9d9e71e47c8afe4f6d2af6528c6244e3da1da15181b8",
+        "tests/common/moderncpp_checks.h": "b1a9420a4ce157591b217cd8e499fe3878829787ef634cdf9c2b8f74398ecdd2",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "updated_utc": "2026-11-10T22:21:52.637759+00:00"
+    },
+    "checks": {
+      "target": "linux-arm64",
+      "source_base": "6a06046a6b2a18ae24db632969b4f2f493f82a3d",
+      "source_dirty": true,
+      "llvm": "21.1.8",
+      "qt": "6.8.5",
+      "stages": [
+        {
+          "target": "linux-arm64",
+          "phase": "checks",
+          "cpus": 4,
+          "memory": "8g",
+          "network": "none",
+          "log": "qt6-linux-arm64-llvm21-checks.log",
+          "status": "PASS",
+          "image": "qt6-linux-arm64:llvm21",
+          "image_id": "sha256:4f55dce38a2a03498a0482d66bfef604cdb8980af910ead2d3b202f408e820c5",
+          "runtime": "QEMU with CentOS 7 sysroot",
+          "seconds": 37.378
+        }
+      ],
+      "source_sha256": {
+        "scripts/build/qt6-llvm-sdk/build-qt.sh": "1b2cdc4f4464d163f4467219aded87f6157aa5161de588cd3cd807e0ec1814cf",
+        "scripts/build/qt6-llvm-sdk/host-libs.sh": "39d4745ac1f984772976379a34095ed6f0e34e3637dad336c1a794a6740c7b44",
+        "scripts/build/qt6-llvm-sdk/linux-arm64.cmake": "7688039c547c42419d35bbd9fa35892f941f0e413615b71eac8dbf9778ef0d6e",
+        "scripts/build/qt6-llvm-sdk/prepare.sh": "9be759cf420d0c37afbc879a50375dade20b0090fd24dd9bc9cf66311984d43a",
+        "scripts/build/qt6-llvm-sdk/run.py": "85f09dc01f210ba2d53a72a86a94e6ac7167852bad3eb8d9010b350f24308ddd",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "59653d270f050c94c6d030e89604fa7e598403799f9fcedb469b645debe5891a",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/tests/qt6-llvm-sdk/build-checks.sh": "510925eeed2b32154c9c95e085a1deaefcb5ccf4a988d87b11dda4962a8afe74",
+        "scripts/tests/qt6-llvm-sdk/CMakeLists.txt": "04f75b11904e042b9e2e09d118749293df14d4a16fe17adb6ae8a93811eb5e84",
+        "scripts/tests/qt6-llvm-sdk/modern-only.cpp": "d123f2428615934d375c77398e905dfceb48b2cc803b82cb4aaddd3d5c567648",
+        "docker/qt6/linux/arm64/Dockerfile-llvm": "e7270fd82a2bdc0604cd9d9e71e47c8afe4f6d2af6528c6244e3da1da15181b8",
+        "tests/common/moderncpp_checks.h": "b1a9420a4ce157591b217cd8e499fe3878829787ef634cdf9c2b8f74398ecdd2",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc",
+        "patches/qt6/all/01-qtopcua-isolate-openssl-symbols.patch": "7fee96eec05e82406b9d0215e3df78462d215b5fccfeb154074bc6d453d10b7f",
+        "patches/qt6/all/02-dbusmenu-without-session-bus.patch": "158053b748b7d190c0b50e52b0fa889c61c1e53f928629a8e5753db7d8c4ae58",
+        "patches/qt6/all/03-freetype-system-font-directories.patch": "20751605b398892c6b675ef1a4e5a62987cc808a43f4d6dcae1db711e33c04a4",
+        "patches/qt6/all/04-opengl-legacy-libgl.patch": "ebaa335501347271c46d5d556c2c021291ff814110df9bbb07b9304b3027c2df",
+        "patches/qt6/all/05-cve-2025-12385-qtdeclarative.patch": "78065198d2ab62d6e625ff4f010e771cb5c7795bd31524a490eb1f4e6c00d485",
+        "patches/qt6/all/06-cve-2025-14576-qtdeclarative.patch": "9e96544fa23f5c3ed36d5923fa09695a5d873fc867f9de8f41573dc67b1425c0",
+        "patches/qt6/all/07-cve-2026-101201-qt5compat.patch": "ac3a1c86e528e9d0721ff36f604841c8c8e0b3455faf8092678fba1fc3c0c08f",
+        "patches/qt6/all/08-cve-2026-105923-qtbase.patch": "645a03a87fa0952925fc30f311cda4ffe45e11e2aad54e5548b435c28dc10fdc",
+        "patches/qt6/all/09-cve-2026-105924-qtbase.patch": "888b02f472a729a4a7a6b348c4f85de4bbcc773e55d07ae27a8288d7da322f82",
+        "patches/qt6/all/10-cve-2026-105946-qtbase.patch": "a4ac90b705b2013228654c1b71b2307e345f9a566bb14cdfbd0af0aa678b7e8f",
+        "patches/qt6/all/11-cve-2026-107157-qtbase.patch": "07ac91a8b6f2d8b8c7624aad4bc694428d685e89cb863ae9748b7bc54fbeb410",
+        "patches/qt6/all/12-cve-2026-107472-qt5compat.patch": "8515da453ebd96043b49fdcc2b4d8eb26290481fd91ddd09d7b862fb91562b91",
+        "patches/qt6/all/13-cve-2026-107590-qt5compat.patch": "9883bf5bb04537d882ffe4719ced3fc462483b01a93d8006ece5c67c303f571d",
+        "patches/qt6/all/14-cve-2026-13326-qtconnectivity.patch": "47eceb368b79c45bdb4bde0659749233b3938bcb25196d5fe4e22d98bfd16f7c",
+        "patches/qt6/all/15-cve-2026-16762-qtbase.patch": "204f688ac3626ee8ceb734c54a13f5692e321304569f934e3f23ddd5d975a52d",
+        "patches/qt6/all/16-cve-2026-6210-qtsvg.patch": "f339fa51bb12b312022f3f3bc5357bda99d5f51c3a0d5f667590ed64129b315a",
+        "patches/qt6/all/17-cve-2026-76151-qtbase.patch": "edffa976e255d3b0031118d475a827c959df77bb83975e9722569c2f0eab6647",
+        "patches/qt6/all/18-cve-2026-78253-qtbase.patch": "b00c384eef1e7bb55aa2fb5485ec17509e0ee6d3229d7ced0b6f5d9b1ff31ef1",
+        "patches/qt6/all/19-cve-2026-79616-qtdeclarative.patch": "3dee482aa200b5e2bb39dd061ace5ac8dcf71cf7863dee806f40791961305459",
+        "patches/qt6/all/20-cve-2026-8168-qtsvg.patch": "5dc6337667b08b421a1946974fc43be95cbcc00aff9ad792cbb2e49b45ae560c",
+        "patches/qt6/all/21-cve-2026-9499-qt5compat.patch": "45bda247f7cbe926fb702d6f37dfcdbbb3b8709258561a597cebe1de4a1327eb",
+        "patches/qt6/all/22-cve-2026-96432-qtbase.patch": "2d1a2b218f3836910500fd03d8bc830b0a96b2da2e27787b69c62da3091885ce",
+        "patches/qt6/all/23-cve-2026-19248-qtbase.patch": "ed23d664d22c66854a750f1f89000a078895904f3b6e97f3a5ddec2541839a0f",
+        "patches/qt6/all/24-cve-2026-82292-qtbase.patch": "cab84293a277946d452b2900eff3e1aa07a952656d77eec29de806cdf54beff3",
+        "patches/qt6/all/25-qtmqtt-protocol-parser.patch": "ca3b404f5d9c0eafc58b5d57b6e4f8b8fd546da74fed5925614fbcc9587dda81",
+        "patches/qt6/all/26-qtbase-hardening.patch": "e4885abe131c40328b9dbd43482f45bcc7b7ce7eb695d65da38771e79a98568d",
+        "patches/qt6/all/27-qtimageformats-hardening.patch": "6dee5d9f44175c2f2957737b11b9218403b620c55b39d91b76e28649da7483ff",
+        "patches/qt6/all/28-qtbase-dom-save-node-alone.patch": "cbfb173a4000b7408f7df4b91139c8d4be79d3f3aa875bb531e20a7c9e48af36",
+        "patches/qt6/all/29-qtbase-arm-yield-builtin.patch": "11125c9d7bb6a8636050a10207fc580871ff2af5c92ce1235b77ef8271243640"
+      },
+      "updated_utc": "2026-11-10T22:22:34.609869+00:00"
+    }
+  },
+  "runs": [
+    {
+      "name": "Installed LLVM runtime",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "file": "installed-toolchain-cxx23.log",
+        "sha256": "3edf56a5c3cbcfad184117c98c5d135fb90b41571f5cdf7fd74452252e9c6e05",
+        "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nRUN: C++14 generic lambda and init capture\nPASS: C++14 generic lambda and init capture\nRUN: C++17 structured bindings\nPASS: C++17 structured bindings\nRUN: C++17 fold expressions\nPASS: C++17 fold expressions\nRUN: C++17 std::optional\nPASS: C++17 std::optional\nRUN: C++17 std::string_view\nPASS: C++17 std::string_view\nRUN: C++20 concepts\nPASS: C++20 concepts\nRUN: C++20 std::span\nPASS: C++20 std::span\nRUN: C++20 ranges filter and transform\nPASS: C++20 ranges filter and transform\nRUN: C++20 std::jthread\nPASS: C++20 std::jthread\nRUN: C++20 std::stop_token and callbacks\nPASS: C++20 std::stop_token and callbacks\nRUN: C++20 std::format\nPASS: C++20 std::format\nRUN: C++23 if consteval\nPASS: C++23 if consteval\nRUN: C++23 std::expected\nPASS: C++23 std::expected\nRUN: C++23 std::byteswap\nPASS: C++23 std::byteswap\nRUN: C++23 std::ranges::to\nPASS: C++23 std::ranges::to\nRUN: C++23 std::print\nPASS: C++23 std::print\nRUN: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 stop_token condition_variable_any cancellation\nRUN: C++20 jthread destructor stop and join\nPASS: C++20 jthread destructor stop and join\nRUN: C++20 atomic wait and notify handoff\nPASS: C++20 atomic wait and notify handoff\nRUN: C++20 jthread thread_local destruction\nPASS: C++20 jthread thread_local destruction\nRUN: C++11 exception unwinding and RAII\nPASS: C++11 exception unwinding and RAII\nRUN: C++17 Unicode filesystem round trip\nPASS: C++17 Unicode filesystem round trip\nRUN: C++20 format_error propagation\nPASS: C++20 format_error propagation\nRUN: C++23 expected monadic error propagation\nPASS: C++23 expected monadic error propagation\nRUN: C++23 Unicode format and print\nPASS: C++23 Unicode format and print\nSUMMARY: 25 passed, 0 failed, 0 skipped\n"
+      }
+    },
+    {
+      "name": "QtCore C++17",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 18,
+      "log": {
+        "file": "modern-cxx17.log",
+        "sha256": "9922e1b7fbdfb8d56394362f3fcc6fa93a4ba3379f55e11e4946775e983de5fe",
+        "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 201703\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nSKIP: C++20 concepts - language and library concepts are unavailable\nSKIP: C++20 std::span - std::span is unavailable\nSKIP: C++20 ranges filter and transform - ranges views are unavailable\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nSKIP: C++20 std::format - std::format is unavailable\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nSKIP: C++20 format_error propagation - formatting with exceptions is unavailable\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 7 passed, 0 failed, 18 skipped ----\n"
+      }
+    },
+    {
+      "name": "QtCore C++20",
+      "passed": 18,
+      "failed": 0,
+      "skipped": 7,
+      "log": {
+        "file": "modern-cxx20.log",
+        "sha256": "2c16cfc48120e20f79e6978abaef92ddb81957af1ee7178f4c2e42421347f756",
+        "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202002\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 18 passed, 0 failed, 7 skipped ----\n"
+      }
+    },
+    {
+      "name": "QtCore required C++23",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "file": "modern-cxx23.log",
+        "sha256": "e36120de094fd9512ed4dc8422f987d36666f3a739bcb76f508768e5498475b2",
+        "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "qt-selftest --modern-cpp",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "file": "qt-selftest-required.log",
+        "sha256": "9d7d691ddf73e23fd4bb93a87eef9e3504b4e3e729cfa56c9d8586dc2cf47200",
+        "text": "Detected locale \"C\" with character encoding \"ANSI_X3.4-1968\", which is not UTF-8.\nQt depends on a UTF-8 locale, and has switched to \"C.UTF-8\" instead.\nIf this causes problems, reconfigure your locale. See the locale(1) manual\nfor more information.\nClang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- qt-selftest: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "QtCore C++23 in stock CentOS 7 arm64",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "file": "stock-centos7-cxx23.log",
+        "sha256": "e36120de094fd9512ed4dc8422f987d36666f3a739bcb76f508768e5498475b2",
+        "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 4 QtCore C++14",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 23,
+      "log": {
+        "file": "qt6-linux-arm64-llvm21-legacy14.log",
+        "sha256": "cfdfb44f5ec79cdafccdb8a5d58b70eac66a3668370a84470df414e66842fb32",
+        "text": "/work/toolchain/bin/sarge-g++ -c -pipe -ffunction-sections -fdata-sections -std=c++14 -Os -Wall -W -D_REENTRANT -DQT_NO_LINUX_FUTEX -DQT_NO_DEBUG -DQT_CORE_LIB -I/work/sdk/mkspecs/linux-sarge-amd64-g++ -I. -I/work/sdk/include/QtCore -I/work/sdk/include -I/src/tests/common -I. -o checks_modern_cpp.o /src/tests/qt-selftest/checks_modern_cpp.cpp\n/work/toolchain/bin/sarge-g++ -c -pipe -ffunction-sections -fdata-sections -std=c++14 -Os -Wall -W -D_REENTRANT -DQT_NO_LINUX_FUTEX -DQT_NO_DEBUG -DQT_CORE_LIB -I/work/sdk/mkspecs/linux-sarge-amd64-g++ -I. -I/work/sdk/include/QtCore -I/work/sdk/include -I/src/tests/common -I. -o modern-only.o /src/scripts/tests/qt6-linux-amd64-llvm/modern-only.cpp\n/work/toolchain/bin/sarge-g++ -static-libgcc -static-libstdc++ -Wl,-O1 -static-libgcc -static-libstdc++ -Wl,--gc-sections -o modern-cxx14 checks_modern_cpp.o modern-only.o    -L/work/sysroot/usr/lib -L/work/sdk/lib -lQtCore -L/work/openssl-1.0.2u/lib -L/work/sdk/lib -L/work/sysroot/usr/lib -lm -ldl -lrt -lpthread \nQIconvCodec::convertFromUnicode: using Latin-1 for conversion, iconv_open failed\nGCC: 5.4.0 20160609\nlibstdc++ headers: 20171010\n__cplusplus: 201402\nPASS: C++14 generic lambda and init capture\nSKIP: C++17 structured bindings - structured bindings are unavailable\nSKIP: C++17 fold expressions - fold expressions are unavailable\nSKIP: C++17 std::optional - std::optional is unavailable\nSKIP: C++17 std::string_view - std::string_view is unavailable\nSKIP: C++20 concepts - language and library concepts are unavailable\nSKIP: C++20 std::span - std::span is unavailable\nSKIP: C++20 ranges filter and transform - ranges views are unavailable\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nSKIP: C++20 std::format - std::format is unavailable\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nSKIP: C++17 Unicode filesystem round trip - std::filesystem is unavailable\nSKIP: C++20 format_error propagation - formatting with exceptions is unavailable\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 2 passed, 0 failed, 23 skipped ----\n"
+      }
+    }
+  ],
+  "binaries": {
+    "installed-toolchain-cxx23": {
+      "file": "installed-toolchain-cxx23",
+      "sha256": "56fced6ebbb9b5a5c40333e168371d4bb9609b933772889f647056732d790d51"
+    },
+    "modern-cxx17": {
+      "file": "modern-cxx17",
+      "sha256": "e6e30092d17e473ea63b0a2f8f7eb07ba0672d3a1c4e49b83f8133dfdbe29f45"
+    },
+    "modern-cxx20": {
+      "file": "modern-cxx20",
+      "sha256": "9eb68d64716f601474ea0f9fa91f2b3d5b7329b36d8573cc470f5576b7d81158"
+    },
+    "modern-cxx23": {
+      "file": "modern-cxx23",
+      "sha256": "b92272c869aade858ff045629ecba22d43feb04fd247c540c20d43792a947510"
+    },
+    "qt-selftest-required": {
+      "file": "qt-selftest-required",
+      "sha256": "458b4024d93a04f690c5e41bd8f418cd495f50674c4f817816e613e852f9fc35"
+    }
+  },
+  "dependencies": {
+    "modern-cxx17.dependencies.log": {
+      "file": "modern-cxx17.dependencies.log",
+      "sha256": "a33cabe9626fb73d83ffaa4a9a082bf857cb6d74279b6a014e5818470b821917",
+      "text": "\nDynamic section at offset 0x2fc000 contains 29 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-aarch64.so.1]\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x202138\n 0x0000000000000008 (RELASZ)             264 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x0000000000000017 (JMPREL)             0x202240\n 0x0000000000000002 (PLTRELSZ)           4656 (bytes)\n 0x0000000000000003 (PLTGOT)             0x531b20\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x200320\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0x201814\n 0x000000000000000a (STRSZ)              2336 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x2017f8\n 0x0000000000000019 (INIT_ARRAY)         0x5121d8\n 0x000000000000001b (INIT_ARRAYSZ)       48 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x512208\n 0x000000000000001c (FINI_ARRAYSZ)       24 (bytes)\n 0x000000000000000c (INIT)               0x501438\n 0x000000000000000d (FINI)               0x50144c\n 0x000000006ffffff0 (VERSYM)             0x2015c8\n 0x000000006ffffffe (VERNEED)            0x201758\n 0x000000006fffffff (VERNEEDNUM)         5\n 0x0000000000000000 (NULL)               0x0\n"
+    },
+    "modern-cxx20.dependencies.log": {
+      "file": "modern-cxx20.dependencies.log",
+      "sha256": "d1ec7366e3d669c75efeed35d4bc7e225cee2959193a5806260e649aed33c5f4",
+      "text": "\nDynamic section at offset 0x332180 contains 29 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-aarch64.so.1]\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x202160\n 0x0000000000000008 (RELASZ)             264 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x0000000000000017 (JMPREL)             0x202268\n 0x0000000000000002 (PLTRELSZ)           4680 (bytes)\n 0x0000000000000003 (PLTGOT)             0x567cb8\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x200320\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0x20182c\n 0x000000000000000a (STRSZ)              2349 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x201810\n 0x0000000000000019 (INIT_ARRAY)         0x5482c8\n 0x000000000000001b (INIT_ARRAYSZ)       48 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x5482f8\n 0x000000000000001c (FINI_ARRAYSZ)       24 (bytes)\n 0x000000000000000c (INIT)               0x537518\n 0x000000000000000d (FINI)               0x53752c\n 0x000000006ffffff0 (VERSYM)             0x2015e0\n 0x000000006ffffffe (VERNEED)            0x201770\n 0x000000006fffffff (VERNEEDNUM)         5\n 0x0000000000000000 (NULL)               0x0\n"
+    },
+    "modern-cxx23.dependencies.log": {
+      "file": "modern-cxx23.dependencies.log",
+      "sha256": "ce5775f828373a52ea0a3bf1471ae3a25cf5331758aad294b75c7c1dcf55ac16",
+      "text": "\nDynamic section at offset 0x333de0 contains 29 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-aarch64.so.1]\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x2021e0\n 0x0000000000000008 (RELASZ)             264 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x0000000000000017 (JMPREL)             0x2022e8\n 0x0000000000000002 (PLTRELSZ)           4776 (bytes)\n 0x0000000000000003 (PLTGOT)             0x569918\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x200320\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0x201894\n 0x000000000000000a (STRSZ)              2378 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x201878\n 0x0000000000000019 (INIT_ARRAY)         0x549f28\n 0x000000000000001b (INIT_ARRAYSZ)       48 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x549f58\n 0x000000000000001c (FINI_ARRAYSZ)       24 (bytes)\n 0x000000000000000c (INIT)               0x539138\n 0x000000000000000d (FINI)               0x53914c\n 0x000000006ffffff0 (VERSYM)             0x201640\n 0x000000006ffffffe (VERNEED)            0x2017d8\n 0x000000006fffffff (VERNEEDNUM)         5\n 0x0000000000000000 (NULL)               0x0\n"
+    },
+    "qt-selftest-required.dependencies.log": {
+      "file": "qt-selftest-required.dependencies.log",
+      "sha256": "90e69172a76afe5b2bde6c361490b7d44fe1e9519d62a322353350fd75bd44bd",
+      "text": "\nDynamic section at offset 0x265e198 contains 51 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libdrm.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libresolv.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [libGL.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-glx.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libX11.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libxkbcommon.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libX11-xcb.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxkbcommon-x11.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-icccm.so.4]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-util.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-image.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-keysyms.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-randr.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-render-util.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-shm.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-sync.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-xfixes.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-render.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-shape.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb-xkb.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libxcb.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-aarch64.so.1]\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x208448\n 0x0000000000000008 (RELASZ)             1752 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x0000000000000017 (JMPREL)             0x208b20\n 0x0000000000000002 (PLTRELSZ)           17832 (bytes)\n 0x0000000000000003 (PLTGOT)             0x28e0b28\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x200320\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0x2052a8\n 0x000000000000000a (STRSZ)              12699 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x205278\n 0x0000000000000019 (INIT_ARRAY)         0x2737ce8\n 0x000000000000001b (INIT_ARRAYSZ)       1776 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x27383d8\n 0x000000000000001c (FINI_ARRAYSZ)       24 (bytes)\n 0x000000000000000c (INIT)               0x2724cf4\n 0x000000000000000d (FINI)               0x2724d08\n 0x000000006ffffff0 (VERSYM)             0x204b50\n 0x000000006ffffffe (VERNEED)            0x205154\n 0x000000006fffffff (VERNEEDNUM)         9\n 0x0000000000000000 (NULL)               0x0\n"
+    }
+  },
+  "required_compile_commands": {
+    "file": "modern-cxx23-compile_commands.json",
+    "sha256": "f78be0532f7fe4d81eef60a66715c474292d477aab42b819e3d3979c9037f613",
+    "text": "[\n{\n  \"directory\": \"/tmp/modern-23\",\n  \"command\": \"/opt/longreach-llvm/bin/target-cxx --target=aarch64-unknown-linux-gnu --sysroot=/opt/sysroot-arm64 -DQT_CORE_LIB -DQT_NO_DEBUG -DSMOKE_REQUIRE_CXX23=1 -I/src/tests/common -isystem /opt/qt6-linux-arm64-llvm/include/QtCore -isystem /opt/qt6-linux-arm64-llvm/include -isystem /opt/qt6-linux-arm64-llvm/mkspecs/linux-clang -O3 -DNDEBUG -ffunction-sections -fdata-sections -std=gnu++2b -o CMakeFiles/modern-only.dir/src/tests/qt-selftest/checks_modern_cpp.cpp.o -c /src/tests/qt-selftest/checks_modern_cpp.cpp\",\n  \"file\": \"/src/tests/qt-selftest/checks_modern_cpp.cpp\"\n},\n{\n  \"directory\": \"/tmp/modern-23\",\n  \"command\": \"/opt/longreach-llvm/bin/target-cxx --target=aarch64-unknown-linux-gnu --sysroot=/opt/sysroot-arm64 -DQT_CORE_LIB -DQT_NO_DEBUG -DSMOKE_REQUIRE_CXX23=1 -I/src/tests/common -isystem /opt/qt6-linux-arm64-llvm/include/QtCore -isystem /opt/qt6-linux-arm64-llvm/include -isystem /opt/qt6-linux-arm64-llvm/mkspecs/linux-clang -O3 -DNDEBUG -ffunction-sections -fdata-sections -std=gnu++2b -o CMakeFiles/modern-only.dir/modern-only.cpp.o -c /src/scripts/tests/qt6-llvm-sdk/modern-only.cpp\",\n  \"file\": \"/src/scripts/tests/qt6-llvm-sdk/modern-only.cpp\"\n}\n]"
+  },
+  "source_sha256": {
+    "docker/qt6/linux/arm64/Dockerfile-llvm": "e7270fd82a2bdc0604cd9d9e71e47c8afe4f6d2af6528c6244e3da1da15181b8",
+    "patches/qt6/all/01-qtopcua-isolate-openssl-symbols.patch": "7fee96eec05e82406b9d0215e3df78462d215b5fccfeb154074bc6d453d10b7f",
+    "patches/qt6/all/02-dbusmenu-without-session-bus.patch": "158053b748b7d190c0b50e52b0fa889c61c1e53f928629a8e5753db7d8c4ae58",
+    "patches/qt6/all/03-freetype-system-font-directories.patch": "20751605b398892c6b675ef1a4e5a62987cc808a43f4d6dcae1db711e33c04a4",
+    "patches/qt6/all/04-opengl-legacy-libgl.patch": "ebaa335501347271c46d5d556c2c021291ff814110df9bbb07b9304b3027c2df",
+    "patches/qt6/all/05-cve-2025-12385-qtdeclarative.patch": "78065198d2ab62d6e625ff4f010e771cb5c7795bd31524a490eb1f4e6c00d485",
+    "patches/qt6/all/06-cve-2025-14576-qtdeclarative.patch": "9e96544fa23f5c3ed36d5923fa09695a5d873fc867f9de8f41573dc67b1425c0",
+    "patches/qt6/all/07-cve-2026-101201-qt5compat.patch": "ac3a1c86e528e9d0721ff36f604841c8c8e0b3455faf8092678fba1fc3c0c08f",
+    "patches/qt6/all/08-cve-2026-105923-qtbase.patch": "645a03a87fa0952925fc30f311cda4ffe45e11e2aad54e5548b435c28dc10fdc",
+    "patches/qt6/all/09-cve-2026-105924-qtbase.patch": "888b02f472a729a4a7a6b348c4f85de4bbcc773e55d07ae27a8288d7da322f82",
+    "patches/qt6/all/10-cve-2026-105946-qtbase.patch": "a4ac90b705b2013228654c1b71b2307e345f9a566bb14cdfbd0af0aa678b7e8f",
+    "patches/qt6/all/11-cve-2026-107157-qtbase.patch": "07ac91a8b6f2d8b8c7624aad4bc694428d685e89cb863ae9748b7bc54fbeb410",
+    "patches/qt6/all/12-cve-2026-107472-qt5compat.patch": "8515da453ebd96043b49fdcc2b4d8eb26290481fd91ddd09d7b862fb91562b91",
+    "patches/qt6/all/13-cve-2026-107590-qt5compat.patch": "9883bf5bb04537d882ffe4719ced3fc462483b01a93d8006ece5c67c303f571d",
+    "patches/qt6/all/14-cve-2026-13326-qtconnectivity.patch": "47eceb368b79c45bdb4bde0659749233b3938bcb25196d5fe4e22d98bfd16f7c",
+    "patches/qt6/all/15-cve-2026-16762-qtbase.patch": "204f688ac3626ee8ceb734c54a13f5692e321304569f934e3f23ddd5d975a52d",
+    "patches/qt6/all/16-cve-2026-6210-qtsvg.patch": "f339fa51bb12b312022f3f3bc5357bda99d5f51c3a0d5f667590ed64129b315a",
+    "patches/qt6/all/17-cve-2026-76151-qtbase.patch": "edffa976e255d3b0031118d475a827c959df77bb83975e9722569c2f0eab6647",
+    "patches/qt6/all/18-cve-2026-78253-qtbase.patch": "b00c384eef1e7bb55aa2fb5485ec17509e0ee6d3229d7ced0b6f5d9b1ff31ef1",
+    "patches/qt6/all/19-cve-2026-79616-qtdeclarative.patch": "3dee482aa200b5e2bb39dd061ace5ac8dcf71cf7863dee806f40791961305459",
+    "patches/qt6/all/20-cve-2026-8168-qtsvg.patch": "5dc6337667b08b421a1946974fc43be95cbcc00aff9ad792cbb2e49b45ae560c",
+    "patches/qt6/all/21-cve-2026-9499-qt5compat.patch": "45bda247f7cbe926fb702d6f37dfcdbbb3b8709258561a597cebe1de4a1327eb",
+    "patches/qt6/all/22-cve-2026-96432-qtbase.patch": "2d1a2b218f3836910500fd03d8bc830b0a96b2da2e27787b69c62da3091885ce",
+    "patches/qt6/all/23-cve-2026-19248-qtbase.patch": "ed23d664d22c66854a750f1f89000a078895904f3b6e97f3a5ddec2541839a0f",
+    "patches/qt6/all/24-cve-2026-82292-qtbase.patch": "cab84293a277946d452b2900eff3e1aa07a952656d77eec29de806cdf54beff3",
+    "patches/qt6/all/25-qtmqtt-protocol-parser.patch": "ca3b404f5d9c0eafc58b5d57b6e4f8b8fd546da74fed5925614fbcc9587dda81",
+    "patches/qt6/all/26-qtbase-hardening.patch": "e4885abe131c40328b9dbd43482f45bcc7b7ce7eb695d65da38771e79a98568d",
+    "patches/qt6/all/27-qtimageformats-hardening.patch": "6dee5d9f44175c2f2957737b11b9218403b620c55b39d91b76e28649da7483ff",
+    "patches/qt6/all/28-qtbase-dom-save-node-alone.patch": "cbfb173a4000b7408f7df4b91139c8d4be79d3f3aa875bb531e20a7c9e48af36",
+    "patches/qt6/all/29-qtbase-arm-yield-builtin.patch": "11125c9d7bb6a8636050a10207fc580871ff2af5c92ce1235b77ef8271243640",
+    "scripts/build/qt6-llvm-probes/build-runtime.sh": "59653d270f050c94c6d030e89604fa7e598403799f9fcedb469b645debe5891a",
+    "scripts/build/qt6-llvm-sdk/build-qt.sh": "1b2cdc4f4464d163f4467219aded87f6157aa5161de588cd3cd807e0ec1814cf",
+    "scripts/build/qt6-llvm-sdk/host-libs.sh": "39d4745ac1f984772976379a34095ed6f0e34e3637dad336c1a794a6740c7b44",
+    "scripts/build/qt6-llvm-sdk/linux-arm64.cmake": "7688039c547c42419d35bbd9fa35892f941f0e413615b71eac8dbf9778ef0d6e",
+    "scripts/build/qt6-llvm-sdk/prepare.sh": "9be759cf420d0c37afbc879a50375dade20b0090fd24dd9bc9cf66311984d43a",
+    "scripts/build/qt6-llvm-sdk/run.py": "85f09dc01f210ba2d53a72a86a94e6ac7167852bad3eb8d9010b350f24308ddd",
+    "scripts/tests/qt6-llvm-sdk/build-checks.sh": "510925eeed2b32154c9c95e085a1deaefcb5ccf4a988d87b11dda4962a8afe74",
+    "scripts/tests/qt6-llvm-sdk/CMakeLists.txt": "04f75b11904e042b9e2e09d118749293df14d4a16fe17adb6ae8a93811eb5e84",
+    "scripts/tests/qt6-llvm-sdk/modern-only.cpp": "d123f2428615934d375c77398e905dfceb48b2cc803b82cb4aaddd3d5c567648",
+    "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc",
+    "tests/cmake/ModernCpp.cmake": "02f208ffa33907402ecc90451cea146525e99d4ac1e79753a9d88309a9c81d1f",
+    "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+    "tests/common/moderncpp_checks.h": "b1a9420a4ce157591b217cd8e499fe3878829787ef634cdf9c2b8f74398ecdd2",
+    "tests/qt-selftest/checks_modern_cpp.cpp": "43327b39fe1f6241063e767feec8dfd930c12b8b26602c21f9f0ef47efa93f74"
+  },
+  "scope": {
+    "cpu": "AArch64 ELF64",
+    "glibc_ceiling": "2.17",
+    "runtime": "QEMU user mode with CentOS 7 aarch64 userland",
+    "kernel_certification": false,
+    "security_tests": "NOT_RUN",
+    "gui_galleries": "NOT_RUN",
+    "experimental_library_flag": false,
+    "concurrent_builds": false
+  },
+  "qt-config.summary": {
+    "file": "qt-config.summary",
+    "sha256": "9d1dba30cde3dcfd631a979a66b362e4a6636840e19dce03ad50feda0b564a7d",
+    "text": "\nBuilding for: linux-clang (arm64, CPU features: cx16 neon)\nCompiler: clang 21.1.8\nBuild options:\n  Mode ................................... release\n  Optimize release build for size ........ yes\n  Fully optimize release builds (-O3) .... no\n  Building shared libraries (alias of  BUILD_SHARED_LIBS)  no\n  Using ccache ........................... no\n  Unity Build ............................ no\n  Using new DTAGS ........................ yes\n  Relocatable ............................ no\n  Using precompiled headers .............. yes\n  Using Link Time Optimization (LTCG) .... no\n  Using Intel Control-flow Enforcement Technology (CET)  no\n  Using Glibc function fortification ..... yes\n  Using -ftrivial-auto-var-init=pattern .. yes\n  Using -fstack-protector-strong ......... yes\n  Using -fstack-clash-protection ......... no\n  Using libstdc++ assertions ............. no\n  Using libc++ hardening ................. yes\n  Using -z relro -z now when linking ..... yes\n  Target compiler supports:\n    ARM Extensions ....................... NEON\n  Sanitizers:\n    Addresses ............................ no\n    Threads .............................. no\n    Memory ............................... no\n    Fuzzer (instrumentation only) ........ no\n    Undefined ............................ no\n  Build parts ............................ libs\n  Install examples sources ............... no\nQt modules and options:\n  Qt Concurrent .......................... yes\n  Qt D-Bus ............................... yes\n  Qt D-Bus directly linked to libdbus .... no\n  Qt Gui ................................. yes\n  Qt Network ............................. yes\n  Qt PrintSupport ........................ yes\n  Qt Sql ................................. yes\n  Qt Testlib ............................. yes\n  Qt Widgets ............................. yes\n  Qt Xml ................................. yes\nSupport enabled for:\n  Using pkg-config ....................... yes\n  Using vcpkg ............................ no\n  udev ................................... no\n  OpenSSL ................................ yes\n    Qt directly linked to OpenSSL ........ yes\n  OpenSSL 1.1 ............................ no\n  OpenSSL 3.0 ............................ yes\n  Using system zlib ...................... no\n  Zstandard support ...................... no\n  Thread support ......................... yes\n  Using 16KB page sizes in Android ....... no\nCommon build options:\n  Linker can resolve circular dependencies  yes\nQt Core:\n  backtrace .............................. yes\n  C++23 <stacktrace> ..................... no\n  DoubleConversion ....................... yes\n    Using system DoubleConversion ........ no\n  CLONE_PIDFD support in forkfd .......... yes\n  GLib ................................... no\n  ICU .................................... no\n  Using system libb2 ..................... no\n  Built-in copy of the MIME database ..... yes\n  Application permissions ................ yes\n  Defaulting legacy IPC to POSIX ......... no\n  Tracing backend ........................ <none>\n  OpenSSL based cryptographic hash ....... no\n  Logging backends:\n    journald ............................. no\n    syslog ............................... no\n    slog2 ................................ no\n  PCRE2 .................................. yes\n    Using system PCRE2 ................... no\nQt Sql:\n  SQL item models ........................ yes\nQt Network:\n  getifaddrs() ........................... no\n  IPv6 ifname ............................ no\n  libproxy ............................... no\n  Linux AF_NETLINK ....................... yes\n  DTLS ................................... yes\n  OCSP-stapling .......................... yes\n  SCTP ................................... no\n  Use system proxies ..................... yes\n  GSSAPI ................................. no\n  Brotli Decompression Support ........... no\n  qIsEffectiveTLD() ...................... yes\n    Built-in publicsuffix database ....... yes\n    System publicsuffix database ......... yes\nCore tools:\n  Android deployment tool ................ no\n  macOS deployment tool .................. no\n  Windows deployment tool ................ no\n  qmake .................................. yes\nQt Gui:\n  Accessibility .......................... yes\n  FreeType ............................... yes\n    Using system FreeType ................ no\n  HarfBuzz ............................... yes\n    Using system HarfBuzz ................ no\n  Fontconfig ............................. no\n  Image formats:\n    GIF .................................. yes\n    ICO .................................. yes\n    JPEG ................................. yes\n      Using system libjpeg ............... no\n    PNG .................................. yes\n      Using system libpng ................ no\n  Text formats:\n    HtmlParser ........................... yes\n    CssParser ............................ yes\n    OdfWriter ............................ yes\n    MarkdownReader ....................... yes\n      Using system libmd4c ............... no\n    MarkdownWriter ....................... yes\n  EGL .................................... yes\n  OpenVG ................................. no\n  OpenGL:\n    Desktop OpenGL ....................... yes\n    OpenGL ES 2.0 ........................ no\n    OpenGL ES 3.0 ........................ no\n    OpenGL ES 3.1 ........................ no\n    OpenGL ES 3.2 ........................ no\n  Vulkan ................................. no\n  Metal .................................. no\n  QGraphicsFrameCapture .................. no\n  Session Management ..................... yes\nFeatures used by QPA backends:\n  evdev .................................. yes\n  libinput ............................... no\n  HiRes wheel support in libinput ........ no\n  INTEGRITY HID .......................... no\n  mtdev .................................. no\n  tslib .................................. no\n  xkbcommon .............................. yes\n  X11 specific:\n    XLib ................................. yes\n    XCB Xlib ............................. yes\n    EGL on X11 ........................... yes\n    xkbcommon-x11 ........................ yes\n    xcb-sm ............................... no\nQPA backends:\n  DirectFB ............................... no\n  EGLFS .................................. yes\n  EGLFS details:\n    EGLFS OpenWFD ........................ no\n    EGLFS i.Mx6 .......................... no\n    EGLFS i.Mx6 Wayland .................. no\n    EGLFS RCAR ........................... no\n    EGLFS EGLDevice ...................... no\n    EGLFS GBM ............................ no\n    EGLFS VSP2 ........................... no\n    EGLFS Mali ........................... no\n    EGLFS Raspberry Pi ................... no\n    EGLFS X11 ............................ yes\n  LinuxFB ................................ yes\n  VNC .................................... yes\n  VK_KHR_display ......................... no\n  QNX:\n    lgmon ................................ no\n    IMF .................................. no\n  XCB:\n    Using system-provided xcb-xinput ..... no\n    GL integrations:\n      GLX Plugin ......................... yes\n        XCB GLX .......................... yes\n      EGL-X11 Plugin ..................... yes\n  Windows:\n    Direct 2D ............................ no\n    Direct 2D 1.1 ........................ no\n    DirectWrite .......................... no\n    DirectWrite 3 ........................ no\nQt Widgets:\n  GTK+ ................................... no\n  Styles ................................. Fusion Windows\nQt Testlib:\n  Tester for item models ................. yes\n  Batch tests ............................ no\nQt PrintSupport:\n  CUPS ................................... no\nQt Sql Drivers:\n  DB2 (IBM) .............................. no\n  InterBase .............................. no\n  MySql .................................. no\n  OCI (Oracle) ........................... no\n  ODBC ................................... no\n  PostgreSQL ............................. no\n  SQLite ................................. yes\n    Using system provided SQLite ......... no\n  Mimer .................................. no\nFurther Image Formats:\n  JasPer ................................. no\n  MNG .................................... no\n  TIFF ................................... yes\n    Using system libtiff ................. no\n  WEBP ................................... yes\n    Using system libwebp ................. no\nQt QML:\n  QML network support .................... yes\n  QML debugging and profiling support .... yes\n  QML just-in-time compiler .............. yes\n  QML XML http request ................... yes\n  QML Locale ............................. yes\n  QML SSL support ........................ yes\nQt QML Models:\n  QML list model ......................... yes\n  QML delegate model ..................... yes\nQt Quick:\n  AnimatedImage item ..................... yes\n  Canvas item ............................ yes\n  Support for Qt Quick Designer .......... yes\n  Flipable item .......................... yes\n  GridView item .......................... yes\n  ListView item .......................... yes\n  TableView item ......................... yes\n  TreeView item .......................... yes\n  Path support ........................... yes\n  PathView item .......................... yes\n  Positioner items ....................... yes\n  Repeater item .......................... yes\n  ShaderEffect item ...................... yes\n  Sprite item ............................ yes\nQt Quick Templates 2:\n  Hover support .......................... yes\n  Multi-touch support .................... yes\n  Calendar support ....................... yes\nQt Quick Controls 2:\n  Styles ................................. Basic Fusion FluentWinUI3 Imagine Material Universal\nQtQuick3D:\n  Assimp ................................. yes\n  System Assimp .......................... no\nQtQuick3D XR:\n  OpenXR ................................. yes\n    Using system OpenXR .................. no\nQt Multimedia:\n  Spatial Audio .......................... yes\n  Spatial Audio (Quick3D) ................ yes\n  Low level Audio Backend:\n    ALSA (experimental) .................. no\n    PulseAudio ........................... no\n    MMRenderer ........................... no\n    CoreAudio ............................ no\n    Open SLES (Android) .................. no\n    Web Assembly ......................... no\n    WASAPI (Windows Audio Session API) ... no\n  Plugin:\n    QtMM GStreamer plugin ................ no\n    FFmpeg ............................... no\n    FFmpeg plugin features:\n      PipeWire screen capture ............ no\n    MMRenderer ........................... no\n    AVFoundation ......................... no\n    Windows Media Foundation ............. no\n    Native Android backend (deprecated) .. no\n  Hardware acceleration and features:\n    Video for Linux ...................... yes\n    VAAPI support ........................ no\n    Linux DMA buffer support ............. yes\n    VideoToolbox ......................... no\nQt 3D:\n  Assimp ................................. yes\n  System Assimp .......................... no\n  Aspects:\n    Render aspect ........................ yes\n    Input aspect ......................... yes\n    Logic aspect ......................... yes\n    Animation aspect ..................... yes\n    Extras aspect ........................ yes\nQt 3D APIs:\n  Vulkan ................................. no\nQt 3D Renderers:\n  OpenGL Renderer ........................ yes\n  RHI Renderer ........................... yes\nQt3D Geometry Loaders:\n  Autodesk FBX ........................... no\nQt 5 Compatibility Libraries:\n  iconv .................................. yes\nQt Charts Types:\n  Area Chart ............................. yes\n  Line Chart ............................. yes\n  Spline Chart ........................... yes\n  Scatter Chart .......................... yes\n  Bar Chart .............................. yes\n  Pie Chart .............................. yes\n  Boxplot Chart .......................... yes\n  Candlestick Chart ...................... yes\nQt Axis Types:\n  DateTime Axis .......................... yes\nQt Bluetooth:\n  BlueZ .................................. no\n  BlueZ Low Energy ....................... no\n  Linux Crypto API ....................... no\n  WinRT Bluetooth API .................... no\nQt Nfc:\n  pcslite ................................ no\n  Use neard to access NFC devices ........ yes\nQt Graphs Support:\n  2D Graphs .............................. yes\n  3D Graphs .............................. yes\nQt Graphs 3D:\n  Bars3D ................................. yes\n  Scatter3D .............................. yes\n  Surface3D .............................. yes\nSerial Port:\n  ntddmodm ............................... no\nQt Tools:\n  Qt Assistant ........................... yes\n  libclang found ......................... no\n  Clang-based lupdate parser ............. no\n  Qt Widgets Designer .................... yes\n  Qt Distance Field Generator ............ yes\n  Qt Linguist ............................ yes\n  pixeltool .............................. yes\n  qdbus .................................. yes\n  QDoc ................................... no\n  Qt Attributions Scanner ................ yes\n  qtdiag ................................. yes\n  qtplugininfo ........................... yes\nQt Protobuf:\n  Qt Core types support .................. no\n  Qt Gui types support ................... no\n  Well-known types support ............... no\n  QML Protobuf support ................... yes\nQt Protobuf tools:\n  Qt Protobuf generator .................. no\nQt GRPC:\n  gRPC support ........................... yes\n  QML gRPC support ....................... yes\nQt GRPC tools:\n  Qt GRPC generator ...................... no\nQt NetworkAuth:\n  URI Scheme Reply Handler ............... yes\nQt Opcua:\n  Open62541 .............................. yes\n  Support for namespace 0 NodeId names ... yes\n  Internal code generator ................ no\n  Open62541 security support ............. yes\n  Support for global discovery server .... yes\n  Data type code generator ............... yes\nQt Remote Objects:\n  High Availability Manager (ham) ........ no\nQt Scxml:\n  ECMAScript data model for QtScxml ...... yes\nQt Sensors:\n  sensorfw ............................... no\n  sensorfw_enabled_with_cmake ............ no\nQt SerialBus:\n  Socket CAN ............................. yes\n  Socket CAN FD .......................... yes\n  SerialPort Support ..................... yes\nQt TextToSpeech:\n  Flite .................................. no\n  Speech Dispatcher ...................... no\nQt Virtualkeyboard:\n  Desktop integration .................... yes\n  Built-in layouts ....................... yes\n  Key navigation ......................... no\n  Retro style as default ................. no\n  Sensitive Debug ........................ no\n  Cerence ................................ no\n    Static Linking ....................... no\n    Handwriting .......................... no\n      Alphabetic ......................... no\n      CJK ................................ no\n    XT9 .................................. no\n      XT9 Debug .......................... no\n      XT9 9-key layouts .................. no\n    Bundle resources ..................... no\n      Handwriting ........................ no\n      XT9 ................................ no\n  Hunspell ............................... no\n    Using Hunspell copy from 3rdparty/ ... no\n  OpenWnn ................................ yes\n  MyScript ............................... no\n  Example HWR ............................ no\n  Language support enabled for:\n    Arabic ............................... yes\n    Bulgarian ............................ yes\n    Czech ................................ yes\n    Danish ............................... yes\n    German ............................... yes\n    Greek ................................ yes\n    English GB ........................... yes\n    English US ........................... yes\n    Spanish .............................. yes\n    Spanish Mexico ....................... yes\n    Estonian ............................. yes\n    Farsi ................................ yes\n    Finnish .............................. yes\n    French Canada ........................ yes\n    French France ........................ yes\n    Hebrew ............................... yes\n    Hindi ................................ yes\n    Croatian ............................. yes\n    Hungarian ............................ yes\n    Indonesian ........................... yes\n    Italian .............................. yes\n    Japanese ............................. yes\n    Korean ............................... yes\n    Malay ................................ yes\n    Norwegian ............................ yes\n    Dutch ................................ yes\n    Polish ............................... yes\n    Portuguese Brazil .................... yes\n    Portuguese Portugal .................. yes\n    Romanian ............................. yes\n    Russian .............................. yes\n    Slovak ............................... yes\n    Slovenian ............................ yes\n    Albanian ............................. yes\n    Serbian .............................. yes\n    Swedish .............................. yes\n    Thai ................................. yes\n    Turkish .............................. yes\n    Ukrainian ............................ yes\n    Vietnamese ........................... yes\n    Simplified Chinese ................... yes\n    Traditional Chinese .................. yes\n    HongKong Chinese ..................... no\n  Traditional chinese input methods:\n    Zhuyin ............................... yes\n    Cangjie .............................. yes\nQt Wayland Client ........................ yes\nQt Wayland Compositor .................... yes\nQt Wayland Drivers:\n  EGL .................................... yes\n  Raspberry Pi ........................... no\n  DRM EGL ................................ yes\n  libhybris EGL .......................... no\n  Linux dma-buf server buffer integration  yes\n  Shm emulation server buffer integration  yes\n  Vulkan-based server buffer integration . no\nQt Wayland Decoration Plugins:\n  GNOME-like client-side decorations ..... yes\nQt Wayland Client Shell Integrations:\n  xdg-shell .............................. yes\n  ivi-shell .............................. yes\n  wl-shell (deprecated) .................. yes\n  qt-shell ............................... yes\nQt Wayland Compositor Layer Plugins:\n  VSP2 hardware layer integration ........ no\nNote: Using static linking will disable the use of dynamically loaded plugins. Make sure to import all needed static plugins, or compile needed modules into the library.\nNote: Disabling X11 Accessibility Bridge: D-Bus or AT-SPI is missing.\nNote: Hunspell in Qt Virtual Keyboard is not enabled. Spelling correction will not be available.\nWARNING: No backend for low level audio found.\nWARNING: No media backend found\nWARNING: \nQDoc will not be compiled because required LLVM/Clang libraries could not be located.\nThis affects Qt documentation generation and Clang-based lupdate parsing.\n\n\nOn Linux:\n- Recommended: Use Qt's prebuilt LLVM packages:\n  https://download.qt.io/development_releases/prebuilt/libclang/qt/\n- Alternative system packages:\n  * Debian/Ubuntu: `sudo apt install libclang-dev`\n  * Fedora/RHEL: `sudo dnf install clang-devel`\n  * ArchLinux: `sudo pacman -S clang llvm`\n\nAfter installation, reconfigure with FEATURE_clang=ON.\n\nFor detailed setup instructions: https://doc.qt.io/qt/qdoc-guide-clang.html\n\nWARNING: The Clang-based lupdate parser will not be available. Suitable LLVM and Clang C++ libraries have not been found. You will need to set the FEATURE_clangcpp CMake variable to ON to re-evaluate this check.\nWARNING: SensorFW support currently not enabled with cmake\n"
+  },
+  "qt-CMakeCache.txt": {
+    "file": "qt-CMakeCache.txt",
+    "sha256": "64af4c68f5a4ce77436766ad2aede3990d85d18fc8b08dfb557a5d4ea6f13476"
+  },
+  "qt-static-libraries.txt": {
+    "file": "qt-static-libraries.txt",
+    "sha256": "8bd674640317d9bed9402e8ed1ad66edfa1fa20b917c9266be7b07c1ebf0d42a",
+    "text": "/opt/qt6-linux-arm64-llvm/lib/libQt63DAnimation.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DCore.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DExtras.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DInput.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DLogic.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickAnimation.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickExtras.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickInput.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickLogic.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickRender.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickScene2D.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DQuickScene3D.a\n/opt/qt6-linux-arm64-llvm/lib/libQt63DRender.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Bluetooth.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Bodymovin.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledEmbree.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledFreetype.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledGlslang_Glslang.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledGlslang_Osdependent.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledGlslang_Spirv.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledHarfbuzz.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledLibjpeg.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledLibjpeg12bits.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledLibjpeg16bits.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledLibpng.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledOpenXR.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledOpenwnn.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledPcre2.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledPhysX.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledPinyin.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledResonanceAudio.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledSpirv_Cross.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledTcime.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6BundledZLIB.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Bundled_Clip2Tri.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Bundled_Clipper.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Bundled_Poly2Tri.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Charts.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ChartsQml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Coap.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Concurrent.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Core.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Core5Compat.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DBus.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DataVisualization.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DataVisualizationQml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DeclarativeOpcua.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Designer.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DesignerComponents.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6DeviceDiscoverySupport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6EglFSDeviceIntegration.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ExampleIcons.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ExamplesAssetDownloader.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6FbSupport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Graphs.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6GraphsWidgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Grpc.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6GrpcQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Gui.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Help.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6HttpServer.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6InputSupport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6JsonRpc.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6KmsSupport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsAnimation.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsFolderListModel.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsPlatform.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsQmlModels.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsSettings.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsSharedImage.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LabsWavefrontMesh.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6LanguageServer.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Location.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Mqtt.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Multimedia.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6MultimediaQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6MultimediaTestLib.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6MultimediaWidgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Network.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6NetworkAuth.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Nfc.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6OpcUa.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6OpenGL.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6OpenGLWidgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6PacketProtocol.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Positioning.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6PositioningQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6PrintSupport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Protobuf.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ProtobufQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Qml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlAssetDownloader.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlCompiler.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlCore.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlDebug.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlDom.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlLocalStorage.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlMeta.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlModels.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlNetwork.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlToolingSettings.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlTypeRegistrar.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlWorkerScript.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QmlXmlListModel.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3D.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DAssetImport.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DAssetUtils.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DEffects.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DGlslParser.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DHelpers.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DHelpersImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DIblBaker.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DParticleEffects.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DParticles.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DPhysics.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DPhysicsHelpers.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DRuntimeRender.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DSpatialAudio.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DUtils.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Quick3DXr.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Basic.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2BasicStyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2FluentWinUI3StyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Fusion.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2FusionStyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Imagine.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2ImagineStyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Impl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Material.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2MaterialStyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2Universal.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControls2UniversalStyleImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickControlsTestUtils.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickDialogs2.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickDialogs2QuickImpl.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickDialogs2Utils.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickEffects.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickLayouts.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickParticles.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickShapes.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickTemplates2.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickTest.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickTestUtils.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickTimeline.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickTimelineBlendTrees.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickVectorImage.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickVectorImageGenerator.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6QuickWidgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6RemoteObjects.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6RemoteObjectsQml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Scxml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ScxmlQml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Sensors.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6SensorsQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6SerialBus.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6SerialPort.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6ShaderTools.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6SpatialAudio.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Sql.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6StateMachine.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6StateMachineQml.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Svg.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6SvgWidgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Test.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6TextToSpeech.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6UiTools.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6VirtualKeyboard.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6VirtualKeyboardSettings.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandClient.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandCompositor.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandCompositorIviapplication.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandCompositorPresentationTime.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandCompositorWLShell.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandCompositorXdgShell.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandEglClientHwIntegration.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WaylandEglCompositorHwIntegration.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WebChannel.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WebChannelQuick.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WebSockets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Widgets.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6WlShellIntegration.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6XcbQpa.a\n/opt/qt6-linux-arm64-llvm/lib/libQt6Xml.a\n"
+  },
+  "target-compiler-version.txt": {
+    "file": "target-compiler-version.txt",
+    "sha256": "72d3a875b2f1b5dbe42915d3899e49b973cd431336edb97f207e1666ca386003",
+    "text": "clang version 21.1.8\nTarget: aarch64-unknown-linux-gnu\nThread model: posix\nInstalledDir: /opt/llvm-21/bin\n"
+  },
+  "linker-version.txt": {
+    "file": "linker-version.txt",
+    "sha256": "418d72df86baf70c88b9a96a9118e3cdc66be0537a58f66a6879df0479f9a78f",
+    "text": "LLD 21.1.8 (compatible with GNU linkers)\n"
+  },
+  "stock-runtime.json": {
+    "file": "stock-runtime.json",
+    "sha256": "e82773f234a5de8302e9bb926089a5e665f97c5a1285e6c7962733938f040de4",
+    "text": "{\n  \"image\": \"arm64v8/centos:7\",\n  \"image_id\": \"sha256:73f11afcbb50d8bc70eab9f0850b3fa30e61a419bc48cf426e63527d14a8373b\",\n  \"state\": {\n    \"Status\": \"exited\",\n    \"Running\": false,\n    \"Paused\": false,\n    \"Restarting\": false,\n    \"OOMKilled\": false,\n    \"Dead\": false,\n    \"Pid\": 0,\n    \"ExitCode\": 0,\n    \"Error\": \"\",\n    \"StartedAt\": \"2026-11-10T22:22:35.022186193Z\",\n    \"FinishedAt\": \"2026-11-10T22:22:35.240988913Z\"\n  },\n  \"method\": \"QEMU user mode with stock CentOS 7 aarch64 root\"\n}\n"
+  },
+  "post_run_patch_context": {
+    "file": "patches/qt6/all/29-qtbase-arm-yield-builtin.patch",
+    "sha256": "929c571e7c567d4220aa28a9ddcacd0b6ce005c6a8842eaa039a605530bd986c",
+    "change": "Removed one trailing context line; code changes are identical."
+  }
+}

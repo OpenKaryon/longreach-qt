@@ -100,12 +100,17 @@ struct Result
         result.detail = why;
         return result;
     }
+#ifdef SMOKE_REQUIRE_CXX23
+    // A required target must compile every facility, even before it can run.
+    static Result unsupported(const char *) = delete;
+#else
     static Result unsupported(const char *why)
     {
         Result result = failure(why);
         result.status = Unavailable;
         return result;
     }
+#endif
 };
 
 template<typename Function>

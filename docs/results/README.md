@@ -1,5 +1,10 @@
 # Results
 
+The [Qt 6 Linux arm64 LLVM 21.1.8 SDK run](qt6-linux-arm64-llvm21-sdk-20261111.md)
+records the static AArch64 build, required 25/25 C++23 runs under QEMU and
+the separate stock CentOS 7 user-space check. The [SDK queue](qt6-llvm21-sdk-queue-20261111.md)
+tracks the remaining targets.
+
 The [Qt 6 Linux amd64 LLVM 21.1.8 SDK run](qt6-linux-amd64-llvm21-sdk-20261110.md)
 records the complete Qt rebuild, required 25/25 C++23 checks through CMake
 and qmake, the ordinary Qt console run and stock CentOS 7 execution.

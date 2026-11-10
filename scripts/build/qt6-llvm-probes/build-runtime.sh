@@ -9,6 +9,14 @@ llvm=${LLVM_ROOT:-$work/toolchain}
 source=$work/source
 prefix=$work/runtimes/$target
 jobs=${PARALLEL_JOBS:-4}
+build_root=$work
+if [ -n "${LLVM_BUILD_VARIANT:-}" ]; then
+    case "$LLVM_BUILD_VARIANT" in
+        *[!a-zA-Z0-9_-]*) echo 'invalid runtime build variant' >&2; exit 2 ;;
+    esac
+    build_root="$work/variants/$LLVM_BUILD_VARIANT"
+    mkdir -p "$build_root"
+fi
 compiler_flags=()
 cmake_args=(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 link_flags='-fuse-ld=lld -Wl,--threads=2'
@@ -103,7 +111,7 @@ common_args=(
 )
 # libc++abi and libunwind query Clang for an existing compiler-rt archive.
 # Install builtins first, so a clean build does not depend on a prior attempt.
-cmake -S "$source/runtimes" -B "$work/build-builtins-$target" -G Ninja \
+cmake -S "$source/runtimes" -B "${build_root}/build-builtins-$target" -G Ninja \
     "${common_args[@]}" -DLLVM_ENABLE_RUNTIMES=compiler-rt \
     -DCOMPILER_RT_INSTALL_PATH="$prefix/resource" \
     -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON -DCOMPILER_RT_INCLUDE_TESTS=OFF \
@@ -111,8 +119,8 @@ cmake -S "$source/runtimes" -B "$work/build-builtins-$target" -G Ninja \
     -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF \
     -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF -DCOMPILER_RT_BUILD_ORC=OFF \
     -DCOMPILER_RT_BUILD_MEMPROF=OFF
-cmake --build "$work/build-builtins-$target" --parallel "$jobs"
-cmake --install "$work/build-builtins-$target"
+cmake --build "${build_root}/build-builtins-$target" --parallel "$jobs"
+cmake --install "${build_root}/build-builtins-$target"
 
 runtime_args=(-DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx')
 if [[ "$target" = linux-* ]]; then
@@ -120,7 +128,7 @@ if [[ "$target" = linux-* ]]; then
     # cannot detect that, so select libc++abi's existing weak-symbol fallback.
     runtime_args+=(-DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF)
 fi
-cmake -S "$source/runtimes" -B "$work/build-runtime-$target" -G Ninja \
+cmake -S "$source/runtimes" -B "${build_root}/build-runtime-$target" -G Ninja \
     "${common_args[@]}" "${runtime_args[@]}" \
     -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON \
     -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBUNWIND_INCLUDE_TESTS=OFF \
@@ -133,8 +141,8 @@ cmake -S "$source/runtimes" -B "$work/build-runtime-$target" -G Ninja \
     -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON \
     -DLIBCXX_INCLUDE_TESTS=OFF -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
     -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON -DLIBCXX_INSTALL_MODULES=OFF
-cmake --build "$work/build-runtime-$target" --parallel "$jobs"
-cmake --install "$work/build-runtime-$target"
+cmake --build "${build_root}/build-runtime-$target" --parallel "$jobs"
+cmake --install "${build_root}/build-runtime-$target"
 
 if [[ "$target" = macos-* ]]; then
     mkdir -p "/out/$target"
@@ -166,13 +174,13 @@ for language in c cxx; do
     chmod +x "$prefix/bin/clang-$language"
 done
 
-cmake -S /src/scripts/tests/qt6-llvm-probes -B "$work/build-probe-$target" -G Ninja \
+cmake -S /src/scripts/tests/qt6-llvm-probes -B "${build_root}/build-probe-$target" -G Ninja \
     "${cmake_args[@]}" -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_COMPILER="$prefix/bin/clang-cxx" -DCMAKE_CXX_COMPILER_TARGET="$triple"
-cmake --build "$work/build-probe-$target" --clean-first --parallel 2
+cmake --build "${build_root}/build-probe-$target" --clean-first --parallel 2
 mkdir -p "/out/$target"
 binary=/out/$target/cxx23-probe$exe_suffix
-cp "$work/build-probe-$target/cxx23-probe$exe_suffix" "$binary"
+cp "${build_root}/build-probe-$target/cxx23-probe$exe_suffix" "$binary"
 export PATH="$llvm/bin:$PATH"
 case "$target" in
     linux-*)

@@ -1,0 +1,27 @@
+{
+  "llvm": {
+    "version": "21.1.8",
+    "file": "llvm-project-21.1.8.src.tar.xz",
+    "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
+    "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+  },
+  "windows_headers_crt": {
+    "project": "mingw-w64",
+    "version": "13.0.0",
+    "file": "mingw-w64-v13.0.0.tar.bz2",
+    "url": "https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v13.0.0.tar.bz2",
+    "sha256": "5afe822af5c4edbf67daaf45eec61d538f49eef6b19524de64897c6b95828caf"
+  },
+  "macos_sdk": {
+    "version": "14.0",
+    "source": "Existing pinned osxcross SDK in the target SDK images"
+  },
+  "compiler_bootstrap_image": "qt6-linux-amd64:centos7-rpm-lock-check",
+  "compiler_bootstrap_image_id": "sha256:7c41b21e376019cfcc5be848d99f6df265ce7aff06213b07a7250942f40271b8",
+  "macos_build_host_python": {
+    "version": "3.11.2",
+    "image": "qt6-linux-arm64:latest",
+    "image_id": "sha256:4a5bc85dee3c7b8a31231e4975485bedb601c3f3a4208bdac26f140dd4cfb415",
+    "purpose": "Build-only interpreter/stdlib copied from the existing Debian 12 cross-SDK; not linked into target programs."
+  }
+}

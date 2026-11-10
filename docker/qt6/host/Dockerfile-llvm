@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+# Shared upstream Clang/LLD for the six Qt 6 target probes. No Qt rebuild.
+ARG LLVM_COMPILER_BASE=qt6-linux-amd64:centos7-rpm-lock-check
+FROM ${LLVM_COMPILER_BASE}
+ARG PARALLEL_JOBS=4
+ENV LLVM_ROOT=/opt/llvm-21
+COPY scripts/build/qt6-llvm-probes/build-compiler.sh /tmp/build-compiler.sh
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/tmp/llvm.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-compiler,target=/work \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" bash /tmp/build-compiler.sh /tmp/llvm.tar.xz
+CMD ["/opt/llvm-21/bin/clang", "--version"]

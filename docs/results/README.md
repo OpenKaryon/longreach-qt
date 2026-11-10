@@ -1,5 +1,8 @@
 # Results
 
+The [six-target upstream LLVM 21.1.8 probes](qt6-llvm21-probes-20261110.md)
+record the C++23 preflight before rebuilding the Qt SDKs.
+
 The [Windows LLVM consumer validation](qt6-win-amd64-llvm-consumer-20261108.md)
 records the SDK console/language checks and local C++20 consumer build.
 

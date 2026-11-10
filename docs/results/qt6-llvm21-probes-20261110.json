@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "status": "BUILD_PASS_RUNTIME_PARTIAL",
+  "source_base": "a5ae7781750e66328a14744e15c51a7d735f9592",
+  "source_dirty": true,
+  "source_sha256": {
+    "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+    "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+    "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+    "scripts/build/qt6-llvm-probes/build-runtime.sh": "e86e04bd45059371cfd5ca4ff7748c1d29fba91de9649a8439270ff4b6d84ec4",
+    "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+    "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+    "scripts/tests/qt6-llvm-probes/main.cpp": "080c85f5aec3e02ba8f4f265fdaf3bbd194469fed905df3a5ebc280ffd9d017b",
+    "scripts/tests/qt6-llvm-probes/run.py": "564321a7b3465f3cb547ee19940129a6d81662804f6dd5254ef76251bb4f6ee6"
+  },
+  "inputs": {
+    "llvm": {
+      "version": "21.1.8",
+      "file": "llvm-project-21.1.8.src.tar.xz",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
+      "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+    },
+    "windows_headers_crt": {
+      "project": "mingw-w64",
+      "version": "13.0.0",
+      "file": "mingw-w64-v13.0.0.tar.bz2",
+      "url": "https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v13.0.0.tar.bz2",
+      "sha256": "5afe822af5c4edbf67daaf45eec61d538f49eef6b19524de64897c6b95828caf"
+    },
+    "macos_sdk": {
+      "version": "14.0",
+      "source": "Existing pinned osxcross SDK in the target SDK images"
+    },
+    "compiler_bootstrap_image": "qt6-linux-amd64:centos7-rpm-lock-check",
+    "compiler_bootstrap_image_id": "sha256:7c41b21e376019cfcc5be848d99f6df265ce7aff06213b07a7250942f40271b8",
+    "macos_build_host_python": {
+      "version": "3.11.2",
+      "image": "qt6-linux-arm64:latest",
+      "image_id": "sha256:4a5bc85dee3c7b8a31231e4975485bedb601c3f3a4208bdac26f140dd4cfb415",
+      "purpose": "Build-only interpreter/stdlib copied from the existing Debian 12 cross-SDK; not linked into target programs."
+    }
+  },
+  "compiler": {
+    "version": "21.1.8",
+    "projects": [
+      "clang",
+      "lld"
+    ],
+    "backends": [
+      "X86",
+      "AArch64"
+    ],
+    "image": "longreach-llvm:21.1.8-compiler",
+    "image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+    "started_utc": "2026-11-10T12:51:14.669903523Z",
+    "finished_utc": "2026-11-10T13:32:27.513143331Z",
+    "build_minutes": 41.214,
+    "cpus": 4,
+    "memory_gib": 8,
+    "parallel_link_jobs": 1
+  },
+  "contract": {
+    "cxx_standard": 23,
+    "libcxx": "21.1.8",
+    "checks": 16,
+    "missing_facility_behavior": "Compilation fails; no SKIP path",
+    "experimental_library_flag": false,
+    "llvm_mingw_distribution_used": false,
+    "complete_cxx23_conformance_claimed": false
+  },
+  "summary": {
+    "builds_passed": 6,
+    "builds_failed": 0,
+    "runtime_passed": 3,
+    "runtime_not_run": 3
+  },
+  "windows_host": {
+    "os": "11",
+    "version": "10.0.26200"
+  },
+  "results": [
+    {
+      "target": "linux-amd64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "PASS",
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "6ab0c48a2fea768be27a9c2e872c2c0f0c54e38bb4f245b5d585c0d187853508",
+      "runtime_method": "native CentOS 7 userland",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "requested_floor": "glibc 2.17",
+      "final_attempt_build_seconds": 2.302,
+      "recorded_utc": "2026-11-10T14:14:39.323879+00:00",
+      "max_glibc": "2.17",
+      "shared_libraries": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6",
+        "librt.so.1",
+        "libdl.so.2"
+      ],
+      "glibc_audit": "PASS"
+    },
+    {
+      "target": "linux-arm64",
+      "build_host_image": "qt6-linux-arm64:latest",
+      "build_host_image_id": "sha256:4a5bc85dee3c7b8a31231e4975485bedb601c3f3a4208bdac26f140dd4cfb415",
+      "runtime": "PASS",
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "7c0c059f6138f9096ec5b4d6b04616be11c7a94a449b896cc028d1f57cc65086",
+      "runtime_method": "QEMU with CentOS 7 sysroot",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "requested_floor": "glibc 2.17",
+      "final_attempt_build_seconds": 2.684,
+      "recorded_utc": "2026-11-10T14:14:42.145364+00:00",
+      "max_glibc": "2.17",
+      "shared_libraries": [
+        "libm.so.6",
+        "libpthread.so.0",
+        "libc.so.6",
+        "librt.so.1",
+        "libdl.so.2"
+      ],
+      "glibc_audit": "PASS"
+    },
+    {
+      "target": "windows-amd64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "PASS",
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "489985d4b233ed8790edf13cf807c13778e11a18cdd858c95131610e8c6d434b",
+      "runtime_method": "native Windows host console; not Windows 7 certification",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "requested_floor": "Windows 7 SP1 / MSVCRT",
+      "final_attempt_build_seconds": 17.884,
+      "recorded_utc": "2026-11-10T14:15:00.417637+00:00",
+      "imported_dlls": [
+        "KERNEL32.dll",
+        "msvcrt.dll"
+      ],
+      "pe_subsystem": "6.1",
+      "win7_import_screen": "PASS"
+    },
+    {
+      "target": "windows-arm64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "NOT_RUN",
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "05ac448f65357fbed2b9c99b7eecd505cc136722f94bef11a5a13a1bc8fb6f86",
+      "requested_floor": "Windows 10 / UCRT",
+      "final_attempt_build_seconds": 3.006,
+      "recorded_utc": "2026-11-10T14:18:35.219208+00:00",
+      "imported_dlls": [
+        "KERNEL32.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-time-l1-1-0.dll",
+        "api-ms-win-crt-multibyte-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll"
+      ],
+      "pe_subsystem": "10.0"
+    },
+    {
+      "target": "macos-amd64",
+      "build_host_image": "qt6-macos-amd64:latest",
+      "build_host_image_id": "sha256:f9444dadca42afaf1093403f0879b460ad6ca8a456c724a958189ff47ad64ee6",
+      "runtime": "NOT_RUN",
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "35f4e0584f07aa4742c82678aabb450e712fe17fd131ea2828e5a00c6ad3718c",
+      "requested_floor": "macOS 10.13",
+      "final_attempt_build_seconds": 2.695,
+      "recorded_utc": "2026-11-10T14:18:38.042831+00:00",
+      "runtime_archive_architectures": "x86_64",
+      "runtime_archives_audited": 4,
+      "shared_libraries": [
+        "/usr/lib/libSystem.B.dylib"
+      ],
+      "deployment_audit": "PASS"
+    },
+    {
+      "target": "macos-arm64",
+      "build_host_image": "qt6-macos-arm64:latest",
+      "build_host_image_id": "sha256:6632a481bf6da932851bf26a1f6544ae6709074d84eb959e9b9a004baba1d357",
+      "runtime": "NOT_RUN",
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "02161dd56a8b4740dc311d12ec2160a40e7960ec24cd71db397a07728cc0d5d2",
+      "requested_floor": "macOS 11.0",
+      "final_attempt_build_seconds": 2.766,
+      "recorded_utc": "2026-11-10T14:18:40.923171+00:00",
+      "runtime_archive_architectures": "arm64",
+      "runtime_archives_audited": 4,
+      "shared_libraries": [
+        "/usr/lib/libSystem.B.dylib"
+      ],
+      "deployment_audit": "PASS"
+    }
+  ],
+  "scope": {
+    "qt_rebuilt": false,
+    "existing_selftests_modified": false,
+    "vm_runs": false,
+    "gui_runs": false,
+    "security_regression_tests_run": false,
+    "builds_and_runs_sequential": true,
+    "container_cpus": 4,
+    "container_memory_gib": 8,
+    "timing_note": "Per-target times describe final attempts and may reuse completed correct objects from earlier attempts."
+  },
+  "limitations": [
+    "Windows amd64 ran on the Windows 11 host, not Windows 7.",
+    "Windows arm64 and both macOS executables were not executed.",
+    "Linux checks exercise old userland on the Docker host kernel; arm64 uses QEMU.",
+    "The sixteen selected language/library checks do not establish full C++23 or full SDK conformance."
+  ]
+}

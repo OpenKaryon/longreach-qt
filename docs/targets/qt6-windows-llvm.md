@@ -58,8 +58,10 @@ python scripts/tests/qt6-win-amd64-llvm/run-suite.py --only qt-selftest
 python scripts/tests/qt6-win-amd64-llvm/run-suite.py --only qt-selftest-experimental
 ```
 
-The experimental executable uses `-fexperimental-library` at compilation
-and linking; jthread and stop-token/callback checks must report PASS.
+The experimental executables use `-fexperimental-library` at compilation
+and linking and `SMOKE_REQUIRE_CXX23=ON`. All 25 shared modern-C++ checks
+must PASS exactly once. Missing checks and modern-section SKIP fail;
+unrelated Qt API SKIP is allowed only in the complete console run.
 
 The Windows runner explicitly selects the native `windows` platform.
 The suite contains Windows OpenGL checks that the offscreen backend
@@ -77,3 +79,24 @@ same LLVM-MinGW toolchain and compatible C++ library settings.
 
 See the [recorded validation](../results/qt6-win-amd64-llvm-consumer-20261108.md)
 for the exact native-runtime scope and consumer checks.
+
+
+## Required C++23 behavior and legacy standards
+
+The default self-test remains compatible with C++14; feature guards retain
+named SKIP for unavailable language/library features. Qt 6 itself requires
+C++17 or newer. `SMOKE_REQUIRE_CXX23=ON` is an explicit required run: select
+`-DCMAKE_CXX_STANDARD=23`, and supply the experimental-library flag when using
+libc++ 19. LLVM 21 probes use ordinary libc++ without that flag.
+
+Run only these checks in the full console executable with `--modern-cpp`,
+then gate its log:
+
+```sh
+python scripts/tests/require-modern-cpp.py modern-required.log
+```
+
+The gate requires every manifest check once, a C++23 language record and a
+consistent summary. Use `--allow-other-checks` only for a complete Qt console
+log, where unrelated Qt API SKIP is expected. The required modern-only run
+always requires zero SKIP. See the [expanded behavior results](../results/modern-cpp-behavior-20261110.md).

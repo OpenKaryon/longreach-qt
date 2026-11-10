@@ -1,0 +1,26 @@
+# Mandatory C++23 language/library behavior checks.
+C++14 generic lambda and init capture
+C++17 structured bindings
+C++17 fold expressions
+C++17 std::optional
+C++17 std::string_view
+C++20 concepts
+C++20 std::span
+C++20 ranges filter and transform
+C++20 std::jthread
+C++20 std::stop_token and callbacks
+C++20 std::format
+C++23 if consteval
+C++23 std::expected
+C++23 std::byteswap
+C++23 std::ranges::to
+C++23 std::print
+C++20 stop_token condition_variable_any cancellation
+C++20 jthread destructor stop and join
+C++20 atomic wait and notify handoff
+C++20 jthread thread_local destruction
+C++11 exception unwinding and RAII
+C++17 Unicode filesystem round trip
+C++20 format_error propagation
+C++23 expected monadic error propagation
+C++23 Unicode format and print

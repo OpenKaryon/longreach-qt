@@ -54,8 +54,11 @@ smoke_add_app(qt-selftest
         checks_declarative1.cpp
         checks_multimedia2.cpp
         ../common/smokecheck.h
+        ../common/moderncpp_checks.h
         checks.h
 )
+
+smoke_configure_modern_cpp(qt-selftest)
 
 # Four modules that are not shared by all three generations. Each is linked
 # only when the SDK has it and sets a DEFINE, the same shape widgets-gallery

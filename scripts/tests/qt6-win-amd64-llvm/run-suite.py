@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import importlib.util
 import os
 import re
 import subprocess
@@ -25,10 +26,9 @@ EXTRA_APPLICATIONS = (
     "modern-cxx23-experimental",
 )
 EXPERIMENTAL_APPLICATIONS = {"qt-selftest-experimental", "modern-cxx23-experimental"}
-REQUIRED_THREAD_CHECKS = (
-    "C++20 std::jthread",
-    "C++20 std::stop_token and callbacks",
-)
+gate_spec = importlib.util.spec_from_file_location("required_modern_cpp", ROOT / "scripts/tests/require-modern-cpp.py")
+modern_gate = importlib.util.module_from_spec(gate_spec)
+gate_spec.loader.exec_module(modern_gate)
 SEM_FAILCRITICALERRORS = 0x0001
 SEM_NOGPFAULTERRORBOX = 0x0002
 SEM_NOOPENFILEERRORBOX = 0x8000
@@ -58,13 +58,6 @@ def child_error_mode() -> Iterator[None]:
         kernel.SetErrorMode(previous)
 
 
-def require_cpp_threads(output: str) -> None:
-    lines = set(output.splitlines())
-    for check in REQUIRED_THREAD_CHECKS:
-        if f"PASS: {check}" not in lines:
-            raise RuntimeError(f"Required experimental check did not PASS: {check}")
-
-
 def run_check(suite: Path, application: str, environment: dict[str, str]) -> str:
     language_probe = application.startswith("modern-cxx23-")
     arguments = [] if language_probe else ["--selftest"]
@@ -81,7 +74,7 @@ def run_check(suite: Path, application: str, environment: dict[str, str]) -> str
         code = result.returncode & 0xFFFFFFFF
         raise RuntimeError(f"{application}.exe: exit 0x{code:08x}; stopped, see {log.name}")
     if application in EXPERIMENTAL_APPLICATIONS:
-        require_cpp_threads(output)
+        modern_gate.require_modern_cpp(output, allow_other_checks=not language_probe)
     print(f"{application}.exe: PASS", flush=True)
     return output
 

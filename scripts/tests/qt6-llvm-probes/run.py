@@ -61,6 +61,8 @@ def verify_architecture(data: bytes, target: str) -> str:
     return arch
 
 
+MODERN_GATE = load_tool("required_modern_cpp", ROOT / "scripts/tests/require-modern-cpp.py")
+
 def native_windows_check(binary: Path, log: Path) -> None:
     runner = load_tool("windows_error_mode", ROOT / "scripts/tests/qt6-win-amd64-llvm/run-suite.py")
     with runner.child_error_mode(), log.open("wb") as stream:
@@ -69,8 +71,9 @@ def native_windows_check(binary: Path, log: Path) -> None:
             timeout=60, creationflags=subprocess.CREATE_NO_WINDOW,
         )
     output = log.read_text(encoding="utf-8", errors="replace")
-    if result.returncode or "SUMMARY: 16 passed, 0 failed, 0 skipped" not in output.splitlines():
+    if result.returncode:
         raise RuntimeError(f"Windows probe failed; see {log}")
+    MODERN_GATE.require_modern_cpp(output)
 
 
 def run_target(target: str, suite: Path, volume: str) -> dict:
@@ -92,6 +95,9 @@ def run_target(target: str, suite: Path, volume: str) -> dict:
         "scripts/tests/qt6-llvm-probes/CMakeLists.txt",
         "scripts/tests/qt6-llvm-probes/main.cpp",
         "scripts/tests/qt6-llvm-probes/run.py",
+        "tests/common/moderncpp_checks.h",
+        "tests/common/moderncpp-required.txt",
+        "scripts/tests/require-modern-cpp.py",
     ]
     result["source_sha256"] = {
         name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in inputs
@@ -128,7 +134,8 @@ def run_target(target: str, suite: Path, volume: str) -> dict:
         result["runtime"] = "PASS"
         result["runtime_method"] = "native Windows host console; not Windows 7 certification"
     if result["runtime"] == "PASS":
-        result.update(passed=16, failed=0, skipped=0)
+        MODERN_GATE.require_modern_cpp((binary.parent / "run.log").read_text(encoding="utf-8"))
+        result.update(passed=len(MODERN_GATE.required_checks()), failed=0, skipped=0)
     print(f"{target}: build PASS; runtime {result['runtime']}", flush=True)
     return result
 

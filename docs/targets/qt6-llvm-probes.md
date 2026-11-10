@@ -1,8 +1,8 @@
 # Qt 6 target toolchain probes: upstream LLVM 21.1.8
 
 These standalone programs test the proposed compiler and C++ runtime before
-rebuilding Qt. They do not use Qt or certify the full Qt SDKs. The existing
-Qt images and self-tests are unchanged.
+rebuilding Qt. They do not use Qt or certify the full Qt SDKs. Their behavior
+checks are shared with the Qt self-test; existing Qt images remain unchanged.
 
 ## Inputs and floors
 
@@ -30,16 +30,31 @@ LLVM version. See the [versioned upstream platform documentation](https://raw.gi
 
 ## Probe contract
 
-[`main.cpp`](../../scripts/tests/qt6-llvm-probes/main.cpp) checks the same
-16 language/library facilities as the existing modern-C++ example checks.
-It requires C++23 and libc++ 21 at compilation, and ordinary-library
-`jthread`/`stop_token` support without `-fexperimental-library`. Missing
-facilities fail compilation; runtime checks do not use SKIP.
+[`main.cpp`](../../scripts/tests/qt6-llvm-probes/main.cpp) and the Qt adapter use
+the same [25 language/library checks](../../tests/common/moderncpp_checks.h).
+The standalone probe requires C++23 and libc++ 21 at compilation, with
+ordinary-library `jthread`/`stop_token` support without `-fexperimental-library`.
+An unavailable feature reports FAIL. The runner also requires every name in
+the [manifest](../../tests/common/moderncpp-required.txt) to PASS exactly once;
+missing checks, SKIP and inconsistent summaries fail the required run.
 
-The checks cover lambdas, structured bindings, folds, optional, string_view,
-concepts, span, ranges, jthread, stop tokens/callbacks, format, if consteval,
-expected, byteswap, ranges::to and print to a temporary file. Passing them
-does not establish complete C++23 conformance.
+The original 16 checks cover lambdas, structured bindings, folds, optional,
+string_view, concepts, span, ranges, jthread, stop tokens/callbacks, format,
+if consteval, expected, byteswap, ranges::to and print. Nine additional checks
+exercise stop-aware condition-variable waits, destructor cancellation/join,
+atomic wait/notify, thread-local destruction, exception unwinding with RAII,
+Unicode filesystem rename/read/write, format_error, expected monadic error
+propagation and Unicode format/print. Files belong to an exclusively created
+temporary directory; cleanup removes only its two known files and directory.
+Thread tests use handshakes rather than sleeps and execution has a 60-second
+timeout. Passing these checks does not establish complete C++23 conformance.
+
+For glibc 2.17, explicitly disable the configure result
+`LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL`. Compile-only cross checks can incorrectly
+detect the absent symbol. This selects libc++abi's existing weak-symbol/TLS
+fallback, exercised by the thread-local destructor check; LLVM source is not
+patched. This fallback has upstream limitations for unloading shared objects
+and destruction order on the main thread; the probe covers a joined worker.
 
 ## Sequential builds
 
@@ -106,4 +121,7 @@ Artifacts and per-target records are saved under
 unexpected shared C++ runtime dependencies. The Windows amd64 import screen
 and macOS deployment audit do not replace runtime tests on the minimum OS.
 
-See the [six-target probe results](../results/qt6-llvm21-probes-20261110.md) for the recorded run and remaining native-platform checks.
+The [initial six-target results](../results/qt6-llvm21-probes-20261110.md) retain
+their original 16-check evidence. See the [25-check follow-up](../results/modern-cpp-behavior-20261110.md)
+for the expanded behavior run and Qt/legacy integration. Native macOS and
+Windows arm64 execution, minimum-OS VM runs and full Qt rebuilds remain separate.

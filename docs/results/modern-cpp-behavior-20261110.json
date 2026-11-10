@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "updated_utc": "2026-11-10T17:54:46.478023+00:00",
+  "source_base": "db7c26790f167db81c9968eb1473594ff7a8650b",
+  "source_dirty": true,
+  "required_behavior_count": 25,
+  "source_sha256": {
+    "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+    "scripts/tests/qt6-linux-amd64-llvm/CMakeLists.txt": "f5430a2b18742acb52c1b40f32ca2ad449d9a9184c11fb8fd4943509835ac028",
+    "scripts/tests/qt6-linux-amd64-llvm/run-suite.sh": "24b9a5accf33408eff9f32b3589a3d04753dce0a980072895c1f5020993fa1d1",
+    "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+    "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+    "scripts/tests/qt6-win-amd64-llvm/CMakeLists.txt": "05192675da27311c33c7859cb442bfcc13c05b1c8c4d0b92958bb3065ebe2573",
+    "scripts/tests/qt6-win-amd64-llvm/build-suite.sh": "40d6674e5f667710d61429dbce2910ecd6e3b241fa309b94c05446a4db4bdf42",
+    "scripts/tests/qt6-win-amd64-llvm/run-suite.py": "e7f9205f4047521905d96309cc98f7a8b84317ce5db744110120fe9916f78796",
+    "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc",
+    "tests/CMakeLists.txt": "f501475416858972fa4343aff9c22c61734e0f1a1af40c183ccfea39befb37b1",
+    "tests/cmake/ModernCpp.cmake": "02f208ffa33907402ecc90451cea146525e99d4ac1e79753a9d88309a9c81d1f",
+    "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+    "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+    "tests/qt-selftest/CMakeLists.txt": "f4a8129208061f24c5662b6994138b0b23f504014640e54dd169e6b31c8e3c0d",
+    "tests/qt-selftest/checks_modern_cpp.cpp": "43327b39fe1f6241063e767feec8dfd930c12b8b26602c21f9f0ef47efa93f74",
+    "tests/qt-selftest/main.cpp": "e8b7756f305714faa11a415e49792289bbb0dcbf38df7c880c146e755cfe7453"
+  },
+  "status": "BUILD_PASS_RUNTIME_PARTIAL",
+  "llvm21_probes": [
+    {
+      "target": "linux-amd64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "PASS",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 3.69,
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "6df04a542b7a7d079a786765392ebfd06dd6118cc07f3723b49d4efea2c5aaaa",
+      "runtime_method": "native CentOS 7 userland",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": {
+        "run.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/linux-amd64/run.log",
+          "sha256": "3edf56a5c3cbcfad184117c98c5d135fb90b41571f5cdf7fd74452252e9c6e05",
+          "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nRUN: C++14 generic lambda and init capture\nPASS: C++14 generic lambda and init capture\nRUN: C++17 structured bindings\nPASS: C++17 structured bindings\nRUN: C++17 fold expressions\nPASS: C++17 fold expressions\nRUN: C++17 std::optional\nPASS: C++17 std::optional\nRUN: C++17 std::string_view\nPASS: C++17 std::string_view\nRUN: C++20 concepts\nPASS: C++20 concepts\nRUN: C++20 std::span\nPASS: C++20 std::span\nRUN: C++20 ranges filter and transform\nPASS: C++20 ranges filter and transform\nRUN: C++20 std::jthread\nPASS: C++20 std::jthread\nRUN: C++20 std::stop_token and callbacks\nPASS: C++20 std::stop_token and callbacks\nRUN: C++20 std::format\nPASS: C++20 std::format\nRUN: C++23 if consteval\nPASS: C++23 if consteval\nRUN: C++23 std::expected\nPASS: C++23 std::expected\nRUN: C++23 std::byteswap\nPASS: C++23 std::byteswap\nRUN: C++23 std::ranges::to\nPASS: C++23 std::ranges::to\nRUN: C++23 std::print\nPASS: C++23 std::print\nRUN: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 stop_token condition_variable_any cancellation\nRUN: C++20 jthread destructor stop and join\nPASS: C++20 jthread destructor stop and join\nRUN: C++20 atomic wait and notify handoff\nPASS: C++20 atomic wait and notify handoff\nRUN: C++20 jthread thread_local destruction\nPASS: C++20 jthread thread_local destruction\nRUN: C++11 exception unwinding and RAII\nPASS: C++11 exception unwinding and RAII\nRUN: C++17 Unicode filesystem round trip\nPASS: C++17 Unicode filesystem round trip\nRUN: C++20 format_error propagation\nPASS: C++20 format_error propagation\nRUN: C++23 expected monadic error propagation\nPASS: C++23 expected monadic error propagation\nRUN: C++23 Unicode format and print\nPASS: C++23 Unicode format and print\nSUMMARY: 25 passed, 0 failed, 0 skipped\n"
+        },
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/linux-amd64/dependencies.log",
+          "sha256": "1cfcd9e8a7f06725eaeebdef58775d124cf4d1db01a9e4456c61e8c78eb38b30",
+          "text": " 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n"
+        }
+      }
+    },
+    {
+      "target": "linux-arm64",
+      "build_host_image": "qt6-linux-arm64:latest",
+      "build_host_image_id": "sha256:4a5bc85dee3c7b8a31231e4975485bedb601c3f3a4208bdac26f140dd4cfb415",
+      "runtime": "PASS",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 7.442,
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "05061912fe467738cca026abb33a41f3007ab99ec3467557eb07a1cc87f2df1b",
+      "runtime_method": "QEMU with CentOS 7 sysroot",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": {
+        "run.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/linux-arm64/run.log",
+          "sha256": "3edf56a5c3cbcfad184117c98c5d135fb90b41571f5cdf7fd74452252e9c6e05",
+          "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nRUN: C++14 generic lambda and init capture\nPASS: C++14 generic lambda and init capture\nRUN: C++17 structured bindings\nPASS: C++17 structured bindings\nRUN: C++17 fold expressions\nPASS: C++17 fold expressions\nRUN: C++17 std::optional\nPASS: C++17 std::optional\nRUN: C++17 std::string_view\nPASS: C++17 std::string_view\nRUN: C++20 concepts\nPASS: C++20 concepts\nRUN: C++20 std::span\nPASS: C++20 std::span\nRUN: C++20 ranges filter and transform\nPASS: C++20 ranges filter and transform\nRUN: C++20 std::jthread\nPASS: C++20 std::jthread\nRUN: C++20 std::stop_token and callbacks\nPASS: C++20 std::stop_token and callbacks\nRUN: C++20 std::format\nPASS: C++20 std::format\nRUN: C++23 if consteval\nPASS: C++23 if consteval\nRUN: C++23 std::expected\nPASS: C++23 std::expected\nRUN: C++23 std::byteswap\nPASS: C++23 std::byteswap\nRUN: C++23 std::ranges::to\nPASS: C++23 std::ranges::to\nRUN: C++23 std::print\nPASS: C++23 std::print\nRUN: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 stop_token condition_variable_any cancellation\nRUN: C++20 jthread destructor stop and join\nPASS: C++20 jthread destructor stop and join\nRUN: C++20 atomic wait and notify handoff\nPASS: C++20 atomic wait and notify handoff\nRUN: C++20 jthread thread_local destruction\nPASS: C++20 jthread thread_local destruction\nRUN: C++11 exception unwinding and RAII\nPASS: C++11 exception unwinding and RAII\nRUN: C++17 Unicode filesystem round trip\nPASS: C++17 Unicode filesystem round trip\nRUN: C++20 format_error propagation\nPASS: C++20 format_error propagation\nRUN: C++23 expected monadic error propagation\nPASS: C++23 expected monadic error propagation\nRUN: C++23 Unicode format and print\nPASS: C++23 Unicode format and print\nSUMMARY: 25 passed, 0 failed, 0 skipped\n"
+        },
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/linux-arm64/dependencies.log",
+          "sha256": "1cfcd9e8a7f06725eaeebdef58775d124cf4d1db01a9e4456c61e8c78eb38b30",
+          "text": " 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]\n"
+        }
+      }
+    },
+    {
+      "target": "windows-amd64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "PASS",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 5.11,
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "1808924d54569ad507d551fd254f03b89a4730435e398f87c6a750fc42aacc52",
+      "runtime_method": "native Windows host console; not Windows 7 certification",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": {
+        "run.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/windows-amd64/run.log",
+          "sha256": "031372853e0e72774e75921b0366f2e3f3de4362e8dd980ae3881f95b7c7c56b",
+          "text": "Clang: 21.1.8 \nlibc++: 210108\n__cplusplus: 202302\nRUN: C++14 generic lambda and init capture\nPASS: C++14 generic lambda and init capture\nRUN: C++17 structured bindings\nPASS: C++17 structured bindings\nRUN: C++17 fold expressions\nPASS: C++17 fold expressions\nRUN: C++17 std::optional\nPASS: C++17 std::optional\nRUN: C++17 std::string_view\nPASS: C++17 std::string_view\nRUN: C++20 concepts\nPASS: C++20 concepts\nRUN: C++20 std::span\nPASS: C++20 std::span\nRUN: C++20 ranges filter and transform\nPASS: C++20 ranges filter and transform\nRUN: C++20 std::jthread\nPASS: C++20 std::jthread\nRUN: C++20 std::stop_token and callbacks\nPASS: C++20 std::stop_token and callbacks\nRUN: C++20 std::format\nPASS: C++20 std::format\nRUN: C++23 if consteval\nPASS: C++23 if consteval\nRUN: C++23 std::expected\nPASS: C++23 std::expected\nRUN: C++23 std::byteswap\nPASS: C++23 std::byteswap\nRUN: C++23 std::ranges::to\nPASS: C++23 std::ranges::to\nRUN: C++23 std::print\nPASS: C++23 std::print\nRUN: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 stop_token condition_variable_any cancellation\nRUN: C++20 jthread destructor stop and join\nPASS: C++20 jthread destructor stop and join\nRUN: C++20 atomic wait and notify handoff\nPASS: C++20 atomic wait and notify handoff\nRUN: C++20 jthread thread_local destruction\nPASS: C++20 jthread thread_local destruction\nRUN: C++11 exception unwinding and RAII\nPASS: C++11 exception unwinding and RAII\nRUN: C++17 Unicode filesystem round trip\nPASS: C++17 Unicode filesystem round trip\nRUN: C++20 format_error propagation\nPASS: C++20 format_error propagation\nRUN: C++23 expected monadic error propagation\nPASS: C++23 expected monadic error propagation\nRUN: C++23 Unicode format and print\nPASS: C++23 Unicode format and print\nSUMMARY: 25 passed, 0 failed, 0 skipped\n"
+        },
+        "audit.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/windows-amd64/audit.log",
+          "sha256": "f6c07a9b899a372f25e1c929175aa48a581941d8e2b6cc37f5faafd1161c61d5",
+          "text": "PASS: cxx23-probe.exe (PE subsystem 6.1)\naudited 1 PE executables\n"
+        },
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/windows-amd64/dependencies.log",
+          "sha256": "2637f72cfaed0f97e54010071dbdc3e69672aea28a8aadb257a507592b74ed1b",
+          "text": "\n/out/windows-amd64/cxx23-probe.exe:\tfile format coff-x86-64\nCharacteristics 0x22\n\texecutable\n\tlarge address aware\n\nTime/Date               Tue Nov 10 17:47:48 2026\nMagic                   020b\t(PE32+)\nMajorLinkerVersion      14\nMinorLinkerVersion      0\nSizeOfCode              00000000000b9e00\nSizeOfInitializedData   0000000000058800\nSizeOfUninitializedData 0000000000000000\nAddressOfEntryPoint     0000000000001390\nBaseOfCode              0000000000001000\nImageBase               0000000140000000\nSectionAlignment        00001000\nFileAlignment           00000200\nMajorOSystemVersion     6\nMinorOSystemVersion     0\nMajorImageVersion       0\nMinorImageVersion       0\nMajorSubsystemVersion   6\nMinorSubsystemVersion   1\nWin32Version            00000000\nSizeOfImage             0011d000\nSizeOfHeaders           00000400\nCheckSum                00000000\nSubsystem               00000003\t(Windows CUI)\nDllCharacteristics      00008160\n\t\t\t\t\tHIGH_ENTROPY_VA\n\t\t\t\t\tDYNAMIC_BASE\n\t\t\t\t\tNX_COMPAT\n\t\t\t\t\tTERMINAL_SERVER_AWARE\nSizeOfStackReserve      0000000000100000\nSizeOfStackCommit       0000000000001000\nSizeOfHeapReserve       0000000000100000\nSizeOfHeapCommit        0000000000001000\nLoaderFlags             00000000\nNumberOfRvaAndSizes     00000010\n\nThe Data Directory\nEntry 0 0000000000000000 00000000 Export Directory [.edata (or where ever we found it)]\nEntry 1 00000000000f1b60 0000003c Import Directory [parts of .idata]\nEntry 2 0000000000000000 00000000 Resource Directory [.rsrc]\nEntry 3 0000000000114000 00005d9c Exception Directory [.pdata]\nEntry 4 0000000000000000 00000000 Security Directory\nEntry 5 000000000011b000 00001c14 Base Relocation Directory [.reloc]\nEntry 6 000000000010c000 0000001c Debug Directory\nEntry 7 0000000000000000 00000000 Description Directory\nEntry 8 0000000000000000 00000000 Special Directory\nEntry 9 00000000000ccc68 00000028 Thread Storage Directory [.tls]\nEntry a 00000000000f19a8 00000138 Load Configuration Directory\nEntry b 0000000000000000 00000000 Bound Import Directory\nEntry c 00000000000f2190 000005f0 Import Address Table Directory\nEntry d 0000000000000000 00000000 Delay Import Directory\nEntry e 0000000000000000 00000000 CLR Runtime Header\nEntry f 0000000000000000 00000000 Reserved\nTLS directory:\n  StartAddressOfRawData: 0x0000014011a000\n  EndAddressOfRawData: 0x0000014011a028\n  AddressOfIndex: 0x0000014010d518\n  AddressOfCallBacks: 0x000001400f1b18\n  SizeOfZeroFill: 0\n  Characteristics: 4194304\n  Alignment: 8\n\n\nThe Import Tables:\n  lookup 000f1ba0 time 00000000 fwd 00000000 name 000f329e addr 000f2190\n\n    DLL Name: KERNEL32.dll\n    Hint/Ord  Name\n           0  AcquireSRWLockExclusive\n           0  AreFileApisANSI\n           0  CloseHandle\n           0  CreateDirectoryW\n           0  CreateFileW\n           0  CreateHardLinkW\n           0  CreateSymbolicLinkW\n           0  DeleteCriticalSection\n           0  DeviceIoControl\n           0  EnterCriticalSection\n           0  FindClose\n           0  FindFirstFileW\n           0  FindNextFileW\n           0  FlsAlloc\n           0  FlsGetValue\n           0  FlsSetValue\n           0  FormatMessageA\n           0  GetConsoleMode\n           0  GetCurrentDirectoryW\n           0  GetCurrentThreadId\n           0  GetDiskFreeSpaceExW\n           0  GetFileAttributesW\n           0  GetFileInformationByHandle\n           0  GetFileInformationByHandleEx\n           0  GetFinalPathNameByHandleW\n           0  GetLastError\n           0  GetModuleHandleA\n           0  GetModuleHandleW\n           0  GetProcAddress\n           0  GetSystemInfo\n           0  GetSystemTimeAsFileTime\n           0  GetTempPathW\n           0  GetThreadId\n           0  InitOnceExecuteOnce\n           0  InitializeCriticalSection\n           0  IsDBCSLeadByteEx\n           0  LeaveCriticalSection\n           0  LocalFree\n           0  MoveFileExW\n           0  MultiByteToWideChar\n           0  QueryPerformanceCounter\n           0  QueryPerformanceFrequency\n           0  RaiseException\n           0  ReleaseSRWLockExclusive\n           0  RtlCaptureContext\n           0  RtlLookupFunctionEntry\n           0  RtlRestoreContext\n           0  RtlUnwindEx\n           0  RtlVirtualUnwind\n           0  SetCurrentDirectoryW\n           0  SetEndOfFile\n           0  SetFileAttributesW\n           0  SetFileInformationByHandle\n           0  SetFilePointerEx\n           0  SetFileTime\n           0  SetLastError\n           0  SetUnhandledExceptionFilter\n           0  Sleep\n           0  SleepConditionVariableSRW\n           0  SwitchToThread\n           0  TlsAlloc\n           0  TlsFree\n           0  TlsGetValue\n           0  TlsSetValue\n           0  TryAcquireSRWLockExclusive\n           0  TryEnterCriticalSection\n           0  VirtualProtect\n           0  VirtualQuery\n           0  WaitForSingleObjectEx\n           0  WakeAllConditionVariable\n           0  WakeConditionVariable\n           0  WideCharToMultiByte\n           0  WriteConsoleW\n           0  __C_specific_handler\n\n  lookup 000f1df8 time 00000000 fwd 00000000 name 000f32ab addr 000f23e8\n\n    DLL Name: msvcrt.dll\n    Hint/Ord  Name\n           0  ___lc_codepage_func\n           0  ___mb_cur_max_func\n           0  __getmainargs\n           0  __initenv\n           0  __iob_func\n           0  __pctype_func\n           0  __set_app_type\n           0  __setusermatherr\n           0  _aligned_free\n           0  _aligned_malloc\n           0  _amsg_exit\n           0  _assert\n           0  _beginthreadex\n           0  _cexit\n           0  _close\n           0  _commode\n           0  atexit\n           0  _errno\n           0  _fdopen\n           0  _filelengthi64\n           0  _fileno\n           0  _fmode\n           0  _get_osfhandle\n           0  _initterm\n           0  _isctype_l\n           0  _iswalpha_l\n           0  _iswcntrl_l\n           0  _iswdigit_l\n           0  _iswlower_l\n           0  _iswprint_l\n           0  _iswpunct_l\n           0  _iswspace_l\n           0  _iswupper_l\n           0  _iswxdigit_l\n           0  _lock\n           0  _mbtowc_l\n           0  _sscanf_l\n           0  _strcoll_l\n           0  _strdup\n           0  _strtod_l\n           0  _strtoi64\n           0  _strtoi64_l\n           0  _strtoui64\n           0  _strtoui64_l\n           0  _strxfrm_l\n           0  _sys_nerr\n           0  _tolower_l\n           0  _toupper_l\n           0  _towlower_l\n           0  _towupper_l\n           0  _unlock\n           0  _vscprintf\n           0  _vsnprintf\n           0  _wcscoll_l\n           0  _wcstoi64\n           0  _wcstoui64\n           0  _wcsxfrm_l\n           0  _wfopen\n           0  _wopen\n           0  abort\n           0  calloc\n           0  exit\n           0  fclose\n           0  feof\n           0  ferror\n           0  fflush\n           0  fgetpos\n           0  fopen\n           0  fprintf\n           0  fputc\n           0  fputwc\n           0  fread\n           0  free\n           0  fseek\n           0  fsetpos\n           0  fwprintf\n           0  fwrite\n           0  getc\n           0  getenv\n           0  isalnum\n           0  isdigit\n           0  isspace\n           0  isxdigit\n           0  localeconv\n           0  malloc\n           0  memchr\n           0  memcmp\n           0  memcpy\n           0  memmove\n           0  memset\n           0  realloc\n           0  rewind\n           0  setbuf\n           0  setlocale\n           0  signal\n           0  strcmp\n           0  strerror\n           0  strftime\n           0  strlen\n           0  strncmp\n           0  strtol\n           0  strtoul\n           0  tmpfile\n           0  tolower\n           0  toupper\n           0  ungetc\n           0  vfprintf\n           0  wcrtomb_s\n           0  wcscmp\n           0  wcscpy\n           0  wcslen\n           0  wcsncmp\n           0  wcstol\n           0  wcstoul\n\n"
+        }
+      }
+    },
+    {
+      "target": "windows-arm64",
+      "build_host_image": "longreach-llvm:21.1.8-compiler",
+      "build_host_image_id": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+      "runtime": "NOT_RUN",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 5.023,
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "0bd81aab91c5e42d04bde2a4c72e2c31e858f7276fcf45596bc30ee231de6312",
+      "evidence": {
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/windows-arm64/dependencies.log",
+          "sha256": "0b006c60744e0c5f31d8bfc302569fe916fd6657bc9504db7d03d8ec709178ac",
+          "text": "\nFile: /out/windows-arm64/cxx23-probe.exe\nFormat: COFF-ARM64\nArch: aarch64\nAddressSize: 64bit\nImageFileHeader {\n  Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)\n  SectionCount: 7\n  TimeDateStamp: 2026-11-10 17:47:54 (0x6AF358CA)\n  PointerToSymbolTable: 0xF9E00\n  SymbolCount: 6119\n  StringTableSize: 272689\n  OptionalHeaderSize: 240\n  Characteristics [ (0x22)\n    IMAGE_FILE_EXECUTABLE_IMAGE (0x2)\n    IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20)\n  ]\n}\nImageOptionalHeader {\n  Magic: 0x20B\n  MajorLinkerVersion: 14\n  MinorLinkerVersion: 0\n  SizeOfCode: 686592\n  SizeOfInitializedData: 335872\n  SizeOfUninitializedData: 0\n  AddressOfEntryPoint: 0x1400\n  BaseOfCode: 0x1000\n  ImageBase: 0x140000000\n  SectionAlignment: 4096\n  FileAlignment: 512\n  MajorOperatingSystemVersion: 6\n  MinorOperatingSystemVersion: 0\n  MajorImageVersion: 0\n  MinorImageVersion: 0\n  MajorSubsystemVersion: 10\n  MinorSubsystemVersion: 0\n  SizeOfImage: 1064960\n  SizeOfHeaders: 1024\n  CheckSum: 0x0\n  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)\n  Characteristics [ (0x8160)\n    IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE (0x40)\n    IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA (0x20)\n    IMAGE_DLL_CHARACTERISTICS_NX_COMPAT (0x100)\n    IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE (0x8000)\n  ]\n  SizeOfStackReserve: 1048576\n  SizeOfStackCommit: 4096\n  SizeOfHeapReserve: 1048576\n  SizeOfHeapCommit: 4096\n  NumberOfRvaAndSize: 16\n  DataDirectory {\n    ExportTableRVA: 0x0\n    ExportTableSize: 0x0\n    ImportTableRVA: 0xDCBE8\n    ImportTableSize: 0x104\n    ResourceTableRVA: 0x0\n    ResourceTableSize: 0x0\n    ExceptionTableRVA: 0xFD000\n    ExceptionTableSize: 0x3830\n    CertificateTableRVA: 0x0\n    CertificateTableSize: 0x0\n    BaseRelocationTableRVA: 0x102000\n    BaseRelocationTableSize: 0x1BB0\n    DebugRVA: 0xF6000\n    DebugSize: 0x1C\n    ArchitectureRVA: 0x0\n    ArchitectureSize: 0x0\n    GlobalPtrRVA: 0x0\n    GlobalPtrSize: 0x0\n    TLSTableRVA: 0xB8E10\n    TLSTableSize: 0x28\n    LoadConfigTableRVA: 0xDCA38\n    LoadConfigTableSize: 0x138\n    BoundImportRVA: 0x0\n    BoundImportSize: 0x0\n    IATRVA: 0xDD370\n    IATSize: 0x680\n    DelayImportDescriptorRVA: 0x0\n    DelayImportDescriptorSize: 0x0\n    CLRRuntimeHeaderRVA: 0x0\n    CLRRuntimeHeaderSize: 0x0\n    ReservedRVA: 0x0\n    ReservedSize: 0x0\n  }\n}\nDOSHeader {\n  Magic: MZ\n  UsedBytesInTheLastPage: 120\n  FileSizeInPages: 1\n  NumberOfRelocationItems: 0\n  HeaderSizeInParagraphs: 4\n  MinimumExtraParagraphs: 0\n  MaximumExtraParagraphs: 0\n  InitialRelativeSS: 0\n  InitialSP: 0\n  Checksum: 0\n  InitialIP: 0\n  InitialRelativeCS: 0\n  AddressOfRelocationTable: 64\n  OverlayNumber: 0\n  OEMid: 0\n  OEMinfo: 0\n  AddressOfNewExeHeader: 120\n}\nImport {\n  Name: KERNEL32.dll\n  ImportLookupTableRVA: 0xDCCF0\n  ImportAddressTableRVA: 0xDD370\n  Symbol: AcquireSRWLockExclusive (0)\n  Symbol: AreFileApisANSI (0)\n  Symbol: CloseHandle (0)\n  Symbol: CreateDirectoryW (0)\n  Symbol: CreateFileW (0)\n  Symbol: CreateHardLinkW (0)\n  Symbol: CreateSymbolicLinkW (0)\n  Symbol: DeleteCriticalSection (0)\n  Symbol: DeviceIoControl (0)\n  Symbol: EnterCriticalSection (0)\n  Symbol: FindClose (0)\n  Symbol: FindFirstFileW (0)\n  Symbol: FindNextFileW (0)\n  Symbol: FlsAlloc (0)\n  Symbol: FlsGetValue (0)\n  Symbol: FlsSetValue (0)\n  Symbol: FormatMessageA (0)\n  Symbol: GetConsoleMode (0)\n  Symbol: GetCurrentDirectoryW (0)\n  Symbol: GetCurrentThreadId (0)\n  Symbol: GetDiskFreeSpaceExW (0)\n  Symbol: GetFileAttributesW (0)\n  Symbol: GetFileInformationByHandle (0)\n  Symbol: GetFileInformationByHandleEx (0)\n  Symbol: GetFinalPathNameByHandleW (0)\n  Symbol: GetLastError (0)\n  Symbol: GetSystemInfo (0)\n  Symbol: GetSystemTimePreciseAsFileTime (0)\n  Symbol: GetTempPathW (0)\n  Symbol: GetThreadId (0)\n  Symbol: InitOnceExecuteOnce (0)\n  Symbol: InitializeCriticalSection (0)\n  Symbol: LeaveCriticalSection (0)\n  Symbol: LocalFree (0)\n  Symbol: MoveFileExW (0)\n  Symbol: MultiByteToWideChar (0)\n  Symbol: QueryPerformanceCounter (0)\n  Symbol: QueryPerformanceFrequency (0)\n  Symbol: RaiseException (0)\n  Symbol: ReleaseSRWLockExclusive (0)\n  Symbol: RtlCaptureContext (0)\n  Symbol: RtlLookupFunctionEntry (0)\n  Symbol: RtlRestoreContext (0)\n  Symbol: RtlUnwindEx (0)\n  Symbol: RtlVirtualUnwind (0)\n  Symbol: SetCurrentDirectoryW (0)\n  Symbol: SetEndOfFile (0)\n  Symbol: SetFileAttributesW (0)\n  Symbol: SetFileInformationByHandle (0)\n  Symbol: SetFilePointerEx (0)\n  Symbol: SetFileTime (0)\n  Symbol: SetLastError (0)\n  Symbol: SetUnhandledExceptionFilter (0)\n  Symbol: Sleep (0)\n  Symbol: SleepConditionVariableSRW (0)\n  Symbol: SwitchToThread (0)\n  Symbol: TlsAlloc (0)\n  Symbol: TlsFree (0)\n  Symbol: TlsGetValue (0)\n  Symbol: TlsSetValue (0)\n  Symbol: TryAcquireSRWLockExclusive (0)\n  Symbol: TryEnterCriticalSection (0)\n  Symbol: VirtualProtect (0)\n  Symbol: VirtualQuery (0)\n  Symbol: WaitForSingleObjectEx (0)\n  Symbol: WakeAllConditionVariable (0)\n  Symbol: WakeConditionVariable (0)\n  Symbol: WideCharToMultiByte (0)\n  Symbol: WriteConsoleW (0)\n}\nImport {\n  Name: api-ms-win-crt-private-l1-1-0.dll\n  ImportLookupTableRVA: 0xDCF20\n  ImportAddressTableRVA: 0xDD5A0\n  Symbol: __C_specific_handler (0)\n  Symbol: memchr (0)\n  Symbol: memcmp (0)\n  Symbol: memcpy (0)\n  Symbol: memmove (0)\n}\nImport {\n  Name: api-ms-win-crt-stdio-l1-1-0.dll\n  ImportLookupTableRVA: 0xDCF50\n  ImportAddressTableRVA: 0xDD5D0\n  Symbol: __acrt_iob_func (0)\n  Symbol: __p__commode (0)\n  Symbol: __p__fmode (0)\n  Symbol: __stdio_common_vfprintf (0)\n  Symbol: __stdio_common_vsprintf (0)\n  Symbol: __stdio_common_vsscanf (0)\n  Symbol: __stdio_common_vswprintf (0)\n  Symbol: _close (0)\n  Symbol: _fileno (0)\n  Symbol: _fseeki64 (0)\n  Symbol: _ftelli64 (0)\n  Symbol: _get_osfhandle (0)\n  Symbol: _wfopen (0)\n  Symbol: _wopen (0)\n  Symbol: fclose (0)\n  Symbol: feof (0)\n  Symbol: ferror (0)\n  Symbol: fflush (0)\n  Symbol: fopen (0)\n  Symbol: fputc (0)\n  Symbol: fputs (0)\n  Symbol: fread (0)\n  Symbol: fseek (0)\n  Symbol: fwrite (0)\n  Symbol: rewind (0)\n  Symbol: setbuf (0)\n  Symbol: tmpfile (0)\n}\nImport {\n  Name: api-ms-win-crt-runtime-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD030\n  ImportAddressTableRVA: 0xDD6B0\n  Symbol: __p___argc (0)\n  Symbol: __p___argv (0)\n  Symbol: __sys_nerr (0)\n  Symbol: _assert (0)\n  Symbol: _beginthreadex (0)\n  Symbol: _cexit (0)\n  Symbol: _configure_narrow_argv (0)\n  Symbol: _crt_atexit (0)\n  Symbol: _errno (0)\n  Symbol: _exit (0)\n  Symbol: _fpreset (0)\n  Symbol: _initialize_narrow_environment (0)\n  Symbol: _initterm (0)\n  Symbol: _initterm_e (0)\n  Symbol: _register_thread_local_exe_atexit_callback (0)\n  Symbol: _set_app_type (0)\n  Symbol: _set_invalid_parameter_handler (0)\n  Symbol: abort (0)\n  Symbol: exit (0)\n  Symbol: signal (0)\n  Symbol: strerror_s (0)\n}\nImport {\n  Name: api-ms-win-crt-locale-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD0E0\n  ImportAddressTableRVA: 0xDD760\n  Symbol: ___lc_codepage_func (0)\n  Symbol: ___mb_cur_max_func (0)\n  Symbol: __pctype_func (0)\n  Symbol: _configthreadlocale (0)\n  Symbol: _create_locale (0)\n  Symbol: _free_locale (0)\n  Symbol: localeconv (0)\n  Symbol: setlocale (0)\n}\nImport {\n  Name: api-ms-win-crt-heap-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD128\n  ImportAddressTableRVA: 0xDD7A8\n  Symbol: _aligned_free (0)\n  Symbol: _aligned_malloc (0)\n  Symbol: _set_new_mode (0)\n  Symbol: calloc (0)\n  Symbol: free (0)\n  Symbol: malloc (0)\n  Symbol: realloc (0)\n}\nImport {\n  Name: api-ms-win-crt-string-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD168\n  ImportAddressTableRVA: 0xDD7E8\n  Symbol: _isctype_l (0)\n  Symbol: _iswalpha_l (0)\n  Symbol: _iswcntrl_l (0)\n  Symbol: _iswdigit_l (0)\n  Symbol: _iswlower_l (0)\n  Symbol: _iswprint_l (0)\n  Symbol: _iswpunct_l (0)\n  Symbol: _iswspace_l (0)\n  Symbol: _iswupper_l (0)\n  Symbol: _iswxdigit_l (0)\n  Symbol: _strcoll_l (0)\n  Symbol: _strdup (0)\n  Symbol: _strxfrm_l (0)\n  Symbol: _tolower_l (0)\n  Symbol: _toupper_l (0)\n  Symbol: _towlower_l (0)\n  Symbol: _towupper_l (0)\n  Symbol: _wcscoll_l (0)\n  Symbol: _wcsxfrm_l (0)\n  Symbol: isalnum (0)\n  Symbol: isspace (0)\n  Symbol: isxdigit (0)\n  Symbol: mbrlen (0)\n  Symbol: memset (0)\n  Symbol: strcmp (0)\n  Symbol: strlen (0)\n  Symbol: strncmp (0)\n  Symbol: tolower (0)\n  Symbol: toupper (0)\n  Symbol: wcscmp (0)\n  Symbol: wcscpy (0)\n  Symbol: wcslen (0)\n  Symbol: wcsncmp (0)\n}\nImport {\n  Name: api-ms-win-crt-time-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD278\n  ImportAddressTableRVA: 0xDD8F8\n  Symbol: _strftime_l (0)\n}\nImport {\n  Name: api-ms-win-crt-multibyte-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD288\n  ImportAddressTableRVA: 0xDD908\n  Symbol: _mbtowc_l (0)\n}\nImport {\n  Name: api-ms-win-crt-convert-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD298\n  ImportAddressTableRVA: 0xDD918\n  Symbol: _strtod_l (0)\n  Symbol: _strtoi64_l (0)\n  Symbol: _strtoui64_l (0)\n  Symbol: btowc (0)\n  Symbol: mbrtowc (0)\n  Symbol: mbsrtowcs (0)\n  Symbol: strtod (0)\n  Symbol: strtof (0)\n  Symbol: strtol (0)\n  Symbol: strtoll (0)\n  Symbol: strtoul (0)\n  Symbol: strtoull (0)\n  Symbol: wcrtomb (0)\n  Symbol: wcrtomb_s (0)\n  Symbol: wcstod (0)\n  Symbol: wcstol (0)\n  Symbol: wcstoll (0)\n  Symbol: wcstoul (0)\n  Symbol: wcstoull (0)\n  Symbol: wctob (0)\n}\nImport {\n  Name: api-ms-win-crt-math-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD340\n  ImportAddressTableRVA: 0xDD9C0\n  Symbol: __setusermatherr (0)\n  Symbol: _fdopen (0)\n}\nImport {\n  Name: api-ms-win-crt-environment-l1-1-0.dll\n  ImportLookupTableRVA: 0xDD358\n  ImportAddressTableRVA: 0xDD9D8\n  Symbol: __p__environ (0)\n  Symbol: getenv (0)\n}\n"
+        }
+      }
+    },
+    {
+      "target": "macos-amd64",
+      "build_host_image": "qt6-macos-amd64:latest",
+      "build_host_image_id": "sha256:f9444dadca42afaf1093403f0879b460ad6ca8a456c724a958189ff47ad64ee6",
+      "runtime": "NOT_RUN",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 4.514,
+      "build": "PASS",
+      "architecture": "amd64",
+      "binary_sha256": "7a26ff08978afcdf54b4900875abc667c820b99d2a47882e81ed6cab137ebe1e",
+      "evidence": {
+        "audit.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-amd64/audit.log",
+          "sha256": "f3cd44833bcfe9ab30418f2971875367a6c110f2b2797c002c0047828fcfe70b",
+          "text": "PASS: cxx23-probe: macOS 10.13, no unresolved aligned allocation\naudited 1 Mach-O executables\n"
+        },
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-amd64/dependencies.log",
+          "sha256": "e399d8451467464a418ca093b5ca5593c66f46ecd6d39f7adcd1ea88cd999999",
+          "text": "/out/macos-amd64/cxx23-probe:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1336.0.0)\n"
+        },
+        "runtime-architectures.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-amd64/runtime-architectures.log",
+          "sha256": "d48fddd48832b87466f5d84b7a6b92ffafc31bf5539d1421ed7c8275161354b1",
+          "text": "Architectures in the fat file: /work/runtimes/macos-amd64/resource/lib/darwin/libclang_rt.osx.a are: x86_64 \nNon-fat file: /work/runtimes/macos-amd64/lib/libunwind.a is architecture: x86_64\nNon-fat file: /work/runtimes/macos-amd64/lib/libc++abi.a is architecture: x86_64\nNon-fat file: /work/runtimes/macos-amd64/lib/libc++.a is architecture: x86_64\n"
+        }
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "build_host_image": "qt6-macos-arm64:latest",
+      "build_host_image_id": "sha256:6632a481bf6da932851bf26a1f6544ae6709074d84eb959e9b9a004baba1d357",
+      "runtime": "NOT_RUN",
+      "source_sha256": {
+        "scripts/build/qt6-llvm-probes/inputs.json": "479ffb2267ab741d8b27c591b6f945294e7451250daccb718913fbffdf52b771",
+        "scripts/build/qt6-llvm-probes/build-compiler.sh": "6381f71dfe15cde16f5a5f26b27660d469de47e7d58f21c3229bb3bbca6f0c52",
+        "scripts/build/qt6-llvm-probes/prepare-host-tools.sh": "0d84ca36f5dfbdd139fa819c9fb88dcdd0116c2d9d5053f9f136a0082de70995",
+        "scripts/build/qt6-llvm-probes/build-runtime.sh": "2db485dfd55a68995173f0079a6b3bbd2d96562e4bf47ea518e15608342ce10b",
+        "scripts/build/qt6-llvm-probes/build-windows-sysroot.sh": "f82eec5783ea5d59a675ae6eabd23380ed8bce8a53a4293b88691259f856e5ad",
+        "scripts/tests/qt6-llvm-probes/CMakeLists.txt": "db36edd5d125f534a198fc7718731219815a977efefda823308f617fa84d3e7e",
+        "scripts/tests/qt6-llvm-probes/main.cpp": "3609235bc359bfafdbdc2b7f638fb3fc036c6c89fc0da65aa5fe7fe422eba3f0",
+        "scripts/tests/qt6-llvm-probes/run.py": "6c803eabe572f93b5e66f55f3aa32fcd660455f444540a8bc64efd9198bd1dc0",
+        "tests/common/moderncpp_checks.h": "bdbc60809f0b94072ec84a61c7f552732afaa95480d86880126651b9073bf8d1",
+        "tests/common/moderncpp-required.txt": "7ca70fc40f75354b1413432df2b402cc1acd027a3254ff71b18cd91007389097",
+        "scripts/tests/require-modern-cpp.py": "c048c66087788cee7aa2c04538c26b342f84067a4c8249ec8d74026540ecf3dc"
+      },
+      "build_seconds": 4.576,
+      "build": "PASS",
+      "architecture": "arm64",
+      "binary_sha256": "bb41de37444a8ef4a41d0f98d2799b0e0a1edd600dcaaadd39632530bab44d1d",
+      "evidence": {
+        "audit.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-arm64/audit.log",
+          "sha256": "16d857814e622ef569deed37cc7214331385f6d21627174630009722724beeb0",
+          "text": "PASS: cxx23-probe: macOS 11.0 (aligned allocation is in the system from 10.14)\naudited 1 Mach-O executables\n"
+        },
+        "dependencies.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-arm64/dependencies.log",
+          "sha256": "a9e64af64c9052c05ae12ea5e5f1c7eb6df848950e44b6ee01662841ae66589a",
+          "text": "/out/macos-arm64/cxx23-probe:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1336.0.0)\n"
+        },
+        "runtime-architectures.log": {
+          "file": "artifacts/probes-qt6-llvm21-behavior/macos-arm64/runtime-architectures.log",
+          "sha256": "33c54eb6df673ae7d31abaa6c1739aaff62fc72eb54e7fbff738eca0dec9e3e6",
+          "text": "Architectures in the fat file: /work/runtimes/macos-arm64/resource/lib/darwin/libclang_rt.osx.a are: arm64 \nNon-fat file: /work/runtimes/macos-arm64/lib/libunwind.a is architecture: arm64\nNon-fat file: /work/runtimes/macos-arm64/lib/libc++abi.a is architecture: arm64\nNon-fat file: /work/runtimes/macos-arm64/lib/libc++.a is architecture: arm64\n"
+        }
+      }
+    }
+  ],
+  "qt_sdk_integration": [
+    {
+      "name": "Qt 6 Linux C++17 ordinary",
+      "description": "QtCore-only; unavailable features remain SKIP",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 18,
+      "image": "qt6-linux-amd64:llvm19-pilot",
+      "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+      "binary": {
+        "file": "modern-cxx17",
+        "sha256": "8831fd7cd652f110328f01b94106412fd6e3d2c1c7556be929dbb8c42b380973"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/modern-cxx17.log",
+        "sha256": "2171c1db75dc56aaea95543ba0fa81c8a49052e56982bee41fc9f1cca1ead0b9",
+        "text": "Clang: 19.1.6 \nlibc++: 190106\n__cplusplus: 201703\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nSKIP: C++20 concepts - language and library concepts are unavailable\nSKIP: C++20 std::span - std::span is unavailable\nSKIP: C++20 ranges filter and transform - ranges views are unavailable\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nSKIP: C++20 std::format - std::format is unavailable\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nSKIP: C++20 format_error propagation - formatting with exceptions is unavailable\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 7 passed, 0 failed, 18 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Linux C++20 ordinary",
+      "description": "QtCore-only; unavailable features remain SKIP",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 13,
+      "image": "qt6-linux-amd64:llvm19-pilot",
+      "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+      "binary": {
+        "file": "modern-cxx20",
+        "sha256": "b24835b76f9b82e994cccbe374ea4dd4583264c1f47c5d2b82761b2040cdee41"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/modern-cxx20.log",
+        "sha256": "3d170ae979fe4d919ad4748350e56b1520af66473fe5b334949148c8cc7e351f",
+        "text": "Clang: 19.1.6 \nlibc++: 190106\n__cplusplus: 202002\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nPASS: C++20 std::format\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 12 passed, 0 failed, 13 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Linux C++23 ordinary",
+      "description": "QtCore-only; unavailable features remain SKIP",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 19,
+      "failed": 0,
+      "skipped": 6,
+      "image": "qt6-linux-amd64:llvm19-pilot",
+      "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+      "binary": {
+        "file": "modern-cxx23",
+        "sha256": "5dd1b94f7a35afe7dd3c010550bce2349881367d944e8826637eee15ff4dddcd"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/modern-cxx23.log",
+        "sha256": "09e4d9ee38230541ff6de49c640ed75c8b42a69e568f0b55457cde7ac9158b38",
+        "text": "Clang: 19.1.6 \nlibc++: 190106\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 19 passed, 0 failed, 6 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Linux required C++23",
+      "description": "QtCore-only; -fexperimental-library; SMOKE_REQUIRE_CXX23=ON; exact 25-check gate",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "image": "qt6-linux-amd64:llvm19-pilot",
+      "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+      "binary": {
+        "file": "modern-required",
+        "sha256": "0f227219097d6335d202546a64d3ef2ed73f415ce88483f3764794c107d46563"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/modern-required.log",
+        "sha256": "b9f80ec5be221764862c49f5e8aaf8406f2c6fb7db8220c9cfa8867fde2263de",
+        "text": "Clang: 19.1.6 \nlibc++: 190106\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Linux qt-selftest required C++23",
+      "description": "Full console target built; only --modern-cpp executed under Xvfb/offscreen; exact 25-check gate",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "image": "qt6-linux-amd64:llvm19-pilot",
+      "image_id": "sha256:9af6acfe332d961c3526f22a163e7eeae0962c57892e7590dbf81e0290212839",
+      "binary": {
+        "file": "qt-selftest-required",
+        "sha256": "46f7c6a55be34c1b02678aae90308f58fd7a3b1b4ea96aeac53c1ae79de779fb"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/qt-selftest-required.log",
+        "sha256": "b74cd05b1d2fc0b3083ad06e2ba477ffe602b5875f16e4b9b25eee7b9008a163",
+        "text": "Detected locale \"C\" with character encoding \"ANSI_X3.4-1968\", which is not UTF-8.\nQt depends on a UTF-8 locale, but has failed to switch to one.\nIf this causes problems, reconfigure your locale. See the locale(1) manual\nfor more information.\nClang: 19.1.6 \nlibc++: 190106\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- qt-selftest: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Windows C++23 ordinary",
+      "description": "Native Windows host console; QtCore-only; no GUI; experimental mode is required C++23",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 19,
+      "failed": 0,
+      "skipped": 6,
+      "image": "qt6-win-amd64:llvm19-pilot",
+      "image_id": "sha256:037a7cc3652692c815853049bfcf8517742e8d1dfb29f315b4ff63e707a463b2",
+      "binary": {
+        "file": "modern-cxx23-ordinary.exe",
+        "sha256": "6aa7fdbf323a6177f04127b872a724d319a975018d877ce13c1941e356e46539"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/smoke-modern-cxx23-ordinary.log",
+        "sha256": "384e03ddb04843d4c38dca432abbdaa7a3542f8ac00c5acd1f6c99c9b6232eea",
+        "text": "Clang: 19.1.6 (https://github.com/llvm/llvm-project.git e21dc4bd5474d04b8e62d7331362edcc5648d7e5)\nlibc++: 190106\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 19 passed, 0 failed, 6 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 6 Windows C++23 experimental",
+      "description": "Native Windows host console; QtCore-only; no GUI; experimental mode is required C++23",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "image": "qt6-win-amd64:llvm19-pilot",
+      "image_id": "sha256:037a7cc3652692c815853049bfcf8517742e8d1dfb29f315b4ff63e707a463b2",
+      "binary": {
+        "file": "modern-cxx23-experimental.exe",
+        "sha256": "616ddf655539301f2acaa8b90659bc516875a8637395ee763493c1d168c35a2a"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/smoke-modern-cxx23-experimental.log",
+        "sha256": "9001348bed7bafc53545ba55536795f00861c6801be01c85845b73787aebaf7c",
+        "text": "Clang: 19.1.6 (https://github.com/llvm/llvm-project.git e21dc4bd5474d04b8e62d7331362edcc5648d7e5)\nlibc++: 190106\n__cplusplus: 202302\nPASS: C++14 generic lambda and init capture\nPASS: C++17 structured bindings\nPASS: C++17 fold expressions\nPASS: C++17 std::optional\nPASS: C++17 std::string_view\nPASS: C++20 concepts\nPASS: C++20 std::span\nPASS: C++20 ranges filter and transform\nPASS: C++20 std::jthread\nPASS: C++20 std::stop_token and callbacks\nPASS: C++20 std::format\nPASS: C++23 if consteval\nPASS: C++23 std::expected\nPASS: C++23 std::byteswap\nPASS: C++23 std::ranges::to\nPASS: C++23 std::print\nPASS: C++20 stop_token condition_variable_any cancellation\nPASS: C++20 jthread destructor stop and join\nPASS: C++20 atomic wait and notify handoff\nPASS: C++20 jthread thread_local destruction\nPASS: C++11 exception unwinding and RAII\nPASS: C++17 Unicode filesystem round trip\nPASS: C++20 format_error propagation\nPASS: C++23 expected monadic error propagation\nPASS: C++23 Unicode format and print\n---- modern-cpp: 25 passed, 0 failed, 0 skipped ----\n"
+      }
+    },
+    {
+      "name": "Qt 4 Linux GCC 5.4 C++14",
+      "description": "qmake; GCC 5.4; Sarge loader/sysroot; legacy feature guards",
+      "build": "PASS",
+      "runtime": "PASS",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 23,
+      "image": "qt4-linux-amd64:latest",
+      "image_id": "sha256:bf1c8d308164a7ee1ce91ad67075d0ca3d866f72d9f2aa0ecfe99d29b13ab2af",
+      "binary": {
+        "file": "modern-qt4-cxx14",
+        "sha256": "3e22ddcf80d2540a9d59809c19ae3056a0fad511051416f3cd3a138ccf0e22c7"
+      },
+      "log": {
+        "file": "artifacts/modern-cpp-behavior-20261110/modern-qt4-cxx14.log",
+        "sha256": "77ff73a510349ca48c97e9e1e62054fb31d3983c62f217c6d2f27a6a65a2bc52",
+        "text": "GCC: 5.4.0 20160609\nlibstdc++ headers: 20171010\n__cplusplus: 201402\nPASS: C++14 generic lambda and init capture\nSKIP: C++17 structured bindings - structured bindings are unavailable\nSKIP: C++17 fold expressions - fold expressions are unavailable\nSKIP: C++17 std::optional - std::optional is unavailable\nSKIP: C++17 std::string_view - std::string_view is unavailable\nSKIP: C++20 concepts - language and library concepts are unavailable\nSKIP: C++20 std::span - std::span is unavailable\nSKIP: C++20 ranges filter and transform - ranges views are unavailable\nSKIP: C++20 std::jthread - std::jthread is unavailable\nSKIP: C++20 std::stop_token and callbacks - std::stop_token and callbacks are unavailable\nSKIP: C++20 std::format - std::format is unavailable\nSKIP: C++23 if consteval - if consteval is unavailable\nSKIP: C++23 std::expected - std::expected is unavailable\nSKIP: C++23 std::byteswap - std::byteswap is unavailable\nSKIP: C++23 std::ranges::to - std::ranges::to is unavailable\nSKIP: C++23 std::print - std::print is unavailable\nSKIP: C++20 stop_token condition_variable_any cancellation - stop-token-aware waits are unavailable\nSKIP: C++20 jthread destructor stop and join - std::jthread is unavailable\nSKIP: C++20 atomic wait and notify handoff - atomic wait/notify and jthread are unavailable\nSKIP: C++20 jthread thread_local destruction - std::jthread is unavailable\nPASS: C++11 exception unwinding and RAII\nSKIP: C++17 Unicode filesystem round trip - std::filesystem is unavailable\nSKIP: C++20 format_error propagation - formatting with exceptions is unavailable\nSKIP: C++23 expected monadic error propagation - std::expected monadic operations are unavailable\nSKIP: C++23 Unicode format and print - C++23 formatting/printing is unavailable\n---- modern-cpp: 2 passed, 0 failed, 23 skipped ----\n"
+      }
+    }
+  ],
+  "gate_controls": {
+    "complete_required_run": "ACCEPTED",
+    "ordinary_cpp23_with_six_skip": "REJECTED_AS_REQUIRED",
+    "missing_required_check": "REJECTED_AS_REQUIRED",
+    "duplicate_required_check": "REJECTED_AS_REQUIRED",
+    "missing_summary": "REJECTED_AS_REQUIRED",
+    "unrelated_skip_in_modern_only": "REJECTED_AS_REQUIRED",
+    "unrelated_qt_skip_in_complete_console_mode": "ACCEPTED"
+  },
+  "strict_lower_standard": "C++20 + SMOKE_REQUIRE_CXX23=ON rejected during CMake configure as required",
+  "configuration_log": {
+    "file": "artifacts/modern-cpp-behavior-20261110/strict-cxx20-rejected.log",
+    "sha256": "797fbe5d2f52f3f087ca6cf38e95dda68a17a2a9aa13d774c153db4b60f4f916",
+    "text": "-- The CXX compiler identification is Clang 19.1.6\n-- Detecting CXX compiler ABI info\n-- Detecting CXX compiler ABI info - done\n-- Check for working CXX compiler: /opt/longreach-llvm/bin/clang-cxx - skipped\n-- Detecting CXX compile features\n-- Detecting CXX compile features - done\n-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed\n-- Check if compiler accepts -pthread\n-- Check if compiler accepts -pthread - yes\n-- Found Threads: TRUE  \n-- Using Qt bundled ZLIB.\n-- Found WrapZLIB: TRUE (found version \"6.8.5\") \n-- Performing Test HAVE_STDATOMIC\n-- Performing Test HAVE_STDATOMIC - Success\n-- Found WrapAtomic: TRUE  \n-- Looking for backtrace\n-- Looking for backtrace - found\n-- backtrace facility detected in default set of libraries\n-- Found Backtrace: /usr/include  \n-- Using Qt bundled PCRE2.\n-- Found WrapPCRE2: TRUE (found version \"6.8.5\") \n-- Performing Test HAVE_GETTIME\n-- Performing Test HAVE_GETTIME - Success\n-- Performing Test HAVE_SHM_OPEN_SHM_UNLINK\n-- Performing Test HAVE_SHM_OPEN_SHM_UNLINK - Success\n-- Found WrapRt: TRUE  \nCMake Error at /src/tests/cmake/ModernCpp.cmake:9 (message):\n  SMOKE_REQUIRE_CXX23 requires CMAKE_CXX_STANDARD=23 or newer\nCall Stack (most recent call first):\n  CMakeLists.txt:12 (smoke_configure_modern_cpp)\n\n\n-- Configuring incomplete, errors occurred!\n"
+  },
+  "limits": [
+    "Six standalone LLVM 21 probes built; full Qt SDKs not rebuilt on LLVM 21.",
+    "macOS amd64/arm64 and Windows arm64 binaries not executed.",
+    "Windows amd64 executed on Windows 11 host; Windows 7 VM runtime remains unverified.",
+    "Linux containers verify userlands on the host kernel; arm64 execution uses QEMU.",
+    "Existing LLVM 19 Qt SDK integration uses -fexperimental-library for the required run.",
+    "No security tests, GUI galleries or VM launches; Docker builds/runs were sequential with bounded resources.",
+    "libc++abi glibc 2.17 TLS fallback has upstream shared-object/main-thread ordering limitations."
+  ]
+}

@@ -14,3 +14,5 @@ set_target_properties(modern-only PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 target_link_libraries(modern-only PRIVATE Qt6::Core)
+include("${REPO_ROOT}/tests/cmake/ModernCpp.cmake")
+smoke_configure_modern_cpp(modern-only)

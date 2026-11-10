@@ -114,8 +114,14 @@ cmake -S "$source/runtimes" -B "$work/build-builtins-$target" -G Ninja \
 cmake --build "$work/build-builtins-$target" --parallel "$jobs"
 cmake --install "$work/build-builtins-$target"
 
+runtime_args=(-DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx')
+if [[ "$target" = linux-* ]]; then
+    # The 2.17 sysroots lack this glibc entry point. Cross compile-only checks
+    # cannot detect that, so select libc++abi's existing weak-symbol fallback.
+    runtime_args+=(-DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF)
+fi
 cmake -S "$source/runtimes" -B "$work/build-runtime-$target" -G Ninja \
-    "${common_args[@]}" -DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx' \
+    "${common_args[@]}" "${runtime_args[@]}" \
     -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON \
     -DLIBUNWIND_USE_COMPILER_RT=ON -DLIBUNWIND_INCLUDE_TESTS=OFF \
     -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON \
@@ -177,12 +183,12 @@ case "$target" in
             exit 1
         fi
         if [ "$target" = linux-amd64 ]; then
-            "$binary" | tee "/out/$target/run.log"
+            timeout 60 "$binary" | tee "/out/$target/run.log"
         else
-            env -u LD_LIBRARY_PATH qemu-aarch64-static -L "$sysroot" "$binary" \
+            timeout 60 env -u LD_LIBRARY_PATH qemu-aarch64-static -L "$sysroot" "$binary" \
                 | tee "/out/$target/run.log"
         fi
-        grep -Fx 'SUMMARY: 16 passed, 0 failed, 0 skipped' "/out/$target/run.log"
+        python3 /src/scripts/tests/require-modern-cpp.py "/out/$target/run.log"
         ;;
     windows-amd64)
         bash /src/scripts/audit/qt6-win7-audit.sh "$binary" | tee "/out/$target/audit.log"

@@ -20,7 +20,7 @@ while read -r app; do
 done < /src/tests/expected-apps.txt
 
 /opt/qt6-amd64/bin/qt-cmake -S /tmp/qt-smoke-src -B /tmp/experimental \
-    "${cmake_args[@]}" -DCMAKE_CXX_FLAGS=-fexperimental-library \
+    "${cmake_args[@]}" -DSMOKE_REQUIRE_CXX23=ON -DCMAKE_CXX_FLAGS=-fexperimental-library \
     -DCMAKE_EXE_LINKER_FLAGS=-fexperimental-library
 cmake --build /tmp/experimental --target qt-selftest --parallel 4
 cp /tmp/experimental/qt-selftest/qt-selftest.exe /out/qt-selftest-experimental.exe
@@ -29,7 +29,7 @@ modern_source=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 for mode in ordinary experimental; do
     extra_args=()
     if [ "$mode" = experimental ]; then
-        extra_args=(-DCMAKE_CXX_FLAGS=-fexperimental-library
+        extra_args=(-DSMOKE_REQUIRE_CXX23=ON -DCMAKE_CXX_FLAGS=-fexperimental-library
                     '-DCMAKE_EXE_LINKER_FLAGS=-static -fexperimental-library')
     else
         extra_args=(-DCMAKE_EXE_LINKER_FLAGS=-static)

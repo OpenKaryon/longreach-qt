@@ -44,6 +44,7 @@ set(SMOKE_GPL_ONLY_MODULES
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(SmokeApp)
+include(ModernCpp)
 
 # Every module an application might link, found in one umbrella call: Qt 6's
 # per-module packages need it first, and repeating it per application

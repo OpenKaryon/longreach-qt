@@ -65,8 +65,10 @@ GLIBC symbol floor for every suite executable and checks that the C++23
 probe has no shared C++/LLVM runtime dependency.
 
 The script then builds the full console `qt-selftest` in a separate build
-tree with `-fexperimental-library` for both compilation and linking. Its
-`std::jthread` and `std::stop_token` checks must PASS; SKIP fails this run.
+tree with `-fexperimental-library` for both compilation and linking. It
+sets `SMOKE_REQUIRE_CXX23=ON`: all 25 shared modern-C++ checks must PASS;
+missing checks or modern-section SKIP fail this run. Unrelated Qt API
+checks may still report SKIP. The QtCore-only required probe allows no SKIP.
 It saves `qt-selftest-experimental` and `qt-selftest-experimental.log`
 without replacing the ordinary suite. Finally it builds and runs the
 QtCore-only `modern-cxx23-experimental` probe, checks its GLIBC floor and
@@ -99,3 +101,24 @@ Earlier result JSON files retain the input paths and hashes captured at
 run time, before this relocation. These historical fingerprints were not
 rewritten to describe the current layout. The current commands above use
 the relocated files.
+
+
+## Required C++23 behavior and legacy standards
+
+The default self-test remains compatible with C++14; feature guards retain
+named SKIP for unavailable language/library features. Qt 6 itself requires
+C++17 or newer. `SMOKE_REQUIRE_CXX23=ON` is an explicit required run: select
+`-DCMAKE_CXX_STANDARD=23`, and supply the experimental-library flag when using
+libc++ 19. LLVM 21 probes use ordinary libc++ without that flag.
+
+Run only these checks in the full console executable with `--modern-cpp`,
+then gate its log:
+
+```sh
+python scripts/tests/require-modern-cpp.py modern-required.log
+```
+
+The gate requires every manifest check once, a C++23 language record and a
+consistent summary. Use `--allow-other-checks` only for a complete Qt console
+log, where unrelated Qt API SKIP is expected. The required modern-only run
+always requires zero SKIP. See the [expanded behavior results](../results/modern-cpp-behavior-20261110.md).

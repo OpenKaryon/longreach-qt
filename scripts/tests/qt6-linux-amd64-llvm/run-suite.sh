@@ -28,7 +28,7 @@ for standard in 17 20 23; do
         -DCMAKE_PREFIX_PATH=/opt/qt6-linux-amd64-llvm \
         -DCMAKE_EXE_LINKER_FLAGS=-no-pie
     cmake --build "/tmp/modern-$standard" --parallel 2
-    "/tmp/modern-$standard/modern-only" > "/out/modern-cxx$standard.log"
+    timeout 60 "/tmp/modern-$standard/modern-only" > "/out/modern-cxx$standard.log"
 done
 cp /tmp/modern-23/modern-only /out/modern-cxx23
 python3 /src/scripts/build/qt5-lucid/max-glibc.py /out/modern-cxx23 2.17
@@ -44,6 +44,7 @@ fi
     -B /tmp/qt-smoke-experimental -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 \
     -DCMAKE_PREFIX_PATH=/opt/qt6-linux-amd64-llvm \
+    -DSMOKE_REQUIRE_CXX23=ON \
     -DCMAKE_CXX_FLAGS=-fexperimental-library \
     '-DCMAKE_EXE_LINKER_FLAGS=-no-pie -fexperimental-library' \
     -DSMOKE_LICENSE_PROFILE=gpl-enabled \
@@ -53,11 +54,8 @@ cp /tmp/qt-smoke-experimental/qt-selftest/qt-selftest /out/qt-selftest-experimen
 xvfb-run -a -s '-screen 0 1280x1024x24' env QT_QPA_PLATFORM=offscreen \
     /out/qt-selftest-experimental --selftest > /out/qt-selftest-experimental.log 2>&1
 
-require_cpp_threads() {
-    grep -Fx 'PASS: C++20 std::jthread' "$1"
-    grep -Fx 'PASS: C++20 std::stop_token and callbacks' "$1"
-}
-require_cpp_threads /out/qt-selftest-experimental.log
+python3 /src/scripts/tests/require-modern-cpp.py --allow-other-checks \
+    /out/qt-selftest-experimental.log
 python3 /src/scripts/build/qt5-lucid/max-glibc.py /out/qt-selftest-experimental 2.17
 
 # A QtCore-only binary also permits a stock-userland runtime check.
@@ -65,12 +63,13 @@ python3 /src/scripts/build/qt5-lucid/max-glibc.py /out/qt-selftest-experimental 
     -B /tmp/modern-experimental -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 \
     -DCMAKE_PREFIX_PATH=/opt/qt6-linux-amd64-llvm \
+    -DSMOKE_REQUIRE_CXX23=ON \
     -DCMAKE_CXX_FLAGS=-fexperimental-library \
     '-DCMAKE_EXE_LINKER_FLAGS=-no-pie -fexperimental-library'
 cmake --build /tmp/modern-experimental --parallel 2
 cp /tmp/modern-experimental/modern-only /out/modern-cxx23-experimental
-/out/modern-cxx23-experimental > /out/modern-cxx23-experimental.log
-require_cpp_threads /out/modern-cxx23-experimental.log
+timeout 60 /out/modern-cxx23-experimental > /out/modern-cxx23-experimental.log
+python3 /src/scripts/tests/require-modern-cpp.py /out/modern-cxx23-experimental.log
 python3 /src/scripts/build/qt5-lucid/max-glibc.py /out/modern-cxx23-experimental 2.17
 readelf -d /out/modern-cxx23-experimental | grep NEEDED
 if readelf -d /out/modern-cxx23-experimental | grep -E 'libstdc\+\+|libc\+\+|libLLVM|libclang'; then

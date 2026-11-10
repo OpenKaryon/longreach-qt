@@ -75,3 +75,8 @@ since the baseline table below.
 | `qt6-linux-centos7-mint223-vmware-20261006.json` | Qt 6 Linux amd64 | Linux Mint 22.3 (VMware) |
 | `qt6-linux-arm64-{centos-7-arm64,debian-12-arm64}-docker-20261014.json` | Qt 6 Linux arm64 | CentOS 7 aarch64, Debian 12 arm64 (containers, emulated) |
 | `qt6-macos-amd64-highsierra-vmware-20261030.json` | Qt 6 macOS x86_64 | macOS 10.13.6 (VMware) |
+
+The [2026-11-10 modern-C++ follow-up](modern-cpp-behavior-20261110.md) records
+the shared 25-check required C++23 run, six LLVM 21 target builds, Qt SDK
+integration and legacy-standard compatibility. Historical 16-check results
+remain unchanged.

@@ -31,8 +31,13 @@ Dockerfiles; helpers belong under scripts/.
 Local queue coordinator: `scripts/build/qt6-llvm-sdk/run.py`.
 Per-target logs: `build/qt6-<target>-llvm21-<stage>.log`.
 Per-target state/artifacts: `artifacts/tests-qt6-<target>-llvm21/`.
-Retained object volumes and stopped owned build containers allow a failed
-stage to resume. Wait for unrelated Docker work instead of interrupting it.
+Run the same command again to rebuild. The coordinator archives the previous
+stopped container for that stage and starts Qt with a fresh object volume.
+The toolchain stage continues to use the shared runtime cache. To continue a
+retained Qt build in the same checkout, use `--stage qt --resume --wait`.
+Resume checks the source and artifact bind paths and reuses the retained
+container's object volume. Wait for unrelated Docker work instead of
+interrupting it.
 
 Linux arm64 preparation found two integration requirements before compiling
 Qt: keep the SDK runtime CMake caches separate when installing the shared

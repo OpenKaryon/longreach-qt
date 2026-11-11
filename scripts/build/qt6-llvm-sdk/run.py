@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[3]
 PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt6/linux/arm64/Dockerfile-llvm",
@@ -54,6 +55,41 @@ def native_runtime(target: str, suite: Path, toolchain: bool) -> dict:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module.run(target, suite, toolchain)
+
+
+def retained_build(state: dict, command: list[str], suite: Path, destination: str) -> str:
+    if state["State"]["Status"] not in {"created", "exited"}:
+        raise RuntimeError("The retained build container is not stopped")
+    if state["Config"]["Cmd"] != command:
+        raise RuntimeError("The retained container has an unexpected command")
+
+    mounts = {mount["Destination"]: mount for mount in state["Mounts"]}
+    for target, expected, writable in (("/src", ROOT, False), ("/out", suite, True)):
+        mount = mounts.get(target, {})
+        source = mount.get("Source")
+        if (mount.get("Type") != "bind" or mount.get("RW") != writable or not source
+                or Path(source).resolve() != expected.resolve()):
+            raise RuntimeError(f"The retained container's {target} bind does not match {expected}")
+
+    work = mounts.get(destination, {})
+    if work.get("Type") != "volume" or not work.get("RW") or not work.get("Name"):
+        raise RuntimeError(f"The retained container has no writable build volume at {destination}")
+    return work["Name"]
+
+
+def create_build(name: str, arguments: list[str], command: list[str], suite: Path, destination: str) -> str:
+    previous = docker("container", "ls", "--all", "--filter", f"name=^/{name}$",
+                      "--format", "{{.ID}}")
+    if previous:
+        state = json.loads(docker("inspect", previous))[0]
+        retained_build(state, command, suite, destination)
+        docker("rename", previous, f"{name}-previous-{uuid4().hex}")
+    try:
+        return docker(*arguments)
+    except subprocess.CalledProcessError:
+        if previous:
+            docker("rename", previous, name)
+        raise
 
 
 def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dict:
@@ -99,26 +135,29 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         output = tag + "-toolchain" if phase == "toolchain" else tag
         helper = "prepare.sh" if phase == "toolchain" else "build-qt.sh"
         destination = "/work" if phase == "toolchain" else "/build"
-        volume = "longreach-llvm21-probes-build" if phase == "toolchain" else f"longreach-qt6-{target}-llvm21-build"
-        arguments = ["create", "--pull", "never", "--name", name, "--cpus", "4", "--memory", "8g", "--network", "none",
-                     "--entrypoint", "/bin/bash", "--env", "PARALLEL_JOBS=4", "--env", "LLVM_ROOT=/opt/llvm-21",
-                     "--mount", f"type=bind,source={ROOT},target=/src,readonly",
-                     "--mount", f"type=bind,source={suite},target=/out",
-                     "--mount", f"type=volume,source={volume},target={destination}", base_id,
-                     f"/src/scripts/build/qt6-llvm-sdk/{helper}", target]
+        command = [f"/src/scripts/build/qt6-llvm-sdk/{helper}", target]
         if resume:
             state = json.loads(docker("inspect", name))[0]
-            if state["State"]["Running"] or state["Image"] != base_id:
-                raise RuntimeError("Cannot resume a running container or one from a different base image")
-            if state["Config"]["Cmd"] != [f"/src/scripts/build/qt6-llvm-sdk/{helper}", target]:
-                raise RuntimeError("The retained container has an unexpected command")
+            if state["Image"] != base_id:
+                raise RuntimeError("Cannot resume a container from a different base image")
+            volume = retained_build(state, command, suite, destination)
+            container_id = state["Id"]
         else:
-            docker(*arguments)
+            # Qt sources keep patch receipts. A new build starts with pristine sources.
+            volume = ("longreach-llvm21-probes-build" if phase == "toolchain"
+                      else f"{name}-build-{uuid4().hex}")
+            arguments = ["create", "--pull", "never", "--name", name, "--cpus", "4", "--memory", "8g",
+                         "--network", "none", "--entrypoint", "/bin/bash", "--env", "PARALLEL_JOBS=4",
+                         "--env", "LLVM_ROOT=/opt/llvm-21",
+                         "--mount", f"type=bind,source={ROOT},target=/src,readonly",
+                         "--mount", f"type=bind,source={suite},target=/out",
+                         "--mount", f"type=volume,source={volume},target={destination}", base_id, *command]
+            container_id = create_build(name, arguments, command, suite, destination)
         print(f"{target} {phase}: running; {log.name}", flush=True)
         mode = "ab" if resume else "wb"
         with log.open(mode) as stream:
-            subprocess.run(["docker", "start", "-a", name], stdout=stream, stderr=subprocess.STDOUT, check=True)
-        state = json.loads(docker("inspect", name))[0]
+            subprocess.run(["docker", "start", "-a", container_id], stdout=stream, stderr=subprocess.STDOUT, check=True)
+        state = json.loads(docker("inspect", container_id))[0]
         if state["State"]["ExitCode"] != 0 or state["State"]["OOMKilled"]:
             raise RuntimeError(f"{target} {phase} failed; see {log}")
         if phase == "toolchain" and target.startswith(("windows-", "macos-")):
@@ -134,7 +173,7 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         for key, value in env.items():
             changes += ["--change", f"ENV {key}={value}"]
         changes += ["--change", "ENTRYPOINT []", "--change", 'CMD ["/opt/llvm-21/bin/clang", "--version"]']
-        image_id = docker("commit", *changes, name, output)
+        image_id = docker("commit", *changes, container_id, output)
         result.update(status="PASS", image=output, image_id=image_id, base_image=base, base_image_id=base_id,
                       volume=volume, state={key:state["State"][key] for key in ["StartedAt","FinishedAt","ExitCode","OOMKilled"]})
     result["seconds"] = round(time.monotonic()-started, 3)

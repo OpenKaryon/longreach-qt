@@ -69,7 +69,8 @@ case "$target" in
             arch=arm64
             minimum=11.0
         fi
-        "$work/host-python/bin/python3.11" -c \
+        host_python=${LLVM_HOST_PYTHON:-$work/host-python/bin/python3.11}
+        "$host_python" -c \
             'import plistlib, sys; data = plistlib.load(open(sys.argv[1], "rb")); assert sys.argv[2] in data["SupportedTargets"]["macosx"]["Archs"]' \
             "$sysroot/SDKSettings.plist" "$arch"
         triple=$arch-apple-darwin23
@@ -78,7 +79,7 @@ case "$target" in
         cmake_args=(-DCMAKE_SYSTEM_NAME=Darwin -DCMAKE_SYSTEM_PROCESSOR="$arch"
                     -DCMAKE_OSX_SYSROOT="$sysroot" -DCMAKE_OSX_ARCHITECTURES="$arch"
                     -DCMAKE_OSX_DEPLOYMENT_TARGET="$minimum"
-                    -DPython3_EXECUTABLE="$work/host-python/bin/python3.11"
+                    -DPython3_EXECUTABLE="$host_python"
                     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                     -DCOMPILER_RT_OSX_ARCHITECTURES="$arch" -DDARWIN_osx_ARCHS="$arch"
                     -DDARWIN_osx_BUILTIN_ARCHS="$arch"

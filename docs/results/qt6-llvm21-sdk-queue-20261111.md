@@ -13,7 +13,7 @@ Commit completed milestones locally with the existing Codex coauthor trailer.
 | Completed before queue | Linux amd64 | Local image `qt6-linux-amd64:llvm21`, commit `7ffea38334c9` | 25/25; see prior report |
 | 1 | Linux arm64 | [SDK built and tested](qt6-linux-arm64-llvm21-sdk-20261111.md) | 25/25 in QtCore and the Qt console, including QtCore in stock CentOS 7 under QEMU |
 | 2 | Windows amd64 | [SDK built and tested](qt6-windows-amd64-llvm21-sdk-20261111.md) | 25/25 on the native Windows 11 host and in Windows 7 SP1 and Windows 11 guests |
-| 3 | macOS amd64 | Pending | Requires a usable macOS guest/host; no unexecuted check counts as PASS |
+| 3 | macOS amd64 | [SDK built and tested](qt6-macos-amd64-llvm21-sdk-20261111.md) | 25/25 in the clean High Sierra 10.13.6 guest |
 | 4 | Windows arm64 | Pending | Execution environment must be checked; compile/audit alone is insufficient |
 | 5 | macOS arm64 | Pending | Execution environment must be checked; compile/audit alone is insufficient |
 

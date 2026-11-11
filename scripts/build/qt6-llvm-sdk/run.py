@@ -18,6 +18,8 @@ PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt
                              "prefix": "/opt/qt6-linux-arm64-llvm"}}
 PROFILES["windows-amd64"] = {"image": "qt6-win-amd64",
     "dockerfile": "docker/qt6/windows/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-amd64-llvm"}
+PROFILES["macos-amd64"] = {"image": "qt6-macos-amd64",
+    "dockerfile": "docker/qt6/macos/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-macos-amd64-llvm"}
 
 
 def docker(*args: str) -> str:
@@ -40,9 +42,10 @@ def environment(image: str) -> dict[str, str]:
     return dict(item.split("=", 1) for item in values)
 
 
-def windows_runtime(target: str, suite: Path, toolchain: bool) -> dict:
-    path = ROOT / "scripts/tests/qt6-llvm-sdk/windows-host-run.py"
-    spec = importlib.util.spec_from_file_location("sdk_windows_host", path)
+def native_runtime(target: str, suite: Path, toolchain: bool) -> dict:
+    system = target.split("-", 1)[0]
+    path = ROOT / f"scripts/tests/qt6-llvm-sdk/{system}-host-run.py"
+    spec = importlib.util.spec_from_file_location(f"sdk_{system}_host", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -74,13 +77,14 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
                      "--mount", f"type=bind,source={ROOT},target=/src,readonly",
                      "--mount", f"type=bind,source={suite},target=/out", image_id,
                      "/src/scripts/tests/qt6-llvm-sdk/" +
-                     ("build-windows-checks.sh" if target.startswith("windows-") else "build-checks.sh"), target]
+                     {"windows":"build-windows-checks.sh", "macos":"build-macos-checks.sh"}.get(
+                         target.split("-", 1)[0], "build-checks.sh"), target]
         print(f"{target}: checking SDK; {log.name}", flush=True)
         with log.open("wb") as stream:
             subprocess.run(arguments, stdout=stream, stderr=subprocess.STDOUT, check=True)
         result.update(status="PASS", image=tag, image_id=image_id)
-        if target.startswith("windows-"):
-            result.update(windows_runtime(target, suite, False))
+        if target.startswith(("windows-", "macos-")):
+            result.update(native_runtime(target, suite, False))
             if result["runtime_status"] == "PENDING":
                 result["status"] = "BUILT_RUNTIME_PENDING"
         else:
@@ -113,8 +117,8 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         state = json.loads(docker("inspect", name))[0]
         if state["State"]["ExitCode"] != 0 or state["State"]["OOMKilled"]:
             raise RuntimeError(f"{target} {phase} failed; see {log}")
-        if phase == "toolchain" and target.startswith("windows-"):
-            result.update(windows_runtime(target, suite, True))
+        if phase == "toolchain" and target.startswith(("windows-", "macos-")):
+            result.update(native_runtime(target, suite, True))
         env = environment(base_id)
         env.update(LLVM_ROOT="/opt/llvm-21", QT_HOST_PATH="/opt/qt6-host-llvm21",
                    PATH="/opt/longreach-llvm/bin:/opt/llvm-21/bin:/opt/qt6-host-llvm21/bin:"+env["PATH"],

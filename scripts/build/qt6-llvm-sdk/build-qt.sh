@@ -17,6 +17,12 @@ case "$target" in
             -no-vulkan -no-dbus -skip qtwayland -skip qtactiveqt)
         platform_cmake=(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
         ;;
+    macos-amd64|macos-arm64)
+        patches+=(/src/patches/qt6/macos/*.patch)
+        platform_args=(-strip -no-vulkan -no-dbus -no-cups -skip qtwayland)
+        platform_cmake=(-DQT_FORCE_WARN_APPLE_SDK_AND_XCODE_CHECK=ON
+            -DQT_CREATE_VERSIONED_HARD_LINK=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+        ;;
     *) exit 2 ;;
 esac
 archive=/src/downloads/qt-everywhere-src-6.8.5.tar.xz

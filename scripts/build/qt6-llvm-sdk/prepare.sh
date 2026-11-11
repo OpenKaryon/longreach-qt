@@ -4,10 +4,13 @@
 set -euo pipefail
 target=${1:?target required}
 case "$target" in
-    linux-arm64|windows-amd64|windows-arm64) ;;
+    linux-arm64|windows-amd64|windows-arm64|macos-amd64|macos-arm64) ;;
     *) exit 2 ;;
 esac
 export LLVM_ROOT=/opt/llvm-21 LLVM_BUILD_ROOT=/work LLVM_BUILD_VARIANT=sdk
+if [[ "$target" = macos-* ]]; then
+    export LLVM_HOST_PYTHON=$(command -v python3)
+fi
 archive=/src/downloads/llvm-project-21.1.8.src.tar.xz
 echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  '"$archive" | sha256sum -c -
 mkdir -p /work/source
@@ -52,6 +55,23 @@ EOF
     for tool in ar ranlib nm strip objcopy objdump; do
         ln -sfn "/opt/llvm-21/bin/llvm-$tool" "/opt/longreach-llvm/bin/$mingw-$tool"
     done
+elif [[ "$target" = macos-* ]]; then
+    arch=${target#macos-}
+    processor=arm64
+    version=11.0
+    if [ "$arch" = amd64 ]; then
+        processor=x86_64
+        version=10.13
+        mv /opt/longreach-llvm/bin/target-cxx /opt/longreach-llvm/bin/target-cxx-runtime
+        cat > /opt/longreach-llvm/bin/target-cxx <<'EOF'
+#!/bin/sh
+exec /opt/longreach-llvm/bin/target-cxx-runtime -faligned-allocation "$@"
+EOF
+        chmod +x /opt/longreach-llvm/bin/target-cxx
+    fi
+    sed -e "s/@ARCH@/$arch/g" -e "s/@PROCESSOR@/$processor/g" -e "s/@VERSION@/$version/g" \
+        /src/scripts/build/qt6-llvm-sdk/macos-toolchain.cmake.in \
+        > /opt/longreach-llvm/cmake/toolchain.cmake
 else
     cp "/src/scripts/build/qt6-llvm-sdk/$target.cmake" /opt/longreach-llvm/cmake/toolchain.cmake
 fi
@@ -77,6 +97,11 @@ EOF
     if [ "$target" = windows-amd64 ]; then
         PATH=/opt/llvm-21/bin:$PATH bash /src/scripts/audit/qt6-win7-audit.sh /out/installed-toolchain-cxx23.exe
     fi
+elif [[ "$target" = macos-* ]]; then
+    /opt/longreach-llvm/bin/target-cxx -std=c++23 -O2 \
+        /src/scripts/tests/qt6-llvm-probes/main.cpp -o /out/installed-toolchain-cxx23
+    MACHO_AUDIT_ARCH="$processor" bash /src/scripts/audit/qt6-macos-audit.sh \
+        "$version" /out/installed-toolchain-cxx23
 else
     /opt/longreach-llvm/bin/target-cxx -std=c++23 -O2 \
         /src/scripts/tests/qt6-llvm-probes/main.cpp -o /out/installed-toolchain-cxx23

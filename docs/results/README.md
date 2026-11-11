@@ -1,5 +1,9 @@
 # Results
 
+The [Qt 6 Windows arm64 LLVM 21.1.8 SDK run](qt6-windows-arm64-llvm21-sdk-20261111.md)
+records the static UCRT build and required C++23 compilation. Execution
+on Windows on ARM is pending.
+
 The [Qt 6 macOS amd64 LLVM 21.1.8 SDK run](qt6-macos-amd64-llvm21-sdk-20261111.md)
 records the static cross-build, the 10.13 deployment checks and the
 25/25 C++23 runs in High Sierra 10.13.6.

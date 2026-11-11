@@ -50,7 +50,7 @@ case "$target" in
             link_flags='-fuse-ld=lld -Wl,--major-subsystem-version,6,--minor-subsystem-version,1'
         else
             triple=aarch64-w64-windows-gnu
-            minimum=0x0a00
+            minimum=0x0A00
             system_version=10.0
             link_flags='-fuse-ld=lld -Wl,--major-subsystem-version,10,--minor-subsystem-version,0'
         fi

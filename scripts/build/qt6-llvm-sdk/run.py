@@ -20,6 +20,8 @@ PROFILES["windows-amd64"] = {"image": "qt6-win-amd64",
     "dockerfile": "docker/qt6/windows/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-amd64-llvm"}
 PROFILES["macos-amd64"] = {"image": "qt6-macos-amd64",
     "dockerfile": "docker/qt6/macos/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-macos-amd64-llvm"}
+PROFILES["windows-arm64"] = {"image": "qt6-win-arm64",
+    "dockerfile": "docker/qt6/windows/arm64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-arm64-llvm"}
 
 
 def docker(*args: str) -> str:

@@ -14,7 +14,7 @@ Commit completed milestones locally with the existing Codex coauthor trailer.
 | 1 | Linux arm64 | [SDK built and tested](qt6-linux-arm64-llvm21-sdk-20261111.md) | 25/25 in QtCore and the Qt console, including QtCore in stock CentOS 7 under QEMU |
 | 2 | Windows amd64 | [SDK built and tested](qt6-windows-amd64-llvm21-sdk-20261111.md) | 25/25 on the native Windows 11 host and in Windows 7 SP1 and Windows 11 guests |
 | 3 | macOS amd64 | [SDK built and tested](qt6-macos-amd64-llvm21-sdk-20261111.md) | 25/25 in the clean High Sierra 10.13.6 guest |
-| 4 | Windows arm64 | Pending | Execution environment must be checked; compile/audit alone is insufficient |
+| 4 | Windows arm64 | [SDK built, PE checked](qt6-windows-arm64-llvm21-sdk-20261111.md) | Pending, no configured Windows on ARM host or guest |
 | 5 | macOS arm64 | Pending | Execution environment must be checked; compile/audit alone is insufficient |
 
 Each required runtime must PASS all 25 names, with zero FAIL/SKIP, using

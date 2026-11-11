@@ -41,7 +41,7 @@ python scripts/build/qt6-llvm-sdk/run.py --target windows-amd64 --wait
 ```
 
 Use `--stage checks` to repeat the checks against the saved SDK image and
-`--stage qt --resume --wait` to continue a retained Qt build. The coordinator
+`--stage qt --resume --wait` to continue a retained Qt build with the same inputs. The coordinator
 writes build logs to `build/` and executable and test evidence to
 `artifacts/tests-qt6-windows-amd64-llvm21/`. For a guest test, copy
 `modern-cxx23.exe` from that directory, record the guest OS version and

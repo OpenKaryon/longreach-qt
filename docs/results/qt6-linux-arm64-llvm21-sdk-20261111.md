@@ -41,7 +41,7 @@ python scripts/build/qt6-llvm-sdk/run.py --target linux-arm64 --wait
 ```
 
 Use `--stage checks` to repeat the consumer tests against the saved image.
-Use `--stage qt --resume --wait` to resume a retained Qt build after a fix.
+Use `--stage qt --resume --wait` to continue a retained Qt build with the same inputs.
 The coordinator writes build logs to `build/` and binaries and test logs to
 `artifacts/tests-qt6-linux-arm64-llvm21/`. For the separate stock check,
 run `modern-cxx23` with static `qemu-aarch64` in `arm64v8/centos:7` using

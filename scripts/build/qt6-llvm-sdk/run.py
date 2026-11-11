@@ -15,6 +15,8 @@ import time
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[3]
+TOOLCHAIN_INPUTS_LABEL = "org.longreach.qt6-llvm-sdk.toolchain-inputs"
+QT_INPUTS_LABEL = "org.longreach.qt6-llvm-sdk.qt-inputs"
 PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt6/linux/arm64/Dockerfile-llvm",
                              "prefix": "/opt/qt6-linux-arm64-llvm"}}
 PROFILES["windows-amd64"] = {"image": "qt6-win-amd64",
@@ -55,6 +57,39 @@ def native_runtime(target: str, suite: Path, toolchain: bool) -> dict:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module.run(target, suite, toolchain)
+
+
+def input_key(base: str, files: list[Path]) -> str:
+    digest = hashlib.sha256(base.encode("utf-8"))
+    for path in sorted(files):
+        digest.update(path.relative_to(ROOT).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def qt_patches(target: str) -> list[Path]:
+    family = target.split("-", 1)[0]
+    groups = ("all", family) if family in {"macos", "windows"} else ("all",)
+    return [patch for group in groups for patch in (ROOT / "patches/qt6" / group).glob("*.patch")]
+
+
+def build_input_key(target: str, phase: str, base_id: str) -> str:
+    sdk = ROOT / "scripts/build/qt6-llvm-sdk"
+    if phase == "qt":
+        labels = json.loads(docker("image", "inspect", "--format", "{{json .Config.Labels}}", base_id)) or {}
+        toolchain_key = labels.get(TOOLCHAIN_INPUTS_LABEL, base_id)
+        return input_key(toolchain_key, [sdk / "build-qt.sh", *qt_patches(target)])
+
+    probes = ROOT / "scripts/build/qt6-llvm-probes"
+    files = [sdk / "prepare.sh", probes / "build-runtime.sh", probes / "inputs.json"]
+    if target.startswith("windows-"):
+        files += [sdk / "windows-toolchain.cmake.in", probes / "build-windows-sysroot.sh"]
+    elif target.startswith("macos-"):
+        files.append(sdk / "macos-toolchain.cmake.in")
+    else:
+        files.append(sdk / f"{target}.cmake")
+    return input_key(f"{target}:{base_id}", files)
 
 
 def retained_build(state: dict, command: list[str], suite: Path, destination: str) -> str:
@@ -141,17 +176,23 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
             if state["Image"] != base_id:
                 raise RuntimeError("Cannot resume a container from a different base image")
             volume = retained_build(state, command, suite, destination)
+            key = build_input_key(target, phase, base_id)
+            labels = state["Config"].get("Labels") or {}
+            if phase == "qt" and labels.get(QT_INPUTS_LABEL, key) != key:
+                raise RuntimeError("Qt build inputs changed; run this stage again without --resume")
             container_id = state["Id"]
         else:
-            # Qt sources keep patch receipts. A new build starts with pristine sources.
+            key = build_input_key(target, phase, base_id)
             volume = ("longreach-llvm21-probes-build" if phase == "toolchain"
-                      else f"{name}-build-{uuid4().hex}")
+                      else f"{name}-build-{key}")
             arguments = ["create", "--pull", "never", "--name", name, "--cpus", "4", "--memory", "8g",
                          "--network", "none", "--entrypoint", "/bin/bash", "--env", "PARALLEL_JOBS=4",
                          "--env", "LLVM_ROOT=/opt/llvm-21",
                          "--mount", f"type=bind,source={ROOT},target=/src,readonly",
                          "--mount", f"type=bind,source={suite},target=/out",
                          "--mount", f"type=volume,source={volume},target={destination}", base_id, *command]
+            if phase == "qt":
+                arguments[1:1] = ["--label", f"{QT_INPUTS_LABEL}={key}"]
             container_id = create_build(name, arguments, command, suite, destination)
         print(f"{target} {phase}: running; {log.name}", flush=True)
         mode = "ab" if resume else "wb"
@@ -173,6 +214,8 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
         for key, value in env.items():
             changes += ["--change", f"ENV {key}={value}"]
         changes += ["--change", "ENTRYPOINT []", "--change", 'CMD ["/opt/llvm-21/bin/clang", "--version"]']
+        if phase == "toolchain":
+            changes += ["--change", f"LABEL {TOOLCHAIN_INPUTS_LABEL}={key}"]
         image_id = docker("commit", *changes, container_id, output)
         result.update(status="PASS", image=output, image_id=image_id, base_image=base, base_image_id=base_id,
                       volume=volume, state={key:state["State"][key] for key in ["StartedAt","FinishedAt","ExitCode","OOMKilled"]})

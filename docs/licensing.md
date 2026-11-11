@@ -6,9 +6,11 @@ the test suite - is GPL-3.0-or-later, Copyright (C) 2026 OpenKaryon
 
 | Files | Licence |
 |-------|---------|
-| `patches/qt5`, `patches/qt6`, the Qt 5 mkspecs, the runtime objects linked into Qt 5 applications | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only (Qt 5/6's own) |
+| Qt-owned code in `patches/qt5` and `patches/qt6`, the Qt 5 mkspecs, the runtime objects linked into Qt 5 applications | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only (Qt 5/6's own) |
 | `patches/qt4`, the Qt 4 mkspecs, the Windows 95 runtime object | LGPL-2.1-only OR GPL-3.0-only (Qt 4.8's own) |
 | the Jaguar libgcc header (`scripts/build/qt4-macos-jaguar/libgcc-dlfcn.h`) | GPL-3.0-or-later WITH GCC-exception-3.1 |
+
+Patches to bundled third-party code name the upstream terms in their headers.
 
 Every source file names its licence in an `SPDX-License-Identifier` line; the
 texts are in [`licenses/`](../licenses/). Because the patched Qt stays under

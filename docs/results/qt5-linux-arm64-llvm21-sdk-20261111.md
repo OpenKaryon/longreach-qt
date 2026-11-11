@@ -29,7 +29,8 @@ optional APIs, modules and backends. The ELF audit confirmed AArch64,
 glibc symbols up to 2.18 and static Qt and LLVM C++ runtime linkage.
 Security tests were outside the run scope. The
 [JSON record](qt5-linux-arm64-llvm21-sdk-20261111.json) includes the image IDs, executable hashes and
-per-application results.
+per-application results. The patch hashes are from the build inputs.
+The later SPDX headers leave the applied hunks unchanged.
 
 ## Reproduce
 

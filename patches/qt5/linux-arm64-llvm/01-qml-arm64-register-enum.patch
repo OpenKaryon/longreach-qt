@@ -1,0 +1,11 @@
+--- a/qtdeclarative/src/3rdparty/masm/assembler/ARM64Assembler.h
++++ b/qtdeclarative/src/3rdparty/masm/assembler/ARM64Assembler.h
+@@ -507,7 +507,7 @@
+     V(double, q30) \
+     V(double, q31)
+ 
+-typedef enum {
++typedef enum : int {
+     #define DECLARE_REGISTER(_type, _regName) _regName,
+     FOR_EACH_CPU_GPREGISTER(DECLARE_REGISTER)
+     #undef DECLARE_REGISTER

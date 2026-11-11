@@ -30,6 +30,9 @@ cmake_args=(
 if [ -n "${SMOKE_OPENSSL_PREFIX:-}" ]; then
     cmake_args+=(-DCMAKE_LIBRARY_PATH="${SMOKE_OPENSSL_PREFIX}/lib64;${SMOKE_OPENSSL_PREFIX}/lib")
 fi
+if [ "${SMOKE_REQUIRE_CXX23:-0}" = 1 ]; then
+    cmake_args+=(-DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DSMOKE_REQUIRE_CXX23=ON)
+fi
 if [ -n "$toolchain" ]; then
     test -f "$toolchain" || { echo "no such toolchain file: $toolchain" >&2; exit 2; }
     cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$toolchain")

@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG BASE_REGISTRY=docker.io/library
+ARG TRUSTY_IMAGE=qt5-linux-arm64:latest
+ARG LLVM_TOOLCHAIN_IMAGE=qt6-linux-arm64:llvm21-toolchain
+
+FROM ${TRUSTY_IMAGE} AS trusty
+FROM ${LLVM_TOOLCHAIN_IMAGE} AS llvm
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS inputs
+ARG APT_SNAPSHOT
+ENV DEBIAN_FRONTEND=noninteractive
+RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snapshot.sh \
+    sh /tmp/apt-snapshot.sh "$APT_SNAPSHOT" && apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential cmake ninja-build \
+        python3 perl pkg-config git bison flex xz-utils libxml2 libexpat1 && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=trusty /work/sysroot /work/sysroot
+COPY --from=trusty /opt/openssl-3 /opt/openssl-3
+COPY --from=trusty /usr/bin/wayland-scanner /usr/local/bin/wayland-scanner
+COPY --from=llvm /opt/llvm-21 /opt/llvm-21
+COPY --from=llvm /opt/llvm-runtime-21 /opt/llvm-runtime-21
+ENV PATH=/opt/llvm-21/bin:${PATH} \
+    PKG_CONFIG_SYSROOT_DIR=/work/sysroot \
+    PKG_CONFIG_LIBDIR=/work/sysroot/usr/local/lib/pkgconfig:/work/sysroot/usr/local/share/pkgconfig:/work/sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/work/sysroot/usr/lib/pkgconfig:/work/sysroot/usr/share/pkgconfig \
+    LLVM_ROOT=/opt/llvm-21 \
+    QT_INSTALL_DIR=/opt/qt5-linux-arm64-llvm
+
+FROM inputs AS build
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt5-linux-arm64,target=/src/qt5-linux-arm64 \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/qt5/all \
+    --mount=type=bind,source=patches/qt5/linux,target=/src/patches/qt5/linux \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm,target=/src/patches/qt5/linux-arm64-llvm \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/src/qt.tar.xz \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/qt5-linux-arm64/build-llvm.sh
+
+FROM inputs AS sdk
+COPY --from=build /opt/qt5-linux-arm64-llvm /opt/qt5-linux-arm64-llvm
+COPY --from=build /opt/qt5-llvm /opt/qt5-llvm
+COPY cmake/qt5/toolchain-linux-arm64-llvm.cmake /opt/qt5-llvm/toolchain.cmake
+ENV PATH=/opt/qt5-linux-arm64-llvm/bin:/opt/qt5-llvm/bin:${PATH} \
+    CC=/opt/qt5-llvm/bin/target-cc CXX=/opt/qt5-llvm/bin/target-cxx
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/tmp/build-tests.sh \
+    --mount=type=bind,source=scripts/build/qt5-lucid/max-glibc.py,target=/tmp/max-glibc.py \
+    --mount=type=bind,source=scripts/build/qt5-linux-arm64/check-llvm-examples.sh,target=/tmp/check-llvm-examples.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/check-llvm-examples.sh

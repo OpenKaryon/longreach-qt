@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-11",
+  "target": "qt5-linux-arm64-llvm",
+  "status": "PASS",
+  "source_base": "3abd4e0b50bcfb7d0d402b1782ed6b4c55835884",
+  "source_dirty": true,
+  "qt": "5.15.19",
+  "qt_source_sha256": "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae",
+  "llvm": "21.1.8",
+  "libcxx_version": 210108,
+  "cxx_language_mode": 202302,
+  "license_profile": "gpl-enabled",
+  "images": {
+    "qt5-linux-arm64:llvm21": "sha256:3b0042cdfe87ce0ebe387dbc0374a18c03fd896288ffd637a1a6718372566c87",
+    "qt5-linux-arm64:latest": "sha256:b7d4e1f3cc6c5f7cbc58107c7a0d1f535e73871ac1954384fe2c96fce7288e6c",
+    "qt6-linux-arm64:llvm21-toolchain": "sha256:5ae652c85d718792bcd6283bb6609c5bbc191bb35c6bb2d756b8188b4416bcab",
+    "arm64v8/ubuntu:14.04": "sha256:5ed16aa332467821529d451800e6fe599d83e30471e91b096752f8696d9bf6e9"
+  },
+  "static_qt_archives": 93,
+  "guest": {
+    "os": "Ubuntu 14.04.6 LTS",
+    "architecture": "arm64",
+    "libc": "ldd (Ubuntu EGLIBC 2.19-0ubuntu6.15) 2.19",
+    "method": "Stock Ubuntu container under QEMU on the Docker host kernel, GUI apps under Xvfb."
+  },
+  "max_glibc_symbol": "2.18",
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "gui": {
+    "apps_passed": 7,
+    "checks": {
+      "passed": 231,
+      "failed": 0,
+      "skipped": 25
+    },
+    "applications": [
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 53,
+        "failed": 0,
+        "skipped": 6
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 2
+      },
+      {
+        "application": "network-gui",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 31,
+        "failed": 0,
+        "skipped": 12
+      },
+      {
+        "application": "widgets-gallery",
+        "passed": 90,
+        "failed": 0,
+        "skipped": 5
+      }
+    ]
+  },
+  "executables_sha256": {
+    "gl-heavy-gallery": "089ca71acb2cf4dc3acd97ebf5c88b1b34322f480f510945a538dff8960ab98a",
+    "graphics-gallery": "f286fc58e6fc0cec63c9db4fa84d8466f9a0c1be218bed7c88d1ac416a712314",
+    "multimedia-lab": "7071dea532255d026d822ce75828607e1e65b848d7a1a669a116e4843de6aac2",
+    "network-gui": "6771645c3e14cbd64b8965ed803ce0e6d62f821b9e5433030590f37bdc683e33",
+    "painting-lab": "53561b096921788cc2c843238daeea52e5fb5ac82b255f27466e96897b071c76",
+    "qt-selftest": "0934769ec9a9d7b613dc52f284acf999ffabbf37fd2e67957837af2207845241",
+    "quick-qml-gallery": "c5d1fe389c4ea99ce2a8574bb00483a268816d59d0a68f949a43022770f5f330",
+    "smoke-runner": "006ee607f376def78c448f4a5bb157ec72236d4f25dde8484bc320b38174f86d",
+    "widgets-gallery": "dadb95ece8980d996d49206f31bc91e9f8f2dc39857a430568a0aaa231aecd2d"
+  },
+  "compatibility_patches_sha256": {
+    "patches/qt5/linux-arm64-llvm/01-qml-arm64-register-enum.patch": "1cd7751ea5a3e92149d74e1ceb11d3ff9239dd698a780ea0b41c1ad127e86b74",
+    "patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch": "45dcae9f965f728065855aa06a118cc734b43b668fcf05401f989bd070fbf6a5"
+  }
+}

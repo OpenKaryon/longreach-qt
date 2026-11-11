@@ -123,6 +123,26 @@ qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH)
 	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --sources-only
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE) .
 
+# Opt-in LLVM profile. The default GCC image supplies the Trusty sysroot and
+# OpenSSL; the Qt 6 LLVM toolchain supplies only the upstream ARM64 runtimes.
+QT5_ARM64_LLVM_IMAGE := qt5-linux-arm64:llvm21
+QT5_ARM64_LLVM_TRUSTY ?= qt5-linux-arm64:latest
+QT5_ARM64_LLVM_TOOLCHAIN ?= qt6-linux-arm64:llvm21-toolchain
+QT5_ARM64_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
+    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
+    --build-arg TRUSTY_IMAGE=$(QT5_ARM64_LLVM_TRUSTY) \
+    --build-arg LLVM_TOOLCHAIN_IMAGE=$(QT5_ARM64_LLVM_TOOLCHAIN) \
+    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+.PHONY: qt5-linux-arm64-llvm qt5-linux-arm64-llvm-examples
+BUILD_TARGETS += qt5-linux-arm64-llvm
+qt5-linux-arm64-llvm qt5-linux-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(QT5_ARM64_LLVM_TRUSTY) $(QT5_ARM64_LLVM_TOOLCHAIN)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/arm64/Dockerfile-llvm -t $(QT5_ARM64_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19)
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
@@ -162,8 +182,9 @@ $(QT5_MACOS_SDK_PATH):
 # LICENSE_PROFILE as its build:
 #   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64
 QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
-QT5_TESTS_OUT := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE)
-QT5_TESTS_PACKAGE := $(ARTIFACTS_DIR)/tests-$(QT5_IMAGE).tar.gz
+QT5_TESTS_NAME := tests-$(subst :,-,$(QT5_IMAGE))
+QT5_TESTS_OUT := $(ARTIFACTS_DIR)/$(QT5_TESTS_NAME)
+QT5_TESTS_PACKAGE := $(QT5_TESTS_OUT).tar.gz
 
 qt5-extract-tests:
 	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(QT5_TESTS_OUT)"
@@ -174,7 +195,7 @@ qt5-extract-tests:
 
 qt5-package-tests: qt5-extract-tests
 	docker run --rm -v "$(CURDIR)/$(ARTIFACTS_DIR):/artifacts" \
-		$(QT5_IMAGE) "tar -czf /artifacts/tests-$(QT5_IMAGE).tar.gz -C /artifacts/tests-$(QT5_IMAGE) . && sha256sum /artifacts/tests-$(QT5_IMAGE).tar.gz > /artifacts/tests-$(QT5_IMAGE).tar.gz.sha256"
+		$(QT5_IMAGE) "tar -czf /artifacts/$(QT5_TESTS_NAME).tar.gz -C /artifacts/$(QT5_TESTS_NAME) . && sha256sum /artifacts/$(QT5_TESTS_NAME).tar.gz > /artifacts/$(QT5_TESTS_NAME).tar.gz.sha256"
 	@echo "-> $(QT5_TESTS_PACKAGE)"
 
 

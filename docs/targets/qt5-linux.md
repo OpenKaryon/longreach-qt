@@ -46,6 +46,33 @@ xkbcommon 0.4.1). The binaries need the same system libraries as on Lucid
 (libxcb, libX11, libGL, fontconfig, FreeType); the optional ones are stubbed
 the same way.
 
+## arm64 with LLVM 21.1.8
+
+The opt-in `qt5-linux-arm64-llvm` target builds the static GPL-enabled SDK
+with upstream Clang, LLD and libc++. It reuses the existing Qt 5 arm64
+image's Trusty sysroot and OpenSSL, and the upstream ARM64 runtimes from the
+Qt 6 LLVM toolchain. Qt 5 host tools such as qmake and moc are built
+natively in the Debian 12 build stage. The Qt libraries build in C++14
+mode, and the example consumers build in strict C++23 mode.
+
+From the repository root, stage the default `qt5-linux-arm64:latest`
+image and `qt6-linux-arm64:llvm21-toolchain`. See the
+[Qt 6 toolchain instructions](../results/qt6-linux-arm64-llvm21-sdk-20261111.md#reproduce)
+for the latter. Then run one build at a time.
+
+```sh
+make qt5-linux-arm64-llvm-examples PARALLEL_JOBS=4
+```
+
+Use `make qt5-linux-arm64-llvm` for the SDK alone. Both use the local tag
+`qt5-linux-arm64:llvm21` and install the SDK to
+`/opt/qt5-linux-arm64-llvm`. CMake consumers can use
+`/opt/qt5-llvm/toolchain.cmake`. The examples target also extracts the
+suite to `artifacts/tests-qt5-linux-arm64-llvm21/`. Docker reuses the SDK
+layers when only the examples change. The
+[run record](../results/qt5-linux-arm64-llvm21-sdk-20261111.md) includes
+the Ubuntu 14.04 commands and results.
+
 ## Results
 
 amd64: 8/8 (498 checks) on Ubuntu 10.04.4 in VMware; 8/8 (511) on CentOS 7 and

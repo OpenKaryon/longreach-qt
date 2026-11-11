@@ -1,0 +1,55 @@
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/rapidjson/1.1.0/include/rapidjson/document.h
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/rapidjson/1.1.0/include/rapidjson/document.h
+@@ -316,7 +316,7 @@
+ 
+     GenericStringRef(const GenericStringRef& rhs) : s(rhs.s), length(rhs.length) {}
+ 
+-    GenericStringRef& operator=(const GenericStringRef& rhs) { s = rhs.s; length = rhs.length; }
++    GenericStringRef& operator=(const GenericStringRef&) = delete;
+ 
+     //! implicit conversion to plain CharType pointer
+     operator const Ch *() const { return s; }
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp
+@@ -12,7 +12,7 @@
+ 
+ namespace boost { namespace numeric
+ {
+-  enum udt_builtin_mixture_enum
++  enum udt_builtin_mixture_enum : int
+   {
+      builtin_to_builtin
+     ,builtin_to_udt
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/int_float_mixture_enum.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/int_float_mixture_enum.hpp
+@@ -12,7 +12,7 @@
+ 
+ namespace boost { namespace numeric
+ {
+-  enum int_float_mixture_enum
++  enum int_float_mixture_enum : int
+   {
+      integral_to_integral
+     ,integral_to_float
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/sign_mixture_enum.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/sign_mixture_enum.hpp
+@@ -12,7 +12,7 @@
+ 
+ namespace boost { namespace numeric
+ {
+-  enum sign_mixture_enum
++  enum sign_mixture_enum : int
+   {
+      unsigned_to_unsigned
+     ,signed_to_signed
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/src/mbgl/layout/symbol_projection.cpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/src/mbgl/layout/symbol_projection.cpp
+@@ -95,7 +95,7 @@
+     PointAndCameraDistance project(const Point<float>& point, const mat4& matrix) {
+         vec4 pos = {{ point.x, point.y, 0, 1 }};
+         matrix::transformMat4(pos, pos, matrix);
+-        return {{ static_cast<float>(pos[0] / pos[3]), static_cast<float>(pos[1] / pos[3]) }, pos[3] };
++        return {{ static_cast<float>(pos[0] / pos[3]), static_cast<float>(pos[1] / pos[3]) }, static_cast<float>(pos[3]) };
+     }
+ 
+     float evaluateSizeForFeature(const ZoomEvaluatedSize& zoomEvaluatedSize, const PlacedSymbol& placedSymbol) {

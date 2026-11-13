@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+# Keep emulated storage alive while Darwin pthread destructors run.
+--- a/compiler-rt/lib/builtins/emutls.c
++++ b/compiler-rt/lib/builtins/emutls.c
+@@ -21,6 +21,9 @@
+ // We can't wait until the final two rounds, because jemalloc needs two rounds
+ // after the final malloc/free call to free its thread-specific data (see
+ // https://reviews.llvm.org/D46978#1107507).
++#define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1
++#elif defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1070
++// Keep storage alive during the libc++abi pthread destructor pass.
+ #define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 1
+ #else
+ #define EMUTLS_SKIP_DESTRUCTOR_ROUNDS 0
+--- a/libcxxabi/src/cxa_thread_atexit.cpp
++++ b/libcxxabi/src/cxa_thread_atexit.cpp
+@@ -21,6 +21,11 @@
+ 
+   using Dtor = void(*)(void*);
+ 
++#if defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1070
++#define LIBCXXABI_DARWIN_WITHOUT_NATIVE_TLS
++#endif
++
++#ifndef LIBCXXABI_DARWIN_WITHOUT_NATIVE_TLS
+   extern "C"
+ #ifndef HAVE___CXA_THREAD_ATEXIT_IMPL
+   // A weak symbol is used to detect this function's presence in the C library
+@@ -28,6 +33,7 @@
+   _LIBCXXABI_WEAK
+ #endif
+   int __cxa_thread_atexit_impl(Dtor, void*, void*);
++#endif
+ 
+ #ifndef HAVE___CXA_THREAD_ATEXIT_IMPL
+ 
+@@ -112,9 +118,11 @@
+ #ifdef HAVE___CXA_THREAD_ATEXIT_IMPL
+     return __cxa_thread_atexit_impl(dtor, obj, dso_symbol);
+ #else
+-    if (__cxa_thread_atexit_impl) {
++#ifndef LIBCXXABI_DARWIN_WITHOUT_NATIVE_TLS
++    if (__cxa_thread_atexit_impl)
+       return __cxa_thread_atexit_impl(dtor, obj, dso_symbol);
+-    } else {
++#endif
++    {
+       // Initialize the dtors std::__libcpp_tls_key (uses __cxa_guard_*() for
+       // one-time initialization and __cxa_atexit() for destruction)
+       static DtorsManager manager;

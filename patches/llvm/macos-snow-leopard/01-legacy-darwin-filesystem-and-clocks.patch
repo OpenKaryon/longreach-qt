@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+# Use the Darwin APIs available at the Snow Leopard deployment target.
+--- a/libcxx/src/chrono.cpp
++++ b/libcxx/src/chrono.cpp
+@@ -15,6 +15,7 @@
+ #include <__system_error/throw_system_error.h>
+ #include <cerrno> // errno
+ #include <chrono>
++#include <cstdint>
+ 
+ #if defined(__MVS__)
+ #  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
+@@ -40,6 +41,12 @@
+ #if defined(__APPLE__) || defined(__gnu_hurd__) || defined(__OpenBSD__) || defined(__AMDGPU__) ||                      \
+     defined(__NVPTX__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
+ #  define _LIBCPP_HAS_CLOCK_GETTIME
++#endif
++
++#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
++#  define _LIBCPP_SNOW_LEOPARD_CLOCKS
++#  undef _LIBCPP_HAS_CLOCK_GETTIME
+ #endif
+ 
+ #if defined(_LIBCPP_WIN32API)
+@@ -170,7 +177,22 @@
+ 
+ #if _LIBCPP_HAS_MONOTONIC_CLOCK
+ 
+-#  if defined(__APPLE__)
++#  if defined(_LIBCPP_SNOW_LEOPARD_CLOCKS)
++
++static steady_clock::time_point __libcpp_steady_clock_now() {
++  static const mach_timebase_info_data_t scale = [] {
++    mach_timebase_info_data_t value{};
++    if (mach_timebase_info(&value) != KERN_SUCCESS || value.denom == 0)
++      std::__throw_system_error(EINVAL, "mach_timebase_info failed");
++    return value;
++  }();
++  const uint64_t ticks = mach_absolute_time();
++  const uint64_t ns = (ticks / scale.denom) * scale.numer +
++                      ((ticks % scale.denom) * scale.numer) / scale.denom;
++  return steady_clock::time_point(nanoseconds(ns));
++}
++
++#  elif defined(__APPLE__)
+ 
+ // On Apple platforms, only CLOCK_UPTIME_RAW, CLOCK_MONOTONIC_RAW or
+ // mach_absolute_time are able to time functions in the nanosecond range.
+--- a/libcxx/src/filesystem/filesystem_clock.cpp
++++ b/libcxx/src/filesystem/filesystem_clock.cpp
+@@ -41,6 +41,11 @@
+ #  define _LIBCPP_HAS_CLOCK_GETTIME
+ #endif
+ 
++#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
++#  undef _LIBCPP_HAS_CLOCK_GETTIME
++#endif
++
+ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+ 
+ _LIBCPP_DIAGNOSTIC_PUSH
+--- a/libcxx/src/filesystem/operations.cpp
++++ b/libcxx/src/filesystem/operations.cpp
+@@ -825,7 +825,9 @@
+ //
+ // The second implementation is used on platforms where `openat()` & friends are available,
+ // and it threads file descriptors through recursive calls to avoid such race conditions.
+-#if defined(_LIBCPP_WIN32API) || defined(__MVS__)
++#if defined(_LIBCPP_WIN32API) || defined(__MVS__) || \
++    (defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++     __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101000)
+ #  define REMOVE_ALL_USE_DIRECTORY_ITERATOR
+ #endif
+ 

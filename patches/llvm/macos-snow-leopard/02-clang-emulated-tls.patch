@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+# Enable explicit -femulated-tls for x86 macOS before 10.7.
+--- a/clang/include/clang/Basic/TargetOptions.h
++++ b/clang/include/clang/Basic/TargetOptions.h
+@@ -71,6 +71,9 @@
+   /// If given, enables support for __int128_t and __uint128_t types.
+   bool ForceEnableInt128 = false;
+ 
++  /// Allow compiler-emulated TLS on Darwin targets without native TLS.
++  bool EmulatedTLS = false;
++
+   /// \brief If enabled, use 32-bit pointers for accessing const/local/shared
+   /// address space.
+   bool NVPTXUseShortPointers = false;
+--- a/clang/lib/Frontend/CompilerInvocation.cpp
++++ b/clang/lib/Frontend/CompilerInvocation.cpp
+@@ -5184,6 +5184,7 @@
+ 
+   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
+                    Res.getFrontendOpts().OutputFile, LangOpts);
++  Res.getTargetOpts().EmulatedTLS = Res.getCodeGenOpts().EmulatedTLS;
+ 
+   // FIXME: Override value name discarding when asan or msan is used because the
+   // backend passes depend on the name of the alloca in order to print out
+--- a/clang/lib/Basic/Targets/OSTargets.h
++++ b/clang/lib/Basic/Targets/OSTargets.h
+@@ -82,7 +82,8 @@
+     this->TLSSupported = false;
+ 
+     if (Triple.isMacOSX())
+-      this->TLSSupported = !Triple.isMacOSXVersionLT(10, 7);
++      this->TLSSupported = !Triple.isMacOSXVersionLT(10, 7) ||
++                           (Triple.isX86() && Opts.EmulatedTLS);
+     else if (Triple.isiOS()) {
+       // 64-bit iOS supported it from 8 onwards, 32-bit device from 9 onwards,
+       // 32-bit simulator from 10 onwards.
+--- a/clang/lib/CodeGen/ItaniumCXXABI.cpp
++++ b/clang/lib/CodeGen/ItaniumCXXABI.cpp
+@@ -2856,7 +2856,11 @@
+   const char *Name = "__cxa_atexit";
+   if (TLS) {
+     const llvm::Triple &T = CGF.getTarget().getTriple();
+-    Name = T.isOSDarwin() ?  "_tlv_atexit" : "__cxa_thread_atexit";
++    const bool LegacyMacOS = T.isMacOSX() && T.isX86() &&
++                            T.isMacOSXVersionLT(10, 7) &&
++                            CGF.getTypes().getCodeGenOpts().EmulatedTLS;
++    Name = T.isOSDarwin() && !LegacyMacOS ? "_tlv_atexit"
++                                         : "__cxa_thread_atexit";
+   }
+ 
+   // We're assuming that the destructor function is something we can

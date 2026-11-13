@@ -57,6 +57,58 @@ VMware, 494, 496 and 496 checks, none failed; a 10.11 build earlier on real
 OS X 10.11.6. arm64 is built and audited, not run
 ([platforms](../platforms.md#qt-51519)).
 
+### LLVM 21.1.8 on i386
+
+Clang 21.1.8 compiled a C++23 language probe for Snow Leopard. The
+existing cctools linker produced a 32-bit Mach-O with a 10.6 deployment
+target. The LLVM Mach-O linker rejects `-arch i386`, so this build still
+needs cctools.
+
+The static libc++ and libc++abi 21.1.8 probe builds against the 10.7 SDK
+with the 10.6 deployment target. It uses the older Darwin clock APIs
+and libc++'s directory-iterator fallback for `std::filesystem::remove_all`
+([libc++ patch](../../patches/llvm/macos-snow-leopard/01-legacy-darwin-filesystem-and-clocks.patch)).
+The stock compiler rejects `thread_local` below macOS 10.7 even with
+`-femulated-tls`. On a 10.7 diagnostic target it emitted emulated storage
+access but called `_tlv_atexit` for destructors. The LLVM profile enables
+emulated TLS for x86 at the 10.6 deployment target and uses a pthread-based
+runtime to register destructors. The standalone probe and all nine strict
+C++23 examples compiled and linked. The Snow Leopard 10.6.3 guest passed
+all 25 C++23 checks and seven GUI examples.
+([Clang patch](../../patches/llvm/macos-snow-leopard/02-clang-emulated-tls.patch),
+[TLS runtime patch](../../patches/llvm/macos-snow-leopard/03-runtime-emulated-tls.patch))
+
+The initial full build reached Qt Declarative. Clang 21 rejected the
+QML JIT's `NoRegister` initializer because it converted `-1` to a register
+enum outside its representable range. The successful Qt Declarative retry
+made that value representable. The current build reuses the signed enum
+patch already used by the other LLVM x86 profiles.
+([QML patch](../../patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch))
+
+The next build reached QtScript, where JavaScriptCore's Darwin `ceil`
+macro renamed symbols in libc++ 21 headers. The current retry uses an
+explicit JavaScriptCore helper and retains the signed-zero workaround.
+([QtScript patch](../../patches/qt5/macos-llvm/01-qtscript-use-ceil-helper.patch))
+
+The QtScript retry passed that error and reached Qt Location. The bundled
+Mapbox GL failed in its RapidJSON and Boost headers under Clang 21. The
+next build reuses the Clang 21 patch from the Linux arm64 profile with
+Mapbox GL enabled.
+([Mapbox GL patch](../../patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch))
+
+Build the SDK and strict C++23 examples from the repository with the local
+`qt5-macos-i386:latest` platform image and the shared upstream LLVM
+21.1.8 compiler image.
+
+```sh
+make qt5-macos-i386-llvm-examples PARALLEL_JOBS=3
+```
+
+The repository command rebuilt the SDK and strict examples. The exported binaries passed the artifact audit.
+
+The resulting SDK and nine ordinary examples passed the artifact audit.
+([build result](../results/qt5-macos-i386-llvm21-snowleopard-20261112.md))
+
 ## Limits
 
 - Real 10.6 hardware, a 32-bit-only Mac and Apple silicon have not run the

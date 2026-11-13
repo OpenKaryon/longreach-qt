@@ -1,0 +1,550 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-11",
+  "target": "qt5-linux-amd64-llvm",
+  "status": "PASS",
+  "method": "Local staged SDK build and sequential QEMU system run. The repository Dockerfile is a separate reproduction path.",
+  "source_base": "79c968155b939dc16dcbd232dab726223ea965ce",
+  "qt": "5.15.19",
+  "qt_source_sha256": "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae",
+  "llvm": "21.1.8",
+  "llvm_source_sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142",
+  "libcxx_version": 210108,
+  "cxx_language_mode": 202302,
+  "license_profile": "gpl-enabled",
+  "images": {
+    "qt5-linux-amd64:llvm21-lucid-sdk": "sha256:195108e2e4677f06c51f01714927bd378a450b6efd51283054e1ea1ec397e4f5",
+    "qt5-linux-amd64:latest": "sha256:74d2abc898eb4f327e4b85a8aa7932dbf65dbce7b9fbc72b787f54e28a61d603",
+    "longreach-llvm:21.1.8-compiler": "sha256:bfa3155636e000133c55ecbb6e7a9482d6f301f0c08c5688491a931950d91c65",
+    "longreach-run-qemu:lucid-xvfb": "sha256:1569ef7321bc50f162a968b34063cae3a0196d6808ebd89036320bf3e914b83d"
+  },
+  "guest": {
+    "os": "Ubuntu 10.04 LTS",
+    "kernel": "Linux (none) 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
+    "architecture": "amd64",
+    "libc": "ldd (Ubuntu EGLIBC 2.11.1-0ubuntu7) 2.11.1",
+    "kernel_package": "linux-image-2.6.32-38-generic_2.6.32-38.83_amd64.deb",
+    "kernel_package_sha256": "a5badc2ee2729472b589225359709876f1d1752efdd37e94c3c6aca25c8491a0",
+    "userland": "Lucid packages verified by debootstrap, unpacked into a test initramfs.",
+    "display": "Debian 12 Xvfb over QEMU user networking inside an isolated container, GLX disabled."
+  },
+  "static_qt_archives": 90,
+  "matches_existing_module_set": true,
+  "max_glibc_symbol": "2.10",
+  "glibc_symbols_by_executable": {
+    "qt-selftest": "2.10",
+    "widgets-gallery": "2.9",
+    "graphics-gallery": "2.9",
+    "painting-lab": "2.9",
+    "multimedia-lab": "2.10",
+    "gl-heavy-gallery": "2.10",
+    "quick-qml-gallery": "2.10",
+    "network-gui": "2.10",
+    "smoke-runner": "2.9"
+  },
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "gui": {
+    "apps_passed": 7,
+    "checks": {
+      "passed": 216,
+      "failed": 0,
+      "skipped": 27
+    },
+    "applications": [
+      {
+        "application": "widgets-gallery",
+        "passed": 90,
+        "failed": 0,
+        "skipped": 5
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 2
+      },
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 39,
+        "failed": 0,
+        "skipped": 7
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 30,
+        "failed": 0,
+        "skipped": 13
+      },
+      {
+        "application": "network-gui",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "executables_sha256": {
+    "gl-heavy-gallery": "ef6f81390f27e7b382f0140f11962587b9e9957c6f3acbda67810705c0d4ad10",
+    "graphics-gallery": "43d8ace11475914ea3b97d8060a42695472945e99a9fd547a0a315968f79ba06",
+    "multimedia-lab": "af19142bd833523b452d31e9f6f4a7e5e34248ddf43c6cc40144c370d300fc6d",
+    "network-gui": "c5f40c52208dab9234cc1ee9d4f169467129e2350795af49c069bb55f7b743e2",
+    "painting-lab": "66f715f8f66ab349c7fb26eea0ff90f66f700e439487f778e0e316c7fbc15722",
+    "qt-selftest": "bb30a00eb3d0bb9b030cdee4fb53e46e9bee73a629527b45c4cdc0b7a27935a6",
+    "quick-qml-gallery": "9dc8c8d3e0039a312f17650b808ea9b130563b05ad28597a9734fbd32fb8462a",
+    "smoke-runner": "7b9ddc6b84fd9da56afbefdbc2f1181e66c4d9d352e835072caf78e82ebb411c",
+    "widgets-gallery": "3ef830b1ded08403ebb4c1619b8102eea85c6ca73e71bc0bd900e7162ae8d1e9"
+  },
+  "repository_build": {
+    "command": "make qt5-linux-amd64-llvm-examples PARALLEL_JOBS=4",
+    "image": "qt5-linux-amd64:llvm21",
+    "image_id": "sha256:a503572a295152626e64ab1ba5d9a10505f812a1d6eea74c2eaff828408849d1",
+    "status": "PASS",
+    "guest_kernel": "Linux (none) 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
+    "modern_cpp": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "gui": {
+      "apps_passed": 7,
+      "checks": {
+        "passed": 216,
+        "failed": 0,
+        "skipped": 27
+      },
+      "applications": [
+        {
+          "application": "widgets-gallery",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 7
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 30,
+          "failed": 0,
+          "skipped": 13
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "executables_sha256": {
+      "gl-heavy-gallery": "c275b23832e29b585fff03062b81ee10b1758f671c93d09d7a8fc8fed780fec5",
+      "graphics-gallery": "c398d719df8c243e32d8f1475d6d6bf978288df5ae9739a20417c376c5907fd5",
+      "multimedia-lab": "cd5d6b2bd17ccc5f05bde0cce52596561771813bb23964ce925d5495c990ff57",
+      "network-gui": "0931463e23593bfeb478246d3bf115c4100515499925c113eb291d4f222104f9",
+      "painting-lab": "6e31ee040f1168ca5a859cb99b135668d3fb813d19e39122768abc416b2236e2",
+      "qt-selftest": "22612b985d6b887a119df8e254ebbfb1d5ccb353640c201ceb81b58a348b7461",
+      "quick-qml-gallery": "fa1de2ac1dff7f5e89a5748c32afcb3004045599fce452db8f9e9e9b8243ccb8",
+      "smoke-runner": "287d5057a1e114dd54cef8f782824d1d87e16d9b27be1ca8ff8cb1bb0275f31d",
+      "widgets-gallery": "36f6f0e9ecc51e9bb1bc6802c47991f3619df449dbcd3d0f91ff505740fc0bb6"
+    }
+  },
+  "quick3d_repository_build": {
+    "command": "make qt5-linux-amd64-llvm-examples PARALLEL_JOBS=3",
+    "status": "PASS",
+    "buildkit_ref": "xhileuvo8gqvotnbghunvwscr",
+    "buildkit_duration": "1h11m50.046s",
+    "image_id": "sha256:febd0563c8262653aebc882475b94dbe9648a3e45f2604f36309070f5a22ca17",
+    "matching_static_library_and_plugin_paths": 196,
+    "matching_sdk_tool_paths": 42,
+    "matching_qmake_module_files": 162,
+    "matching_qmake_feature_entries": 324,
+    "tool_max_glibc_symbol": {
+      "balsam": "2.10",
+      "meshdebug": "2.10"
+    },
+    "executables_sha256": {
+      "gl-heavy-gallery": "c275b23832e29b585fff03062b81ee10b1758f671c93d09d7a8fc8fed780fec5",
+      "graphics-gallery": "c398d719df8c243e32d8f1475d6d6bf978288df5ae9739a20417c376c5907fd5",
+      "multimedia-lab": "cd5d6b2bd17ccc5f05bde0cce52596561771813bb23964ce925d5495c990ff57",
+      "network-gui": "0931463e23593bfeb478246d3bf115c4100515499925c113eb291d4f222104f9",
+      "painting-lab": "6e31ee040f1168ca5a859cb99b135668d3fb813d19e39122768abc416b2236e2",
+      "qt-selftest": "22612b985d6b887a119df8e254ebbfb1d5ccb353640c201ceb81b58a348b7461",
+      "quick-qml-gallery": "0caceef38332698580f2f9e1e05e06d65337aa95860e766d32d4710d67b81d60",
+      "smoke-runner": "287d5057a1e114dd54cef8f782824d1d87e16d9b27be1ca8ff8cb1bb0275f31d",
+      "widgets-gallery": "36f6f0e9ecc51e9bb1bc6802c47991f3619df449dbcd3d0f91ff505740fc0bb6"
+    },
+    "identical_to_lucid_runtime_build": [
+      "gl-heavy-gallery",
+      "graphics-gallery",
+      "multimedia-lab",
+      "network-gui",
+      "painting-lab",
+      "qt-selftest",
+      "smoke-runner",
+      "widgets-gallery"
+    ],
+    "quick_qml_gallery_elf_audit": {
+      "matching_dynamic_library_paths": 14,
+      "baseline_dynamic_imports": 604,
+      "candidate_dynamic_imports": 618,
+      "added_strong_imports_found_in_lucid": {
+        "_IO_getc@GLIBC_2.2.5": "libc-2.11.1.so",
+        "atanf@GLIBC_2.2.5": "libm-2.11.1.so",
+        "atof@GLIBC_2.2.5": "libc-2.11.1.so",
+        "fputwc@GLIBC_2.2.5": "libc-2.11.1.so",
+        "fseeko@GLIBC_2.2.5": "libc-2.11.1.so",
+        "ftello@GLIBC_2.2.5": "libc-2.11.1.so",
+        "getwc@GLIBC_2.2.5": "libc-2.11.1.so",
+        "isalpha@GLIBC_2.2.5": "libc-2.11.1.so",
+        "remove@GLIBC_2.2.5": "libc-2.11.1.so",
+        "setbuf@GLIBC_2.2.5": "libc-2.11.1.so",
+        "strcasecmp@GLIBC_2.2.5": "libc-2.11.1.so",
+        "ungetc@GLIBC_2.2.5": "libc-2.11.1.so",
+        "ungetwc@GLIBC_2.2.5": "libc-2.11.1.so",
+        "vsprintf@GLIBC_2.2.5": "libc-2.11.1.so"
+      },
+      "lucid_library_sha256": {
+        "libc-2.11.1.so": "237f982b047ffdf736d8fd482b3de61cfb92b3f6ea371cfb3bd3cb441397c97a",
+        "libm-2.11.1.so": "973b58ade74013610126afaac29005a0e27e4a574186e57cc73d59acea394ad4"
+      }
+    },
+    "lucid_userspace_runtime": {
+      "application": "quick-qml-gallery",
+      "status": "PASS",
+      "method": "Ubuntu 10.04 amd64 userspace under QEMU user mode on the WSL2 host kernel",
+      "qemu_user_version": "7.2.22 (Debian 1:7.2+dfsg-7+deb12u18+b3)",
+      "qemu_user_sha256": "8f2e8d5017b23a877fdf52e4021e6348bb5ad92306dd0d0615159ab6276da442",
+      "gui": "Debian 12 Xvfb outside the chroot with GLX disabled",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 13
+    },
+    "lucid_kernel_runtime": {
+      "kernel": "Linux (none) 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
+      "method": "QEMU system mode, Ubuntu 10.04 userland, external Xvfb with GLX disabled",
+      "modern_cpp": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "applications": [
+        {
+          "application": "gl-heavy-gallery",
+          "status": "PASS",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 7
+        },
+        {
+          "application": "graphics-gallery",
+          "status": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "status": "PASS",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2
+        },
+        {
+          "application": "network-gui",
+          "status": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "painting-lab",
+          "status": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "status": "FAIL",
+          "passed": 29,
+          "failed": 1,
+          "skipped": 13
+        },
+        {
+          "application": "widgets-gallery",
+          "status": "PASS",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5
+        }
+      ],
+      "failure": "qml/visual-files-compile: qtquickcontrols2fusionstyleplugin not found",
+      "retries_with_identical_binaries": [
+        {
+          "attempt": 1,
+          "status": "PASS",
+          "modern_cpp": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0
+          },
+          "applications": [
+            {
+              "application": "gl-heavy-gallery",
+              "passed": 39,
+              "failed": 0,
+              "skipped": 7
+            },
+            {
+              "application": "graphics-gallery",
+              "passed": 32,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "multimedia-lab",
+              "passed": 2,
+              "failed": 0,
+              "skipped": 2
+            },
+            {
+              "application": "network-gui",
+              "passed": 7,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "painting-lab",
+              "passed": 16,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "quick-qml-gallery",
+              "passed": 30,
+              "failed": 0,
+              "skipped": 13
+            },
+            {
+              "application": "widgets-gallery",
+              "passed": 90,
+              "failed": 0,
+              "skipped": 5
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "status": "PASS",
+          "modern_cpp": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0
+          },
+          "applications": [
+            {
+              "application": "gl-heavy-gallery",
+              "passed": 39,
+              "failed": 0,
+              "skipped": 7
+            },
+            {
+              "application": "graphics-gallery",
+              "passed": 32,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "multimedia-lab",
+              "passed": 2,
+              "failed": 0,
+              "skipped": 2
+            },
+            {
+              "application": "network-gui",
+              "passed": 7,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "painting-lab",
+              "passed": 16,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "quick-qml-gallery",
+              "passed": 30,
+              "failed": 0,
+              "skipped": 13
+            },
+            {
+              "application": "widgets-gallery",
+              "passed": 90,
+              "failed": 0,
+              "skipped": 5
+            }
+          ]
+        },
+        {
+          "attempt": 3,
+          "status": "PASS",
+          "modern_cpp": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0
+          },
+          "applications": [
+            {
+              "application": "gl-heavy-gallery",
+              "passed": 39,
+              "failed": 0,
+              "skipped": 7
+            },
+            {
+              "application": "graphics-gallery",
+              "passed": 32,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "multimedia-lab",
+              "passed": 2,
+              "failed": 0,
+              "skipped": 2
+            },
+            {
+              "application": "network-gui",
+              "passed": 7,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "painting-lab",
+              "passed": 16,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "quick-qml-gallery",
+              "passed": 30,
+              "failed": 0,
+              "skipped": 13
+            },
+            {
+              "application": "widgets-gallery",
+              "passed": 90,
+              "failed": 0,
+              "skipped": 5
+            }
+          ]
+        },
+        {
+          "attempt": 4,
+          "status": "PASS",
+          "modern_cpp": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0
+          },
+          "applications": [
+            {
+              "application": "gl-heavy-gallery",
+              "passed": 39,
+              "failed": 0,
+              "skipped": 7
+            },
+            {
+              "application": "graphics-gallery",
+              "passed": 32,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "multimedia-lab",
+              "passed": 2,
+              "failed": 0,
+              "skipped": 2
+            },
+            {
+              "application": "network-gui",
+              "passed": 7,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "painting-lab",
+              "passed": 16,
+              "failed": 0,
+              "skipped": 0
+            },
+            {
+              "application": "quick-qml-gallery",
+              "passed": 30,
+              "failed": 0,
+              "skipped": 13
+            },
+            {
+              "application": "widgets-gallery",
+              "passed": 90,
+              "failed": 0,
+              "skipped": 5
+            }
+          ]
+        }
+      ],
+      "first_run_status": "FAIL",
+      "status": "INTERMITTENT",
+      "last_run_status": "PASS",
+      "fusion_diagnostic_run": {
+        "kernel": "2.6.32-38-generic",
+        "application": "quick-qml-gallery",
+        "qml_import_trace": true,
+        "same_binary_sha256": "0caceef38332698580f2f9e1e05e06d65337aa95860e766d32d4710d67b81d60",
+        "sequential_invocations": {
+          "passed": 20,
+          "failed": 0
+        },
+        "observed_library_import": "QtQuick.Controls.Fusion",
+        "original_failure_reproduced": false
+      }
+    }
+  }
+}

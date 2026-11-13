@@ -143,6 +143,30 @@ qt5-linux-arm64-llvm qt5-linux-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywher
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/arm64/Dockerfile-llvm -t $(QT5_ARM64_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19)
 
+# Lucid needs LLVM runtimes for each architecture at the glibc 2.11 floor.
+QT5_LUCID_LLVM_ARCH = $(if $(filter qt5-linux-i386-llvm%,$@),i386,amd64)
+QT5_LUCID_LLVM_IMAGE = qt5-linux-$(QT5_LUCID_LLVM_ARCH):llvm21
+QT5_LUCID_LLVM_SYSROOT ?= qt5-linux-$(QT5_LUCID_LLVM_ARCH):latest
+QT5_LUCID_LLVM_SCANNER ?= qt5-linux-amd64:latest
+QT5_LUCID_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
+QT5_LUCID_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
+    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
+    --build-arg LUCID_ARCH=$(QT5_LUCID_LLVM_ARCH) \
+    --build-arg LUCID_IMAGE=$(QT5_LUCID_LLVM_SYSROOT) \
+    --build-arg LUCID_SCANNER_IMAGE=$(QT5_LUCID_LLVM_SCANNER) \
+    --build-arg LLVM_COMPILER_IMAGE=$(QT5_LUCID_LLVM_COMPILER) \
+    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+QT5_LUCID_LLVM_TARGETS := qt5-linux-amd64-llvm
+.PHONY: $(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS))
+BUILD_TARGETS += $(QT5_LUCID_LLVM_TARGETS)
+$(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS)): $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(sort $(QT5_LUCID_LLVM_SYSROOT) $(QT5_LUCID_LLVM_SCANNER) $(QT5_LUCID_LLVM_COMPILER))
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_LUCID_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/amd64/Dockerfile-llvm -t $(QT5_LUCID_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_LUCID_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-lucid/include/openssl/opensslv.h)
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
@@ -185,12 +209,16 @@ QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
 QT5_TESTS_NAME := tests-$(subst :,-,$(QT5_IMAGE))
 QT5_TESTS_OUT := $(ARTIFACTS_DIR)/$(QT5_TESTS_NAME)
 QT5_TESTS_PACKAGE := $(QT5_TESTS_OUT).tar.gz
+ifneq ($(filter qt5-linux-amd64:llvm21,$(QT5_IMAGE)),)
+QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-lucid/include/openssl/opensslv.h
+endif
+QT5_TESTS_OPENSSL_ARG = $(if $(QT5_TESTS_OPENSSL_HEADER),--openssl-header "$(QT5_TESTS_OPENSSL_HEADER)",--openssl-version "$(OPENSSL_VERSION)")
 
 qt5-extract-tests:
 	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(QT5_TESTS_OUT)"
 	docker run --rm -v "$(CURDIR)/$(QT5_TESTS_OUT):/out" -v "$(CURDIR)/scripts:/scripts:ro" \
 		$(QT5_IMAGE) "bash /scripts/tests/extract.sh"
-	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT5_TESTS_OUT)" --image "$(QT5_IMAGE)" --qt-version "$(QT5_VERSION)" --openssl-version "$(OPENSSL_VERSION)" --license-profile "$(LICENSE_PROFILE)"
+	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT5_TESTS_OUT)" --image "$(QT5_IMAGE)" --qt-version "$(QT5_VERSION)" $(QT5_TESTS_OPENSSL_ARG) --license-profile "$(LICENSE_PROFILE)"
 	@echo "-> $(QT5_TESTS_OUT)"
 
 qt5-package-tests: qt5-extract-tests

@@ -6,6 +6,12 @@ Qt archives in `qt5-linux-arm64:llvm21`, including Qt Wayland Client and
 Compositor. The SDK uses the existing GPL-enabled profile, with QtWebEngine
 excluded. Qt Location retains its Mapbox GL plugin.
 
+The LLVM SDK retains all 196 static library and plugin paths and all
+163 qmake module files from the previous arm64 SDK. It also builds
+EGL support, EGLFS, XCB EGL integration and Wayland DMA-BUF and DRM
+EGL integrations. The JSON record lists the 11 added archive paths
+and two additional private qmake module files.
+
 The QtQml ARM64 register enum has a signed underlying type so Clang can
 represent the invalid-register sentinel. The Mapbox patch deletes an invalid
 assignment operator on a RapidJSON type with const fields, gives the Boost conversion

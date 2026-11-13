@@ -29,6 +29,19 @@ case "$target" in
         triple=x86_64-unknown-linux-gnu
         compiler_flags=(--gcc-toolchain=/opt/rh/devtoolset-11/root/usr -pthread)
         ;;
+    linux-lucid-amd64|linux-lucid-i386)
+        cpu=x86_64
+        if [ "$target" = linux-lucid-i386 ]; then cpu=i686; fi
+        triple=$cpu-unknown-linux-gnu
+        sysroot=/opt/sysroot-lucid
+        compiler_flags=(--sysroot="$sysroot" -pthread -nostdinc
+                        -isystem "$llvm/lib/clang/21/include" -isystem "$sysroot/usr/include"
+                        -B"$sysroot/usr/lib/" -L"$sysroot/usr/lib" -L"$sysroot/lib"
+                        -Wl,-rpath-link,"$sysroot/lib:$sysroot/usr/lib")
+        cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR="$cpu"
+                    -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
+        link_flags='-fuse-ld=lld -no-pie -Wl,--threads=2'
+        ;;
     linux-arm64)
         triple=aarch64-unknown-linux-gnu
         sysroot=/opt/sysroot-arm64
@@ -185,7 +198,9 @@ cp "${build_root}/build-probe-$target/cxx23-probe$exe_suffix" "$binary"
 export PATH="$llvm/bin:$PATH"
 case "$target" in
     linux-*)
-        python3 /src/scripts/build/qt5-lucid/max-glibc.py "$binary" 2.17
+        glibc_floor=2.17
+        if [[ "$target" = linux-lucid-* ]]; then glibc_floor=2.11; fi
+        python3 /src/scripts/build/qt5-lucid/max-glibc.py "$binary" "$glibc_floor"
         readelf -d "$binary" | grep NEEDED | tee "/out/$target/dependencies.log"
         if grep -E 'lib(c\+\+|stdc\+\+|gcc_s|unwind)' "/out/$target/dependencies.log"; then
             echo 'unexpected shared C++ runtime dependency' >&2
@@ -193,6 +208,10 @@ case "$target" in
         fi
         if [ "$target" = linux-amd64 ]; then
             timeout 60 "$binary" | tee "/out/$target/run.log"
+        elif [[ "$target" = linux-lucid-* ]]; then
+            # The native loader requires vsyscall emulation, absent on WSL2.
+            # The probe runs in Lucid separately from the SDK image build.
+            exit 0
         else
             timeout 60 env -u LD_LIBRARY_PATH qemu-aarch64-static -L "$sysroot" "$binary" \
                 | tee "/out/$target/run.log"

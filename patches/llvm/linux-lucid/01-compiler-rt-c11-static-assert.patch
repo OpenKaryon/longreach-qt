@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Old glibc's assert.h has no C11 static_assert macro.
+--- a/compiler-rt/lib/builtins/cpu_model/x86.c
++++ b/compiler-rt/lib/builtins/cpu_model/x86.c
+@@ -1157,8 +1157,8 @@
+   unsigned Vendor;
+   unsigned Model, Family;
+   unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
+-  static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
+-  static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
++  _Static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
++  _Static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
+ 
+   // This function needs to run just once.
+   if (__cpu_model.__cpu_vendor)

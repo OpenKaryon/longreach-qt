@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+# Build the Qt Quick 3D asset importers and tools for Lucid x86.
+diff --git a/.gitmodules b/.gitmodules
+--- a/.gitmodules
++++ b/.gitmodules
+@@ -399,6 +399,7 @@
+ 	repoType = replaced
+ [submodule "qtquick3d"]
+ 	depends = qtbase qtdeclarative
++	serialize = qtwayland
+ 	path = qtquick3d
+ 	url = ../tqtc-qtquick3d.git
+ 	alias = qt/qtquick3d
+diff --git a/qtquick3d/src/plugins/plugins.pro b/qtquick3d/src/plugins/plugins.pro
+--- a/qtquick3d/src/plugins/plugins.pro
++++ b/qtquick3d/src/plugins/plugins.pro
+@@ -1,6 +1,6 @@
+ TEMPLATE = subdirs
+ 
+-# Only build import plugins on platforms that would run tooling
+-!integrity:!android|android_app:!wasm:!cross_compile {
++# Keep the asset importers in the Lucid x86 cross-built SDK.
++!integrity:!android|android_app:!wasm {
+     SUBDIRS = assetimporters
+ }
+diff --git a/qtquick3d/tools/tools.pro b/qtquick3d/tools/tools.pro
+--- a/qtquick3d/tools/tools.pro
++++ b/qtquick3d/tools/tools.pro
+@@ -1,7 +1,7 @@
+ TEMPLATE = subdirs
+ 
+-# Only build on platforms that would run tooling
+-!integrity:!android|android_app:!wasm:!cross_compile {
++# Keep the Qt Quick 3D tools built for the Lucid x86 target.
++!integrity:!android|android_app:!wasm {
+     SUBDIRS = \
+         balsam \
+         meshdebug
+diff --git a/qtquick3d/src/assetimport/assetimport.pro b/qtquick3d/src/assetimport/assetimport.pro
+--- a/qtquick3d/src/assetimport/assetimport.pro
++++ b/qtquick3d/src/assetimport/assetimport.pro
+@@ -14,7 +14,7 @@
+     qtquick3dassetimportglobal_p.h \
+     qssgmeshutilities_p.h
+ 
+-!integrity:!android|android_app:!wasm:!cross_compile {
++!integrity:!android|android_app:!wasm {
+ SOURCES += \
+     qssgassetimporterfactory.cpp \
+     qssgassetimportmanager.cpp \

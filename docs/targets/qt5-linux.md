@@ -46,6 +46,34 @@ xkbcommon 0.4.1). The binaries need the same system libraries as on Lucid
 (libxcb, libX11, libGL, fontconfig, FreeType); the optional ones are stubbed
 the same way.
 
+## amd64 with LLVM 21.1.8
+
+The opt-in `qt5-linux-amd64-llvm` build uses upstream Clang and LLD with
+static compiler-rt, libunwind, libc++abi and libc++ built against the pinned
+Ubuntu 10.04 sysroot. The existing `qt5-linux-amd64:latest` image supplies
+that sysroot, OpenSSL and the native Wayland scanner. Qt uses the existing
+GPL-enabled module configuration and a Clang qmake spec. Its examples
+compile in required C++23 mode.
+
+Stage the Qt 5.15.19 and LLVM 21.1.8 archives under `downloads/`, and
+prepare `longreach-llvm:21.1.8-compiler` as described in the
+[LLVM probe guide](qt6-llvm-probes.md). From the repository root, run:
+
+```sh
+make qt5-linux-amd64-llvm-examples PARALLEL_JOBS=4
+```
+
+Use `make qt5-linux-amd64-llvm` for the SDK alone. The local image is
+`qt5-linux-amd64:llvm21`, with the SDK at `/opt/qt5-linux-amd64-llvm`
+and its CMake toolchain at `/opt/llvm-runtime-lucid/toolchain.cmake`.
+The examples target extracts the binaries to
+`artifacts/tests-qt5-linux-amd64-llvm21/`.
+
+The local staged SDK build passed all 25 required C++23 checks and all
+seven GUI examples under Ubuntu's 2.6.32 kernel and Lucid userland in QEMU.
+The [run record](../results/qt5-linux-amd64-llvm21-lucid-20261111.md) describes the display setup
+and the scope of the run.
+
 ## arm64 with LLVM 21.1.8
 
 The opt-in `qt5-linux-arm64-llvm` target builds the static GPL-enabled SDK

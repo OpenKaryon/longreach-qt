@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+# Give the private x86 register enum a signed type for the -1 sentinel.
+--- a/qtdeclarative/src/3rdparty/masm/assembler/X86Assembler.h
++++ b/qtdeclarative/src/3rdparty/masm/assembler/X86Assembler.h
+@@ -42,7 +42,7 @@
+ inline bool CAN_SIGN_EXTEND_8_32(int32_t value) { return value == (int32_t)(signed char)value; }
+ 
+ namespace X86Registers {
+-    typedef enum {
++    typedef enum : int {
+         eax,
+         ecx,
+         edx,

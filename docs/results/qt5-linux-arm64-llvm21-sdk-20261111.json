@@ -18,6 +18,29 @@
     "arm64v8/ubuntu:14.04": "sha256:5ed16aa332467821529d451800e6fe599d83e30471e91b096752f8696d9bf6e9"
   },
   "static_qt_archives": 93,
+  "sdk_comparison": {
+    "baseline_static_library_and_plugin_paths": 196,
+    "llvm_static_library_and_plugin_paths": 207,
+    "added_static_library_and_plugin_paths": [
+      "lib/libQt5EglFSDeviceIntegration.a",
+      "lib/libQt5EglSupport.a",
+      "plugins/egldeviceintegrations/libqeglfs-emu-integration.a",
+      "plugins/egldeviceintegrations/libqeglfs-x11-integration.a",
+      "plugins/platforms/libqeglfs.a",
+      "plugins/platforms/libqminimalegl.a",
+      "plugins/wayland-graphics-integration-client/libdmabuf-server.a",
+      "plugins/wayland-graphics-integration-client/libdrm-egl-server.a",
+      "plugins/wayland-graphics-integration-server/libqt-wayland-compositor-dmabuf-server-buffer.a",
+      "plugins/wayland-graphics-integration-server/libqt-wayland-compositor-drm-egl-server-buffer.a",
+      "plugins/xcbglintegrations/libqxcb-egl-integration.a"
+    ],
+    "baseline_qmake_module_files": 163,
+    "llvm_qmake_module_files": 165,
+    "added_qmake_module_files": [
+      "qt_lib_egl_support_private.pri",
+      "qt_lib_eglfsdeviceintegration_private.pri"
+    ]
+  },
   "guest": {
     "os": "Ubuntu 14.04.6 LTS",
     "architecture": "arm64",

@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 from pathlib import Path
 
@@ -24,6 +25,17 @@ def run_git(args: list[str]) -> str | None:
         return subprocess.check_output(["git", *args], text=True, stderr=subprocess.DEVNULL).strip()
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def image_openssl_version(image: str, header: str) -> str:
+    contents = subprocess.check_output(
+        ["docker", "run", "--rm", "--network=none", "--entrypoint", "cat", image, header],
+        text=True,
+    )
+    match = re.search(r'^\s*#\s*define\s+OPENSSL_VERSION_STR\s+"([^"]+)"', contents, re.MULTILINE)
+    if match is None:
+        raise ValueError(f"OPENSSL_VERSION_STR missing from {header} in {image}")
+    return match[1]
 
 
 def sha256_file(path: Path) -> str:
@@ -97,7 +109,9 @@ def main() -> int:
     parser.add_argument("--out", required=True, help="artifact directory")
     parser.add_argument("--image", required=True, help="Docker image the tests were extracted from")
     parser.add_argument("--qt-version", required=True)
-    parser.add_argument("--openssl-version", required=True)
+    openssl = parser.add_mutually_exclusive_group(required=True)
+    openssl.add_argument("--openssl-version")
+    openssl.add_argument("--openssl-header", help="OpenSSL version header in the Docker image")
     parser.add_argument("--manifest-name", default="manifest.json")
     # --kind names the kit that built the artifact. --runner keeps the report
     # file and expected-warnings document pointing at smoke-runner's.
@@ -107,6 +121,12 @@ def main() -> int:
                         default="gpl-enabled")
     parser.add_argument("--license-matrix", type=Path, default=DEFAULT_LICENSE_MATRIX)
     ns = parser.parse_args()
+    openssl_version = ns.openssl_version
+    if ns.openssl_header:
+        try:
+            openssl_version = image_openssl_version(ns.image, ns.openssl_header)
+        except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+            parser.error(str(exc))
 
     out_dir = Path(ns.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -119,7 +139,7 @@ def main() -> int:
         "generated_at": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
         "image": ns.image,
         "qt_version": ns.qt_version,
-        "openssl_version": ns.openssl_version,
+        "openssl_version": openssl_version,
         "git": {
             "commit": run_git(["rev-parse", "HEAD"]),
             "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),

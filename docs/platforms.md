@@ -84,6 +84,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | `qt5-macos-i386` | Mac OS X 10.6 (32-bit Intel) | 10.6.3, 10.7.5, 10.13.6 (VMware) | 10.6.3: 8/8, 494 passed, 0 failed, 87 skipped ([json](results/qt5-macos-i386-snowleopard-vmware-20261030.json)); 10.7.5: 8/8, 496 passed, 0 failed, 85 skipped ([json](results/qt5-macos-i386-lion-vmware-20261030.json)); 10.13.6: 8/8, 497 passed, 0 failed, 84 skipped ([json](results/qt5-macos-i386-highsierra-vmware-20261030.json)) |
 | `qt5-macos-i386-llvm` | Mac OS X 10.6 (32-bit Intel) | Mac OS X 10.6.3 (VMware) | 25/25 C++23, 7/7 GUI examples ([result](results/qt5-macos-i386-llvm21-snowleopard-20261112.md)) |
 | `qt5-macos-arm64` | macOS 11.0 | - | built and audited, not run |
+| `qt5-macos-arm64-llvm` | macOS 11.0 (Apple silicon) | - | SDK and nine strict C++23 examples built and audited. Runtime verification deferred ([result](results/qt5-macos-arm64-llvm21-20261112.md)) |
 
 ### Qt 6.8.5
 

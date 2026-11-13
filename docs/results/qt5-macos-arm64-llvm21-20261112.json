@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "target": "qt5-macos-arm64-llvm",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "min_os": "macOS 11.0",
+  "tls_backend": "SecureTransport",
+  "repository_build": {
+    "command": "make qt5-macos-arm64-llvm-examples PARALLEL_JOBS=3",
+    "status": "PASS",
+    "buildkit_ref": "5f2d4rene5h63q0felkh4y08y",
+    "buildkit_duration": "39m11.312s",
+    "image": "qt5-macos-arm64:llvm21",
+    "image_id": "sha256:926e00ac52be307888c57ede7d02b77f151b6628e4d8cd2e315e2270d11635b2",
+    "sdk_archives": 238,
+    "qmake_module_files": 155,
+    "matches_existing_archive_set": true,
+    "matches_existing_qmake_module_files": true,
+    "matches_existing_qmake_features": true,
+    "mach_o": {
+      "architecture": "arm64",
+      "deployment_target": "11.0",
+      "dynamic_libraries": "system-only"
+    },
+    "strict_cxx23_compile": "PASS",
+    "manifest_matches_image": true,
+    "executables_sha256": {
+      "gl-heavy-gallery": "df46b7dbaaa8dde36664c79153ac81c58eb35f635f933f12166adc8a6c0d1f8e",
+      "graphics-gallery": "24b73228bedc56b4e19355f470e1e2d1c4c9b94964013784d70ef7a95451bb59",
+      "multimedia-lab": "4f72df272ff3ab2e76bb9a98dfb0a3ba2fdb95e215a39fb4770cb95f62552411",
+      "network-gui": "9f3253f1da54234207d34b0c8646f6503fa21ff99901b65faebebb127e95287f",
+      "painting-lab": "f3e5cdf134578368c432cd1ae16c39ef0765d9c672a8897e4d27be3c8bd3f9a2",
+      "qt-selftest": "d4335c2f5b33c3af86ba01d88cd55ae802fa616385a0342b468bff130af261ff",
+      "quick-qml-gallery": "bcaa226e2641dc89e549ed8476ddbb47d9278ebc19a32a77ec44880e62ae8dd6",
+      "smoke-runner": "a77b781e8fffd4552145a70d72ba3506ad826228caf18bc282db4803eb8aad4d",
+      "widgets-gallery": "8eeddf343e325631da8772063e6996c9e24d26257698975d08b5ec7e8c58f4b4"
+    }
+  },
+  "strict_cxx23_runtime": "NOT_RUN",
+  "ordinary_runtime": "NOT_RUN"
+}

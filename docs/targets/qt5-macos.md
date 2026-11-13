@@ -129,6 +129,20 @@ link `__isPlatformVersionAtLeast`. The repository profile builds that
 compiler-rt helper against the 10.7 SDK for the 10.6 target. A standalone
 `@available` probe linked with the helper. Explicitly loading the static TLS archive resolved destructor registration in the audited examples.
 
+### LLVM 21.1.8 on arm64
+
+The LLVM profile uses the existing Qt 5 osxcross and 11.3 SDK, with
+Clang 21.1.8 and the static arm64 LLVM runtime from the Qt 6 toolchain
+image. Its deployment target is macOS 11.0. The recipe retains
+SecureTransport and desktop OpenGL and compiles the required C++23
+probe before building Qt.
+
+```sh
+make qt5-macos-arm64-llvm-examples PARALLEL_JOBS=3
+```
+
+The SDK and all nine strict C++23 examples built and passed the artifact audit. The archive paths, qmake modules and qmake features match the baseline arm64 SDK. Runtime verification requires Apple silicon. ([build result](../results/qt5-macos-arm64-llvm21-20261112.md))
+
 ## Limits
 
 - Real 10.6 hardware, a 32-bit-only Mac and Apple silicon have not run the

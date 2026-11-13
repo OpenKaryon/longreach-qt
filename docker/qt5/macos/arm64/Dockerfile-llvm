@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG LLVM_TOOLCHAIN_IMAGE=qt6-macos-arm64:llvm21-toolchain
+ARG MACOS_PLATFORM_IMAGE=qt5-macos-arm64:latest
+FROM ${LLVM_TOOLCHAIN_IMAGE} AS llvm
+
+# Use Qt 5's existing 11.3 SDK and osxcross; reuse only LLVM tools and runtimes.
+FROM ${MACOS_PLATFORM_IMAGE} AS toolchain
+COPY --from=llvm /opt/llvm-21 /opt/llvm-21
+COPY --from=llvm /opt/llvm-runtime-21/resource/lib/darwin/libclang_rt.osx.a /opt/llvm-21/lib/clang/21/lib/darwin/libclang_rt.osx.a
+COPY --from=llvm /opt/llvm-runtime-21/include/c++/v1 /tmp/llvm-libcxx/include
+COPY --from=llvm /opt/llvm-runtime-21/lib/libc++.a /tmp/llvm-libcxx/libc++.a
+ENV PATH=/opt/llvm-21/bin:${PATH}
+RUN --network=none set -eu; \
+    clang --version | grep -E '^clang version 21\.1\.8([[:space:]]|$)'; \
+    osxcross=/usr/local/osxcross; \
+    sdk=$(find "$osxcross/SDK" -mindepth 1 -maxdepth 1 -name 'MacOSX*.sdk' -type d); \
+    test -f "$sdk/usr/include/c++/v1/__config"; \
+    "$(cat /opt/osxcross-prefix)lipo" /tmp/llvm-libcxx/libc++.a -verify_arch arm64; \
+    rm -rf "$sdk/usr/include/c++/v1"; \
+    mv /tmp/llvm-libcxx/include "$sdk/usr/include/c++/v1"; \
+    rm -f "$sdk/usr/lib/libc++.tbd" "$sdk/usr/lib/libc++.1.tbd"; \
+    install -m 644 /tmp/llvm-libcxx/libc++.a "$sdk/usr/lib/libc++.a"; \
+    rm -rf /tmp/llvm-libcxx /usr/local/Qt-5.15 /opt/qt-smoke-bin
+
+RUN --network=none \
+    --mount=type=bind,source=scripts/tests/qt6-llvm-probes/main.cpp,target=/src/scripts/tests/qt6-llvm-probes/main.cpp \
+    --mount=type=bind,source=tests/common/moderncpp_checks.h,target=/src/tests/common/moderncpp_checks.h \
+    set -eu; \
+    prefix=$(cat /opt/osxcross-prefix); \
+    "${prefix}clang++" -std=c++23 -mmacosx-version-min=11.0 -Wl,-no_implicit_dylibs \
+        /src/scripts/tests/qt6-llvm-probes/main.cpp -o /tmp/cxx23-probe; \
+    "${prefix}lipo" /tmp/cxx23-probe -verify_arch arm64; \
+    "${prefix}otool" -l /tmp/cxx23-probe | grep -Eq '^[[:space:]]*(version|minos)[[:space:]]+11\.0(\.0)?$'; \
+    rm /tmp/cxx23-probe
+
+FROM toolchain AS build-qt
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/src/qt.tar.xz \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/all \
+    --mount=type=bind,source=patches/qt5/macos,target=/src/patches/macos \
+    --mount=type=bind,source=patches/qt5/macos-llvm,target=/src/patches/macos-llvm \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm,target=/src/patches/arm64-llvm \
+    --mount=type=bind,source=scripts/build/qt5-macos/build-qt-llvm.sh,target=/src/build-qt.sh \
+    --mount=type=cache,id=qt5-macos-arm64-llvm21-qt,target=/work,sharing=locked \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh arm64
+
+FROM toolchain AS sdk
+COPY --from=build-qt /usr/local/Qt-5.15 /usr/local/Qt-5.15
+COPY cmake/qt5/toolchain-macos-arm64.cmake /opt/longreach-llvm/cmake/toolchain.cmake
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+COPY tests /tmp/qt-smoke-tests
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/src/build-tests.sh \
+    SMOKE_CMAKE_TOOLCHAIN=/opt/longreach-llvm/cmake/toolchain.cmake \
+    SMOKE_REQUIRE_CXX23=1 PARALLEL_JOBS="$PARALLEL_JOBS" \
+    bash /src/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin

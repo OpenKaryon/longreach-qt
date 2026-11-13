@@ -256,6 +256,22 @@ qt5-macos-i386: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_S
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET=10.6 --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --target toolchain -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_TOOLCHAIN_106_IMAGE) .
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg BASE_IMAGE=$(QT5_MACOS_TOOLCHAIN_106_IMAGE) --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)" -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_I386_IMAGE) .
 
+QT5_MACOS_ARM64_LLVM_IMAGE := qt5-macos-arm64:llvm21
+QT5_MACOS_ARM64_LLVM_PLATFORM ?= qt5-macos-arm64:latest
+QT5_MACOS_ARM64_LLVM_TOOLCHAIN ?= qt6-macos-arm64:llvm21-toolchain
+QT5_MACOS_ARM64_LLVM_ARGS = --build-arg MACOS_PLATFORM_IMAGE=$(QT5_MACOS_ARM64_LLVM_PLATFORM) \
+    --build-arg LLVM_TOOLCHAIN_IMAGE=$(QT5_MACOS_ARM64_LLVM_TOOLCHAIN) \
+    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+.PHONY: qt5-macos-arm64-llvm qt5-macos-arm64-llvm-examples
+BUILD_TARGETS += qt5-macos-arm64-llvm
+qt5-macos-arm64-llvm qt5-macos-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(QT5_MACOS_ARM64_LLVM_PLATFORM) $(QT5_MACOS_ARM64_LLVM_TOOLCHAIN)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/macos/arm64/Dockerfile-llvm -t $(QT5_MACOS_ARM64_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_MACOS_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=)
+
 qt5-macos-arm64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)

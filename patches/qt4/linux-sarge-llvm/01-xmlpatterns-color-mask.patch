@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Use unsigned arithmetic for the mask so Clang can evaluate it.
+--- a/src/xmlpatterns/api/qcoloroutput_p.h
++++ b/src/xmlpatterns/api/qcoloroutput_p.h
+@@ -71,7 +71,7 @@
+             BackgroundShift = 20,
+             SpecialShift    = 20,
+             ForegroundMask  = ((1 << ForegroundShift) - 1) << ForegroundShift,
+-            BackgroundMask  = ((1 << BackgroundShift) - 1) << BackgroundShift
++            BackgroundMask  = ((1u << BackgroundShift) - 1u) << BackgroundShift
+         };
+ 
+     public:

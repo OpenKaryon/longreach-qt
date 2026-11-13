@@ -24,7 +24,7 @@ for path in sorted(glob.glob('/out/bin/*')):
     assert elf_class in header and machine in header and 'UNIX - System V' in header, path
     assert required and tuple(int(n) for n in required[-1][6:].split('.')) <= (2, 3, 2), path
     dependencies = re.findall(r'\(NEEDED\).*\[([^]]+)\]', dynamic)
-    assert not any(n.startswith(('libQt', 'libstdc++', 'libgcc_s')) for n in dependencies), path
+    assert not any(n.startswith(('libQt', 'libstdc++', 'libgcc_s', 'libc++', 'libunwind')) for n in dependencies), path
     assert not re.search(r'\((?:RPATH|RUNPATH)\)', dynamic), path
     resolved = subprocess.check_output([root + loader, '--library-path',
         root + '/lib/tls:' + root + '/lib:' + root + '/usr/lib:' + root + '/usr/X11R6/lib',

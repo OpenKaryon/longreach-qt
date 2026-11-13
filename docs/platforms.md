@@ -46,6 +46,7 @@ it has been repeated; built-only ARM targets retain that status.
 | | | Windows 7 SP1 x64 (VMware, amd64) | 8/8, 373 passed, 0 failed, 124 skipped ([json](results/qt4-win-amd64-win7-vmware-20261030.json)) |
 | `qt4-linux-i386` | Debian 3.1 Sarge (glibc 2.3.2) | Sarge, kernel 2.6.8 (QEMU) | 8/8, 361 passed, 0 failed ([json](results/qt4-linux-i386-sarge-qemu-20261013.json)); earlier 24/24 on a Sarge Xfce desktop ([json](results/qt4-sarge-desktop-20261002.json)) |
 | | | Ubuntu 16.04 i386, Debian 12 i386 (containers) | 8/8, 366 passed, 0 failed ([Ubuntu](results/qt4-linux-i386-ubuntu-16.04-i386-docker-20261011.json), [Debian](results/qt4-linux-i386-debian-12-i386-docker-20261011.json)) |
+| `qt4-linux-i386-llvm` | Debian 3.1 Sarge i386 (glibc 2.3.2), Pentium III | Sarge, kernel 2.6.8 (QEMU) | 8/8 ordinary applications and 25/25 C++23 checks without skips. QtScript uses the interpreter. ([result](results/qt4-linux-i386-sarge-llvm21-20261113.md)) |
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
 | | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |

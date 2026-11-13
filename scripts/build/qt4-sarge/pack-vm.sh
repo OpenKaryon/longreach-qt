@@ -3,7 +3,19 @@
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
 root=/work/sysroot
-mkdir -p /work/kernel
+mkdir -p /work/kernel "$root/dev"
+if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
+    mkdir -p "$root/opt/apps"
+    install -m 755 /out/bin/* "$root/opt/apps/"
+    for directory in "$root"/usr/X11R6/lib/X11/fonts/*; do
+        [ -d "$directory" ] || continue
+        mkfontdir "$directory"
+        aliases="$root/etc/X11/fonts/$(basename "$directory")"
+        if compgen -G "$aliases/*.alias" > /dev/null; then
+            cat "$aliases"/*.alias > "$directory/fonts.alias"
+        fi
+    done
+fi
 dpkg-deb -x /kernels/kernel-image-2.6.8-4-386_2.6.8-17sarge1_i386.deb /work/kernel
 dpkg-deb -x /kernels/net-tools_1.60-10_i386.deb "$root"
 for package in /kernels/mount_*.deb /kernels/libblkid1_*.deb /kernels/libuuid1_*.deb; do
@@ -13,14 +25,21 @@ dpkg-deb -x /kernels/module-init-tools_3.2-pre1-2_i386.deb "$root"
 mkdir -p "$root/lib/modules/2.6.8-4-386/kernel/net/unix" "$root/lib/modules/2.6.8-4-386/kernel/net/ipv6"
 cp /work/kernel/lib/modules/2.6.8-4-386/kernel/net/unix/unix.ko "$root/lib/modules/2.6.8-4-386/kernel/net/unix/"
 cp /work/kernel/lib/modules/2.6.8-4-386/kernel/net/ipv6/ipv6.ko "$root/lib/modules/2.6.8-4-386/kernel/net/ipv6/"
+if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
+    printf '%s\n' /lib/modules/2.6.8-4-386/kernel/net/{unix/unix,ipv6/ipv6}.ko: \
+        > "$root/lib/modules/2.6.8-4-386/modules.dep"
+fi
 python /scripts/relativize-sysroot.py
 cp /work/kernel/boot/vmlinuz-2.6.8-4-386 /out/
 cp /work/kernel/boot/config-2.6.8-4-386 /out/
-for item in 'console 5 1' 'ttyS0 4 64'; do
-    read -r name major minor <<< "$item"
-    [ -e "$root/dev/$name" ] || mknod -m 600 "$root/dev/$name" c "$major" "$minor"
+for item in 'console 5 1 600' 'ttyS0 4 64 600' 'null 1 3 666' 'zero 1 5 666' 'random 1 8 666' 'urandom 1 9 666'; do
+    read -r name major minor mode <<< "$item"
+    [ -e "$root/dev/$name" ] || mknod -m "$mode" "$root/dev/$name" c "$major" "$minor"
 done
 mkdir -p "$root/proc" "$root/sys"
+if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
+    touch "$root/opt/apps/.llvm-suite"
+fi
 cat > "$root/init" <<'EOF'
 #!/bin/bash
 export LD_LIBRARY_PATH=/lib/tls:/lib:/usr/lib:/usr/X11R6/lib
@@ -29,8 +48,11 @@ export HOME=/root LANG=C DISPLAY=:91
 exec </dev/console >/dev/console 2>&1
 mkdir -p /proc /sys /tmp /root /var/cache/fontconfig
 chmod 1777 /tmp
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
+mount -n -t proc proc /proc
+mount -n -t sysfs sysfs /sys
+if [ -f /opt/apps/.llvm-suite ]; then
+    echo /bin/false > /proc/sys/kernel/modprobe
+fi
 insmod /lib/modules/2.6.8-4-386/kernel/net/unix/unix.ko
 insmod /lib/modules/2.6.8-4-386/kernel/net/ipv6/ipv6.ko
 /sbin/ifconfig lo 127.0.0.1 up
@@ -41,6 +63,12 @@ cd /opt/apps
 Xvfb :91 -screen 0 1280x1024x24 -nolisten tcp > xvfb-vm.log 2>&1 &
 xpid=$!
 sleep 3
+if ! kill -0 "$xpid" 2>/dev/null; then
+    cat xvfb-vm.log
+    echo SARGE_SUITE_RESULT=1
+    echo SARGE_VM_DONE
+    while true; do sleep 60; done
+fi
 echo SARGE_SUITE_BEGIN
 ./smoke-runner --timeout=90
 result=$?
@@ -48,6 +76,13 @@ echo SARGE_SUITE_RESULT=$result
 echo SARGE_REPORT_BEGIN
 cat smoke-report.txt
 echo SARGE_REPORT_END
+if [ -f .llvm-suite ]; then
+    echo SARGE_MODERN_BEGIN
+    ./qt-selftest-cxx23 --modern-cpp
+    modern=$?
+    echo SARGE_MODERN_END
+    echo SARGE_MODERN_RESULT=$modern
+fi
 kill "$xpid"
 sync
 echo SARGE_VM_DONE

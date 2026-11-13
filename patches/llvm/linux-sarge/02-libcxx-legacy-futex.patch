@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Use libc++'s timed backoff for Linux 2.6.8.
+--- a/libcxx/src/atomic.cpp
++++ b/libcxx/src/atomic.cpp
+@@ -14,7 +14,7 @@
+ 
+ #include "include/apple_availability.h"
+ 
+-#ifdef __linux__
++#if defined(__linux__) && !defined(LONGREACH_SARGE)
+ 
+ #  include <linux/futex.h>
+ #  include <sys/syscall.h>
+@@ -51,7 +51,7 @@
+ 
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+-#ifdef __linux__
++#if defined(__linux__) && !defined(LONGREACH_SARGE)
+ 
+ static void
+ __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {

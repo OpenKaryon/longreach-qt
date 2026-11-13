@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Sarge's random header expects the kernel types to be declared first.
+--- a/libcxx/src/random.cpp
++++ b/libcxx/src/random.cpp
+@@ -28,6 +28,7 @@
+ #  include <fcntl.h>
+ #  include <unistd.h>
+ #  if __has_include(<sys/ioctl.h>) && __has_include(<linux/random.h>)
++#    include <linux/types.h>
+ #    include <linux/random.h>
+ #    include <sys/ioctl.h>
+ #  endif

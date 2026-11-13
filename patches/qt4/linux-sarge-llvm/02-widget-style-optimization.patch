@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Keep this function out of Clang optimization on Sarge i386.
+--- a/src/gui/kernel/qwidget.cpp
++++ b/src/gui/kernel/qwidget.cpp
+@@ -2749,6 +2749,9 @@
+         d->setStyle_helper(style, false);
+ }
+ 
++#ifdef __clang__
++__attribute__((optnone))
++#endif
+ void QWidgetPrivate::setStyle_helper(QStyle *newStyle, bool propagate, bool
+ #ifdef Q_WS_MAC
+         metalHack

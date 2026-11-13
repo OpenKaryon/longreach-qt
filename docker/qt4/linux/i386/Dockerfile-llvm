@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG BASE_REGISTRY=docker.io/library
+ARG SARGE_IMAGE=qt4-linux-i386:latest
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+ARG HOST_IMAGE=host-packages
+ARG SARGE_PLATFORM=linux/386
+
+FROM --platform=${SARGE_PLATFORM} ${SARGE_IMAGE} AS sarge
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS host-packages
+ARG APT_SNAPSHOT
+RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snapshot.sh \
+    sh /tmp/apt-snapshot.sh "$APT_SNAPSHOT" && apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential cmake ninja-build \
+        python3 perl pkg-config git xz-utils libxml2 libexpat1 && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM ${HOST_IMAGE} AS toolchain
+ENV PATH=/opt/llvm-21/bin:/usr/local/bin:/usr/bin:/bin CC="" CXX="" \
+    PKG_CONFIG_SYSROOT_DIR="" PKG_CONFIG_LIBDIR=""
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=sarge /work/sysroot /opt/sysroot-sarge
+COPY --from=sarge /work/openssl-1.0.2u /opt/sarge-openssl
+COPY --from=sarge /usr/lib/gcc/i686-linux-gnu/5/crtbegin.o /usr/lib/gcc/i686-linux-gnu/5/crtend.o /opt/sarge-crt/
+
+FROM toolchain AS runtime
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=patches/llvm,target=/src/patches/llvm \
+    --mount=type=bind,source=tests/common,target=/src/tests/common \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-sarge/prepare-llvm.sh
+
+FROM toolchain AS sdk-toolchain
+COPY --from=runtime /work/sarge-llvm/runtimes/linux-sarge-i386 /work/sarge-llvm/runtimes/linux-sarge-i386
+COPY --from=runtime /out/linux-sarge-i386/cxx23-probe /opt/qt4-sarge/cxx23-probe
+
+FROM sdk-toolchain AS build-qt
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/src/qt.tar.gz \
+    --mount=type=bind,source=patches/qt4,target=/src/patches/qt4 \
+    --mount=type=bind,source=scripts/build/qt4-sarge/build-qt-llvm.sh,target=/src/build-qt.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
+
+FROM sdk-toolchain AS sdk
+COPY --from=build-qt /opt/qt4-sarge-llvm-sdk /opt/qt4-sarge-llvm-sdk
+COPY --from=build-qt /work/qt4-sarge-llvm-sdk-src/LICENSE.LGPLv21 /work/qt4-sarge-llvm-sdk-src/LICENSE.LGPLv3 /work/qt4-sarge-llvm-sdk-src/LGPL_EXCEPTION.txt /opt/qt4-sarge/licenses/
+COPY --from=runtime /work/sarge-llvm/source/LICENSE.TXT /opt/qt4-sarge/licenses/LLVM-LICENSE.txt
+COPY --from=sarge /opt/qt4-sarge/licenses/OPENSSL-LICENSE.txt /opt/qt4-sarge/licenses/
+ENV PATH=/opt/qt4-sarge-llvm-sdk/bin:${PATH} QMAKESPEC=linux-sarge-llvm
+ENTRYPOINT ["/bin/bash"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build,target=/src/scripts/build \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-sarge/build-examples-llvm.sh

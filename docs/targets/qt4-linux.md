@@ -34,6 +34,36 @@ The X11 client is Xlib (Qt 4 has no xcb backend); OpenGL, fontconfig,
 FreeType, Xrender, Xrandr, Xinerama and the X input extension are used when
 the target has them.
 
+## i386 with LLVM 21.1.8
+
+The opt-in LLVM build uses upstream Clang and static libc++, libc++abi,
+libunwind and compiler-rt. Build tools run on Linux amd64. The existing
+Sarge SDK image supplies the pinned i386 sysroot, OpenSSL 1.0.2u and two
+GCC startup objects. GNU ld handles the old glibc archive's linkonce
+sections and emits a SysV ELF hash for the Sarge loader.
+
+Stage the LLVM 21.1.8 source archive and compiler image using the
+[LLVM compiler instructions](qt6-llvm-probes.md), and have
+`qt4-linux-i386:latest` available. Then run these commands in order:
+
+```sh
+make qt4-linux-i386-llvm-examples PARALLEL_JOBS=3
+make qt4-linux-i386-llvm-qemu
+```
+
+The first command builds the SDK in `qt4-linux-i386:llvm21`, exports the
+ordinary examples and strict C++23 selftest to
+`artifacts/tests-qt4-linux-i386-llvm21/bin/`, and audits them with the
+Sarge loader. Use `make qt4-linux-i386-llvm` for the SDK alone.
+The QEMU target uses the Sarge kernel packages staged under
+`downloads/debian-sarge-kernel/` and a Linux image with Python 3 and
+`qemu-system-i386`. Set `QT4_SARGE_LLVM_QEMU` to use a different local
+QEMU image. The serial log and strict C++23 log are written next to the
+binaries.
+
+See the [LLVM build and QEMU result](../results/qt4-linux-i386-sarge-llvm21-20261113.md)
+for the CPU floor, runtime changes and test scope.
+
 ## Results
 
 The i386 build passes the current suite 8/8 (361 checks) with Sarge's own

@@ -18,6 +18,7 @@ if [ -n "${LLVM_BUILD_VARIANT:-}" ]; then
     mkdir -p "$build_root"
 fi
 compiler_flags=()
+c_flags=
 cmake_args=(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 link_flags='-fuse-ld=lld -Wl,--threads=2'
 exe_suffix=
@@ -41,6 +42,20 @@ case "$target" in
         cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR="$cpu"
                     -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
         link_flags='-fuse-ld=lld -no-pie -Wl,--threads=2'
+        ;;
+    linux-sarge-i386)
+        cpu=i686
+        triple=$cpu-unknown-linux-gnu
+        sysroot=/opt/sysroot-sarge
+        compiler_flags=(--sysroot="$sysroot" -march=pentium3 -DLONGREACH_SARGE -pthread -nostdinc
+                        -isystem "$llvm/lib/clang/21/include" -isystem "$sysroot/usr/include"
+                        -B/opt/sarge-crt/ -B"$sysroot/usr/lib/" -L"$sysroot/usr/lib" -L"$sysroot/lib"
+                        -Wl,-rpath-link,"$sysroot/lib:$sysroot/usr/lib")
+        cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR="$cpu"
+                    -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
+        cmake_args+=(-DCOMPILER_RT_HAS_i386_FLOAT16=OFF -DCOMPILER_RT_HAS_i386_BFLOAT16=OFF)
+        c_flags=-fgnu89-inline
+        link_flags='--ld-path=/usr/bin/ld -no-pie -Wl,--hash-style=sysv'
         ;;
     linux-arm64)
         triple=aarch64-unknown-linux-gnu
@@ -141,7 +156,7 @@ common_args=(
     -DCMAKE_ASM_COMPILER="$llvm/bin/clang" -DCMAKE_ASM_COMPILER_TARGET="$triple"
     -DCMAKE_ASM_FLAGS="$flags"
     -DCMAKE_AR="$llvm/bin/llvm-ar" -DCMAKE_RANLIB="$llvm/bin/llvm-ranlib"
-    -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags"
+    -DCMAKE_C_FLAGS="$flags $c_flags" -DCMAKE_CXX_FLAGS="$flags"
     -DCMAKE_EXE_LINKER_FLAGS="$link_flags"
     -DLLVM_DEFAULT_TARGET_TRIPLE="$triple" -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF
 )
@@ -208,7 +223,11 @@ for language in c cxx; do
         echo '#!/bin/bash'
         printf 'exec '
         printf '%q ' "${arguments[@]}" "${linker_flags[@]}"
-        printf '"$@"\n'
+        printf '"$@"'
+        if [[ "$target" == linux-sarge-i386 && "$language" == cxx ]]; then
+            printf ' -Wl,--no-as-needed -ldl -lrt -Wl,--as-needed'
+        fi
+        printf '\n'
     } > "$prefix/bin/clang-$language"
     chmod +x "$prefix/bin/clang-$language"
 done
@@ -225,6 +244,7 @@ case "$target" in
     linux-*)
         glibc_floor=2.17
         if [[ "$target" = linux-lucid-* ]]; then glibc_floor=2.11; fi
+        if [[ "$target" = linux-sarge-* ]]; then glibc_floor=2.3.2; fi
         python3 /src/scripts/build/qt5-lucid/max-glibc.py "$binary" "$glibc_floor"
         readelf -d "$binary" | grep NEEDED | tee "/out/$target/dependencies.log"
         if grep -E 'lib(c\+\+|stdc\+\+|gcc_s|unwind)' "/out/$target/dependencies.log"; then
@@ -233,9 +253,9 @@ case "$target" in
         fi
         if [ "$target" = linux-amd64 ]; then
             timeout 60 "$binary" | tee "/out/$target/run.log"
-        elif [[ "$target" = linux-lucid-* ]]; then
+        elif [[ "$target" = linux-lucid-* || "$target" = linux-sarge-* ]]; then
             # The native loader requires vsyscall emulation, absent on WSL2.
-            # The probe runs in Lucid separately from the SDK image build.
+            # These probes run in the target guest after the image build.
             exit 0
         else
             timeout 60 env -u LD_LIBRARY_PATH qemu-aarch64-static -L "$sysroot" "$binary" \

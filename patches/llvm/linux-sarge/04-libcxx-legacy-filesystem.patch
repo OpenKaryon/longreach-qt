@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Use the existing directory iterator fallback on glibc 2.3.2.
+--- a/libcxx/src/filesystem/operations.cpp
++++ b/libcxx/src/filesystem/operations.cpp
+@@ -825,6 +825,6 @@
+ //
+ // The second implementation is used on platforms where `openat()` & friends are available,
+ // and it threads file descriptors through recursive calls to avoid such race conditions.
+-#if defined(_LIBCPP_WIN32API) || defined(__MVS__)
++#if defined(_LIBCPP_WIN32API) || defined(__MVS__) || !defined(AT_FDCWD)
+ #  define REMOVE_ALL_USE_DIRECTORY_ITERATOR
+ #endif

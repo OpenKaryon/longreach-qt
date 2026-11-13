@@ -193,6 +193,23 @@ $(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS)): $(DOWNLOAD
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_XP_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-3/include/openssl/opensslv.h)
 
+# ARM64 uses the Windows 10 UCRT toolchain already built from upstream LLVM.
+QT5_WINDOWS_ARM64_LLVM_IMAGE := qt5-win-arm64:llvm21
+QT5_WINDOWS_ARM64_LLVM_TOOLCHAIN ?= qt6-win-arm64:llvm21-toolchain
+QT5_WINDOWS_ARM64_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
+    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
+    --build-arg LLVM_TOOLCHAIN_IMAGE=$(QT5_WINDOWS_ARM64_LLVM_TOOLCHAIN) \
+    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+.PHONY: qt5-win-arm64-llvm qt5-win-arm64-llvm-examples
+BUILD_TARGETS += qt5-win-arm64-llvm
+qt5-win-arm64-llvm qt5-win-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(QT5_WINDOWS_ARM64_LLVM_TOOLCHAIN)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/arm64/Dockerfile-llvm -t $(QT5_WINDOWS_ARM64_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_WINDOWS_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=)
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)

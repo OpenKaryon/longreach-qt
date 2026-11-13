@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG BASE_REGISTRY=docker.io/library
+ARG LLVM_TOOLCHAIN_IMAGE=qt6-win-arm64:llvm21-toolchain
+FROM ${LLVM_TOOLCHAIN_IMAGE} AS cross
+
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS inputs
+ARG APT_SNAPSHOT
+ENV DEBIAN_FRONTEND=noninteractive
+RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snapshot.sh \
+    sh /tmp/apt-snapshot.sh "$APT_SNAPSHOT" && apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential cmake ninja-build python-is-python3 \
+        perl pkg-config git bison flex xz-utils libxml2 libexpat1 && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=cross /opt/llvm-21 /opt/llvm-21
+COPY --from=cross /opt/llvm-runtime-21 /opt/llvm-runtime-21
+COPY --from=cross /opt/llvm-sysroot-21 /opt/llvm-sysroot-21
+COPY --from=cross /opt/longreach-llvm/bin /opt/longreach-llvm/bin
+# The bundled qmake features spell these import library names with capitals.
+RUN --network=none cd /opt/llvm-sysroot-21/lib && \
+    ln -sfn libsecur32.a libSecur32.a && ln -sfn libcrypt32.a libCrypt32.a
+ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-21/bin:${PATH} \
+    QT_INSTALL_DIR=/opt/qt5-win-arm64-llvm \
+    CC=/opt/longreach-llvm/bin/target-cc CXX=/opt/longreach-llvm/bin/target-cxx
+
+FROM inputs AS build-qt
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt5-windows-arm64/build-qt.sh,target=/src/build-qt.sh \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/all \
+    --mount=type=bind,source=patches/qt5/windows,target=/src/patches/windows \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/src/qt.tar.xz \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
+
+FROM inputs AS sdk
+COPY --from=build-qt ${QT_INSTALL_DIR} ${QT_INSTALL_DIR}
+COPY cmake/qt5/toolchain-win-arm64-llvm.cmake /opt/longreach-llvm/cmake/toolchain.cmake
+ENV PATH=${QT_INSTALL_DIR}/bin:${PATH}
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/tmp/build-tests.sh \
+    --mount=type=bind,source=scripts/build/qt5-windows-arm64/check-examples.sh,target=/tmp/check-examples.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/check-examples.sh

@@ -70,6 +70,7 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | `qt5-win-i386-llvm` | Windows XP SP3 | Windows XP SP3 (VMware) | 25/25 C++23, 7/7 GUI examples, app-local Visual C++ 2010 runtime ([result](results/qt5-win-i386-llvm21-xp-probe-20261112.md)) |
 | `qt5-win-amd64-llvm` | Windows XP x64 SP2 | Windows 7 SP1 x64 (VMware), Windows 11 x64 | 25/25 C++23, 7/7 GUI examples, app-local Visual C++ 2010 runtime. XP x64 runtime deferred ([result](results/qt5-win-amd64-llvm21-xp-20261112.md)) |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
+| `qt5-win-arm64-llvm` | Windows 10 on ARM | - | SDK and nine strict C++23 examples built and audited. Runtime verification deferred ([result](results/qt5-win-arm64-llvm21-20261112.md)) |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 498 passed, 0 failed ([json](results/qt5-linux-amd64-lucid-vmware-20261028.json)) |
 | | | CentOS 7, Debian 13 (containers) | 8/8, 511 passed, 0 failed, 87 skipped on each ([CentOS 7](results/qt5-linux-amd64-centos-7-docker-20261030.json), [Debian 13](results/qt5-linux-amd64-debian-13-docker-20261030.json)); with GStreamer, PulseAudio, speech-dispatcher and BlueZ installed, 513 ([json](results/qt5-linux-amd64-debian-13-media-docker-20261028.json)) |
 | | | Ubuntu 16.04/24.04, Fedora 44, Arch (containers) | 8/8 on each, 474-490 passed, 0 failed ([json](results/linux-forward-20261010.json)) |

@@ -70,6 +70,21 @@ Use `make qt5-win-amd64-llvm` for the SDK alone. Both targets use
 The [build and run record](../results/qt5-win-amd64-llvm21-xp-20261112.md)
 documents the Windows 7 and Windows 11 runtime results and the deferred XP x64 check.
 
+## arm64 with LLVM 21.1.8
+
+Stage `qt6-win-arm64:llvm21-toolchain` as described in the
+[Windows ARM64 toolchain build](../results/qt6-windows-arm64-llvm21-sdk-20261111.md#reproduce).
+
+```sh
+make qt5-win-arm64-llvm-examples PARALLEL_JOBS=3
+```
+
+`make qt5-win-arm64-llvm` builds the SDK alone. Both targets use `qt5-win-arm64:llvm21`
+and install Qt to `/opt/qt5-win-arm64-llvm`. The Qt 5 ARM64 build retains Schannel
+and its existing module set. The
+[build record](../results/qt5-win-arm64-llvm21-20261112.md) lists the
+compiled examples and the deferred Windows on ARM runtime checks.
+
 ## Results
 
 8/8 (478 checks) on Windows XP SP3 in VMware with the i386 build; the XP

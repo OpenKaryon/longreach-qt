@@ -1,0 +1,526 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "target": "qt5-win-amd64-llvm",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "staged_build": {
+    "status": "PASS",
+    "archives": 235,
+    "matches_existing_archive_set": true,
+    "architecture": "AMD64",
+    "subsystem_version": "5.2",
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "09d4d84486a43e1648b759b01f5572b53fb30476783a95a7ae7b15b749e7b286",
+      "graphics-gallery.exe": "964dec01a2299b1511c5929a442591413cb2416acbd821a23407379435bbe11c",
+      "multimedia-lab.exe": "165b4945e89aa06d64229732a95acf7ab0ab905e810d0fe76dff8694fcc31159",
+      "network-gui.exe": "c4b775349c01a692a1bd3be70c8c8b4e9ea29640febdb27fc9d80204c38eb183",
+      "painting-lab.exe": "ecdc7f377f9762f48fa6fb731d9b892c1675f07a3b8e1f3a1a23278aa1631748",
+      "qt-selftest.exe": "c94bacecfad88956c60138bdf93e197cc9deba70e82373a24dee6af49d2b4a75",
+      "quick-qml-gallery.exe": "88577470000b6bfe1d9d007d28c39b7c1d87cd0f8ff6785633760b3382189472",
+      "smoke-runner.exe": "85e94a8119de5b38582e0b969e4de135971b483506a233c1ffbe16f20cf61a97",
+      "widgets-gallery.exe": "dbbd79cb5dec60e70c3445c35a4035f13c0fdcad9a6cfd8a1ebef058765d5242"
+    },
+    "pe_imports": {
+      "gl-heavy-gallery.exe": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "OPENGL32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "graphics-gallery.exe": [
+        "ADVAPI32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "multimedia-lab.exe": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "OPENGL32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "network-gui.exe": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "painting-lab.exe": [
+        "ADVAPI32.dll",
+        "comdlg32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "qt-selftest.exe": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "DNSAPI.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "MPR.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ODBC32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "OPENGL32.dll",
+        "SETUPAPI.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "quick-qml-gallery.exe": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "OPENGL32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ],
+      "smoke-runner.exe": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "SHELL32.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll"
+      ],
+      "widgets-gallery.exe": [
+        "ADVAPI32.dll",
+        "comdlg32.dll",
+        "CRYPT32.dll",
+        "GDI32.dll",
+        "IMM32.dll",
+        "IPHLPAPI.DLL",
+        "KERNEL32.dll",
+        "msvcr100.dll",
+        "NETAPI32.dll",
+        "ole32.dll",
+        "OLEAUT32.dll",
+        "OPENGL32.dll",
+        "SHELL32.dll",
+        "SHLWAPI.dll",
+        "USER32.dll",
+        "USERENV.dll",
+        "UxTheme.dll",
+        "VERSION.dll",
+        "WINMM.dll",
+        "WS2_32.dll",
+        "WTSAPI32.dll"
+      ]
+    },
+    "direct_import_comparison": {
+      "baseline": "artifacts/tests-qt5-win-amd64",
+      "new_system_imports": {
+        "kernel32.dll": [
+          "CreateHardLinkW",
+          "FormatMessageA",
+          "RtlRestoreContext",
+          "SetFileAttributesW",
+          "WriteConsoleW"
+        ]
+      },
+      "app_local_crt_imports": 211,
+      "app_local_crt_exports_verified": true
+    }
+  },
+  "repository_build": {
+    "command": "make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3",
+    "status": "PASS",
+    "image": "qt5-win-amd64:llvm21",
+    "image_id": "sha256:339de42f088f534a3131393fbdf29bff0fb70971d86695b9af1567446e3911a5",
+    "verified_at": "2026-11-12",
+    "archives": 235,
+    "matches_existing_archive_set": true,
+    "qmake_module_files": 157,
+    "qmake_feature_entries": 314,
+    "matches_existing_qmake_modules_and_features": true,
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "5c7795265ed6e7080d7fc5f6e96664ea14e65c30b1984bd6b81134bcd7e010c9",
+      "graphics-gallery.exe": "c9dbfff7e06332752943c621bd264ebf54c3373d2852959e5228acc718c65637",
+      "multimedia-lab.exe": "37aee55380961199974908d2e0b9b977a6d15e4359710880ea5172a1d59ce782",
+      "network-gui.exe": "2c7582d6132dc68aa3c29a35a66ae63a389545d58eb2b8b025db0f900c64fa4d",
+      "painting-lab.exe": "142f1690058396ec47684c463cd92c937794b2ecf5e31fbb56838fa070e2a281",
+      "qt-selftest.exe": "8df918cbd32c0d1a8273ed0c0a368e4c191c3acbe77ee45adc4908c27a97a787",
+      "quick-qml-gallery.exe": "5e01c1931b554f7703036d533647a288007c51078cbae0c5d2a112a871875773",
+      "smoke-runner.exe": "54201842c09fae428d3cd9370e4711eb49db9ab880b31e8931d3bba46a81e026",
+      "widgets-gallery.exe": "5ef216dfc1b72c70a57788f65132a947a6036b58f3e92dfcf586fb6b6e5ab340"
+    },
+    "runtime": {
+      "os": "Windows 11 x64",
+      "build": "26200",
+      "xp_x64_sp2": "NOT_RUN",
+      "modern_cpp": [
+        {
+          "working_drive": "C:",
+          "passed": 23,
+          "failed": 2,
+          "skipped": 0,
+          "failure": "Windows CRT tmpfile could not open a temporary file in the drive root"
+        },
+        {
+          "working_drive": "E:",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "working_drive": "C:",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "fixture": "Open the print stream in the user temporary directory",
+          "executable_sha256": "3489306dc428a6e7ffd840b5f32dd72de7f18e1ed8d008d37d81e48307f087bc"
+        }
+      ],
+      "gui": {
+        "apps_passed": 7,
+        "checks": {
+          "passed": 235,
+          "failed": 0,
+          "skipped": 23
+        },
+        "applications": [
+          {
+            "application": "widgets-gallery",
+            "passed": 96,
+            "failed": 0,
+            "skipped": 3,
+            "executable_sha256": "5ef216dfc1b72c70a57788f65132a947a6036b58f3e92dfcf586fb6b6e5ab340"
+          },
+          {
+            "application": "graphics-gallery",
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0,
+            "executable_sha256": "c9dbfff7e06332752943c621bd264ebf54c3373d2852959e5228acc718c65637"
+          },
+          {
+            "application": "painting-lab",
+            "passed": 18,
+            "failed": 0,
+            "skipped": 1,
+            "executable_sha256": "142f1690058396ec47684c463cd92c937794b2ecf5e31fbb56838fa070e2a281"
+          },
+          {
+            "application": "multimedia-lab",
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "executable_sha256": "37aee55380961199974908d2e0b9b977a6d15e4359710880ea5172a1d59ce782"
+          },
+          {
+            "application": "gl-heavy-gallery",
+            "passed": 53,
+            "failed": 0,
+            "skipped": 6,
+            "executable_sha256": "5c7795265ed6e7080d7fc5f6e96664ea14e65c30b1984bd6b81134bcd7e010c9"
+          },
+          {
+            "application": "quick-qml-gallery",
+            "passed": 25,
+            "failed": 0,
+            "skipped": 13,
+            "executable_sha256": "5e01c1931b554f7703036d533647a288007c51078cbae0c5d2a112a871875773"
+          },
+          {
+            "application": "network-gui",
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "executable_sha256": "2c7582d6132dc68aa3c29a35a66ae63a389545d58eb2b8b025db0f900c64fa4d"
+          }
+        ]
+      }
+    },
+    "windows_7_sp1_runtime": {
+      "date": "2026-11-13",
+      "status": "PASS",
+      "guest": "Windows 7 SP1 x64, build 6.1.7601, VMware Workstation",
+      "executables_sha256": {
+        "gl-heavy-gallery.exe": "5c7795265ed6e7080d7fc5f6e96664ea14e65c30b1984bd6b81134bcd7e010c9",
+        "graphics-gallery.exe": "c9dbfff7e06332752943c621bd264ebf54c3373d2852959e5228acc718c65637",
+        "multimedia-lab.exe": "37aee55380961199974908d2e0b9b977a6d15e4359710880ea5172a1d59ce782",
+        "network-gui.exe": "2c7582d6132dc68aa3c29a35a66ae63a389545d58eb2b8b025db0f900c64fa4d",
+        "painting-lab.exe": "142f1690058396ec47684c463cd92c937794b2ecf5e31fbb56838fa070e2a281",
+        "qt-selftest.exe": "3489306dc428a6e7ffd840b5f32dd72de7f18e1ed8d008d37d81e48307f087bc",
+        "quick-qml-gallery.exe": "5e01c1931b554f7703036d533647a288007c51078cbae0c5d2a112a871875773",
+        "smoke-runner.exe": "54201842c09fae428d3cd9370e4711eb49db9ab880b31e8931d3bba46a81e026",
+        "widgets-gallery.exe": "5ef216dfc1b72c70a57788f65132a947a6036b58f3e92dfcf586fb6b6e5ab340"
+      },
+      "app_local_msvcr100_sha256": "ae3cb6c6afba9a4aa5c85f66023c35338ca579b30326dd02918f9d55259503d5",
+      "selftest_fixture": "Open the print stream in the user temporary directory",
+      "modern_cpp": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "gui": {
+        "apps_passed": 7,
+        "checks": {
+          "passed": 236,
+          "failed": 0,
+          "skipped": 22
+        },
+        "applications": [
+          {
+            "application": "gl-heavy-gallery",
+            "passed": 53,
+            "failed": 0,
+            "skipped": 6
+          },
+          {
+            "application": "graphics-gallery",
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "multimedia-lab",
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "network-gui",
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "painting-lab",
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "quick-qml-gallery",
+            "passed": 25,
+            "failed": 0,
+            "skipped": 13
+          },
+          {
+            "application": "widgets-gallery",
+            "passed": 96,
+            "failed": 0,
+            "skipped": 3
+          }
+        ]
+      }
+    }
+  },
+  "xp_x64_sp2_test_kit": {
+    "filename": "qt5-llvm21-xp-x64-sp2-test-kit.zip",
+    "sha256": "a37cd53b82a649495264055b7a40bc29a51489738f6eea542632cc0c92ce7f16",
+    "files_verified": 10,
+    "selftest_fixture": "Open the print stream in the user temporary directory",
+    "runner_host_validation": "OS guard rejected Windows 11. A local copy with the OS guard omitted passed the 25 strict C++23 checks and seven GUI examples and recorded all exit codes.",
+    "xp_x64_sp2_runtime": "NOT_RUN"
+  },
+  "current_repository_export": {
+    "status": "PASS",
+    "command": "make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3",
+    "buildkit_ref": "l1k3q0vw18lnsmvssewg59azn",
+    "buildkit_duration": "56m14.933039696s",
+    "image_id": "sha256:d5d23b3d6cfce5645a5989b6761ff7b9127d5f5d677cd5c1f692b7abd5236c32",
+    "manifest_generated_at": "2026-11-13T11:02:00+00:00",
+    "machine": "AMD64",
+    "subsystem_version": "5.2",
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "76dca704e8b741a2818def8a14f704ea65d35f78e3af1aa108a7783d1e4a4b7d",
+      "graphics-gallery.exe": "36e9aea1094dca8e23e50f1971a5ee6b7cdd4abefe0e71c77441ac59b697ffa3",
+      "multimedia-lab.exe": "712a35526b69705ec9cc6f00d97d95cdb9fd6a940e96dacef7f7cb62e4b4086e",
+      "network-gui.exe": "6511aee6486e1019e569868cbdf9cb20045d9ec32c2ee27d946be4fe1d39bee0",
+      "painting-lab.exe": "ece7dc488b831c6e768f49897d63016347a361d9824aec9296b98e4ca4511195",
+      "qt-selftest.exe": "bd794f55fda4b4e8c9a8d3fc27911b3f4b0282bbdeb39c1388f18b877d6261d0",
+      "quick-qml-gallery.exe": "3bb25f054ca65806b375de2aaa1ae264801d0ed47c42e304c5185401d7a2421f",
+      "smoke-runner.exe": "0b834dcbca7523271ffc3d8413072b0caa6c8d1fc67a725a7392836580dcded2",
+      "widgets-gallery.exe": "af02ee12affd4768dad110814cd6ab55ef03f562ce5f9795acf725788d289694"
+    },
+    "app_local_msvcr100_sha256": "ae3cb6c6afba9a4aa5c85f66023c35338ca579b30326dd02918f9d55259503d5",
+    "windows_7_sp1_runtime": {
+      "status": "PASS",
+      "guest": "Windows 7 SP1 x64, build 6.1.7601, VMware Workstation",
+      "modern_cpp": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "gui": {
+        "apps_passed": 7,
+        "checks": {
+          "passed": 236,
+          "failed": 0,
+          "skipped": 22
+        },
+        "applications": [
+          {
+            "application": "gl-heavy-gallery",
+            "passed": 53,
+            "failed": 0,
+            "skipped": 6
+          },
+          {
+            "application": "graphics-gallery",
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "multimedia-lab",
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "network-gui",
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "painting-lab",
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "quick-qml-gallery",
+            "passed": 25,
+            "failed": 0,
+            "skipped": 13
+          },
+          {
+            "application": "widgets-gallery",
+            "passed": 96,
+            "failed": 0,
+            "skipped": 3
+          }
+        ]
+      }
+    },
+    "xp_x64_sp2_test_kit": {
+      "filename": "qt5-llvm21-xp-x64-sp2-current-export.zip",
+      "sha256": "30f17f82e16cbe33efb32ceba20a2328a0c66d3cedbcde02183f8665403ffc6a",
+      "runtime": "NOT_RUN"
+    },
+    "direct_import_audit": {
+      "comparison": "Earlier Windows 7 verified suite",
+      "crt_imports_by_executable": {
+        "gl-heavy-gallery.exe": 203,
+        "graphics-gallery.exe": 173,
+        "multimedia-lab.exe": 184,
+        "network-gui.exe": 184,
+        "painting-lab.exe": 175,
+        "qt-selftest.exe": 202,
+        "quick-qml-gallery.exe": 187,
+        "smoke-runner.exe": 152,
+        "widgets-gallery.exe": 184
+      },
+      "all_crt_imports_found_in_app_local_exports": true,
+      "changed_direct_imports": {}
+    },
+    "sdk_comparison": {
+      "baseline_image_id": "sha256:f91ecd7318d7a5f05d38dfe820419ed79d2dffd505aed3cfeefae5a46b8c8405",
+      "matches_baseline": true,
+      "static_archive_paths": 235,
+      "qmake_module_files": 157,
+      "qmake_feature_entries": 314
+    }
+  }
+}

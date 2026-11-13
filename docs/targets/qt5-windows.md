@@ -54,6 +54,22 @@ The [build and run record](../results/qt5-win-i386-llvm21-xp-probe-20261112.md)
 describes the C++23 and GUI results and the experimental filesystem limits.
 
 
+## amd64 with LLVM 21.1.8
+
+The amd64 profile shares the XP recipe and uses the 64-bit MinGW-w64 v5
+sysroot and OpenSSL archives from `qt5-win-amd64:latest`. The example binaries
+target subsystem 5.2 and use the 64-bit Visual C++ 2010 CRT beside the
+executable.
+
+```sh
+make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3
+```
+
+Use `make qt5-win-amd64-llvm` for the SDK alone. Both targets use
+`qt5-win-amd64:llvm21`, with the SDK in `/opt/qt5-win-amd64-llvm`.
+The [build and run record](../results/qt5-win-amd64-llvm21-xp-20261112.md)
+documents the Windows 7 and Windows 11 runtime results and the deferred XP x64 check.
+
 ## Results
 
 8/8 (478 checks) on Windows XP SP3 in VMware with the i386 build; the XP

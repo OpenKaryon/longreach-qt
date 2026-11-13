@@ -1,0 +1,438 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+# Build LLVM 21.1.8 runtimes for the Windows XP sysroot.
+--- a/compiler-rt/lib/builtins/emutls.c
++++ b/compiler-rt/lib/builtins/emutls.c
+@@ -136,6 +136,11 @@
+ #include <stdio.h>
+ #include <windows.h>
+ 
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++#include <pthread.h>
++#define EMUTLS_USE_WINPTHREAD_ONCE 1
++#endif
++
+ static LPCRITICAL_SECTION emutls_mutex;
+ static DWORD emutls_tls_index = TLS_OUT_OF_INDEXES;
+ 
+@@ -182,10 +187,7 @@
+   }
+ }
+ 
+-static BOOL CALLBACK emutls_init(PINIT_ONCE p0, PVOID p1, PVOID *p2) {
+-  (void)p0;
+-  (void)p1;
+-  (void)p2;
++static BOOL emutls_init_impl(void) {
+   emutls_mutex =
+       (LPCRITICAL_SECTION)_aligned_malloc(sizeof(CRITICAL_SECTION), 16);
+   if (!emutls_mutex) {
+@@ -204,10 +206,30 @@
+   return TRUE;
+ }
+ 
++#if EMUTLS_USE_WINPTHREAD_ONCE
++static void emutls_init(void) {
++  if (!emutls_init_impl())
++    abort();
++}
++
++static __inline void emutls_init_once(void) {
++  static pthread_once_t once = PTHREAD_ONCE_INIT;
++  if (pthread_once(&once, emutls_init) != 0)
++    abort();
++}
++#else
++static BOOL CALLBACK emutls_init(PINIT_ONCE p0, PVOID p1, PVOID *p2) {
++  (void)p0;
++  (void)p1;
++  (void)p2;
++  return emutls_init_impl();
++}
++
+ static __inline void emutls_init_once(void) {
+   static INIT_ONCE once;
+   InitOnceExecuteOnce(&once, emutls_init, NULL, NULL);
+ }
++#endif
+ 
+ static __inline void emutls_lock(void) { EnterCriticalSection(emutls_mutex); }
+ 
+--- a/libunwind/src/RWMutex.hpp
++++ b/libunwind/src/RWMutex.hpp
+@@ -13,7 +13,7 @@
+ #ifndef __RWMUTEX_HPP__
+ #define __RWMUTEX_HPP__
+ 
+-#if defined(_WIN32)
++#if defined(_WIN32) && !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600)
+ #include <windows.h>
+ #elif !defined(_LIBUNWIND_HAS_NO_THREADS)
+ #include <pthread.h>
+@@ -34,7 +34,7 @@
+   bool unlock() { return true; }
+ };
+ 
+-#elif defined(_WIN32)
++#elif defined(_WIN32) && !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600)
+ 
+ class _LIBUNWIND_HIDDEN RWMutex {
+ public:
+--- a/libcxxabi/src/CMakeLists.txt
++++ b/libcxxabi/src/CMakeLists.txt
+@@ -36,7 +36,7 @@
+   )
+ endif()
+ 
+-if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
++if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA OR (MINGW AND LIBCXX_HAS_PTHREAD_API)) AND NOT (APPLE OR CYGWIN)
+     AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
+   list(APPEND LIBCXXABI_SOURCES
+     cxa_thread_atexit.cpp
+--- a/libcxxabi/src/cxa_guard_impl.h
++++ b/libcxxabi/src/cxa_guard_impl.h
+@@ -637,7 +637,12 @@
+   static T instance;
+ };
+ template <class T>
+-_LIBCPP_CONSTINIT T GlobalStatic<T>::instance = {};
++// Old winpthreads uses a non-null integer pointer sentinel. Clang can
++// emit it in static storage, but it is not a C++ constant expression.
++#if !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD))
++_LIBCPP_CONSTINIT
++#endif
++T GlobalStatic<T>::instance = {};
+ 
+ enum class Implementation { NoThreads, GlobalMutex, Futex };
+ 
+--- a/libcxxabi/src/fallback_malloc.cpp
++++ b/libcxxabi/src/fallback_malloc.cpp
+@@ -35,7 +35,11 @@
+ 
+ // When POSIX threads are not available, make the mutex operations a nop
+ #ifndef _LIBCXXABI_HAS_NO_THREADS
+-static _LIBCPP_CONSTINIT std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
++// Winpthreads v5 uses an integer pointer sentinel.
++#if !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD))
++_LIBCPP_CONSTINIT
++#endif
++static std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
+ #else
+ static _LIBCPP_CONSTINIT void* heap_mutex = 0;
+ #endif
+--- a/libcxxabi/src/cxa_thread_atexit.cpp
++++ b/libcxxabi/src/cxa_thread_atexit.cpp
+@@ -17,9 +17,24 @@
+ 
+ #include <stdlib.h>
+ 
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++#include <windows.h>
++#define LIBCXXABI_WINXP_TLS 1
++// MinGW-w64 v5 does not provide a DSO handle. This profile links the runtime
++// into a single executable and uses the pthread destructor fallback.
++extern "C" {
++void* __dso_handle = &__dso_handle;
++}
++#endif
++
+ namespace __cxxabiv1 {
+ 
++#if LIBCXXABI_WINXP_TLS && defined(__i386__)
++  // Clang uses the Windows i386 member-function calling convention here.
++  using Dtor = void(__attribute__((thiscall)) *)(void*);
++#else
+   using Dtor = void(*)(void*);
++#endif
+ 
+   extern "C"
+ #ifndef HAVE___CXA_THREAD_ATEXIT_IMPL
+@@ -83,6 +98,22 @@
+     dtors_alive = false;
+   }
+ 
++#if LIBCXXABI_WINXP_TLS
++  void NTAPI xp_thread_detach(PVOID, DWORD reason, PVOID) {
++    if (reason == DLL_THREAD_DETACH)
++      run_dtors(nullptr);
++  }
++
++  __attribute__((used, section(".CRT$XLE")))
++  PIMAGE_TLS_CALLBACK xp_tls_callback = xp_thread_detach;
++
++  void xp_main_thread_exit() { run_dtors(nullptr); }
++
++  void xp_register_main_thread_exit() {
++    if (atexit(xp_main_thread_exit) != 0)
++      __abort_message("atexit() failed registering thread_local cleanup");
++  }
++#else
+   struct DtorsManager {
+     DtorsManager() {
+       // There is intentionally no matching std::__libcpp_tls_delete call, as
+@@ -102,21 +133,36 @@
+       run_dtors(nullptr);
+     }
+   };
++#endif
+ } // namespace
+ 
+ #endif // HAVE___CXA_THREAD_ATEXIT_IMPL
+ 
+ extern "C" {
+ 
++#if LIBCXXABI_WINXP_TLS
++  _LIBCXXABI_FUNC_VIS void __libcpp_run_thread_local_destructors() { run_dtors(nullptr); }
++#endif
++
+   _LIBCXXABI_FUNC_VIS int __cxa_thread_atexit(Dtor dtor, void* obj, void* dso_symbol) throw() {
+ #ifdef HAVE___CXA_THREAD_ATEXIT_IMPL
+     return __cxa_thread_atexit_impl(dtor, obj, dso_symbol);
+ #else
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++    (void)dso_symbol;
++    {
++#else
+     if (__cxa_thread_atexit_impl) {
+       return __cxa_thread_atexit_impl(dtor, obj, dso_symbol);
+     } else {
++#endif
+       // Initialize the dtors std::__libcpp_tls_key (uses __cxa_guard_*() for
+       // one-time initialization and __cxa_atexit() for destruction)
++#if LIBCXXABI_WINXP_TLS
++      static pthread_once_t once = PTHREAD_ONCE_INIT;
++      if (pthread_once(&once, xp_register_main_thread_exit) != 0)
++        return -1;
++#else
+       static DtorsManager manager;
+ 
+       if (!dtors_alive) {
+@@ -125,6 +171,7 @@
+         }
+         dtors_alive = true;
+       }
++#endif
+ 
+       auto head = static_cast<DtorList*>(::malloc(sizeof(DtorList)));
+       if (!head) {
+--- a/libcxx/src/call_once.cpp
++++ b/libcxx/src/call_once.cpp
+@@ -25,8 +25,13 @@
+ // keep in sync with:  7741191.
+ 
+ #if _LIBCPP_HAS_THREADS
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
++static __libcpp_mutex_t mut  = _LIBCPP_MUTEX_INITIALIZER;
++static __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
++#  else
+ static constinit __libcpp_mutex_t mut  = _LIBCPP_MUTEX_INITIALIZER;
+ static constinit __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
++#  endif
+ #endif
+ 
+ void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(void*)) {
+--- a/libcxx/src/memory.cpp
++++ b/libcxx/src/memory.cpp
+@@ -101,7 +101,10 @@
+ #if _LIBCPP_HAS_THREADS
+ 
+ static constexpr std::size_t __sp_mut_count                = 32;
+-static constinit __libcpp_mutex_t mut_back[__sp_mut_count] = {
++#  if !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD))
++constinit
++#  endif
++static __libcpp_mutex_t mut_back[__sp_mut_count] = {
+     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+--- a/libcxx/src/random_shuffle.cpp
++++ b/libcxx/src/random_shuffle.cpp
+@@ -19,7 +19,10 @@
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+ #if _LIBCPP_HAS_THREADS
+-static constinit __libcpp_mutex_t __rs_mut = _LIBCPP_MUTEX_INITIALIZER;
++#  if !(defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD))
++constinit
++#  endif
++static __libcpp_mutex_t __rs_mut = _LIBCPP_MUTEX_INITIALIZER;
+ #endif
+ unsigned __rs_default::__c_ = 0;
+ 
+--- a/libcxx/src/filesystem/posix_compat.h
++++ b/libcxx/src/filesystem/posix_compat.h
+@@ -147,6 +147,43 @@
+ };
+ 
+ inline int stat_handle(HANDLE h, StatT* buf) {
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++  // XP filesystem probe: keep the same file identity as the Vista branch.
++  BY_HANDLE_FILE_INFORMATION info;
++  if (!GetFileInformationByHandle(h, &info))
++    return -1;
++  memset(buf, 0, sizeof(*buf));
++  LARGE_INTEGER mtime, atime;
++  mtime.LowPart = info.ftLastWriteTime.dwLowDateTime;
++  mtime.HighPart = info.ftLastWriteTime.dwHighDateTime;
++  atime.LowPart = info.ftLastAccessTime.dwLowDateTime;
++  atime.HighPart = info.ftLastAccessTime.dwHighDateTime;
++  buf->st_mtim = filetime_to_timespec(mtime);
++  buf->st_atim = filetime_to_timespec(atime);
++  buf->st_mode = (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? _S_IFDIR | 0555 : _S_IFREG | 0555;
++  if (!(info.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
++    buf->st_mode |= 0222;
++  if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
++    alignas(DWORD) unsigned char reparse[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
++    DWORD length;
++    if (!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, nullptr, 0, reparse, sizeof(reparse), &length, nullptr))
++      return -1;
++    DWORD tag;
++    if (length < sizeof(tag)) {
++      SetLastError(ERROR_INVALID_DATA);
++      return -1;
++    }
++    memcpy(&tag, reparse, sizeof(tag));
++    if (tag == IO_REPARSE_TAG_SYMLINK)
++      buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFLNK;
++  }
++  buf->st_nlink = info.nNumberOfLinks;
++  buf->st_size = (uint64_t(info.nFileSizeHigh) << 32) | info.nFileSizeLow;
++  buf->st_dev = info.dwVolumeSerialNumber;
++  memcpy(&buf->st_ino.id[0], &info.nFileIndexHigh, 4);
++  memcpy(&buf->st_ino.id[4], &info.nFileIndexLow, 4);
++  return 0;
++#  else
+   FILE_BASIC_INFO basic;
+   if (!GetFileInformationByHandleEx(h, FileBasicInfo, &basic, sizeof(basic)))
+     return -1;
+@@ -180,6 +217,7 @@
+   memcpy(&buf->st_ino.id[0], &info.nFileIndexHigh, 4);
+   memcpy(&buf->st_ino.id[4], &info.nFileIndexLow, 4);
+   return 0;
++#  endif
+ }
+ 
+ inline int stat_file(const wchar_t* path, StatT* buf, DWORD flags) {
+@@ -207,6 +245,13 @@
+ }
+ 
+ inline int symlink_file_dir(const wchar_t* oldname, const wchar_t* newname, bool is_dir) {
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++  (void)oldname;
++  (void)newname;
++  (void)is_dir;
++  SetLastError(ERROR_NOT_SUPPORTED);
++  return -1;
++#  else
+   path dest(oldname);
+   dest.make_preferred();
+   oldname     = dest.c_str();
+@@ -219,6 +264,7 @@
+   if (CreateSymbolicLinkW(newname, oldname, flags))
+     return 0;
+   return -1;
++#  endif
+ }
+ 
+ inline int symlink_file(const wchar_t* oldname, const wchar_t* newname) {
+@@ -236,6 +282,13 @@
+ }
+ 
+ inline int remove(const wchar_t* path) {
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++  DWORD attributes = GetFileAttributesW(path);
++  if (attributes == INVALID_FILE_ATTRIBUTES)
++    return -1;
++  BOOL removed = (attributes & FILE_ATTRIBUTE_DIRECTORY) ? RemoveDirectoryW(path) : DeleteFileW(path);
++  return removed ? 0 : -1;
++#  else
+   detail::WinHandle h(path, DELETE, FILE_FLAG_OPEN_REPARSE_POINT);
+   if (!h)
+     return -1;
+@@ -244,6 +297,7 @@
+   if (!SetFileInformationByHandle(h, FileDispositionInfo, &info, sizeof(info)))
+     return -1;
+   return 0;
++#  endif
+ }
+ 
+ inline int truncate_handle(HANDLE h, off_t length) {
+@@ -334,6 +388,12 @@
+ inline wchar_t* realpath(const wchar_t* path, [[maybe_unused]] wchar_t* resolved_name) {
+   // Only expected to be used with us allocating the buffer.
+   _LIBCPP_ASSERT_INTERNAL(resolved_name == nullptr, "Windows realpath() assumes a null resolved_name");
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++  // Keep handle-based canonicalization out of this preliminary XP probe.
++  (void)path;
++  SetLastError(ERROR_NOT_SUPPORTED);
++  return nullptr;
++#  else
+ 
+   WinHandle h(path, FILE_READ_ATTRIBUTES, 0);
+   if (!h) {
+@@ -360,6 +420,7 @@
+     }
+   }
+   return buff.release();
++#  endif
+ }
+ 
+ #  define AT_FDCWD -1
+@@ -367,6 +428,12 @@
+ using ModeT = int;
+ 
+ inline int fchmod_handle(HANDLE h, int perms) {
++#  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
++  (void)h;
++  (void)perms;
++  SetLastError(ERROR_NOT_SUPPORTED);
++  return -1;
++#  else
+   FILE_BASIC_INFO basic;
+   if (!GetFileInformationByHandleEx(h, FileBasicInfo, &basic, sizeof(basic)))
+     return -1;
+@@ -377,6 +444,7 @@
+   if (basic.FileAttributes != orig_attributes && !SetFileInformationByHandle(h, FileBasicInfo, &basic, sizeof(basic)))
+     return -1;
+   return 0;
++#  endif
+ }
+ 
+ inline int fchmodat(int /*fd*/, const wchar_t* path, int perms, int flag) {
+--- a/libcxx/include/__thread/thread.h
++++ b/libcxx/include/__thread/thread.h
+@@ -159,6 +159,10 @@
+   std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
+ }
+ 
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
++extern "C" _LIBCPP_EXPORTED_FROM_ABI void __libcpp_run_thread_local_destructors();
++#endif
++
+ template <class _Fp>
+ _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
+   // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
+@@ -166,6 +170,11 @@
+   __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
+   typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
+   std::__thread_execute(*__p.get(), _Index());
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
++  // Old winpthreads can release a joiner before the Win32 detach callback.
++  __p.reset();
++  __libcpp_run_thread_local_destructors();
++#endif
+   return nullptr;
+ }
+ 
+@@ -186,6 +195,11 @@
+   unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
+   __thread_local_data().set_pointer(__p->__tsp_.release());
+   (__p->__fn_)();
++#if defined(__MINGW32__) && _WIN32_WINNT < 0x0600 && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
++  // Old winpthreads can release a joiner before the Win32 detach callback.
++  __p.reset();
++  __libcpp_run_thread_local_destructors();
++#endif
+   return nullptr;
+ }
+ 

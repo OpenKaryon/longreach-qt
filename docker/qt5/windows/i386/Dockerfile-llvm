@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG BASE_REGISTRY=docker.io/library
+ARG XP_IMAGE=qt5-win-i386:latest
+ARG XP_ARCH=i386
+ARG XP_CROSS=i686-w64-mingw32
+ARG XP_OPENSSL_LIBDIR=lib
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+
+FROM ${XP_IMAGE} AS xp
+ARG XP_CROSS
+# The older CRT calls this stack probe and emits TLS startup metadata in
+# .tls. Put the directory outside the data and sort the start marker first.
+RUN --network=none cd /tmp && \
+    "$XP_CROSS-ar" x "$("$XP_CROSS-gcc" -print-libgcc-file-name)" _chkstk_ms.o && \
+    archive="/usr/$XP_CROSS/lib/libmingw32.a" && \
+    member=$("$XP_CROSS-ar" t "$archive" | sed -n '/-tlssup\.o$/p') && \
+    test -n "$member" && \
+    "$XP_CROSS-ar" x "$archive" "$member" && \
+    "$XP_CROSS-objcopy" --rename-section '.tls=.rdata$T' --rename-section '.tls$AAA=.tls$!AAA' \
+        "$member" tls-lld.o
+
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS inputs
+ARG APT_SNAPSHOT
+ARG XP_ARCH
+ARG XP_CROSS
+ARG XP_OPENSSL_LIBDIR
+ENV DEBIAN_FRONTEND=noninteractive
+RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snapshot.sh \
+    sh /tmp/apt-snapshot.sh "$APT_SNAPSHOT" && apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential cmake ninja-build python3 \
+        perl pkg-config git bison flex xz-utils libxml2 libexpat1 && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=xp /usr/${XP_CROSS} /opt/sysroot-xp
+# The MinGW-w64 headers link to ../../share/mingw-w64/include.
+COPY --from=xp /usr/share/mingw-w64/include /opt/share/mingw-w64/include
+COPY --from=xp /tmp/_chkstk_ms.o /opt/sysroot-xp/lib/chkstk-ms.o
+COPY --from=xp /tmp/tls-lld.o /opt/sysroot-xp/lib/tls-lld.o
+# Copy only Windows archives for the selected architecture.
+COPY --from=xp /opt/openssl-3/include /opt/openssl-3/include
+COPY --from=xp /opt/openssl-3/${XP_OPENSSL_LIBDIR} /opt/openssl-3/${XP_OPENSSL_LIBDIR}
+ENV XP_ARCH=${XP_ARCH} XP_CROSS=${XP_CROSS} XP_OPENSSL_LIBDIR=${XP_OPENSSL_LIBDIR}
+RUN --network=none --mount=type=bind,source=scripts/build/qt5-windows-xp/prepare-headers.py,target=/tmp/prepare-headers.py \
+    python3 /tmp/prepare-headers.py
+ENV PATH=/opt/llvm-21/bin:${PATH} QT_INSTALL_DIR=/opt/qt5-win-${XP_ARCH}-llvm
+
+FROM inputs AS build-runtime
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt5-windows-xp/prepare-llvm.sh,target=/src/prepare-llvm.sh \
+    --mount=type=bind,source=scripts/build/qt6-llvm-probes/build-runtime.sh,target=/src/build-runtime.sh \
+    --mount=type=bind,source=scripts/tests/qt6-llvm-probes,target=/src/scripts/tests/qt6-llvm-probes \
+    --mount=type=bind,source=tests/common,target=/src/tests/common \
+    --mount=type=bind,source=patches/llvm/windows-xp,target=/src/patches/llvm/windows-xp \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/prepare-llvm.sh
+
+FROM inputs AS toolchain
+COPY --from=build-runtime /opt/llvm-runtime-xp /opt/llvm-runtime-xp
+
+FROM toolchain AS build-qt
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt5-windows-xp/build-qt.sh,target=/src/build-qt.sh \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/qt5/all \
+    --mount=type=bind,source=patches/qt5/windows,target=/src/patches/qt5/windows \
+    --mount=type=bind,source=patches/qt5/windows-xp-llvm,target=/src/patches/qt5/windows-xp-llvm \
+    --mount=type=bind,source=patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch,target=/src/qml-x86.patch \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch,target=/src/mapbox-clang21.patch \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/src/qt.tar.xz \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
+
+FROM toolchain AS sdk
+COPY --from=build-qt ${QT_INSTALL_DIR} ${QT_INSTALL_DIR}
+COPY cmake/qt5/toolchain-win-${XP_ARCH}-llvm.cmake /opt/llvm-runtime-xp/toolchain.cmake
+ENV PATH=${QT_INSTALL_DIR}/bin:/opt/llvm-runtime-xp/bin:${PATH} \
+    CC=/opt/llvm-runtime-xp/bin/${XP_CROSS}-clang \
+    CXX=/opt/llvm-runtime-xp/bin/${XP_CROSS}-clang++
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/tmp/build-tests.sh \
+    --mount=type=bind,source=scripts/build/qt5-windows-xp/check-examples.sh,target=/tmp/check-examples.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/check-examples.sh

@@ -52,6 +52,28 @@ case "$target" in
         cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64
                     -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
         ;;
+    windows-xp-i386|windows-xp-amd64)
+        if [ "$target" = windows-xp-amd64 ]; then
+            processor=x86_64
+            minimum=0x0502
+            minor=2
+        else
+            processor=i686
+            minimum=0x0501
+            minor=1
+        fi
+        triple=$processor-w64-windows-gnu
+        sysroot=/opt/sysroot-xp
+        exe_suffix=.exe
+        link_flags="-fuse-ld=lld -static -Wl,--major-subsystem-version,5,--minor-subsystem-version,$minor $sysroot/lib/chkstk-ms.o $sysroot/lib/tls-lld.o -lpsapi -lmsvcr100"
+        compiler_flags=(--sysroot="$sysroot" -D_WIN32_WINNT="$minimum" -DWINVER="$minimum"
+                        -D_WIN32_WINNT_WIN10=0x0a00 -fdata-sections --rtlib=compiler-rt
+                        -isystem "$sysroot/include" -L"$sysroot/lib" -pthread)
+        cmake_args=(-DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION="5.$minor"
+                    -DCMAKE_SYSTEM_PROCESSOR="$processor" -DCMAKE_SYSROOT="$sysroot"
+                    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+                    -DLIBCXX_HAS_WIN32_THREAD_API=OFF -DLIBCXX_HAS_PTHREAD_API=ON)
+        ;;
     windows-amd64|windows-arm64)
         bash /src/scripts/build/qt6-llvm-probes/build-windows-sysroot.sh "$target"
         sysroot=$work/sysroots/mingw13/$target
@@ -137,6 +159,9 @@ cmake --build "${build_root}/build-builtins-$target" --parallel "$jobs"
 cmake --install "${build_root}/build-builtins-$target"
 
 runtime_args=(-DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx')
+if [[ "$target" = windows-xp-* ]]; then
+    runtime_args+=(-DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF)
+fi
 if [[ "$target" = linux-* ]]; then
     # The 2.17 sysroots lack this glibc entry point. Cross compile-only checks
     # cannot detect that, so select libc++abi's existing weak-symbol fallback.
@@ -217,6 +242,10 @@ case "$target" in
                 | tee "/out/$target/run.log"
         fi
         python3 /src/scripts/tests/require-modern-cpp.py "/out/$target/run.log"
+        ;;
+    windows-xp-i386|windows-xp-amd64)
+        llvm-readobj --file-headers --coff-imports "$binary" > "/out/$target/pe.log"
+        llvm-objdump -p "$binary" > "/out/$target/dependencies.log"
         ;;
     windows-amd64)
         bash /src/scripts/audit/qt6-win7-audit.sh "$binary" | tee "/out/$target/audit.log"

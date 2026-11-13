@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+# Use the Windows system clock with the Clang XP runtime.
+--- a/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/wtf/CurrentTime.cpp
++++ b/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/wtf/CurrentTime.cpp
+@@ -136,6 +136,12 @@
+     tmtime.tm_sec = systemTime.wSecond;
+     time_t timet = mktime(&tmtime);
+     return timet * msPerSecond + systemTime.wMilliseconds;
++#elif defined(__MINGW32__) && defined(__clang__) && _WIN32_WINNT < 0x0600
++    FILETIME time;
++    GetSystemTimeAsFileTime(&time);
++    const int64_t ticks = (uint64_t(time.dwHighDateTime) << 32) | time.dwLowDateTime;
++    const int64_t unixEpoch = 116444736000000000LL;
++    return (ticks - unixEpoch) / 10000.0;
+ #else
+     struct _timeb timebuffer;
+     _ftime(&timebuffer);

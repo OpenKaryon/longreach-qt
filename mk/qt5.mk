@@ -167,6 +167,32 @@ $(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS)): $(DO
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_LUCID_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/amd64/Dockerfile-llvm -t $(QT5_LUCID_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_LUCID_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-lucid/include/openssl/opensslv.h)
 
+# XP needs its existing CRT and OpenSSL as inputs to the upstream LLVM build.
+QT5_XP_LLVM_ARCH = $(if $(filter qt5-win-amd64-llvm%,$@),amd64,i386)
+QT5_XP_LLVM_CROSS = $(if $(filter amd64,$(QT5_XP_LLVM_ARCH)),x86_64,i686)-w64-mingw32
+QT5_XP_LLVM_OPENSSL_LIBDIR = $(if $(filter amd64,$(QT5_XP_LLVM_ARCH)),lib64,lib)
+QT5_XP_LLVM_IMAGE = qt5-win-$(QT5_XP_LLVM_ARCH):llvm21
+QT5_XP_LLVM_SYSROOT ?= qt5-win-$(QT5_XP_LLVM_ARCH):latest
+QT5_XP_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
+QT5_XP_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
+    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
+    --build-arg XP_IMAGE=$(QT5_XP_LLVM_SYSROOT) \
+    --build-arg XP_ARCH=$(QT5_XP_LLVM_ARCH) \
+    --build-arg XP_CROSS=$(QT5_XP_LLVM_CROSS) \
+    --build-arg XP_OPENSSL_LIBDIR=$(QT5_XP_LLVM_OPENSSL_LIBDIR) \
+    --build-arg LLVM_COMPILER_IMAGE=$(QT5_XP_LLVM_COMPILER) \
+    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+QT5_XP_LLVM_TARGETS := qt5-win-i386-llvm
+.PHONY: $(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS))
+BUILD_TARGETS += $(QT5_XP_LLVM_TARGETS)
+$(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS)): $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_SYSROOT) $(QT5_XP_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_XP_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-3/include/openssl/opensslv.h)
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
@@ -211,6 +237,8 @@ QT5_TESTS_OUT := $(ARTIFACTS_DIR)/$(QT5_TESTS_NAME)
 QT5_TESTS_PACKAGE := $(QT5_TESTS_OUT).tar.gz
 ifneq ($(filter qt5-linux-amd64:llvm21 qt5-linux-i386:llvm21,$(QT5_IMAGE)),)
 QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-lucid/include/openssl/opensslv.h
+else ifneq ($(filter qt5-win-i386:llvm21,$(QT5_IMAGE)),)
+QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-3/include/openssl/opensslv.h
 endif
 QT5_TESTS_OPENSSL_ARG = $(if $(QT5_TESTS_OPENSSL_HEADER),--openssl-header "$(QT5_TESTS_OPENSSL_HEADER)",--openssl-version "$(OPENSSL_VERSION)")
 

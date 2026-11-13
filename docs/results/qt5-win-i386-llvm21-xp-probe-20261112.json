@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "target": "qt5-win-i386-llvm-runtime-probe",
+  "status": "PASS",
+  "scope": "Standalone C++ probe",
+  "llvm": "21.1.8",
+  "libcxx_version": 210108,
+  "cxx_language_mode": 202302,
+  "guest": {
+    "os": "Windows XP SP3",
+    "version": "5.1.2600",
+    "architecture": "i386",
+    "hypervisor": "VMware Workstation"
+  },
+  "runtime": {
+    "crt": "Visual C++ 2010 Runtime",
+    "crt_version": "10.0.30319.1",
+    "crt_deployment": "App-local",
+    "crt_sha256": "1221a09484964a6f38af5e34ee292b9afefccb3dc6e55435fd3aaf7c235d9067",
+    "pe_subsystem_version": "5.1",
+    "pe_imports": [
+      "KERNEL32.dll",
+      "msvcr100.dll",
+      "PSAPI.DLL",
+      "USER32.dll"
+    ]
+  },
+  "previous_results": {
+    "system_msvcrt": {
+      "loader_exit": "0xc0000139",
+      "missing_imports": 26
+    },
+    "cdecl_tls_destructor": {
+      "passed": 24,
+      "failed": 1,
+      "skipped": 0,
+      "failed_check": "C++20 jthread thread_local destruction"
+    }
+  },
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "checks": [
+      "C++14 generic lambda and init capture",
+      "C++17 structured bindings",
+      "C++17 fold expressions",
+      "C++17 std::optional",
+      "C++17 std::string_view",
+      "C++20 concepts",
+      "C++20 std::span",
+      "C++20 ranges filter and transform",
+      "C++20 std::jthread",
+      "C++20 std::stop_token and callbacks",
+      "C++20 std::format",
+      "C++23 if consteval",
+      "C++23 std::expected",
+      "C++23 std::byteswap",
+      "C++23 std::ranges::to",
+      "C++23 std::print",
+      "C++20 stop_token condition_variable_any cancellation",
+      "C++20 jthread destructor stop and join",
+      "C++20 atomic wait and notify handoff",
+      "C++20 jthread thread_local destruction",
+      "C++11 exception unwinding and RAII",
+      "C++17 Unicode filesystem round trip",
+      "C++20 format_error propagation",
+      "C++23 expected monadic error propagation",
+      "C++23 Unicode format and print"
+    ]
+  },
+  "executable_sha256": "f5edd072358da663b615a87ba8d5a05102976a22d8938622cb840ea35738980d",
+  "sdk_build": {
+    "status": "PASS",
+    "scope": "Local staged build",
+    "qt": "5.15.19",
+    "archives": 235,
+    "matches_existing_archive_set": true,
+    "runtime_method": "VMware guest operations, native Windows platform plugin, executables verified by SHA256 after transfer",
+    "modern_cpp": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "gui": {
+      "apps_passed": 7,
+      "checks": {
+        "passed": 216,
+        "failed": 0,
+        "skipped": 29
+      },
+      "applications": [
+        {
+          "application": "widgets-gallery",
+          "passed": 94,
+          "failed": 0,
+          "skipped": 5
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 7
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 14
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "85b308b8a956bb01c18dbf4b9a427d79eb14bd939e544302527f6b186740867d",
+      "graphics-gallery.exe": "ca5ca04fb1635506b945ccb42fdde6dbcbe2d7a494292cc1f5ae7b88e281e4b2",
+      "multimedia-lab.exe": "a30611c4bc44a106fecffc8e4bc3590227e18236db5843d488a8153717e6e694",
+      "network-gui.exe": "fffb653b5394591b27ada86dba17e9f4208bfb420a10484c08a8568bc71c97e0",
+      "painting-lab.exe": "a9d5c525d7f89beb709b7d46a17fbfded3a061c02d88f114532ebcb19df6fe78",
+      "qt-selftest.exe": "eb421343760578afe52c49fe1a0afa4e338a0c099b91ee4b19c6d7a7ace9cab0",
+      "quick-qml-gallery.exe": "5bc0121b492858bf73d474c46033684db56d2af860556941cfa7fa307005dd10",
+      "smoke-runner.exe": "b4d66a8fd32257a4597a5939bd03d784290a5150de88c1931b37e5f301286d44",
+      "widgets-gallery.exe": "c5641273ce7ccfd8577cf056853ee4b8b42f03c3ba6526c5629e5e46345759eb"
+    }
+  },
+  "repository_build": {
+    "command": "make qt5-win-i386-llvm-examples PARALLEL_JOBS=4",
+    "image": "qt5-win-i386:llvm21",
+    "image_id": "sha256:311ef7c21841afec4bc12610c091602d76ddf2b34a72358497c73e99c039f4ec",
+    "verified_at": "2026-11-12",
+    "status": "PASS",
+    "archives": 235,
+    "matches_existing_archive_set": true,
+    "qmake_module_files": 157,
+    "qmake_feature_entries": 314,
+    "matches_existing_qmake_modules_and_features": true,
+    "modern_cpp": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "gui": {
+      "apps_passed": 7,
+      "checks": {
+        "passed": 216,
+        "failed": 0,
+        "skipped": 29
+      },
+      "applications": [
+        {
+          "application": "widgets-gallery",
+          "passed": 94,
+          "failed": 0,
+          "skipped": 5
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 7
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 14
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "f4d4a82891746502e7ab4fe1e5278bed184243305c99b3f00b0065c2b60937cf",
+      "graphics-gallery.exe": "9c7dbe47314fe518e09c5a7544122938815a72c7d456a12a84d318f183bfe1db",
+      "multimedia-lab.exe": "4d001f82258050afdb1c077264008c6ddd8ce6e6fd6acb50ad7eb9fc9f84d40c",
+      "network-gui.exe": "3c125bdf71bd89f302438f25ac363f9ddef3e38e419320577d571d6d5a7e38d4",
+      "painting-lab.exe": "c2977524e2d55e8ded421a24e418dda5ecd80a2cb5012e55356c0b9bf1e7ec83",
+      "qt-selftest.exe": "cfd44a286eb02ebdcebb9c94558e751b3aae115ca4fbb6886c8d1bbd3e87d270",
+      "quick-qml-gallery.exe": "6ca7d86cf04523862e31ba3dc9442cd97e84e160ceab20b8c1b96cfb2a0400e9",
+      "smoke-runner.exe": "0c9a80308b17f9fe14c3d8d91fbd35de331166a0fa82ab91c32a74d9b8478110",
+      "widgets-gallery.exe": "4c7b0f25983323229107a705f0bb8458307329cbcdd7494094c33486fb9a615f"
+    },
+    "xp_sp3_rerun": {
+      "date": "2026-11-13",
+      "guest": "Windows XP SP3 (32-bit), VMware Workstation",
+      "matches_repository_build_sha256": true,
+      "app_local_msvcr100_sha256": "1221a09484964a6f38af5e34ee292b9afefccb3dc6e55435fd3aaf7c235d9067",
+      "modern_cpp": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "gui": {
+        "apps_passed": 7,
+        "checks": {
+          "passed": 216,
+          "failed": 0,
+          "skipped": 29
+        },
+        "applications": [
+          {
+            "application": "gl-heavy-gallery",
+            "passed": 39,
+            "failed": 0,
+            "skipped": 7
+          },
+          {
+            "application": "graphics-gallery",
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "multimedia-lab",
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "network-gui",
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "application": "painting-lab",
+            "passed": 16,
+            "failed": 0,
+            "skipped": 3
+          },
+          {
+            "application": "quick-qml-gallery",
+            "passed": 24,
+            "failed": 0,
+            "skipped": 14
+          },
+          {
+            "application": "widgets-gallery",
+            "passed": 94,
+            "failed": 0,
+            "skipped": 5
+          }
+        ]
+      }
+    }
+  }
+}

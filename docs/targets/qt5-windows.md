@@ -30,6 +30,30 @@ finds the newer API. It uses Schannel instead of OpenSSL and disables Qt
 Quick's D3D12 backend (its shaders need Microsoft's `fxc`) and the MapboxGL
 geoservices plugin (clang 19 rejects the boost and rapidjson it vendors).
 
+## i386 with LLVM 21.1.8
+
+The opt-in profile uses upstream Clang, LLD, compiler-rt and libc++. It takes
+the MinGW-w64 v5 XP sysroot and OpenSSL from `qt5-win-i386:latest`. Prepare
+`longreach-llvm:21.1.8-compiler` using the
+[LLVM compiler instructions](qt5-linux.md#amd64-with-llvm-2118), then run
+one build at a time.
+
+```sh
+make qt5-win-i386-llvm-examples PARALLEL_JOBS=4
+```
+
+`make qt5-win-i386-llvm` builds the SDK alone. The SDK installs to
+`/opt/qt5-win-i386-llvm` in `qt5-win-i386:llvm21`. The examples go to
+`artifacts/tests-qt5-win-i386-llvm21/`. The validated deployment on XP SP3
+places the 32-bit Visual C++ 2010 CRT (`msvcr100.dll`) alongside the
+executables. The build image and extracted suite contain the import
+library and the executables, respectively. Supply the runtime on the
+guest when running the tests.
+
+The [build and run record](../results/qt5-win-i386-llvm21-xp-probe-20261112.md)
+describes the C++23 and GUI results and the experimental filesystem limits.
+
+
 ## Results
 
 8/8 (478 checks) on Windows XP SP3 in VMware with the i386 build; the XP

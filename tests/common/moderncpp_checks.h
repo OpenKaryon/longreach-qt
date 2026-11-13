@@ -243,6 +243,31 @@ private:
 };
 #endif
 
+#if SMOKE_CXX_LEVEL > 202002L && defined(__cpp_lib_print) && __cpp_lib_print >= 202207L
+class PrintOutputFile
+{
+public:
+    PrintOutputFile()
+#if defined(_WIN32) && defined(__cpp_lib_filesystem) && __cpp_lib_filesystem >= 201703L
+        // The Windows CRT's tmpfile uses the root of the current drive.
+        : m_file(m_directory.valid() ? ::_wfopen(m_directory.first().c_str(), L"w+b") : nullptr)
+#else
+        : m_file(std::tmpfile())
+#endif
+    {
+    }
+
+    explicit operator bool() const { return bool(m_file); }
+    std::FILE *get() const { return m_file.get(); }
+
+private:
+#if defined(_WIN32) && defined(__cpp_lib_filesystem) && __cpp_lib_filesystem >= 201703L
+    TemporaryDirectory m_directory;
+#endif
+    std::unique_ptr<std::FILE, FileCloser> m_file;
+};
+#endif
+
 #if defined(__cpp_fold_expressions) && __cpp_fold_expressions >= 201603L
 template<typename... Values>
 static int modernSum(Values... values)
@@ -424,7 +449,7 @@ inline void run(Check check)
     });
     check("C++23 std::print", []() -> Result {
 #if SMOKE_CXX_LEVEL > 202002L && defined(__cpp_lib_print) && __cpp_lib_print >= 202207L
-        std::unique_ptr<std::FILE, FileCloser> file(std::tmpfile());
+        PrintOutputFile file;
         if (!file) {
             return Result::failure("cannot create a temporary output file");
         }
@@ -562,7 +587,7 @@ inline void run(Check check)
     check("C++23 Unicode format and print", []() -> Result {
 #if SMOKE_CXX_LEVEL > 202002L && defined(__cpp_lib_print) && __cpp_lib_print >= 202207L \
     && defined(__cpp_lib_format) && __cpp_lib_format >= 201907L
-        std::unique_ptr<std::FILE, FileCloser> file(std::tmpfile());
+        PrintOutputFile file;
         if (!file)
             return Result::failure("cannot create a temporary output file");
         const std::string text("\xc3\xa9_\xe6\x97\xa5");

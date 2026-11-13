@@ -74,6 +74,29 @@ seven GUI examples under Ubuntu's 2.6.32 kernel and Lucid userland in QEMU.
 The [run record](../results/qt5-linux-amd64-llvm21-lucid-20261111.md) describes the display setup
 and the scope of the run.
 
+## i386 with LLVM 21.1.8
+
+The i386 profile shares the [Lucid build recipe](#amd64-with-llvm-2118).
+It takes the i386 sysroot and OpenSSL from `qt5-linux-i386:latest`.
+The host still runs the amd64 compiler and Wayland scanner. The LLVM
+runtimes and all target Qt libraries are built for i686 against glibc 2.11.
+The i386 FreeType header keeps its original assembly constraints and
+omits the obsolete `register` specifier on the output variable.
+
+With the same pinned sources and compiler staged, run:
+
+```sh
+make qt5-linux-i386-llvm-examples PARALLEL_JOBS=4
+```
+
+The SDK alone is `make qt5-linux-i386-llvm`. It installs to
+`/opt/qt5-linux-i386-llvm` in `qt5-linux-i386:llvm21`. The examples go to
+`artifacts/tests-qt5-linux-i386-llvm21/`. The staged and clean repository
+builds both passed all 25 required C++23 checks and all seven GUI examples
+under Ubuntu's 32-bit 2.6.32 kernel and Lucid userland in QEMU.
+The [run record](../results/qt5-linux-i386-llvm21-lucid-20261111.md) describes the display setup
+and the scope of the run.
+
 ## arm64 with LLVM 21.1.8
 
 The opt-in `qt5-linux-arm64-llvm` target builds the static GPL-enabled SDK

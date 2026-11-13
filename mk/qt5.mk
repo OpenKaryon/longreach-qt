@@ -157,7 +157,7 @@ QT5_LUCID_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
     --build-arg LLVM_COMPILER_IMAGE=$(QT5_LUCID_LLVM_COMPILER) \
     --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
 
-QT5_LUCID_LLVM_TARGETS := qt5-linux-amd64-llvm
+QT5_LUCID_LLVM_TARGETS := qt5-linux-amd64-llvm qt5-linux-i386-llvm
 .PHONY: $(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS))
 BUILD_TARGETS += $(QT5_LUCID_LLVM_TARGETS)
 $(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS)): $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
@@ -209,7 +209,7 @@ QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
 QT5_TESTS_NAME := tests-$(subst :,-,$(QT5_IMAGE))
 QT5_TESTS_OUT := $(ARTIFACTS_DIR)/$(QT5_TESTS_NAME)
 QT5_TESTS_PACKAGE := $(QT5_TESTS_OUT).tar.gz
-ifneq ($(filter qt5-linux-amd64:llvm21,$(QT5_IMAGE)),)
+ifneq ($(filter qt5-linux-amd64:llvm21 qt5-linux-i386:llvm21,$(QT5_IMAGE)),)
 QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-lucid/include/openssl/opensslv.h
 endif
 QT5_TESTS_OPENSSL_ARG = $(if $(QT5_TESTS_OPENSSL_HEADER),--openssl-header "$(QT5_TESTS_OPENSSL_HEADER)",--openssl-version "$(OPENSSL_VERSION)")

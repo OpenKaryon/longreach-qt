@@ -224,22 +224,78 @@
       "matching_dynamic_library_paths": 14,
       "baseline_dynamic_imports": 604,
       "candidate_dynamic_imports": 618,
-      "added_strong_imports_found_in_lucid": {
-        "_IO_getc@GLIBC_2.2.5": "libc-2.11.1.so",
-        "atanf@GLIBC_2.2.5": "libm-2.11.1.so",
-        "atof@GLIBC_2.2.5": "libc-2.11.1.so",
-        "fputwc@GLIBC_2.2.5": "libc-2.11.1.so",
-        "fseeko@GLIBC_2.2.5": "libc-2.11.1.so",
-        "ftello@GLIBC_2.2.5": "libc-2.11.1.so",
-        "getwc@GLIBC_2.2.5": "libc-2.11.1.so",
-        "isalpha@GLIBC_2.2.5": "libc-2.11.1.so",
-        "remove@GLIBC_2.2.5": "libc-2.11.1.so",
-        "setbuf@GLIBC_2.2.5": "libc-2.11.1.so",
-        "strcasecmp@GLIBC_2.2.5": "libc-2.11.1.so",
-        "ungetc@GLIBC_2.2.5": "libc-2.11.1.so",
-        "ungetwc@GLIBC_2.2.5": "libc-2.11.1.so",
-        "vsprintf@GLIBC_2.2.5": "libc-2.11.1.so"
-      },
+      "added_strong_imports_found_in_lucid": [
+        {
+          "symbol": "_IO_getc",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "atanf",
+          "version": "GLIBC_2.2.5",
+          "library": "libm-2.11.1.so"
+        },
+        {
+          "symbol": "atof",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "fputwc",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "fseeko",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "ftello",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "getwc",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "isalpha",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "remove",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "setbuf",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "strcasecmp",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "ungetc",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "ungetwc",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        },
+        {
+          "symbol": "vsprintf",
+          "version": "GLIBC_2.2.5",
+          "library": "libc-2.11.1.so"
+        }
+      ],
       "lucid_library_sha256": {
         "libc-2.11.1.so": "237f982b047ffdf736d8fd482b3de61cfb92b3f6ea371cfb3bd3cb441397c97a",
         "libm-2.11.1.so": "973b58ade74013610126afaac29005a0e27e4a574186e57cc73d59acea394ad4"

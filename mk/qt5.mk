@@ -226,6 +226,23 @@ qt5-macos-i386-llvm qt5-macos-i386-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_I386_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/macos/i386/Dockerfile-llvm -t $(QT5_MACOS_I386_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_MACOS_I386_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=3.5.7)
 
+QT5_MACOS_AMD64_LLVM_IMAGE := qt5-macos-amd64:llvm21
+QT5_MACOS_AMD64_LLVM_PLATFORM ?= qt5-macos-amd64:latest
+QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE := longreach-llvm:21.1.8-snow-tls
+QT5_MACOS_AMD64_LLVM_ARGS = --build-arg MACOS_PLATFORM_IMAGE=$(QT5_MACOS_AMD64_LLVM_PLATFORM) \
+    --build-arg LLVM_COMPILER_IMAGE=$(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) \
+    --build-arg LEGACY_MACOS_SDK=$(QT5_MACOS_I386_LINK_SDK) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+
+.PHONY: qt5-macos-amd64-llvm qt5-macos-amd64-llvm-examples
+BUILD_TARGETS += qt5-macos-amd64-llvm
+qt5-macos-amd64-llvm qt5-macos-amd64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(DOWNLOAD_DIR)/openssl-3.5.7.tar.gz $(QT5_MACOS_I386_LINK_SDK_PATH)
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
+	docker image inspect --format "{{.Id}}" $(QT5_MACOS_AMD64_LLVM_PLATFORM) $(QT5_MACOS_I386_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_I386_LLVM_ARGS) --target compiler -f docker/qt5/macos/i386/Dockerfile-llvm -t $(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_AMD64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/macos/amd64/Dockerfile-llvm -t $(QT5_MACOS_AMD64_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_MACOS_AMD64_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=3.5.7)
+
 qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)

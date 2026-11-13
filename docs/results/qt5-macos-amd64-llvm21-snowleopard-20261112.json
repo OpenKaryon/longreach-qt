@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "target": "qt5-macos-amd64-llvm",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "min_os": "Mac OS X 10.6",
+  "local_build": {
+    "status": "PASS",
+    "sdk_buildkit_ref": "p7aeyjrsj5o44se564ve4t1dg",
+    "examples_buildkit_ref": "u8r5h44vk3z5ou6ewvdaokp4s",
+    "image": "qt5-macos-amd64:llvm21-snow-static-tls-probe",
+    "image_id": "sha256:2219e06157962bceebc86b8a1122e6ec37f8ade86bc3dedec0ef29ae9cc920bc",
+    "sdk_archives": 238,
+    "qmake_module_files": 155,
+    "matches_existing_archive_set": true,
+    "matches_existing_qmake_module_files": true,
+    "mach_o": {
+      "architecture": "x86_64",
+      "deployment_target": "10.6",
+      "dynamic_libraries": "system-only"
+    },
+    "unresolved_tls_symbols": false,
+    "executables_sha256": {
+      "gl-heavy-gallery": "e522c7bff536300277c6fef9b5323073993485af92babe906e008190366c6aef",
+      "graphics-gallery": "d6bd1117e1e8325eb9ed8c05edf07dbb05b37d7406444bfe45a3a6c0d0eb5ad4",
+      "multimedia-lab": "19d6eefc7269f118e2a82f6be6224220db9cad5c6e2755d19351e91d3897b90e",
+      "network-gui": "3ab77f2ea90b183c2b63ab26f4ce3f0d17bf68351c54eb33355329a4445a1902",
+      "painting-lab": "7a6d9f9e46c1536b5177589d94b2f5dd9099d6fdd806516650e6390a24802cb3",
+      "qt-selftest": "fc55464e3a99c875e7a17ac5c1e60b6650823c563ecf2a13f7a5f6fad83907b3",
+      "quick-qml-gallery": "d192c833122995cb258680f1e364738b4796542cb1a8ded9476be8901f94106a",
+      "smoke-runner": "4c746f4882b62e1a6f034fc2131f6b2bd5915f9200910af4f66b3123329fd06e",
+      "widgets-gallery": "b58185b65c4a0f1918779506371fb6a8548127f7b9fd9f97a96e562e0acdd6fa"
+    }
+  },
+  "strict_cxx23_compile": "PASS",
+  "strict_cxx23_runtime": "PASS",
+  "ordinary_runtime": "PASS",
+  "repository_build": {
+    "command": "make qt5-macos-amd64-llvm-examples PARALLEL_JOBS=3",
+    "status": "PASS",
+    "buildkit_ref": "cvwfe0728wisluc33vsi0cc2g",
+    "buildkit_duration": "41m58.869s",
+    "image": "qt5-macos-amd64:llvm21",
+    "image_id": "sha256:f532189302216b9703bccfec7b3928ffecfbdb6a47c604f3ea3f811ecfa0a63d",
+    "sdk_archives": 238,
+    "qmake_module_files": 155,
+    "matches_existing_archive_set": true,
+    "matches_existing_qmake_module_files": true,
+    "matches_existing_qmake_features": true,
+    "mach_o": {
+      "architecture": "x86_64",
+      "deployment_target": "10.6",
+      "dynamic_libraries": "system-only"
+    },
+    "strict_cxx23_compile": "PASS",
+    "unresolved_tls_symbols": false,
+    "manifest_matches_image": true,
+    "executables_sha256": {
+      "gl-heavy-gallery": "9c2a8482f14fea0f351e1e597920e21607a36063ca97de69847ebaed95f3cacb",
+      "graphics-gallery": "63ba1693890b592816a87de98e07af44e5849dcdc46a80f7a392cce3d1e7e1d9",
+      "multimedia-lab": "0019bbeead4f4b0d52c56bee744b450b011053f5693922eba538dd9e9942b1cf",
+      "network-gui": "893fa353ffc93e49720d088396a0d079c1c9e6903e342ae637df1cefc0d40104",
+      "painting-lab": "fbca7bbe91a9fe6d8b2e9457146e30677ed34bd6f85784bbaf0f03c25129beab",
+      "qt-selftest": "d2bee6b465db5bd7c3fc957b49dae47ea09cf1760731272bc214682c9d23c459",
+      "quick-qml-gallery": "133ae74241e9a1bd54bc2a8d086e2d31d713534fca36d27b750aabfe39e6694e",
+      "smoke-runner": "744351d7539635a6f3aef3f057e560d207b543b6c418b8cf2abfffaabfc394da",
+      "widgets-gallery": "d36ed301eaac260b2d9ddc065a340032b353fc2dda313343aeed54b4eca94fed"
+    }
+  },
+  "libsystem_import_audit": {
+    "system": "Mac OS X 10.6.3",
+    "system_build": "10D2235",
+    "status": "PASS",
+    "architecture": "x86_64",
+    "binaries": "repository build",
+    "library_sha256": {
+      "libSystem.B.dylib": "d4afd1015e595a10a8e2907288a1efe5bd05672acbee2ea88e06e3b66a5b0c4b",
+      "libmathCommon.A.dylib": "288d8f7e86217faf16ce44eb44b1ec0064ce8db90214b6825c8c42900c905cd2"
+    },
+    "strong_imports_by_binary": {
+      "qt-selftest": 424,
+      "widgets-gallery": 292,
+      "graphics-gallery": 264,
+      "painting-lab": 264,
+      "multimedia-lab": 309,
+      "gl-heavy-gallery": 343,
+      "quick-qml-gallery": 330,
+      "network-gui": 309,
+      "smoke-runner": 226
+    }
+  },
+  "dylib_load_audit": {
+    "system": "Mac OS X 10.6.3",
+    "system_build": "10D2235",
+    "status": "PASS",
+    "distinct_strong_load_paths": 24,
+    "compatibility_versions_present": true,
+    "strong_loads_by_binary": {
+      "qt-selftest": 24,
+      "widgets-gallery": 21,
+      "graphics-gallery": 17,
+      "painting-lab": 17,
+      "multimedia-lab": 22,
+      "gl-heavy-gallery": 18,
+      "quick-qml-gallery": 18,
+      "network-gui": 18,
+      "smoke-runner": 9
+    },
+    "binaries": "repository build"
+  },
+  "framework_binding_comparison": {
+    "status": "PASS",
+    "baseline_runtime_report": "qt5-macos-amd64-snowleopard-vmware-20261030.json",
+    "baseline_executables_verified": 9,
+    "new_required_non_libsystem_bindings": 0,
+    "checked_bindings_by_binary": {
+      "qt-selftest": 920,
+      "widgets-gallery": 847,
+      "graphics-gallery": 774,
+      "painting-lab": 784,
+      "multimedia-lab": 892,
+      "gl-heavy-gallery": 864,
+      "quick-qml-gallery": 832,
+      "network-gui": 825,
+      "smoke-runner": 176
+    }
+  },
+  "snow_leopard_runtime": {
+    "os": "Mac OS X 10.6.3 (10D2235)",
+    "kernel": "Darwin qts-Mac-mini.local 10.3.3 Darwin Kernel Version 10.3.3: Wed Apr  7 20:47:33 PDT 2010; root:xnu-1504.6.1~3/RELEASE_X86_64 x86_64",
+    "method": "VMware user session, separate strict C++23 and ordinary GUI passes over SSH",
+    "matches_repository_build_sha256": true,
+    "modern_cpp": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0
+    },
+    "gui_totals": {
+      "passed": 228,
+      "failed": 0,
+      "skipped": 23
+    },
+    "applications": [
+      {
+        "application": "widgets-gallery",
+        "passed": 92,
+        "failed": 0,
+        "skipped": 3
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 53,
+        "failed": 0,
+        "skipped": 6
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 25,
+        "failed": 0,
+        "skipped": 13
+      },
+      {
+        "application": "network-gui",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  }
+}

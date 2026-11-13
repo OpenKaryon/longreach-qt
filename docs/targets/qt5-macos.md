@@ -109,6 +109,26 @@ The repository command rebuilt the SDK and strict examples. The exported binarie
 The resulting SDK and nine ordinary examples passed the artifact audit.
 ([build result](../results/qt5-macos-i386-llvm21-snowleopard-20261112.md))
 
+### LLVM 21.1.8 on amd64
+
+The standalone set of 25 C++23 checks compiled and linked as x86_64
+Mach-O with the 10.6 deployment target. The static libc++ and libc++abi
+build uses the 10.7 SDK headers and the same emulated TLS patches as
+i386. The Qt profile uses the existing 11.3 SDK for application
+headers and linking. Qt configuration retains QML JIT, Mapbox GL and
+static OpenSSL 3.5.7.
+
+```sh
+make qt5-macos-amd64-llvm-examples PARALLEL_JOBS=3
+```
+
+The repository build and all nine strict C++23 examples passed the artifact audit. The archive paths, qmake modules and qmake features match the baseline. The Snow Leopard 10.6.3 guest passed all 25 C++23 checks and seven GUI examples. ([build result](../results/qt5-macos-amd64-llvm21-snowleopard-20261112.md))
+
+The first full prototype reached the Qt Declarative tools and failed to
+link `__isPlatformVersionAtLeast`. The repository profile builds that
+compiler-rt helper against the 10.7 SDK for the 10.6 target. A standalone
+`@available` probe linked with the helper. Explicitly loading the static TLS archive resolved destructor registration in the audited examples.
+
 ## Limits
 
 - Real 10.6 hardware, a 32-bit-only Mac and Apple silicon have not run the

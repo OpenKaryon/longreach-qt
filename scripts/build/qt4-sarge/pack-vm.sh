@@ -3,6 +3,12 @@
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
 root=/work/sysroot
+arch=${SARGE_ARCH:-i386}
+case "$arch" in
+    i386) kernel=2.6.8-4-386 ;;
+    amd64) kernel=2.6.8-12-amd64-generic ;;
+    *) echo "Unsupported Sarge architecture: $arch" >&2; exit 2 ;;
+esac
 mkdir -p /work/kernel "$root/dev"
 if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
     mkdir -p "$root/opt/apps"
@@ -16,22 +22,26 @@ if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
         fi
     done
 fi
-dpkg-deb -x /kernels/kernel-image-2.6.8-4-386_2.6.8-17sarge1_i386.deb /work/kernel
-dpkg-deb -x /kernels/net-tools_1.60-10_i386.deb "$root"
+if [ "${SARGE_LLVM_PROBE:-0}" = 1 ]; then
+    install -Dm755 /out/bin/cxx23-probe "$root/opt/apps/cxx23-probe"
+    touch "$root/opt/apps/.llvm-probe"
+fi
+dpkg-deb -x /kernels/kernel-image-"$kernel"_*_"$arch".deb /work/kernel
+dpkg-deb -x /kernels/net-tools_1.60-10_"$arch".deb "$root"
 for package in /kernels/mount_*.deb /kernels/libblkid1_*.deb /kernels/libuuid1_*.deb; do
     dpkg-deb -x "$package" "$root"
 done
-dpkg-deb -x /kernels/module-init-tools_3.2-pre1-2_i386.deb "$root"
-mkdir -p "$root/lib/modules/2.6.8-4-386/kernel/net/unix" "$root/lib/modules/2.6.8-4-386/kernel/net/ipv6"
-cp /work/kernel/lib/modules/2.6.8-4-386/kernel/net/unix/unix.ko "$root/lib/modules/2.6.8-4-386/kernel/net/unix/"
-cp /work/kernel/lib/modules/2.6.8-4-386/kernel/net/ipv6/ipv6.ko "$root/lib/modules/2.6.8-4-386/kernel/net/ipv6/"
+dpkg-deb -x /kernels/module-init-tools_3.2-pre1-2_"$arch".deb "$root"
+mkdir -p "${root}/lib/modules/${kernel}/kernel/net/unix" "${root}/lib/modules/${kernel}/kernel/net/ipv6"
+cp /work/kernel/lib/modules/${kernel}/kernel/net/unix/unix.ko "${root}/lib/modules/${kernel}/kernel/net/unix/"
+cp /work/kernel/lib/modules/${kernel}/kernel/net/ipv6/ipv6.ko "${root}/lib/modules/${kernel}/kernel/net/ipv6/"
 if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
-    printf '%s\n' /lib/modules/2.6.8-4-386/kernel/net/{unix/unix,ipv6/ipv6}.ko: \
-        > "$root/lib/modules/2.6.8-4-386/modules.dep"
+    printf '%s\n' /lib/modules/${kernel}/kernel/net/{unix/unix,ipv6/ipv6}.ko: \
+        > "$root/lib/modules/$kernel/modules.dep"
 fi
 python /scripts/relativize-sysroot.py
-cp /work/kernel/boot/vmlinuz-2.6.8-4-386 /out/
-cp /work/kernel/boot/config-2.6.8-4-386 /out/
+cp /work/kernel/boot/vmlinuz-"$kernel" /out/
+cp /work/kernel/boot/config-"$kernel" /out/
 for item in 'console 5 1 600' 'ttyS0 4 64 600' 'null 1 3 666' 'zero 1 5 666' 'random 1 8 666' 'urandom 1 9 666'; do
     read -r name major minor mode <<< "$item"
     [ -e "$root/dev/$name" ] || mknod -m "$mode" "$root/dev/$name" c "$major" "$minor"
@@ -53,13 +63,23 @@ mount -n -t sysfs sysfs /sys
 if [ -f /opt/apps/.llvm-suite ]; then
     echo /bin/false > /proc/sys/kernel/modprobe
 fi
-insmod /lib/modules/2.6.8-4-386/kernel/net/unix/unix.ko
-insmod /lib/modules/2.6.8-4-386/kernel/net/ipv6/ipv6.ko
+insmod /lib/modules/"$(uname -r)"/kernel/net/unix/unix.ko
+insmod /lib/modules/"$(uname -r)"/kernel/net/ipv6/ipv6.ko
 /sbin/ifconfig lo 127.0.0.1 up
 echo SARGE_KERNEL_BEGIN
 uname -a
 cat /proc/meminfo | head -3
 cd /opt/apps
+if [ -f .llvm-probe ]; then
+    echo SARGE_MODERN_BEGIN
+    ./cxx23-probe
+    modern=$?
+    echo SARGE_MODERN_END
+    echo SARGE_MODERN_RESULT=$modern
+    sync
+    echo SARGE_VM_DONE
+    while true; do sleep 60; done
+fi
 Xvfb :91 -screen 0 1280x1024x24 -nolisten tcp > xvfb-vm.log 2>&1 &
 xpid=$!
 sleep 3

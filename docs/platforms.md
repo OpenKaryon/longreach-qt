@@ -50,6 +50,7 @@ it has been repeated; built-only ARM targets retain that status.
 | `qt4-linux-amd64` | Debian 3.1 Sarge amd64 | Debian 13 (container) | 8/8, 366 passed, 0 failed ([json](results/qt4-linux-amd64-debian-13-docker-20261011.json)); CentOS 7 and Ubuntu 24.04 before the GLX patch ([json](results/linux-forward-20261010.json)); not yet on Sarge amd64 itself |
 | | | CentOS 5.11 x86_64, glibc 2.5 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-centos-5-qemu-20261011.json)) |
 | | | Debian 4.0 etch amd64, glibc 2.3.6 (QEMU) | 8/8, 362 passed, 0 failed ([json](results/qt4-linux-amd64-debian-4-qemu-20261011.json)) |
+| `qt4-linux-amd64-llvm` | Debian 3.1 Sarge amd64 (glibc 2.3.2) | Sarge amd64 port, kernel 2.6.8 (QEMU) | 8/8 ordinary applications and 25/25 C++23 checks without skips ([result](results/qt4-linux-amd64-sarge-llvm21-20261113.md)) |
 | `qt4-macos-i386` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (QEMU, Core Duo) | 8/8, 364 passed, 0 failed ([json](results/qt4-macos-i386-tiger-qemu-20261015.json)); earlier 24/24 with the 24-application suite ([json](results/qt4-tiger-i386-suite-20261003.json)) |
 | | | macOS 10.13.6 (VMware, i386) | 8/8, 369 passed, 0 failed, 126 skipped ([json](results/qt4-macos-i386-highsierra-vmware-20261030.json)) |
 | | | OS X 10.7.5 (VMware, i386) | 8/8, 366 passed, 0 failed, 129 skipped ([json](results/qt4-macos-i386-lion-vmware-20261030.json)) |

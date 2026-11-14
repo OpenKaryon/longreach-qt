@@ -2,7 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
-runtime=/work/sarge-llvm/runtimes/linux-sarge-i386
+arch=${SARGE_ARCH:-i386}
+case "$arch" in
+    i386) qt_arch=i386 ;;
+    amd64) qt_arch=x86_64 ;;
+    *) echo "Unsupported Sarge architecture: $arch" >&2; exit 2 ;;
+esac
+runtime=/work/sarge-llvm/runtimes/linux-sarge-$arch
 prefix=/opt/qt4-sarge-llvm-sdk
 source=/work/qt4-sarge-llvm-sdk-src
 spec=linux-sarge-llvm
@@ -47,7 +53,7 @@ DEFINES += QT_NO_LINUX_FUTEX
 EOF
 OPENSSL_LIBS='-L/opt/sarge-openssl/lib -lssl -lcrypto -ldl -pthread' \
 ./configure -prefix "$prefix" -opensource -confirm-license -release -static -no-rpath \
-    -platform linux-longreach-host -xplatform "$spec" -arch i386 -host-arch x86_64 \
+    -platform linux-longreach-host -xplatform "$spec" -arch "$qt_arch" -host-arch x86_64 \
     -openssl-linked -I/opt/sarge-openssl/include -L/opt/sarge-openssl/lib \
     -I/opt/sysroot-sarge/usr/include/freetype2 \
     -nomake demos -nomake examples -nomake docs -nomake translations -nomake tests \

@@ -40,7 +40,7 @@ def fetch(item, directory):
         directory.mkdir(parents=True, exist_ok=True)
         with fetch_py.downloading(path):
             if not path.is_file():
-                # fetch.py: the OpenKaryonLab copy for a file sources.json lists, else upstream.
+                # fetch.py uses the configured mirror for files listed in sources.json.
                 pending = Path(fetch_py.download(item['url'], str(path)))
                 fetch_py.checked(str(pending), lambda p: verify(Path(p), item))
                 fetch_py.finish(str(pending), str(path))
@@ -59,11 +59,19 @@ def verify(path, item):
         raise SystemExit('SHA256/size mismatch: ' + str(path))
 
 
+def fetch_vm(arch, download_dir):
+    lock_name = 'qt4-sarge-vm-packages.json' if arch == 'i386' else 'qt4-sarge-amd64-vm-packages.json'
+    directory = 'debian-sarge-kernel' if arch == 'i386' else 'debian-sarge-kernel-amd64'
+    lock = json.loads((LOCKS / lock_name).read_text(encoding='utf-8'))
+    for item in lock['packages']:
+        fetch(item, download_dir / directory)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--download-dir', type=Path, default=ROOT / 'downloads')
     parser.add_argument('--arch', choices=['i386', 'amd64'], default='i386')
-    parser.add_argument('--vm', action='store_true', help='also fetch Sarge kernel/VM utilities (i386)')
+    parser.add_argument('--vm', action='store_true', help='also fetch the selected Sarge kernel and VM utilities')
     parser.add_argument('--verify-only', action='store_true',
                         help='check the packages already downloaded, for every architecture and the VM; '
                              'fetch nothing (make verify-downloads checks the archives)')
@@ -75,9 +83,7 @@ def main():
             lock = json.loads((LOCKS / f'qt4-sarge-{arch}-packages.json').read_text(encoding='utf-8'))
             for item in lock['packages']:
                 fetch(item, args.download_dir / f'debian-sarge-{arch}')
-        vm_lock = json.loads((LOCKS / 'qt4-sarge-vm-packages.json').read_text(encoding='utf-8'))
-        for item in vm_lock['packages']:
-            fetch(item, args.download_dir / 'debian-sarge-kernel')
+            fetch_vm(arch, args.download_dir)
         print(f"qt4-sarge-fetch.py: {COUNTS['verified']} verified, {COUNTS['absent']} not downloaded")
         return
     lock = json.loads((LOCKS / f'qt4-sarge-{args.arch}-packages.json').read_text(encoding='utf-8'))
@@ -86,9 +92,7 @@ def main():
     for item in SOURCES:
         fetch(item, args.download_dir)
     if args.vm:
-        vm_lock = json.loads((LOCKS / 'qt4-sarge-vm-packages.json').read_text(encoding='utf-8'))
-        for item in vm_lock['packages']:
-            fetch(item, args.download_dir / 'debian-sarge-kernel')
+        fetch_vm(args.arch, args.download_dir)
 
 
 if __name__ == '__main__':

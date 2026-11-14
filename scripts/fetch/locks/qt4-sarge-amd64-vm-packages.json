@@ -1,0 +1,59 @@
+{
+  "index_url": "https://archive.debian.org/debian-amd64/dists/sarge/main/binary-amd64/Packages.gz",
+  "packages": [
+    {
+      "package": "kernel-image-2.6.8-12-amd64-generic",
+      "version": "2.6.8-16sarge6",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/k/kernel-image-2.6.8-amd64/kernel-image-2.6.8-12-amd64-generic_2.6.8-16sarge6_amd64.deb",
+      "file": "kernel-image-2.6.8-12-amd64-generic_2.6.8-16sarge6_amd64.deb",
+      "bytes": 12571284,
+      "sha256": "3cd3af58f29cc68373d04de75ed0085141367dbdf5cb2f00fc42b1c95a12d732",
+      "archive_md5": "c0a9538516a6cce193b918dec8b0a0e3"
+    },
+    {
+      "package": "mount",
+      "version": "2.12p-4sarge1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/u/util-linux/mount_2.12p-4sarge1_amd64.deb",
+      "file": "mount_2.12p-4sarge1_amd64.deb",
+      "bytes": 146038,
+      "sha256": "72ec04023272a862f93baf6c212fcc54a91715374835445383f5defe95e7f3fe",
+      "archive_md5": "b8f5b355beb87bc3637861fc526c6d85"
+    },
+    {
+      "package": "libblkid1",
+      "version": "1.37-2sarge1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/e/e2fsprogs/libblkid1_1.37-2sarge1_amd64.deb",
+      "file": "libblkid1_1.37-2sarge1_amd64.deb",
+      "bytes": 42612,
+      "sha256": "d7e6ad23e3f22169813f9a450d3a164679f93e22f4a2040d821748204d171889",
+      "archive_md5": "2c70b74201a6672e2b0ecc0c16de44a4"
+    },
+    {
+      "package": "libuuid1",
+      "version": "1.37-2sarge1",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/e/e2fsprogs/libuuid1_1.37-2sarge1_amd64.deb",
+      "file": "libuuid1_1.37-2sarge1_amd64.deb",
+      "bytes": 31696,
+      "sha256": "6240df886a99caa91d7108819672c7aad7ef9ac289621795b4671230ac4511c6",
+      "archive_md5": "ba8d63f78c4e9f9fa331f93771e735d7"
+    },
+    {
+      "package": "net-tools",
+      "version": "1.60-10",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/n/net-tools/net-tools_1.60-10_amd64.deb",
+      "file": "net-tools_1.60-10_amd64.deb",
+      "bytes": 264910,
+      "sha256": "a9268d943cbdee6d88575421c2820c8cfc84dcdca96ffebfc549d9218b782468",
+      "archive_md5": "0a100ce29823411e1d27dc1f88572897"
+    },
+    {
+      "package": "module-init-tools",
+      "version": "3.2-pre1-2",
+      "url": "https://archive.debian.org/debian-amd64/pool/main/m/module-init-tools/module-init-tools_3.2-pre1-2_amd64.deb",
+      "file": "module-init-tools_3.2-pre1-2_amd64.deb",
+      "bytes": 78128,
+      "sha256": "f426c83a9392e6e28e1461b284fd71d8c7fb7fd77e3287b7e8b89c2412a15eb4",
+      "archive_md5": "4ce58dba03a2c1a656dedb7ac65e9dd4"
+    }
+  ]
+}

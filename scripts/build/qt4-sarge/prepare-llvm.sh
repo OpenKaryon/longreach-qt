@@ -8,7 +8,12 @@ echo "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  $archive
 "$LLVM_ROOT/bin/clang" --version | grep -E '^clang version 21[.]1[.]8([[:space:]]|$)'
 mkdir -p "$LLVM_BUILD_ROOT/source"
 tar -xJf "$archive" -C "$LLVM_BUILD_ROOT/source" --strip-components=1
-for patch in /src/patches/llvm/{linux-lucid,linux-sarge}/*.patch; do
+arch=${SARGE_ARCH:-i386}
+patches=(/src/patches/llvm/linux-lucid/*.patch /src/patches/llvm/linux-sarge/0[2345]-*.patch)
+if [ "$arch" = i386 ]; then
+    patches+=(/src/patches/llvm/linux-sarge/01-compiler-rt-no-half.patch)
+fi
+for patch in "${patches[@]}"; do
     (cd "$LLVM_BUILD_ROOT/source" && git apply "$patch")
 done
-bash /src/scripts/build/qt6-llvm-probes/build-runtime.sh linux-sarge-i386
+bash /src/scripts/build/qt6-llvm-probes/build-runtime.sh "linux-sarge-$arch"

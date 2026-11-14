@@ -54,29 +54,38 @@ qt4-linux-amd64: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch amd64
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/amd64/Dockerfile -t $(QT4_LINUX_AMD64_IMAGE) .
 
-# Opt-in Clang/libc++ SDK. The existing i386 SDK supplies the pinned Sarge
+# Opt-in Clang/libc++ SDKs. The existing SDKs supply the pinned Sarge
 # sysroot, CRT startup objects and OpenSSL.
-QT4_SARGE_LLVM_IMAGE := qt4-linux-i386:llvm21
-QT4_SARGE_LLVM_BASE ?= qt4-linux-i386:latest
+QT4_SARGE_LLVM_ARCH = $(if $(filter qt4-linux-amd64-llvm%,$@),amd64,i386)
+QT4_SARGE_LLVM_PLATFORM = linux/$(if $(filter amd64,$(QT4_SARGE_LLVM_ARCH)),amd64,386)
+QT4_SARGE_LLVM_TRIPLE = $(if $(filter amd64,$(QT4_SARGE_LLVM_ARCH)),x86_64,i686)-linux-gnu
+QT4_SARGE_LLVM_IMAGE = qt4-linux-$(QT4_SARGE_LLVM_ARCH):llvm21
+QT4_SARGE_LLVM_BASE ?= qt4-linux-$(QT4_SARGE_LLVM_ARCH):latest
 QT4_SARGE_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
 QT4_SARGE_LLVM_HOST ?= host-packages
-QT4_SARGE_LLVM_QEMU ?= longreach-run-qemu:lucid-i386-bookworm
-QT4_SARGE_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-linux-i386-llvm21
+QT4_SARGE_LLVM_QEMU ?= longreach-run-qemu:lucid-$(QT4_SARGE_LLVM_ARCH)-bookworm
+QT4_SARGE_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-linux-$(QT4_SARGE_LLVM_ARCH)-llvm21
 
-.PHONY: qt4-linux-i386-llvm qt4-linux-i386-llvm-examples qt4-linux-i386-llvm-qemu
-BUILD_TARGETS += qt4-linux-i386-llvm
-qt4-linux-i386-llvm qt4-linux-i386-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-4.8.7.tar.gz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+QT4_SARGE_LLVM_TARGETS := qt4-linux-i386-llvm qt4-linux-amd64-llvm
+.PHONY: $(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -qemu,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_LLVM_TARGETS))
+BUILD_TARGETS += $(QT4_SARGE_LLVM_TARGETS)
+$(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)): $(QT4_ARCHIVE_PATH)
+
+$(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_LLVM_TARGETS)): $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
 	$(ONE_BUILD_CHECK)
 	docker image inspect --format "{{.Id}}" $(QT4_SARGE_LLVM_BASE) $(QT4_SARGE_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg BASE_REGISTRY=$(BASE_REGISTRY) $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) --build-arg SARGE_IMAGE=$(QT4_SARGE_LLVM_BASE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_SARGE_LLVM_COMPILER) --build-arg HOST_IMAGE=$(QT4_SARGE_LLVM_HOST) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt4/linux/i386/Dockerfile-llvm -t $(QT4_SARGE_LLVM_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg BASE_REGISTRY=$(BASE_REGISTRY) $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) --build-arg SARGE_IMAGE=$(QT4_SARGE_LLVM_BASE) --build-arg SARGE_ARCH=$(QT4_SARGE_LLVM_ARCH) --build-arg SARGE_PLATFORM=$(QT4_SARGE_LLVM_PLATFORM) --build-arg SARGE_GCC_TRIPLE=$(QT4_SARGE_LLVM_TRIPLE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_SARGE_LLVM_COMPILER) --build-arg HOST_IMAGE=$(QT4_SARGE_LLVM_HOST) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),sdk-toolchain,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/linux/i386/Dockerfile-llvm -t $(QT4_SARGE_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
+	$(if $(filter %-probe,$@),$(call MKDIR_P,$(QT4_SARGE_LLVM_OUT)/probe/bin))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT)/probe/bin:/export" --entrypoint cp $(QT4_SARGE_LLVM_IMAGE)-probe /opt/qt4-sarge/cxx23-probe /export/)
+	$(if $(filter %-probe,$@),$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --probe-only --arch $(QT4_SARGE_LLVM_ARCH) --out "$(QT4_SARGE_LLVM_OUT)/probe" --sarge-image "$(QT4_SARGE_LLVM_BASE)" --qemu-image "$(QT4_SARGE_LLVM_QEMU)")
 	$(if $(filter %-examples,$@),$(call MKDIR_P,$(QT4_SARGE_LLVM_OUT)))
 	$(if $(filter %-examples,$@),$(PYTHON) -c "from pathlib import Path; Path('$(QT4_SARGE_LLVM_OUT)/elf-audit.json').unlink(missing_ok=True)")
 	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT):/export" $(QT4_SARGE_LLVM_IMAGE) -ec "mkdir -p /export/bin && cp /out/bin/* /export/bin/")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT):/out" -v "$(CURDIR)/scripts/build/qt4-sarge:/scripts:ro" -v "$(CURDIR)/tests/expected-apps.txt:/expected-apps.txt:ro" $(QT4_SARGE_LLVM_BASE) -ec "mkdir -p /work/suite && cp /expected-apps.txt /work/suite/expected-apps.txt && echo qt-selftest-cxx23 >> /work/suite/expected-apps.txt && python /scripts/audit-elf.py")
+	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT):/out" -v "$(CURDIR)/scripts/build/qt4-sarge:/scripts:ro" -v "$(CURDIR)/tests/expected-apps.txt:/expected-apps.txt:ro" -e SARGE_ARCH=$(QT4_SARGE_LLVM_ARCH) $(QT4_SARGE_LLVM_BASE) -ec "mkdir -p /work/suite && cp /expected-apps.txt /work/suite/expected-apps.txt && echo qt-selftest-cxx23 >> /work/suite/expected-apps.txt && python /scripts/audit-elf.py")
 
-qt4-linux-i386-llvm-qemu:
+$(addsuffix -qemu,$(QT4_SARGE_LLVM_TARGETS)):
 	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --out "$(QT4_SARGE_LLVM_OUT)" --sarge-image "$(QT4_SARGE_LLVM_BASE)" --qemu-image "$(QT4_SARGE_LLVM_QEMU)"
+	$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --arch $(QT4_SARGE_LLVM_ARCH) --out "$(QT4_SARGE_LLVM_OUT)" --sarge-image "$(QT4_SARGE_LLVM_BASE)" --qemu-image "$(QT4_SARGE_LLVM_QEMU)"
 
 .PHONY: qt4-macos-i386
 # Tiger: the Mac OS X 10.4u SDK, and GCC 5.5 for the C++ runtime.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-"""Boot the staged Sarge i386 examples in QEMU and require both test runs."""
+"""Boot Sarge in QEMU and verify the standalone probe or the SDK suite."""
 import argparse
 import hashlib
 import json
@@ -19,12 +19,20 @@ def run_guest():
     def timed_out(signum, frame):
         raise TimeoutError("Sarge guest did not finish within 600 seconds")
 
+    arch = os.environ["SARGE_ARCH"]
+    kernel = "2.6.8-4-386" if arch == "i386" else "2.6.8-12-amd64-generic"
+    machine = "i386" if arch == "i386" else "x86_64"
+    cpu = "pentium3" if arch == "i386" else "qemu64,phys-bits=32"
+    boot_args = "console=ttyS0 rdinit=/init panic=1 quiet"
+    if arch == "amd64":
+        boot_args += " memmap=exactmap memmap=636K@0 memmap=383M@1M"
+
     with subprocess.Popen([
-        "qemu-system-i386", "-machine", "pc", "-accel", "tcg", "-cpu", "pentium3",
+        f"qemu-system-{machine}", "-machine", "pc", "-accel", "tcg", "-cpu", cpu,
         "-m", "384", "-smp", "1", "-display", "none", "-monitor", "none",
         "-serial", "stdio", "-nic", "none", "-no-reboot",
-        "-kernel", "/out/vmlinuz-2.6.8-4-386", "-initrd", "/out/sarge-initramfs.cpio.gz",
-        "-append", "console=ttyS0 rdinit=/init panic=1 quiet",
+        "-kernel", f"/out/vmlinuz-{kernel}", "-initrd", "/out/sarge-initramfs.cpio.gz",
+        "-append", boot_args,
     ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as qemu:
         signal.signal(signal.SIGALRM, timed_out)
         signal.alarm(600)
@@ -45,35 +53,40 @@ def run_guest():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--sarge-image", default="qt4-linux-i386:latest")
-    parser.add_argument("--qemu-image", default="longreach-run-qemu:lucid-i386-bookworm")
+    parser.add_argument("--arch", choices=("i386", "amd64"), default="i386")
+    parser.add_argument("--probe-only", action="store_true")
+    parser.add_argument("--sarge-image")
+    parser.add_argument("--qemu-image")
     args = parser.parse_args()
     output = args.out.resolve()
-    try:
-        audit = json.loads((output / "elf-audit.json").read_text(encoding="utf-8"))
-        binaries = {entry["binary"]: entry["sha256"] for entry in audit["binaries"]}
-        actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-                  for p in (output / "bin").iterdir() if p.is_file()}
-    except (OSError, ValueError, KeyError, TypeError):
-        parser.error("Build and audit the examples with make qt4-linux-i386-llvm-examples first")
-    if "qt-selftest-cxx23" not in binaries or actual != binaries:
-        parser.error("Exported examples do not match the ELF audit")
+    sarge_image = args.sarge_image or f"qt4-linux-{args.arch}:latest"
+    qemu_image = args.qemu_image or f"longreach-run-qemu:lucid-{args.arch}-bookworm"
+    packages = "debian-sarge-kernel" if args.arch == "i386" else "debian-sarge-kernel-amd64"
+    kernel_path = ROOT / "downloads" / packages
+    if not kernel_path.is_dir():
+        parser.error(f"Stage the {args.arch} Sarge kernel packages under downloads/{packages}")
+    if args.probe_only:
+        if not (output / "bin/cxx23-probe").is_file():
+            parser.error("Missing standalone probe in the output directory")
+    else:
+        verify_examples(output, args.arch, parser)
     mounts = [
         "--mount", f"type=bind,source={ROOT},target=/repo,readonly",
         "--mount", f"type=bind,source={output},target=/out",
+        "-e", f"SARGE_ARCH={args.arch}",
     ]
     subprocess.run([
         "docker", "run", "--rm", "--network", "none", *mounts,
-        "-e", "SARGE_LLVM_SUITE=1",
-        "--entrypoint", "bash", args.sarge_image, "-ec",
+        "-e", "SARGE_LLVM_PROBE=1" if args.probe_only else "SARGE_LLVM_SUITE=1",
+        "--mount", f"type=bind,source={kernel_path},target=/kernels,readonly",
+        "--entrypoint", "bash", sarge_image, "-ec",
         "ln -s /repo/scripts/build/qt4-sarge /scripts; "
-        "ln -s /repo/downloads/debian-sarge-kernel /kernels; "
         "bash /scripts/pack-vm.sh",
     ], check=True)
     subprocess.run([
         "docker", "run", "--rm", "--network", "none", "--cpus", "1", "--memory", "1g", *mounts,
         "-e", "SARGE_IN_QEMU_CONTAINER=1",
-        "--entrypoint", "python3", args.qemu_image, f"/repo/{Path(__file__).relative_to(ROOT).as_posix()}",
+        "--entrypoint", "python3", qemu_image, f"/repo/{Path(__file__).relative_to(ROOT).as_posix()}",
     ], check=True)
 
     log = (output / "qemu.log").read_text(encoding="utf-8")
@@ -83,10 +96,25 @@ def main():
     (output / "cxx23.log").write_text(modern[1], encoding="utf-8")
     subprocess.run([sys.executable, str(ROOT / "scripts/tests/require-modern-cpp.py"),
                     str(output / "cxx23.log")], check=True)
-    if not all(marker in log for marker in (
-        "8 passed, 0 failed, 0 not built for this platform", "SARGE_SUITE_RESULT=0", "SARGE_MODERN_RESULT=0",
-    )):
-        raise SystemExit("The Sarge examples or the C++23 selftest failed")
+    if "SARGE_MODERN_RESULT=0" not in log.splitlines():
+        raise SystemExit("The Sarge C++23 run failed")
+    if not args.probe_only and (
+        "8 passed, 0 failed, 0 not built for this platform" not in log.splitlines()
+        or "SARGE_SUITE_RESULT=0" not in log.splitlines()
+    ):
+        raise SystemExit("The Sarge examples failed")
+
+
+def verify_examples(output, arch, parser):
+    try:
+        audit = json.loads((output / "elf-audit.json").read_text(encoding="utf-8"))
+        binaries = {entry["binary"]: entry["sha256"] for entry in audit["binaries"]}
+        actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                  for p in (output / "bin").iterdir() if p.is_file()}
+    except (OSError, ValueError, KeyError, TypeError):
+        parser.error(f"Build and audit the examples with make qt4-linux-{arch}-llvm-examples first")
+    if "qt-selftest-cxx23" not in binaries or actual != binaries:
+        parser.error("Exported examples do not match the ELF audit")
 
 
 if __name__ == "__main__":

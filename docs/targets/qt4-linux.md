@@ -64,6 +64,35 @@ binaries.
 See the [LLVM build and QEMU result](../results/qt4-linux-i386-sarge-llvm21-20261113.md)
 for the CPU floor, runtime changes and test scope.
 
+## amd64 with LLVM 21.1.8
+
+The amd64 build uses the same LLVM recipe with the unofficial Sarge amd64
+sysroot. The two locale-aware integer conversions in libc++ use the
+older symbols that the sysroot exports at `GLIBC_2.2.5`. This keeps the
+final ABI ceiling at `GLIBC_2.3.2`.
+
+With the compiler inputs above, `qt4-linux-amd64:latest`, and a local
+QEMU runner image available, run the commands in order:
+
+```sh
+python scripts/fetch/qt4-sarge-fetch.py --arch amd64 --vm
+make qt4-linux-amd64-llvm-probe PARALLEL_JOBS=3
+make qt4-linux-amd64-llvm-examples PARALLEL_JOBS=3
+make qt4-linux-amd64-llvm-qemu
+```
+
+The probe target builds only the LLVM runtime and standalone test, then
+runs all 25 required checks in QEMU. To reuse the Debian 12 tools image
+from the Lucid probe, set
+`QT4_SARGE_LLVM_HOST=qt5-linux-i386:llvm21-lucid-probe-inputs`.
+The probe writes its logs under
+`artifacts/tests-qt4-linux-amd64-llvm21/probe/`.
+
+The runner boots the pinned Sarge amd64 kernel in QEMU with an explicit
+low-memory map. The original kernel fails during page-table setup with
+the default modern QEMU memory map. The output directory is
+`artifacts/tests-qt4-linux-amd64-llvm21/`.
+
 ## Results
 
 The i386 build passes the current suite 8/8 (361 checks) with Sarge's own

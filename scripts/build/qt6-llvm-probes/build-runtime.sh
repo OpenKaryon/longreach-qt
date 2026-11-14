@@ -43,17 +43,22 @@ case "$target" in
                     -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
         link_flags='-fuse-ld=lld -no-pie -Wl,--threads=2'
         ;;
-    linux-sarge-i386)
-        cpu=i686
+    linux-sarge-i386|linux-sarge-amd64)
+        cpu=x86_64
+        march=x86-64
+        if [ "$target" = linux-sarge-i386 ]; then
+            cpu=i686
+            march=pentium3
+            cmake_args+=(-DCOMPILER_RT_HAS_i386_FLOAT16=OFF -DCOMPILER_RT_HAS_i386_BFLOAT16=OFF)
+        fi
         triple=$cpu-unknown-linux-gnu
         sysroot=/opt/sysroot-sarge
-        compiler_flags=(--sysroot="$sysroot" -march=pentium3 -DLONGREACH_SARGE -pthread -nostdinc
+        compiler_flags=(--sysroot="$sysroot" -march="$march" -DLONGREACH_SARGE -pthread -nostdinc
                         -isystem "$llvm/lib/clang/21/include" -isystem "$sysroot/usr/include"
                         -B/opt/sarge-crt/ -B"$sysroot/usr/lib/" -L"$sysroot/usr/lib" -L"$sysroot/lib"
                         -Wl,-rpath-link,"$sysroot/lib:$sysroot/usr/lib")
-        cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR="$cpu"
-                    -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
-        cmake_args+=(-DCOMPILER_RT_HAS_i386_FLOAT16=OFF -DCOMPILER_RT_HAS_i386_BFLOAT16=OFF)
+        cmake_args+=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR="$cpu"
+                     -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
         c_flags=-fgnu89-inline
         link_flags='--ld-path=/usr/bin/ld -no-pie -Wl,--hash-style=sysv'
         ;;
@@ -224,7 +229,7 @@ for language in c cxx; do
         printf 'exec '
         printf '%q ' "${arguments[@]}" "${linker_flags[@]}"
         printf '"$@"'
-        if [[ "$target" == linux-sarge-i386 && "$language" == cxx ]]; then
+        if [[ "$target" == linux-sarge-* && "$language" == cxx ]]; then
             printf ' -Wl,--no-as-needed -ldl -lrt -Wl,--as-needed'
         fi
         printf '\n'
@@ -245,7 +250,10 @@ case "$target" in
         glibc_floor=2.17
         if [[ "$target" = linux-lucid-* ]]; then glibc_floor=2.11; fi
         if [[ "$target" = linux-sarge-* ]]; then glibc_floor=2.3.2; fi
-        python3 /src/scripts/build/qt5-lucid/max-glibc.py "$binary" "$glibc_floor"
+        python3 /src/scripts/build/qt5-lucid/max-glibc.py "$binary" "$glibc_floor" || {
+            readelf --dyn-syms --wide "$binary" | grep GLIBC_ >&2
+            exit 1
+        }
         readelf -d "$binary" | grep NEEDED | tee "/out/$target/dependencies.log"
         if grep -E 'lib(c\+\+|stdc\+\+|gcc_s|unwind)' "/out/$target/dependencies.log"; then
             echo 'unexpected shared C++ runtime dependency' >&2

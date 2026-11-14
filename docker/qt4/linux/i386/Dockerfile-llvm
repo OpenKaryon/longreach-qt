@@ -5,6 +5,8 @@ ARG SARGE_IMAGE=qt4-linux-i386:latest
 ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
 ARG HOST_IMAGE=host-packages
 ARG SARGE_PLATFORM=linux/386
+ARG SARGE_ARCH=i386
+ARG SARGE_GCC_TRIPLE=i686-linux-gnu
 
 FROM --platform=${SARGE_PLATFORM} ${SARGE_IMAGE} AS sarge
 FROM ${LLVM_COMPILER_IMAGE} AS compiler
@@ -17,12 +19,15 @@ RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snaps
     rm -rf /var/lib/apt/lists/*
 
 FROM ${HOST_IMAGE} AS toolchain
+ARG SARGE_ARCH
+ARG SARGE_GCC_TRIPLE
+ENV SARGE_ARCH=${SARGE_ARCH}
 ENV PATH=/opt/llvm-21/bin:/usr/local/bin:/usr/bin:/bin CC="" CXX="" \
     PKG_CONFIG_SYSROOT_DIR="" PKG_CONFIG_LIBDIR=""
 COPY --from=compiler /opt/llvm-21 /opt/llvm-21
 COPY --from=sarge /work/sysroot /opt/sysroot-sarge
 COPY --from=sarge /work/openssl-1.0.2u /opt/sarge-openssl
-COPY --from=sarge /usr/lib/gcc/i686-linux-gnu/5/crtbegin.o /usr/lib/gcc/i686-linux-gnu/5/crtend.o /opt/sarge-crt/
+COPY --from=sarge /usr/lib/gcc/${SARGE_GCC_TRIPLE}/5/crtbegin.o /usr/lib/gcc/${SARGE_GCC_TRIPLE}/5/crtend.o /opt/sarge-crt/
 
 FROM toolchain AS runtime
 ARG PARALLEL_JOBS=3
@@ -34,8 +39,9 @@ RUN --network=none \
     PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-sarge/prepare-llvm.sh
 
 FROM toolchain AS sdk-toolchain
-COPY --from=runtime /work/sarge-llvm/runtimes/linux-sarge-i386 /work/sarge-llvm/runtimes/linux-sarge-i386
-COPY --from=runtime /out/linux-sarge-i386/cxx23-probe /opt/qt4-sarge/cxx23-probe
+ARG SARGE_ARCH
+COPY --from=runtime /work/sarge-llvm/runtimes/linux-sarge-${SARGE_ARCH} /work/sarge-llvm/runtimes/linux-sarge-${SARGE_ARCH}
+COPY --from=runtime /out/linux-sarge-${SARGE_ARCH}/cxx23-probe /opt/qt4-sarge/cxx23-probe
 
 FROM sdk-toolchain AS build-qt
 ARG PARALLEL_JOBS=3

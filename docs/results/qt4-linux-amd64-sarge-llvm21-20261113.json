@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-13",
+  "target": "qt4-linux-amd64-llvm",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "image_id": "sha256:8eb718d3866009ffb0a62322d4f03f9d4ba6624e7f34c891e5f556baa3616b0a",
+  "guest": {
+    "os": "Debian 3.1 Sarge amd64 port",
+    "kernel": "2.6.8-12-amd64-generic",
+    "cpu": "qemu64,phys-bits=32",
+    "memory_mib": 384,
+    "hypervisor": "QEMU TCG",
+    "display": "Sarge Xvfb"
+  },
+  "standalone_probe": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "sha256": "5ad5ecb9c206ca467bfcaef6bd208d9993aa1e5ba072139b65e43bbf1eb8bf90",
+    "repository_rebuild": {
+      "target": "qt4-linux-amd64-llvm-probe",
+      "host_image": "qt5-linux-i386:llvm21-lucid-probe-inputs",
+      "sha256": "ad401d75ae4f443b9a87758607d03050485a960467ec8659edf29c55f124c6cd",
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "maximum_glibc": "2.3.2"
+    }
+  },
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "ordinary": {
+    "apps_passed": 8,
+    "applications": [
+      {
+        "application": "qt-selftest",
+        "passed": 121,
+        "failed": 0,
+        "skipped": 139
+      },
+      {
+        "application": "widgets-gallery",
+        "passed": 140,
+        "failed": 0,
+        "skipped": 9
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 29,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 4
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 3
+      },
+      {
+        "application": "network-gui",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 1
+      }
+    ]
+  },
+  "elf_audit": {
+    "max_glibc": "2.3.2",
+    "binaries": [
+      {
+        "binary": "gl-heavy-gallery",
+        "sha256": "905f27e62bee2b4f78cb148cfb2bb12059c515d9a66783a5a49cbf598f5c7cf0",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libGL.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "graphics-gallery",
+        "sha256": "50b2005a23ea403ce8ed25b09a3768a7b237617ceefae5f64dbe1675f80501cd",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "multimedia-lab",
+        "sha256": "68453de4ccbeccb453bdb05970abf09951adb153f4c0b5055ca61e5836c398b5",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "network-gui",
+        "sha256": "f02b3210bed35cbb2e215a005b1a9cbf72d92a341ad5aad38a642b71c0ff0ed7",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "painting-lab",
+        "sha256": "42c84f32688e5403fdc59afbd42d9a044e2348c2f234a51b59e3151c82e24e56",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "qt-selftest",
+        "sha256": "345036e3b948acea2d819fc238b7904367a3a43d6e87efa8539ca2112aa3bf5e",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "qt-selftest-cxx23",
+        "sha256": "bff13fc262e0ea6d9a85baee2ff1aea4ae1939c47f9a598582416f7dd149ebe8",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "quick-qml-gallery",
+        "sha256": "76dc2d93a1e537ad9466d1db18c45b16dda1ea7a5ea3c7cac094b8340ed6a405",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libGL.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "smoke-runner",
+        "sha256": "2539051a9a2109e790a03bfa23110ea3973670ed91d99044b12d6b6a292c098a",
+        "needed": [
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      },
+      {
+        "binary": "widgets-gallery",
+        "sha256": "a7fa77ae6cb77fefc3dbc6c2b1883665e34902015ef5a94c45faaa17b664a6a7",
+        "needed": [
+          "libSM.so.6",
+          "libICE.so.6",
+          "libfreetype.so.6",
+          "libfontconfig.so.1",
+          "libXext.so.6",
+          "libX11.so.6",
+          "libm.so.6",
+          "libdl.so.2",
+          "librt.so.1",
+          "libpthread.so.0",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ],
+        "glibc_versions": [
+          "GLIBC_2.2.5",
+          "GLIBC_2.3",
+          "GLIBC_2.3.2"
+        ]
+      }
+    ]
+  },
+  "sdk_archive_comparison": {
+    "baseline_count": 35,
+    "llvm_count": 35,
+    "paths_match": true
+  }
+}

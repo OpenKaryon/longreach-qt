@@ -75,7 +75,8 @@ Windows Me is expected to behave like Windows 98 SE and has not been run.
 | | | Windows 7 SP1 x64 (VMware, amd64) | 8/8, 500 passed, 0 failed, 88 skipped ([json](results/qt5-win-amd64-win7-vmware-20261030.json)) |
 | | | Windows 11 (VMware), amd64 | 8/8, 498 passed, 0 failed, 90 skipped ([json](results/qt5-win-amd64-win11-vmware-20261030.json)) |
 | `qt5-win-i386-llvm` | Windows XP SP3 | Windows XP SP3 (VMware) | 25/25 C++23, 7/7 GUI examples, app-local Visual C++ 2010 runtime ([result](results/qt5-win-i386-llvm21-xp-probe-20261112.md)) |
-| `qt5-win-amd64-llvm` | Windows XP x64 SP2 | Windows 7 SP1 x64 (VMware), Windows 11 x64 | 25/25 C++23, 7/7 GUI examples, app-local Visual C++ 2010 runtime. XP x64 runtime deferred ([result](results/qt5-win-amd64-llvm21-xp-20261112.md)) |
+| `qt5-win-amd64-llvm` | Windows XP x64 SP2 | Windows 7 SP1 x64 (VMware), Windows 11 x64 | 25/25 C++23, 7/7 GUI examples, app-local Visual C++ 2010 runtime ([result](results/qt5-win-amd64-llvm21-xp-20261112.md)) |
+| `qt5-win-amd64-llvm` | Windows XP x64 SP2 | Windows XP x64 SP2 (VMware) | 25/25 C++23 without skips, 8/8 ordinary applications, 504 passed and 96 optional skips ([result](results/qt5-win-amd64-llvm21-xp-20261112.md#final-run-after-the-fixes)) |
 | `qt5-win-arm64` | Windows 10 on ARM | - | built, not run |
 | `qt5-win-arm64-llvm` | Windows 10 on ARM | - | SDK and nine strict C++23 examples built and audited. Runtime verification deferred ([result](results/qt5-win-arm64-llvm21-20261112.md)) |
 | `qt5-linux-amd64` | Ubuntu 10.04 (glibc 2.11, libxcb 1.5) | Ubuntu 10.04.4 (VMware) | 8/8, 498 passed, 0 failed ([json](results/qt5-linux-amd64-lucid-vmware-20261028.json)) |

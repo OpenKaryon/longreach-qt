@@ -9,6 +9,8 @@
 
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
+#include <QOpenGLFramebufferObject>
+#include <QOpenGLFunctions>
 #include <QScopedPointer>
 #include <QSGAbstractRenderer>
 #include <QSGEngine>
@@ -64,6 +66,13 @@ void checkQt5SceneGraphEngine(SmokeReporter &r)
         surface.create();
         if (!surface.isValid() || !context.makeCurrent(&surface)) {
             r.skip(d, QStringLiteral("no usable offscreen OpenGL surface"));
+            return false;
+        }
+
+        if (!QOpenGLFramebufferObject::hasOpenGLFramebufferObjects()
+            || !context.functions()->hasOpenGLFeature(QOpenGLFunctions::Shaders)) {
+            r.skip(d, QStringLiteral("OpenGL %1.%2 lacks framebuffer objects or shaders")
+                       .arg(context.format().majorVersion()).arg(context.format().minorVersion()));
             return false;
         }
 

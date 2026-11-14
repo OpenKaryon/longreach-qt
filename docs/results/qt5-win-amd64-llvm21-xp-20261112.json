@@ -497,7 +497,115 @@
     "xp_x64_sp2_test_kit": {
       "filename": "qt5-llvm21-xp-x64-sp2-current-export.zip",
       "sha256": "30f17f82e16cbe33efb32ceba20a2328a0c66d3cedbcde02183f8665403ffc6a",
-      "runtime": "NOT_RUN"
+      "runtime": "NOT_RUN",
+      "note": "The guest run below used the matching current export binaries on ISO media."
+    },
+    "windows_xp_x64_sp2_runtime": {
+      "status": "FAIL",
+      "date": "2026-11-14",
+      "guest": "Windows XP x64 SP2, build 5.2.3790, AMD64, VMware Workstation",
+      "input": "Current repository export with app-local Visual C++ 2010 SP1 CRT",
+      "iso_sha256": "ccc8171a4d93323d2e974cd239aa8becd5f0c24a751c5b9072c0e6af796db333",
+      "guest_binary_comparisons_passed": 10,
+      "modern_cpp": {
+        "command": "qt-selftest.exe --modern-cpp",
+        "verifier": "scripts/tests/require-modern-cpp.py",
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0,
+        "cplusplus": 202302
+      },
+      "ordinary_suite": {
+        "command": "smoke-runner.exe --timeout=180",
+        "apps_passed": 6,
+        "apps_failed": 2,
+        "apps_not_built": 0,
+        "applications": {
+          "qt-selftest": {
+            "status": "FAIL",
+            "exception": "0xC0000005",
+            "last_completed_check": "script/value-object-props",
+            "runner_summary": "crashed, exception 0xc0000005",
+            "fault_rva": "0x005F3BC9"
+          },
+          "widgets-gallery": {
+            "status": "PASS",
+            "passed": 94,
+            "failed": 0,
+            "skipped": 5
+          },
+          "graphics-gallery": {
+            "status": "PASS",
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "status": "FAIL",
+            "exception": "0xC0000005",
+            "last_completed_check": "scenegraph/grab-without-window",
+            "runner_summary": "exit code 128"
+          },
+          "gl-heavy-gallery": {
+            "status": "PASS",
+            "passed": 39,
+            "failed": 0,
+            "skipped": 7
+          },
+          "painting-lab": {
+            "status": "PASS",
+            "passed": 16,
+            "failed": 0,
+            "skipped": 3
+          },
+          "multimedia-lab": {
+            "status": "PASS",
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0
+          },
+          "network-gui": {
+            "status": "PASS",
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0
+          }
+        }
+      },
+      "attempts": [
+        {
+          "environment_overrides": {},
+          "modern_cpp_exit_code": 0,
+          "smoke_runner_exit_code": 1,
+          "logs_directory": "build/qt5-xp-x64-guest-verification/initial",
+          "logs_sha256": {
+            "DONE.TXT": "5e1f8562208322ba8dbd7567515383ac6ebf909de2eca4b674a5bfa781adcae4",
+            "RUNNER.LOG": "e1b0b480a0faac0541d7c9a3865a874d7b71ad5fd62ca7b4288462c9fc57c0ca",
+            "SMOKE.TXT": "0986e4cfd4f4d54eb53a132c3a2a0395c5eeed67f3bb209614d2f09d12a28a41",
+            "STATUS.TXT": "527e1afa5a2ced9c28c2845affcb9b26228958c6c3e3aeff4c7f24168c99cf90",
+            "STRICT.LOG": "57573a96320d5b7a937863ba0bdfad3065a5998c3e205c8292073eec7a2d942e",
+            "SYSTEM.TXT": "891171ee0cd88fd8336994813ecf45743a2388b3187add5dec3b6d5b191665a0",
+            "TRANSFER.TXT": "e3d9d5c1d054cd1fc428ca69ca72c82f8bc1b6b33a9e0a9723887c86aa622404"
+          }
+        },
+        {
+          "environment_overrides": {
+            "QV4_FORCE_INTERPRETER": "1"
+          },
+          "modern_cpp_exit_code": 0,
+          "smoke_runner_exit_code": 1,
+          "logs_directory": "build/qt5-xp-x64-guest-verification/interpreter",
+          "logs_sha256": {
+            "DONE.TXT": "5e1f8562208322ba8dbd7567515383ac6ebf909de2eca4b674a5bfa781adcae4",
+            "RUNNER.LOG": "2042cc67ee7f03307ed00ed91e0027ffce20022a1cb4839a2eab7a359c52d388",
+            "SMOKE.TXT": "0a3cf628831842296a7bf0d2d02bdf04b3cec766275567a982257d35519cdee5",
+            "STATUS.TXT": "527e1afa5a2ced9c28c2845affcb9b26228958c6c3e3aeff4c7f24168c99cf90",
+            "STRICT.LOG": "57573a96320d5b7a937863ba0bdfad3065a5998c3e205c8292073eec7a2d942e",
+            "SYSTEM.TXT": "891171ee0cd88fd8336994813ecf45743a2388b3187add5dec3b6d5b191665a0",
+            "TRANSFER.TXT": "e3d9d5c1d054cd1fc428ca69ca72c82f8bc1b6b33a9e0a9723887c86aa622404"
+          }
+        }
+      ]
     },
     "direct_import_audit": {
       "comparison": "Earlier Windows 7 verified suite",
@@ -521,6 +629,115 @@
       "static_archive_paths": 235,
       "qmake_module_files": 157,
       "qmake_feature_entries": 314
+    }
+  },
+  "fixed_repository_export": {
+    "status": "PASS",
+    "date": "2026-11-15",
+    "guest": "Windows XP x64 SP2, build 5.2.3790, AMD64, VMware Workstation",
+    "build_command": "make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3",
+    "buildkit_ref": "q78vah9e3j4jsv0ibrer6zixs",
+    "image_id": "sha256:3aba9f9227fea12c8699c2b31e4e5ceb6bd71bdd596d62612f43e80391f420be",
+    "sdk_base_commit": "8eb56a53f31874d0349fb797f2f3880aaddcac41",
+    "patches": {
+      "patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch": "e60082f4e5166a5296e2ab7e652b69a2fe0f9c87948d12c6cb47a7b78fd48502",
+      "patches/qt5/windows-xp-llvm/03-qtscript-align-win64-jump-buffer.patch": "66a803d7051581eb981ed590d220f5b7cc3b9be9f8bd691ed045c937ca3d9890",
+      "tests/quick-qml-gallery/checks_scenegraph_qt5.cpp": "0d7da08fa0fe0944b19cc4fc90990c2170210756a66bc3d88fbb5ac8a74e8593"
+    },
+    "executables_sha256": {
+      "gl-heavy-gallery.exe": "3e002adc3d209cbd5356f1cf490a41612dea4aa8282a5251af7523a064eec832",
+      "graphics-gallery.exe": "8e8bf4c0de66c4b4f0a276d4889c5761aba39db8d7b9dd8ce940a96ff2a313d5",
+      "multimedia-lab.exe": "05cc2c8bac9988cd44e95467558df5520d7fca339db6c75b48521c779f02c03c",
+      "network-gui.exe": "62df73c3dc2c0131e0fd9440aafc8db0ff65235e5ca7b8be0e3dc7856bbaa637",
+      "painting-lab.exe": "e16d1ff80f96db15dc623333720613de477ef7730c5ef117a90c0e7270fdc069",
+      "qt-selftest.exe": "a94206ce4d6bc80b6e789461902734b98787a7890907bd2e8a6e89adda455f81",
+      "quick-qml-gallery.exe": "23d51cfdc8b80f7ca0d7889fb542fd25e5a5bb568b7cd479d6d0f6eb1c0a4882",
+      "smoke-runner.exe": "e804d9cb0da33d49a80096eaa4a874709e5785fbc81ec173c05d39da906a4fbe",
+      "widgets-gallery.exe": "60aa4de62320642589d861edfc94b5b633877c22f739af7540854639939bfdbd"
+    },
+    "app_local_msvcr100_sha256": "ae3cb6c6afba9a4aa5c85f66023c35338ca579b30326dd02918f9d55259503d5",
+    "iso_sha256": "0a46588fe2dac5ddd576ac7dc2dd09a150e7e55f00b003f55c396d84e09fa9c3",
+    "guest_binary_comparisons_passed": 10,
+    "modern_cpp": {
+      "command": "qt-selftest.exe --modern-cpp",
+      "exit_code": 0,
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "cplusplus": 202302
+    },
+    "ordinary_suite": {
+      "command": "smoke-runner.exe --timeout=180",
+      "exit_code": 0,
+      "apps_passed": 8,
+      "apps_failed": 0,
+      "apps_not_built": 0,
+      "checks_passed": 504,
+      "checks_skipped": 96,
+      "applications": {
+        "qt-selftest": {
+          "status": "PASS",
+          "passed": 288,
+          "failed": 0,
+          "skipped": 67
+        },
+        "widgets-gallery": {
+          "status": "PASS",
+          "passed": 94,
+          "failed": 0,
+          "skipped": 5
+        },
+        "graphics-gallery": {
+          "status": "PASS",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        "quick-qml-gallery": {
+          "status": "PASS",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 14
+        },
+        "gl-heavy-gallery": {
+          "status": "PASS",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 7
+        },
+        "painting-lab": {
+          "status": "PASS",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 3
+        },
+        "multimedia-lab": {
+          "status": "PASS",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        "network-gui": {
+          "status": "PASS",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      },
+      "scenegraph_qt5_engine_renderer": {
+        "status": "SKIP",
+        "detail": "OpenGL 1.1 lacks framebuffer objects or shaders"
+      }
+    },
+    "logs_directory": "build/qt5-xp-x64-guest-verification/fixed",
+    "logs_sha256": {
+      "DONE.TXT": "5e1f8562208322ba8dbd7567515383ac6ebf909de2eca4b674a5bfa781adcae4",
+      "RUNNER.LOG": "6de82fa05c983c5c8adbbfe7b9b8bd6dbc3ba7b5a9f753fdae00f9c91db4e6ec",
+      "SMOKE.TXT": "d6dfe3395199901521415df5625be9e892f1c0e48309ef627c4261914497df9b",
+      "STATUS.TXT": "bc538a1a2a9d1222788ad9a53314d76e57ba12b159bfd44d3d1775ef7d0e184c",
+      "STRICT.LOG": "57573a96320d5b7a937863ba0bdfad3065a5998c3e205c8292073eec7a2d942e",
+      "SYSTEM.TXT": "891171ee0cd88fd8336994813ecf45743a2388b3187add5dec3b6d5b191665a0",
+      "TRANSFER.TXT": "e3d9d5c1d054cd1fc428ca69ca72c82f8bc1b6b33a9e0a9723887c86aa622404"
     }
   }
 }

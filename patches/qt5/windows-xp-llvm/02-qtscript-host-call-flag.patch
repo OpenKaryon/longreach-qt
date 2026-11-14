@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Test and strip the host-call bit on the raw frame pointer. Clang treats
+# the implicit this parameter as aligned and can fold the low-bit operations.
+# In the interpreter's return opcode the folded test loses the host return
+# path and dispatches from the null return PC of the host call.
+
+--- a/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/interpreter/CallFrame.h
++++ b/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/interpreter/CallFrame.h
+@@ -136,7 +136,13 @@
+         int returnValueRegister() const { return this[RegisterFile::ReturnValueRegister].i(); }
+ 
+-        bool hasHostCallFrameFlag() const { return reinterpret_cast<intptr_t>(this) & HostCallFrameFlag; }
++        static bool hasHostCallFrameFlag(const CallFrame* frame)
++        {
++            return reinterpret_cast<intptr_t>(frame) & HostCallFrameFlag;
++        }
+         CallFrame* addHostCallFrameFlag() const { return reinterpret_cast<CallFrame*>(reinterpret_cast<intptr_t>(this) | HostCallFrameFlag); }
+-        CallFrame* removeHostCallFrameFlag() { return reinterpret_cast<CallFrame*>(reinterpret_cast<intptr_t>(this) & ~HostCallFrameFlag); }
++        static CallFrame* removeHostCallFrameFlag(CallFrame* frame)
++        {
++            return reinterpret_cast<CallFrame*>(reinterpret_cast<intptr_t>(frame) & ~HostCallFrameFlag);
++        }
+ 
+     private:
+--- a/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/interpreter/Interpreter.cpp
++++ b/qtscript/src/3rdparty/javascriptcore/JavaScriptCore/interpreter/Interpreter.cpp
+@@ -488,5 +488,5 @@
+     void* returnPC = callFrame->returnPC();
+     callFrame = callFrame->callerFrame();
+-    if (callFrame->hasHostCallFrameFlag())
++    if (CallFrame::hasHostCallFrameFlag(callFrame))
+         return false;
+ 
+@@ -575,5 +575,5 @@
+         void* returnPC = callFrameTemp->returnPC();
+         callFrameTemp = callFrameTemp->callerFrame();
+-        if (callFrameTemp->hasHostCallFrameFlag()) {
++        if (CallFrame::hasHostCallFrameFlag(callFrameTemp)) {
+             hasHandler = false;
+             break;
+@@ -3386,5 +3386,5 @@
+         callFrame = callFrame->callerFrame();
+         
+-        if (callFrame->hasHostCallFrameFlag())
++        if (CallFrame::hasHostCallFrameFlag(callFrame))
+             return returnValue;
+ 
+@@ -4012,5 +4012,5 @@
+ 
+     CallFrame* callerFrame = functionCallFrame->callerFrame();
+-    if (callerFrame->hasHostCallFrameFlag())
++    if (CallFrame::hasHostCallFrameFlag(callerFrame))
+         return jsNull();
+ 
+@@ -4029,5 +4029,5 @@
+ 
+     CallFrame* callerFrame = callFrame->callerFrame();
+-    if (callerFrame->hasHostCallFrameFlag())
++    if (CallFrame::hasHostCallFrameFlag(callerFrame))
+         return;
+ 
+@@ -4045,5 +4045,5 @@
+ CallFrame* Interpreter::findFunctionCallFrame(CallFrame* callFrame, InternalFunction* function)
+ {
+-    for (CallFrame* candidate = callFrame; candidate; candidate = candidate->callerFrame()->removeHostCallFrameFlag()) {
++    for (CallFrame* candidate = callFrame; candidate; candidate = CallFrame::removeHostCallFrameFlag(candidate->callerFrame())) {
+         if (candidate->callee() == function)
+             return candidate;
+--- a/qtscript/src/script/api/qscriptcontext.cpp
++++ b/qtscript/src/script/api/qscriptcontext.cpp
+@@ -337,5 +337,5 @@
+     }
+ 
+-    if (frame->callerFrame()->hasHostCallFrameFlag()) {
++    if (JSC::CallFrame::hasHostCallFrameFlag(frame->callerFrame())) {
+         // <eval> context doesn't have arguments. return an empty object
+         return QScriptEnginePrivate::get(QScript::scriptEngineFromExec(frame))->newObject();
+@@ -400,5 +400,5 @@
+     const JSC::CallFrame *frame = QScriptEnginePrivate::frameForContext(this);
+     QScript::APIShim shim(QScript::scriptEngineFromExec(frame));
+-    JSC::CallFrame *callerFrame = frame->callerFrame()->removeHostCallFrameFlag();
++    JSC::CallFrame *callerFrame = JSC::CallFrame::removeHostCallFrameFlag(frame->callerFrame());
+     return QScriptEnginePrivate::contextForFrame(callerFrame);
+ }
+@@ -666,5 +666,5 @@
+             if (info.functionType() == QScriptContextInfo::ScriptFunction)
+                 result.append(QLatin1String("<anonymous>"));
+-            else if(frame->callerFrame()->hasHostCallFrameFlag())
++            else if (JSC::CallFrame::hasHostCallFrameFlag(frame->callerFrame()))
+                 result.append(QLatin1String("<eval>"));
+             else
+--- a/qtscript/src/script/api/qscriptcontextinfo.cpp
++++ b/qtscript/src/script/api/qscriptcontextinfo.cpp
+@@ -166,8 +166,8 @@
+     } else {
+         // rewind the stack from the top in order to find the frame from the caller where the returnPC is stored
+-        while (rewindContext && QScriptEnginePrivate::contextForFrame(rewindContext->callerFrame()->removeHostCallFrameFlag()) != context)
+-            rewindContext = rewindContext->callerFrame()->removeHostCallFrameFlag();
++        while (rewindContext && QScriptEnginePrivate::contextForFrame(JSC::CallFrame::removeHostCallFrameFlag(rewindContext->callerFrame())) != context)
++            rewindContext = JSC::CallFrame::removeHostCallFrameFlag(rewindContext->callerFrame());
+         if (rewindContext) {
+-            frame = rewindContext->callerFrame()->removeHostCallFrameFlag(); //for retreiving the global context's "fake" frame
++            frame = JSC::CallFrame::removeHostCallFrameFlag(rewindContext->callerFrame()); //for retreiving the global context's "fake" frame
+ 
+             JSC::Instruction *returnPC = rewindContext->returnPC();
+--- a/qtscript/src/script/api/qscriptengine.cpp
++++ b/qtscript/src/script/api/qscriptengine.cpp
+@@ -884,5 +884,5 @@
+     // The first non-empty source URL in the call stack determines the translation context.
+     {
+-        JSC::ExecState *frame = exec->callerFrame()->removeHostCallFrameFlag();
++        JSC::ExecState *frame = JSC::CallFrame::removeHostCallFrameFlag(exec->callerFrame());
+         while (frame) {
+             if (frame->codeBlock() && QScriptEnginePrivate::hasValidCodeBlockRegister(frame)
+@@ -892,5 +892,5 @@
+                 break;
+             }
+-            frame = frame->callerFrame()->removeHostCallFrameFlag();
++            frame = JSC::CallFrame::removeHostCallFrameFlag(frame->callerFrame());
+         }
+     }
+--- a/qtscript/src/script/api/qscriptengine_p.h
++++ b/qtscript/src/script/api/qscriptengine_p.h
+@@ -900,8 +900,8 @@
+     if (!frame)
+         return 0;
+-    if (frame && frame->callerFrame()->hasHostCallFrameFlag() && !frame->callee()
+-        && frame->callerFrame()->removeHostCallFrameFlag() == QScript::scriptEngineFromExec(frame)->globalExec()) {
++    if (frame && JSC::CallFrame::hasHostCallFrameFlag(frame->callerFrame()) && !frame->callee()
++        && JSC::CallFrame::removeHostCallFrameFlag(frame->callerFrame()) == QScript::scriptEngineFromExec(frame)->globalExec()) {
+         //skip the "fake" context created in Interpreter::execute.
+-        frame = frame->callerFrame()->removeHostCallFrameFlag();
++        frame = JSC::CallFrame::removeHostCallFrameFlag(frame->callerFrame());
+     }
+     return reinterpret_cast<QScriptContext *>(frame);

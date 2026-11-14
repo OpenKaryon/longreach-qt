@@ -68,7 +68,10 @@ make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3
 Use `make qt5-win-amd64-llvm` for the SDK alone. Both targets use
 `qt5-win-amd64:llvm21`, with the SDK in `/opt/qt5-win-amd64-llvm`.
 The [build and run record](../results/qt5-win-amd64-llvm21-xp-20261112.md)
-documents the Windows 7 and Windows 11 runtime results and the deferred XP x64 check.
+documents the runtime results on Windows 7, Windows 11 and Windows XP x64 SP2.
+XP x64 SP2 passed all 25 required C++23 checks without skips and all eight
+ordinary applications. The guest's OpenGL 1.1 driver skipped the Qt 5 scene
+graph renderer check because it lacks the required graphics features.
 
 ## arm64 with LLVM 21.1.8
 

@@ -18,9 +18,7 @@ Windows 11 x64 host (build 26200) with app-local Visual C++ 2010 CRT
 | `cxx23-probe.exe` | `0a4bde0d4d395ea3cdd0cc8664e41a3695ededd5c0d8be53ae0511aa78426341` |
 | `msvcr100.dll` | `ae3cb6c6afba9a4aa5c85f66023c35338ca579b30326dd02918f9d55259503d5` |
 
-The PE subsystem version records the target. The loader and runtime on
-Windows XP x64 SP2 still need a guest run. The standalone probe does
-not use the Qt libraries.
+This standalone probe exercised Clang and libc++ on the Windows 11 host.
 
 ## SDK build recipe
 
@@ -71,7 +69,6 @@ C++23 checks and all seven GUI examples. The GUI total was 236 passed,
 0 failed and 22 optional skips. The guest used the repository binaries,
 the app-local Visual C++ 2010 CRT and the selftest rebuilt with the
 print fixture correction. All ten files were verified after transfer.
-Windows XP x64 SP2 runtime compatibility remains unverified.
 
 A local `qt5-llvm21-xp-x64-sp2-test-kit.zip` packages the nine tested
 executables, the app-local CRT, their SHA-256 checksums and an XP x64 SP2
@@ -94,4 +91,94 @@ files and 314 qmake feature entries.
 Windows 7 SP1 x64 passed all 25 required C++23 checks and all seven GUI
 examples, with 236 GUI checks passed, 0 failed and 22 optional skips.
 The local `qt5-llvm21-xp-x64-sp2-current-export.zip` contains the same
-nine executables and app-local CRT. The XP x64 SP2 run is deferred until installation media or a guest is available.
+nine executables and app-local CRT.
+
+## Windows XP x64 SP2 guest run
+
+On 2026-11-14, the same VMware Workstation guest used for the Qt 4 AMD64
+run reported Windows XP x64 SP2 (5.2.3790, AMD64). The Qt 5.15.19 binaries
+built with LLVM and libc++ 21.1.8 matched the current repository export
+manifest. In the guest, all nine executables and the app-local Visual C++
+2010 SP1 CRT matched the verified ISO copies byte for byte.
+
+`qt-selftest.exe --modern-cpp` exited with code 0 and reported
+`__cplusplus=202302`. `scripts/tests/require-modern-cpp.py` confirmed
+**25/25 required checks, 0 failures, 0 skips**.
+
+`smoke-runner.exe --timeout=180` then ran all eight applications.
+**Six passed and two crashed**. The runner exited with code 1.
+
+| Application | Result | Checks or last completed check |
+|---|---|---|
+| `qt-selftest` | Crash (`0xC0000005`) | `script/value-object-props` |
+| `widgets-gallery` | Pass | 94 passed, 5 skipped |
+| `graphics-gallery` | Pass | 32 passed, 0 skipped |
+| `quick-qml-gallery` | Crash (`0xC0000005`) | `scenegraph/grab-without-window` |
+| `gl-heavy-gallery` | Pass | 39 passed, 7 skipped |
+| `painting-lab` | Pass | 16 passed, 3 skipped |
+| `multimedia-lab` | Pass | 4 passed, 0 skipped |
+| `network-gui` | Pass | 7 passed, 0 skipped |
+
+The ordinary `qt-selftest --selftest` run faulted at RVA `0x005F3BC9`.
+`quick-qml-gallery` logged the access violation and the runner reported
+its exit code as 128. A second run with `QV4_FORCE_INTERPRETER=1` gave
+the same 25/25 C++23 result and reproduced both crashes at the same
+points.
+
+The [JSON record](qt5-win-amd64-llvm21-xp-20261112.json) records the
+settings, exit codes and log hashes for both baseline runs. The local raw logs
+are under `build/qt5-xp-x64-guest-verification/initial/` and
+`build/qt5-xp-x64-guest-verification/interpreter/`.
+
+### Crash diagnosis and fixes
+
+Linker maps and the original machine code placed the first QtScript
+crash in the interpreter's return opcode. Clang removed a low-bit test
+on a tagged host call frame because it assumed that the C++ `this`
+pointer was aligned. The interpreter then attempted to resume a
+bytecode stream from a null return address. The patch tests and strips
+the tag on the raw pointer.
+
+The Quick gallery crash went through `QOpenGLFramebufferObject::bindDefault()`.
+The guest exposes OpenGL 1.1, so a current context alone is insufficient
+for the Qt 5 scene graph renderer exercise. The check now requires
+framebuffer objects and shaders. The other Quick checks still run.
+
+The first rebuilt suite passed seven of eight applications. It passed
+`script/function-call-context` and the Quick gallery, then exposed a
+separate QtScript crash in `script/engine-debugger`. In that check the
+collector calls the AMD64 CRT's `_setjmp` to save registers. The old
+alignment annotation put the buffer at an address aligned to 8 bytes,
+while the CRT saves XMM registers with 16-byte aligned stores. The
+collector now explicitly aligns that buffer to 16 bytes on Windows AMD64.
+
+### Final run after the fixes
+
+The standard `make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3` target
+rebuilt the SDK and all nine executables. The final guest run used the
+same Windows XP x64 SP2 VM and the same app-local CRT. All ten files
+matched the verified ISO copies byte for byte.
+
+The strict C++23 run passed **25/25 with zero skips**. The ordinary
+suite passed **8/8 applications**, with 504 checks passed, 0 failed and
+96 optional skips. Both commands exited with code 0.
+
+| Application | Passed | Failed | Skipped |
+|---|---:|---:|---:|
+| `qt-selftest` | 288 | 0 | 67 |
+| `widgets-gallery` | 94 | 0 | 5 |
+| `graphics-gallery` | 32 | 0 | 0 |
+| `quick-qml-gallery` | 24 | 0 | 14 |
+| `gl-heavy-gallery` | 39 | 0 | 7 |
+| `painting-lab` | 16 | 0 | 3 |
+| `multimedia-lab` | 4 | 0 | 0 |
+| `network-gui` | 7 | 0 | 0 |
+
+`script/function-call-context` and `script/engine-debugger` passed.
+The OpenGL 1.1 driver skipped `scenegraph/qt5-engine-renderer` because
+the required graphics features were unavailable.
+`scenegraph/qt5-rhi-material-shader` passed.
+
+The [JSON record](qt5-win-amd64-llvm21-xp-20261112.json) includes the
+final image, executable and log hashes. The raw final logs are under
+`build/qt5-xp-x64-guest-verification/fixed/`.

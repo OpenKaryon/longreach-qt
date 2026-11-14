@@ -193,6 +193,12 @@ $(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS)): $(DOWNLOAD
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_XP_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-3/include/openssl/opensslv.h)
 
+.PHONY: qt5-win-amd64-llvm-toolchain
+qt5-win-amd64-llvm-toolchain: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_SYSROOT) $(QT5_XP_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target toolchain -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE)-toolchain .
+
 # ARM64 uses the Windows 10 UCRT toolchain already built from upstream LLVM.
 QT5_WINDOWS_ARM64_LLVM_IMAGE := qt5-win-arm64:llvm21
 QT5_WINDOWS_ARM64_LLVM_TOOLCHAIN ?= qt6-win-arm64:llvm21-toolchain

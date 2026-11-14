@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG XP_TOOLCHAIN_IMAGE=qt5-win-amd64:llvm21-toolchain
+FROM ${XP_TOOLCHAIN_IMAGE} AS toolchain
+ENV QT_INSTALL_DIR=/opt/qt4-win-amd64-llvm
+ENV PATH=${QT_INSTALL_DIR}/bin:/opt/llvm-runtime-xp/bin:/opt/llvm-21/bin:/usr/local/bin:/usr/bin:/bin
+
+FROM toolchain AS build-qt
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/src/qt.tar.gz \
+    --mount=type=bind,source=patches/qt4,target=/src/patches/qt4 \
+    --mount=type=bind,source=patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch,target=/src/patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch \
+    --mount=type=bind,source=scripts/build/qt4-windows-xp/build-qt.sh,target=/src/build-qt.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
+
+FROM toolchain AS sdk
+COPY --from=build-qt ${QT_INSTALL_DIR} ${QT_INSTALL_DIR}
+COPY --from=build-qt /work/qt4-xp-src/LICENSE.LGPLv21 /work/qt4-xp-src/LICENSE.LGPLv3 /work/qt4-xp-src/LGPL_EXCEPTION.txt /opt/qt4-windows-xp/licenses/
+ENV QMAKESPEC=win32-g++-longreach-xp
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build,target=/src/scripts/build \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-windows-xp/build-examples.sh

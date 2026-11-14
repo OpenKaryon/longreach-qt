@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+#
+The x64 Windows CRT stores XMM registers to jmp_buf with aligned SSE
+instructions. The old JavaScriptCore annotation forces only pointer
+alignment under Clang/MinGW and can misalign that buffer during GC.
+
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp
+@@ -802,5 +802,7 @@
+-#if COMPILER(GCC)
++#if COMPILER(GCC) && defined(_WIN64)
++#define REGISTER_BUFFER_ALIGNMENT __attribute__ ((aligned (16)))
++#elif COMPILER(GCC)
+ #define REGISTER_BUFFER_ALIGNMENT __attribute__ ((aligned (sizeof(void*))))
+ #else
+ #define REGISTER_BUFFER_ALIGNMENT
+ #endif

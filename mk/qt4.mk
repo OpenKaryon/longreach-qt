@@ -170,6 +170,26 @@ qt4-win-amd64: $(QT4_ARCHIVE_PATH) $(OPENSSL_PATH)
 	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT4_BUILD_ARGS) -f docker/qt4/windows/amd64/Dockerfile -t $(QT4_WIN_AMD64_IMAGE) .
 
+# The XP x64 SDK reuses the upstream LLVM toolchain stage from Qt 5.
+QT4_WIN_AMD64_LLVM_IMAGE := qt4-win-amd64:llvm21
+QT4_WIN_AMD64_LLVM_TOOLCHAIN ?= qt5-win-amd64:llvm21-toolchain
+QT4_WIN_AMD64_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-win-amd64-llvm21
+
+.PHONY: qt4-win-amd64-llvm-probe qt4-win-amd64-llvm qt4-win-amd64-llvm-examples
+BUILD_TARGETS += qt4-win-amd64-llvm
+
+qt4-win-amd64-llvm-probe:
+	$(ONE_BUILD_CHECK)
+	$(call MKDIR_P,$(QT4_WIN_AMD64_LLVM_OUT)/bin)
+	docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN_AMD64_LLVM_OUT)/bin:/out" $(QT4_WIN_AMD64_LLVM_TOOLCHAIN) cp /opt/llvm-runtime-xp/share/cxx23-probe.exe /out/
+
+qt4-win-amd64-llvm qt4-win-amd64-llvm-examples: $(QT4_ARCHIVE_PATH)
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT4_WIN_AMD64_LLVM_TOOLCHAIN)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN_AMD64_LLVM_TOOLCHAIN) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt4/windows/amd64/Dockerfile-llvm -t $(QT4_WIN_AMD64_LLVM_IMAGE) .
+	$(if $(filter %-examples,$@),$(call MKDIR_P,$(QT4_WIN_AMD64_LLVM_OUT)))
+	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN_AMD64_LLVM_OUT):/out" $(QT4_WIN_AMD64_LLVM_IMAGE) "mkdir -p /out/bin && cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-xp/share/cxx23-probe.exe /out/bin/")
+
 # The test suite into artifacts/tests-<image>/: Windows i386 and Sarge build it
 # against the installed SDK now, Windows amd64 copies /opt/qt4-smoke-bin out
 # of the image.

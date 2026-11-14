@@ -8,6 +8,37 @@
 `make qt4-extract-tests QT4_IMAGE=qt4-win-i386` builds the test suite against
 the SDK with qmake and puts the EXEs in `artifacts/tests-qt4-win-i386/`.
 
+## Windows amd64 with LLVM 21.1.8
+
+The opt-in SDK targets XP x64 and Server 2003 using upstream Clang, LLD
+and libc++, with the pinned XP x64 MinGW-w64 sysroot and OpenSSL 3.5.7
+from the Qt 5 toolchain stage. qmake builds Qt in its original C++98
+dialect and builds the strict test application in C++23.
+
+With the base Qt 5 Windows amd64 image and LLVM compiler image already built:
+
+```sh
+make qt5-win-amd64-llvm-toolchain PARALLEL_JOBS=3
+make qt4-win-amd64-llvm-probe
+```
+
+Copy the AMD64 Visual C++ 2010 SP1 runtime file `msvcr100.dll` from a
+licensed installation next to `cxx23-probe.exe` in
+`artifacts/tests-qt4-win-amd64-llvm21/bin/`. Run the standalone probe on
+XP x64 and check its log with
+`python scripts/tests/require-modern-cpp.py <log>` from the repository root.
+
+Build the full SDK and examples with:
+
+```sh
+make qt4-win-amd64-llvm-examples PARALLEL_JOBS=3
+```
+
+Copy the examples and the same AMD64 runtime DLL to the guest. Run
+`qt-selftest-cxx23.exe --modern-cpp` and `smoke-runner.exe --timeout=90`
+in sequence. Check the C++23 log with the same verifier.
+QtScript and QtDeclarative use the JavaScript interpreter.
+
 ## Windows 95, 98, ME and NT 4.0
 
 Qt removed Windows 9x support in 4.6. `patches/qt4/windows` puts it back:
@@ -45,6 +76,9 @@ Windows 95 certificate store is not consulted.
 See [platforms](../platforms.md#qt-487): i386 8/8 on Windows 95 OSR2
 (QEMU), Windows 98 SE, NT 4.0 SP6a and Windows 2000 (VMware) and Windows 11;
 amd64 8/8 on Windows 11, not yet on XP x64. Windows Me has not been run.
+
+The [LLVM amd64 result](../results/qt4-win-amd64-llvm21-xp-20261113.md)
+records the Windows XP x64 SP2, Windows 7 SP1 and Windows 11 runs.
 
 ## Limits
 

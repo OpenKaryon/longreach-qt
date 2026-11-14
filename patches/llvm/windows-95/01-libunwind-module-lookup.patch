@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Find unwind sections from VirtualQuery instead of PSAPI.
+# Win95 reports the main executable mapping as MEM_PRIVATE.
+--- a/libunwind/src/AddressSpace.hpp
++++ b/libunwind/src/AddressSpace.hpp
+@@ -541,29 +541,23 @@
+   if (info.arm_section && info.arm_section_length)
+     return true;
+ #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_WIN32)
+-  HMODULE mods[1024];
+-  HANDLE process = GetCurrentProcess();
+-  DWORD needed;
+-
+-  if (!EnumProcessModules(process, mods, sizeof(mods), &needed)) {
+-    DWORD err = GetLastError();
+-    _LIBUNWIND_TRACE_UNWINDING("findUnwindSections: EnumProcessModules failed, "
+-                               "returned error %d", (int)err);
+-    (void)err;
++  MEMORY_BASIC_INFORMATION region;
++  if (VirtualQuery(reinterpret_cast<const void *>(targetAddr), &region, sizeof(region)) != sizeof(region) ||
++      !region.AllocationBase ||
++      (region.Type != MEM_IMAGE && region.AllocationBase != GetModuleHandleA(nullptr)))
+     return false;
+-  }
+-
+-  for (unsigned i = 0; i < (needed / sizeof(HMODULE)); i++) {
+-    PIMAGE_DOS_HEADER pidh = (PIMAGE_DOS_HEADER)mods[i];
++  const void *module = region.AllocationBase;
++  {
++    PIMAGE_DOS_HEADER pidh = (PIMAGE_DOS_HEADER)module;
+     PIMAGE_NT_HEADERS pinh = (PIMAGE_NT_HEADERS)((BYTE *)pidh + pidh->e_lfanew);
+     PIMAGE_FILE_HEADER pifh = (PIMAGE_FILE_HEADER)&pinh->FileHeader;
+     PIMAGE_SECTION_HEADER pish = IMAGE_FIRST_SECTION(pinh);
+     bool found_obj = false;
+     bool found_hdr = false;
+ 
+-    info.dso_base = (uintptr_t)mods[i];
++    info.dso_base = (uintptr_t)module;
+     for (unsigned j = 0; j < pifh->NumberOfSections; j++, pish++) {
+-      uintptr_t begin = pish->VirtualAddress + (uintptr_t)mods[i];
++      uintptr_t begin = pish->VirtualAddress + (uintptr_t)module;
+       uintptr_t end = begin + pish->Misc.VirtualSize;
+       if (!strncmp((const char *)pish->Name, ".text",
+                    IMAGE_SIZEOF_SHORT_NAME)) {

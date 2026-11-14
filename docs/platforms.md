@@ -42,6 +42,8 @@ it has been repeated; built-only ARM targets retain that status.
 | | | Windows XP SP3 (VMware, i386) | 8/8, 370 passed, 0 failed, 129 skipped ([json](results/qt4-win-i386-xp-sp3-vmware-20261030.json)) |
 | | | Windows 98 SE, NT 4.0 SP6a, 2000 (VMware) | 8/8 each, 364, 362 and 365 passed, 0 failed ([98 SE](results/qt4-win98se-vmware-20261010.json), [NT 4](results/qt4-nt4-sp6a-vmware-20261010.json), [2000](results/qt4-win2000-vmware-20261010.json)) |
 | | | Windows 11 (VMware) | 8/8, 373 passed, 0 failed, 126 skipped ([json](results/qt4-win-i386-win11-vmware-20261030.json)) |
+| `qt4-win-i386-llvm` | Windows 95 OSR2 | Russian Windows 95 OSR2 (QEMU) | 8/8 ordinary applications and 24/25 required C++23 checks, zero skips. The active code page cannot represent the mixed-script filename. ([result](results/qt4-win-i386-llvm21-win95-20261113.md#file-api-follow-up)) |
+| | | Simplified Chinese Windows 95 OSR2 (QEMU, CP936, Winsock 2) | 8/8 ordinary applications and 25/25 required C++23 checks without skips in both runs ([result](results/qt4-win-i386-llvm21-win95-20261113.md#simplified-chinese-osr2-in-qemu)) |
 | `qt4-win-amd64` | Windows XP x64 | Windows 11 (VMware) | 8/8, 371 passed, 0 failed, 126 skipped ([json](results/qt4-win-amd64-win11-vmware-20261030.json)); not yet on XP x64 |
 | | | Windows 7 SP1 x64 (VMware, amd64) | 8/8, 373 passed, 0 failed, 124 skipped ([json](results/qt4-win-amd64-win7-vmware-20261030.json)) |
 | `qt4-win-amd64-llvm` | Windows XP x64, app-local Visual C++ 2010 SP1 runtime | Windows XP x64 SP2 and Windows 7 SP1 x64 (VMware), Windows 11 x64 (host) | 8/8 ordinary applications and 25/25 C++23 checks without skips on each system ([result](results/qt4-win-amd64-llvm21-xp-20261113.md)) |

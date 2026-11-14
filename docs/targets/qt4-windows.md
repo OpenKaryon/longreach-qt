@@ -71,6 +71,27 @@ the system tray and accessibility are built in and select their Win9x paths
 at run time (patches 21-25). The TLS checks use the suite's own CA; the
 Windows 95 certificate store is not consulted.
 
+### Windows 95 OSR2 with LLVM 21.1.8
+
+The experimental C++23 probe uses upstream Clang, LLD, libc++ and the
+original OSR2 MSVCRT. Build it with the existing Qt 4 Win95 image, Qt 5
+Windows i386 base image and LLVM compiler image available locally.
+
+```sh
+make qt5-win-i386-llvm-toolchain PARALLEL_JOBS=3
+make qt4-win-i386-llvm-probe PARALLEL_JOBS=3
+make qt4-win-i386-llvm-examples PARALLEL_JOBS=3
+```
+
+The probe target exports `cxx23-probe.exe` to
+`artifacts/tests-qt4-win-i386-llvm21/`. The examples target exports all
+eleven executables to the same directory, including the probe and the
+strict Qt selftest. The
+[Windows 95 LLVM trial](../results/qt4-win-i386-llvm21-win95-20261113.md)
+records both locales. The original mixed-script filename passes on
+Simplified Chinese OSR2 with CP936. The Russian OSR2 code pages cannot
+represent that filename.
+
 ## Results
 
 See [platforms](../platforms.md#qt-487): i386 8/8 on Windows 95 OSR2

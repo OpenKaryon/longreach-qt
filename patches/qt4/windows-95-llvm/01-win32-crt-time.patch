@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Windows MSVCRT provides localtime and gmtime even when pthread headers
+# advertise POSIX threading. Select Qt's existing CRT path on Windows.
+--- a/src/corelib/tools/qdatetime.cpp
++++ b/src/corelib/tools/qdatetime.cpp
+@@ -4031,7 +4031,7 @@
+             brokenDown = &res;
+         }
+     }
+-#elif !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS)
++#elif !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_WIN)
+     // use the reentrant version of localtime() where available
+     tzset();
+     tm res;
+@@ -4136,7 +4136,7 @@
+         tz.Close();
+         }
+     }
+-#elif !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS)
++#elif !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_WIN)
+     // use the reentrant version of gmtime() where available
+     tm res;
+     brokenDown = gmtime_r(&secsSince1Jan1970UTC, &res);

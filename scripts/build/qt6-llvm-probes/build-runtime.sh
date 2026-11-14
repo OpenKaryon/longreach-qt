@@ -72,6 +72,19 @@ case "$target" in
         cmake_args=(-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64
                     -DCMAKE_SYSROOT="$sysroot" -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY)
         ;;
+    windows-95-i386)
+        triple=i686-w64-windows-gnu
+        sysroot=/opt/sysroot-xp
+        exe_suffix=.exe
+        link_flags="-fuse-ld=lld -static -Wl,--major-subsystem-version,4,--minor-subsystem-version,0 $sysroot/lib/chkstk-ms.o $sysroot/lib/tls-lld.o /opt/win95-cxx14/exe-exit.o -Wl,--start-group -lmingwex -lmsvcrt -Wl,--end-group"
+        compiler_flags=(--sysroot="$sysroot" -D_WIN32_WINNT=0x0400 -DWINVER=0x0400
+                        -D_WIN32_WINNT_WIN10=0x0a00 -march=pentium -mno-sse -mno-sse2
+                        -fdata-sections --rtlib=compiler-rt -isystem "$sysroot/include" -L"$sysroot/lib" -pthread)
+        cmake_args=(-DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION=4.0
+                    -DCMAKE_SYSTEM_PROCESSOR=i686 -DCMAKE_SYSROOT="$sysroot"
+                    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+                    -DLIBCXX_HAS_WIN32_THREAD_API=OFF -DLIBCXX_HAS_PTHREAD_API=ON)
+        ;;
     windows-xp-i386|windows-xp-amd64)
         if [ "$target" = windows-xp-amd64 ]; then
             processor=x86_64
@@ -179,7 +192,7 @@ cmake --build "${build_root}/build-builtins-$target" --parallel "$jobs"
 cmake --install "${build_root}/build-builtins-$target"
 
 runtime_args=(-DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx')
-if [[ "$target" = windows-xp-* ]]; then
+if [[ "$target" = windows-xp-* || "$target" = windows-95-i386 ]]; then
     runtime_args+=(-DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF)
 fi
 if [[ "$target" = linux-* ]]; then
@@ -271,7 +284,7 @@ case "$target" in
         fi
         python3 /src/scripts/tests/require-modern-cpp.py "/out/$target/run.log"
         ;;
-    windows-xp-i386|windows-xp-amd64)
+    windows-95-i386|windows-xp-i386|windows-xp-amd64)
         llvm-readobj --file-headers --coff-imports "$binary" > "/out/$target/pe.log"
         llvm-objdump -p "$binary" > "/out/$target/dependencies.log"
         ;;

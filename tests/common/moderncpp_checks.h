@@ -200,20 +200,25 @@ inline bool cancellation(bool explicitRequest)
 class TemporaryDirectory
 {
 public:
-    TemporaryDirectory() : m_owned(false)
+    explicit TemporaryDirectory(bool unicodeName = true) : m_owned(false)
     {
         namespace fs = std::filesystem;
         const fs::path temporary = fs::temp_directory_path();
         const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
         for (int attempt = 0; attempt < 32; ++attempt) {
             m_root = temporary / ("longreach-cxx-" + std::to_string(stamp) + "-" + std::to_string(attempt));
+            if (unicodeName) {
 #if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
-            m_first = m_root / fs::path(u8"\u00e9_\u65e5\u672c.txt");
-            m_second = m_root / fs::path(u8"moved_\u00e9_\u65e5\u672c.txt");
+                m_first = m_root / fs::path(u8"\u00e9_\u65e5\u672c.txt");
+                m_second = m_root / fs::path(u8"moved_\u00e9_\u65e5\u672c.txt");
 #else
-            m_first = m_root / fs::u8path(u8"\u00e9_\u65e5\u672c.txt");
-            m_second = m_root / fs::u8path(u8"moved_\u00e9_\u65e5\u672c.txt");
+                m_first = m_root / fs::u8path(u8"\u00e9_\u65e5\u672c.txt");
+                m_second = m_root / fs::u8path(u8"moved_\u00e9_\u65e5\u672c.txt");
 #endif
+            } else {
+                m_first = m_root / "output.txt";
+                m_second = m_root / "moved.txt";
+            }
             std::error_code error;
             if (fs::create_directory(m_root, error)) {
                 m_owned = true;
@@ -250,7 +255,12 @@ public:
     PrintOutputFile()
 #if defined(_WIN32) && defined(__cpp_lib_filesystem) && __cpp_lib_filesystem >= 201703L
         // The Windows CRT's tmpfile uses the root of the current drive.
+#  if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
+        : m_directory(false),
+          m_file(m_directory.valid() ? std::fopen(m_directory.first().string().c_str(), "w+b") : nullptr)
+#  else
         : m_file(m_directory.valid() ? ::_wfopen(m_directory.first().c_str(), L"w+b") : nullptr)
+#  endif
 #else
         : m_file(std::tmpfile())
 #endif

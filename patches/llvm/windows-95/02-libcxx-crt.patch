@@ -1,0 +1,462 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Use aligned allocation and locale conversions supported by the Win95 CRT.
+--- a/libcxx/include/__memory/aligned_alloc.h
++++ b/libcxx/include/__memory/aligned_alloc.h
+@@ -11,6 +11,7 @@
+ 
+ #include <__config>
+ #include <cstdlib>
++#include <stdint.h>
+ 
+ #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+ #  pragma GCC system_header
+@@ -27,7 +28,20 @@
+ //
+ // Returns the allocated memory, or `nullptr` on failure.
+ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(_WIN32) && defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  if (__alignment < sizeof(void*))
++    __alignment = sizeof(void*);
++  const size_t overhead = __alignment - 1 + sizeof(void*);
++  if (__size > SIZE_MAX - overhead)
++    return nullptr;
++  void* raw = ::malloc(__size + overhead);
++  if (!raw)
++    return nullptr;
++  uintptr_t address = (reinterpret_cast<uintptr_t>(raw) + overhead) & ~(uintptr_t(__alignment) - 1);
++  void** aligned = reinterpret_cast<void**>(address);
++  aligned[-1] = raw;
++  return aligned;
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   return ::_aligned_malloc(__size, __alignment);
+ #  elif _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_C11_ALIGNED_ALLOC
+   // aligned_alloc() requires that __size is a multiple of __alignment,
+@@ -49,7 +63,10 @@
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(_WIN32) && defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  if (__ptr)
++    ::free(static_cast<void**>(__ptr)[-1]);
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   ::_aligned_free(__ptr);
+ #  else
+   ::free(__ptr);
+--- a/libcxx/src/support/win32/support.cpp
++++ b/libcxx/src/support/win32/support.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++#include <cerrno>
++#include <climits>
+ #include <cstdarg> // va_start, va_end
+ #include <cstddef> // size_t
+ #include <cstdio>  // vsprintf, vsnprintf
+@@ -85,6 +87,11 @@
+                   size_t max_source_chars,
+                   size_t dst_size_bytes,
+                   mbstate_t* __restrict ps) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  mbstate_t internal_state = ps ? *ps : mbstate_t();
++  if (!dst || !ps)
++    ps = &internal_state;
++#endif
+   // const size_t invalid_sequence = static_cast<size_t>(-1);
+ 
+   size_t source_converted = 0;
+@@ -105,10 +112,27 @@
+     if (!dest_remaining)
+       break;
+     wchar_t c = (*src)[source_converted];
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++    char converted[MB_LEN_MAX];
++    mbstate_t next_state = *ps;
++    char_size = std::wcrtomb(converted, c, &next_state);
++    if (char_size == static_cast<size_t>(-1))
++      result = errno;
++    else if (dst && char_size > dest_remaining)
++      break;
++    else {
++      if (dst) {
++        std::memcpy(dst + dest_converted, converted, char_size);
++      }
++      *ps = next_state;
++      result = no_error;
++    }
++#else
+     if (dst)
+       result = wcrtomb_s(&char_size, dst + dest_converted, dest_remaining, c, ps);
+     else
+       result = wcrtomb_s(&char_size, nullptr, 0, c, ps);
++#endif
+     // If result is zero there is no error and char_size contains the
+     // size of the multi-byte-sequence converted.
+     // Otherwise result indicates an errno type error.
+--- a/libcxx/include/__locale_dir/support/windows.h
++++ b/libcxx/include/__locale_dir/support/windows.h
+@@ -153,9 +153,25 @@
+   __lconv_storage* __lc_ = nullptr;
+ };
+ 
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++// The old CRT has a process-wide locale. Serialize libc++ operations and
++// restore the prior locale before unlocking.
++struct __locale_guard {
++  _LIBCPP_EXPORTED_FROM_ABI explicit __locale_guard(const __locale_t&);
++  _LIBCPP_EXPORTED_FROM_ABI ~__locale_guard();
++  __locale_guard(const __locale_guard&) = delete;
++  __locale_guard& operator=(const __locale_guard&) = delete;
++  char* __previous = nullptr;
++};
++#endif
++
+ #if defined(_LIBCPP_BUILDING_LIBRARY)
+ _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::free(static_cast<void*>(__loc.operator ::_locale_t())); }
++#else
+ inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
++#endif
+ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __locale) {
+   char* __new_locale = ::setlocale(__category, __locale);
+   if (__new_locale == nullptr)
+@@ -183,61 +199,214 @@
+ #endif
+ 
+ inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::strtod(__nptr, __endptr);
++#else
+   return ::_strtod_l(__nptr, __endptr, __loc);
++#endif
++
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::strtoll(__nptr, __endptr, __base);
++#else
+   return ::_strtoi64_l(__nptr, __endptr, __base, __loc);
++#endif
++
+ }
+ inline _LIBCPP_HIDE_FROM_ABI unsigned long long
+ __strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::strtoull(__nptr, __endptr, __base);
++#else
+   return ::_strtoui64_l(__nptr, __endptr, __base, __loc);
++#endif
++
+ }
+ 
+ //
+ // Character manipulation functions
+ //
+-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return _isdigit_l(__c, __loc); }
+-
+-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return _isxdigit_l(__c, __loc); }
++inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::isdigit(__c);
++#else
++  return _isdigit_l(__c, __loc);
++#endif
++ }
++
++inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::isxdigit(__c);
++#else
++  return _isxdigit_l(__c, __loc);
++#endif
++ }
+ 
+ #if defined(_LIBCPP_BUILDING_LIBRARY)
+-inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return ::_toupper_l(__c, __loc); }
+-
+-inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t __loc) { return ::_tolower_l(__c, __loc); }
++inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::toupper(__c);
++#else
++  return ::_toupper_l(__c, __loc);
++#endif
++ }
++
++inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::tolower(__c);
++#else
++  return ::_tolower_l(__c, __loc);
++#endif
++ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::strcoll(__s1, __s2);
++#else
+   return ::_strcoll_l(__s1, __s2, __loc);
++#endif
++
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, size_t __n, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::strxfrm(__dest, __src, __n);
++#else
+   return ::_strxfrm_l(__dest, __src, __n, __loc);
++#endif
++
+ }
+ 
+ #  if _LIBCPP_HAS_WIDE_CHARACTERS
+ inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswctype(__c, __type);
++#else
+   return ::_iswctype_l(__c, __type, __loc);
+-}
+-inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __c, __locale_t __loc) { return ::_iswspace_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __c, __locale_t __loc) { return ::_iswprint_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswcntrl(wint_t __c, __locale_t __loc) { return ::_iswcntrl_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswupper(wint_t __c, __locale_t __loc) { return ::_iswupper_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswlower(wint_t __c, __locale_t __loc) { return ::_iswlower_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswalpha(wint_t __c, __locale_t __loc) { return ::_iswalpha_l(__c, __loc); }
++#endif
++
++}
++inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswspace(__c);
++#else
++  return ::_iswspace_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswprint(__c);
++#else
++  return ::_iswprint_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswcntrl(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswcntrl(__c);
++#else
++  return ::_iswcntrl_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswupper(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswupper(__c);
++#else
++  return ::_iswupper_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswlower(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswlower(__c);
++#else
++  return ::_iswlower_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswalpha(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswalpha(__c);
++#else
++  return ::_iswalpha_l(__c, __loc);
++#endif
++ }
+ // TODO: use locale to determine blank characters
+ inline _LIBCPP_HIDE_FROM_ABI int __iswblank(wint_t __c, __locale_t /*loc*/) { return (__c == L' ' || __c == L'\t'); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswdigit(wint_t __c, __locale_t __loc) { return ::_iswdigit_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswpunct(wint_t __c, __locale_t __loc) { return ::_iswpunct_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI int __iswxdigit(wint_t __c, __locale_t __loc) { return ::_iswxdigit_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __c, __locale_t __loc) { return ::_towupper_l(__c, __loc); }
+-inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __c, __locale_t __loc) { return ::_towlower_l(__c, __loc); }
++inline _LIBCPP_HIDE_FROM_ABI int __iswdigit(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswdigit(__c);
++#else
++  return ::_iswdigit_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswpunct(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswpunct(__c);
++#else
++  return ::_iswpunct_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI int __iswxdigit(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::iswxdigit(__c);
++#else
++  return ::_iswxdigit_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::towupper(__c);
++#else
++  return ::_towupper_l(__c, __loc);
++#endif
++ }
++inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __c, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::towlower(__c);
++#else
++  return ::_towlower_l(__c, __loc);
++#endif
++ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __ws1, const wchar_t* __ws2, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::wcscoll(__ws1, __ws2);
++#else
+   return ::_wcscoll_l(__ws1, __ws2, __loc);
++#endif
++
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::wcsxfrm(__dest, __src, __n);
++#else
+   return ::_wcsxfrm_l(__dest, __src, __n, __loc);
++#endif
++
+ }
+ #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+ 
+@@ -265,7 +434,13 @@
+ __mbrtowc(wchar_t* __restrict, const char* __restrict, size_t, mbstate_t* __restrict, __locale_t);
+ 
+ inline _LIBCPP_HIDE_FROM_ABI int __mbtowc(wchar_t* __pwc, const char* __pmb, size_t __max, __locale_t __loc) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::mbtowc(__pwc, __pmb, __max);
++#else
+   return ::_mbtowc_l(__pwc, __pmb, __max, __loc);
++#endif
++
+ }
+ 
+ _LIBCPP_EXPORTED_FROM_ABI size_t __mbrlen(const char* __restrict, size_t, mbstate_t* __restrict, __locale_t);
+@@ -292,12 +467,17 @@
+ template <class... _Args>
+ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
+     const char* __dest, __locale_t __loc, const char* __format, _Args&&... __args) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  __locale_guard current(__loc);
++  return ::sscanf(__dest, __format, std::forward<_Args>(__args)...);
++#else
+   return ::_sscanf_l(__dest, __format, __loc, std::forward<_Args>(__args)...);
++#endif
+ }
+ _LIBCPP_DIAGNOSTIC_POP
+ #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
+ 
+-#if defined(_LIBCPP_BUILDING_LIBRARY)
++#if defined(_LIBCPP_BUILDING_LIBRARY) && !(defined(__MINGW32__) && _WIN32_WINNT == 0x0400)
+ struct __locale_guard {
+   _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
+     // Setting the locale can be expensive even when the locale given is
+--- a/libcxx/src/support/win32/locale_win32.cpp
++++ b/libcxx/src/support/win32/locale_win32.cpp
+@@ -13,17 +13,66 @@
+ #include <cstdio>  // std::vsnprintf & friends
+ #include <cstdlib> // std::strtof & friends
+ #include <ctime>   // std::strftime
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++#  include <pthread.h>
++#endif
+ #include <cwchar>  // wide char manipulation
+ 
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ namespace __locale {
+ 
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++static pthread_mutex_t locale_mutex = PTHREAD_MUTEX_INITIALIZER;
++
++__locale_guard::__locale_guard(const __locale_t& loc) {
++  if (pthread_mutex_lock(&locale_mutex) != 0)
++    std::abort();
++  const char* name = loc.__get_locale();
++  const char* current = ::setlocale(LC_ALL, nullptr);
++  if (!name || (current && std::strcmp(current, name) == 0))
++    return;
++  __previous = current ? ::_strdup(current) : nullptr;
++  if (!__previous || !::setlocale(LC_ALL, name)) {
++    ::free(__previous);
++    pthread_mutex_unlock(&locale_mutex);
++    std::__throw_bad_alloc();
++  }
++}
++
++__locale_guard::~__locale_guard() {
++  if (__previous) {
++    if (!::setlocale(LC_ALL, __previous))
++      std::abort();
++    ::free(__previous);
++  }
++  pthread_mutex_unlock(&locale_mutex);
++}
++#endif
++
+ //
+ // Locale management
+ //
+ // FIXME: base and mask currently unused. Needs manual work to construct the new locale
+ __locale_t __newlocale(int /*mask*/, const char* locale, __locale_t /*base*/) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  if (pthread_mutex_lock(&locale_mutex) != 0)
++    std::abort();
++  const char* current = ::setlocale(LC_ALL, nullptr);
++  char* saved = current ? ::_strdup(current) : nullptr;
++  char* copy = nullptr;
++  if (saved) {
++    const char* selected = ::setlocale(LC_ALL, locale);
++    if (selected)
++      copy = ::_strdup(selected);
++    if (!::setlocale(LC_ALL, saved))
++      std::abort();
++    ::free(saved);
++  }
++  pthread_mutex_unlock(&locale_mutex);
++  return {reinterpret_cast<::_locale_t>(copy), copy};
++#else
+   return {::_create_locale(LC_ALL, locale), locale};
++#endif
+ }
+ 
+ __lconv_t* __localeconv(__locale_t& loc) {

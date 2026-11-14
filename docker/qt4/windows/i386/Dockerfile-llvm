@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG XP_TOOLCHAIN_IMAGE=qt5-win-i386:llvm21-toolchain
+ARG WIN95_IMAGE=qt4-win-i386:latest
+FROM ${WIN95_IMAGE} AS win95
+FROM ${XP_TOOLCHAIN_IMAGE} AS build-runtime
+ARG PARALLEL_JOBS=3
+COPY --from=win95 /opt/win95-cxx14/exe-exit.o /opt/win95-cxx14/
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=downloads/mingw-w64_4.0.4.orig.tar.bz2,target=/src/mingw-w64.tar.bz2 \
+    --mount=type=bind,source=patches/llvm,target=/src/patches/llvm \
+    --mount=type=bind,source=patches/winpthreads,target=/src/patches/winpthreads \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests/common,target=/src/tests/common \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-win95/prepare-llvm.sh
+
+FROM ${XP_TOOLCHAIN_IMAGE} AS probe
+COPY --from=build-runtime /opt/sysroot-xp/lib/libpthread.a /opt/sysroot-xp/lib/libwinpthread.a /opt/sysroot-xp/lib/
+COPY --from=build-runtime /opt/win95-cxx14/exe-exit.o /opt/win95-cxx14/
+COPY --from=build-runtime /opt/llvm-runtime-win95 /opt/llvm-runtime-win95
+ENV PATH=/opt/llvm-runtime-win95/bin:/opt/llvm-21/bin:/usr/local/bin:/usr/bin:/bin
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["i686-w64-mingw32-clang++ --version"]
+
+FROM probe AS build-qt
+ARG PARALLEL_JOBS=3
+COPY --from=win95 /opt/openssl-1.0.2u /opt/openssl-1.0.2u
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/src/qt.tar.gz \
+    --mount=type=bind,source=patches/qt4,target=/src/patches/qt4 \
+    --mount=type=bind,source=patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch,target=/src/patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch \
+    --mount=type=bind,source=scripts/build/qt4-win95/build-qt-llvm.sh,target=/src/build-qt.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
+
+FROM probe AS sdk
+COPY --from=build-qt /opt/qt4-win-i386-llvm /opt/qt4-win-i386-llvm
+COPY --from=build-qt /opt/openssl-1.0.2u /opt/openssl-1.0.2u
+COPY --from=build-qt /work/qt4-win95-src/LICENSE.LGPLv21 /work/qt4-win95-src/LICENSE.LGPLv3 /work/qt4-win95-src/LGPL_EXCEPTION.txt /opt/qt4-win95/licenses/
+ENV QT_INSTALL_DIR=/opt/qt4-win-i386-llvm QMAKESPEC=win32-g++-longreach-win95
+ENV PATH=${QT_INSTALL_DIR}/bin:${PATH}
+CMD ["qmake -query QT_VERSION"]
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build,target=/src/scripts/build \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-win95/build-examples-llvm.sh

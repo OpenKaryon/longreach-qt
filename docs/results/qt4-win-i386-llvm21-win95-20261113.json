@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-13",
+  "target": "qt4-win-i386-llvm",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "openssl": "1.0.2u",
+  "guest": {
+    "os": "Windows 95 OSR2 4.00.1111",
+    "hypervisor": "QEMU TCG",
+    "cpu": "Pentium III",
+    "memory_mib": 128,
+    "ansi_code_page": 1251,
+    "oem_code_page": 866
+  },
+  "sdk_archives": {
+    "count": 37,
+    "matches_gcc_sdk": true
+  },
+  "standalone_probe": {
+    "passed": 24,
+    "failed": 1,
+    "skipped": 0,
+    "failure": "C++17 Unicode filesystem round trip"
+  },
+  "qt_cxx23": {
+    "passed": 24,
+    "failed": 1,
+    "skipped": 0,
+    "failure": "C++17 Unicode filesystem round trip"
+  },
+  "ordinary_suite": {
+    "qt-selftest": {
+      "passed": 121,
+      "failed": 0,
+      "skipped": 139
+    },
+    "widgets-gallery": {
+      "passed": 143,
+      "failed": 0,
+      "skipped": 7
+    },
+    "graphics-gallery": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "quick-qml-gallery": {
+      "passed": 29,
+      "failed": 0,
+      "skipped": 1
+    },
+    "gl-heavy-gallery": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 4
+    },
+    "painting-lab": {
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    },
+    "multimedia-lab": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 3
+    },
+    "network-gui": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 1
+    }
+  },
+  "pe": {
+    "machine": "i386",
+    "subsystem_version": "4.0",
+    "missing_exports": 0
+  },
+  "executables_sha256": {
+    "cxx23-probe.exe": "1a7859bdf24c553a54406940e55a87125ec8ee9b7fbe19feb25b36196855f1cb",
+    "gl-heavy-gallery.exe": "38db5d7446ed2e5c1bd464dc6338d0170a57deb83220398336dceecb85d1ddba",
+    "graphics-gallery.exe": "07bed5e116085b86e36ab25186f1e17c1419dfd12814246e5803f2276561eae2",
+    "multimedia-lab.exe": "371409226e26432d3fb6c7c4c2f02424a775c43626d2c0a60b4877ad805c83fe",
+    "network-gui.exe": "6a03262176c318f5bc5a3a85ea7c3dcecb9a2bbd9b1fac93dd2229566186f88e",
+    "painting-lab.exe": "2069d1889343ee400edae46d6d5d2cadc5eaaa0f496d0528561b8ad12d7a67ad",
+    "qt-selftest-cxx23.exe": "38172c6efacb8b351fa67faed26bc37fd31871471ee31a16981d6f28c225aee6",
+    "qt-selftest.exe": "72b5e3e15ac2499b015c8da3a26c1b5908c8029e98343ccd36943cfaf0833e8c",
+    "quick-qml-gallery.exe": "06fb622705c0a76f187c162fea322e0cec4973dcfefdc7734e2cf68d94e5f3c6",
+    "smoke-runner.exe": "158a12a563144fb5027f72bf71d8e39e627e4109e39bfa8ad243c8701a4580d4",
+    "widgets-gallery.exe": "efdd7fe4d3c64662ea428b5bd60dbd8e48cece1e99b657252a7ed3c08cc420de"
+  },
+  "file_api_followup": {
+    "date": "2026-11-14",
+    "sdk_image_id": "sha256:56d72f249f1b4e63cf83b03559731a806c76107c0b426fa4adfc6723d8c89cb8",
+    "static_archive_paths": 37,
+    "matches_gcc_sdk": true,
+    "focused_probe": {
+      "sha256": "e90c1b7ce8460f43cf5cbe07aec5e4a8847941fe0f1741dda3f9300eb080ac6b",
+      "passed": 3,
+      "failed": 0
+    },
+    "standalone_probe": {
+      "passed": 24,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "C++17 Unicode filesystem round trip"
+    },
+    "qt_cxx23": {
+      "passed": 24,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "C++17 Unicode filesystem round trip"
+    },
+    "ordinary_suite": {
+      "applications_passed": 8,
+      "passed": 369,
+      "failed": 0,
+      "optional_skips": 155
+    },
+    "pe_export_audit": {
+      "executables": 11,
+      "missing_imports": 0,
+      "subsystem_version": "4.0"
+    },
+    "executables_sha256": {
+      "cxx23-probe.exe": "1adace718dc340f5df7297cdd0e86092ce647d53f2daaf0c24288d67e90dcbd6",
+      "gl-heavy-gallery.exe": "93785afecab2c366b6e54b8d13d8dba413f02f94e60283e6134c90ad75112104",
+      "graphics-gallery.exe": "37c5de375e5a34050af425e6d0e7ae5f7fc1a2589b15a9e617c5085b1a12259e",
+      "multimedia-lab.exe": "ef6089e287376e24ca23ab84fc4121743087dffe4dd2899301c70375558571f2",
+      "network-gui.exe": "0f56f6bee6bfc81072d5ca09441d260aa1fd239bc718b5a70e022511057bacb8",
+      "painting-lab.exe": "c42b1c8ba7e66edb126aaa1544ad77a6f254bfcd631655bfc7ca657d1985b13a",
+      "qt-selftest-cxx23.exe": "eb2778ef762626961d9549849d2005b339cc1624f704524ba8ba4a0cb6e51961",
+      "qt-selftest.exe": "5177ba90682aaea688915f024cc05a128898e1583a1a4464dd440ec8f4f0d273",
+      "quick-qml-gallery.exe": "df3e2bad877a1b7640b5ef436cb52a7ee7436820792dc304ff7579c81cbf826e",
+      "smoke-runner.exe": "5df300f4e51b766a2634217d28a0f679fed16ab422b396fdcf1ec706ad183312",
+      "widgets-gallery.exe": "c5d93e549014fa27a9e2f5ffdd577cce54e96e24d7e205e2746c09f92e543508"
+    }
+  },
+  "windows_95_chinese_osr2": {
+    "status": "passed",
+    "installation_media": {
+      "archive_item": "Win95OSR2CHS",
+      "archive_file": "WINDOWS95B.iso",
+      "sha1": "0e1b32366536c1cadd55c84e0d8ef37d308bbe9a",
+      "sha256": "eb5da9ee641b16b4efc9345d1438a942f799413c3e704ff551f86c1b2690e72e",
+      "layout_inf_lists_cp936": true
+    },
+    "installation_media_export_audit": {
+      "winsock2_sha256": "48c82825328ef63bce1d471d505f0e243cae94b5b05c66cf2e51b75c6d4d4922",
+      "system_dlls": 14,
+      "executables": 11,
+      "unresolved_imports": 0
+    },
+    "guest_version": "4.00.1111",
+    "ansi_codepage": 936,
+    "oem_codepage": 936,
+    "mixed_script_name_roundtrip": true,
+    "standalone_probe": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "1adace718dc340f5df7297cdd0e86092ce647d53f2daaf0c24288d67e90dcbd6"
+    },
+    "logs_sha256": {
+      "CP.LOG": "2dd54bfafdb0de3d1d248146b2514f26337f2d237909856eec80c87def74b5aa",
+      "PROBE.LOG": "031372853e0e72774e75921b0366f2e3f3de4362e8dd980ae3881f95b7c7c56b",
+      "RESULT.TXT": "d938fa189912f8776c3deb31a6bec42f403f57b9c8e3ed936bdb076caf6bd61c",
+      "SYSTEM.TXT": "02980128127179d6e897a5578155a27d98b32cb3897b5c8a12f4b0852f9d26fa",
+      "WINSOCK.LOG": "5dd560bb39de5d48090cd7bd62c8b1e9bd2112befe789e5a09e79e2e6d5229dc",
+      "PING.LOG": "fdf821c41946f903bb91a0c566374b52ca7c4d9356c74fd599e1c42a65184eb9"
+    },
+    "win95_network": {
+      "adapter": "AMD PCnet PCI 1022:2000",
+      "pci_bus_installed": true,
+      "winsock2_installed": true,
+      "loopback_verified_after_reboot": true
+    },
+    "sdk_run": {
+      "standalone_probe": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "qt_cxx23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "ordinary_suite": {
+        "applications_passed": 8,
+        "passed": 369,
+        "failed": 0,
+        "optional_skips": 155,
+        "applications": {
+          "qt-selftest": {
+            "passed": 121,
+            "failed": 0,
+            "skipped": 139
+          },
+          "widgets-gallery": {
+            "passed": 143,
+            "failed": 0,
+            "skipped": 7
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 1
+          },
+          "gl-heavy-gallery": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 4
+          },
+          "painting-lab": {
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0
+          },
+          "multimedia-lab": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 3
+          },
+          "network-gui": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 1
+          }
+        }
+      },
+      "verified_executables": 11,
+      "executables_sha256": {
+        "cxx23-probe.exe": "1adace718dc340f5df7297cdd0e86092ce647d53f2daaf0c24288d67e90dcbd6",
+        "gl-heavy-gallery.exe": "93785afecab2c366b6e54b8d13d8dba413f02f94e60283e6134c90ad75112104",
+        "graphics-gallery.exe": "37c5de375e5a34050af425e6d0e7ae5f7fc1a2589b15a9e617c5085b1a12259e",
+        "multimedia-lab.exe": "ef6089e287376e24ca23ab84fc4121743087dffe4dd2899301c70375558571f2",
+        "network-gui.exe": "0f56f6bee6bfc81072d5ca09441d260aa1fd239bc718b5a70e022511057bacb8",
+        "painting-lab.exe": "c42b1c8ba7e66edb126aaa1544ad77a6f254bfcd631655bfc7ca657d1985b13a",
+        "qt-selftest-cxx23.exe": "eb2778ef762626961d9549849d2005b339cc1624f704524ba8ba4a0cb6e51961",
+        "qt-selftest.exe": "5177ba90682aaea688915f024cc05a128898e1583a1a4464dd440ec8f4f0d273",
+        "quick-qml-gallery.exe": "df3e2bad877a1b7640b5ef436cb52a7ee7436820792dc304ff7579c81cbf826e",
+        "smoke-runner.exe": "5df300f4e51b766a2634217d28a0f679fed16ab422b396fdcf1ec706ad183312",
+        "widgets-gallery.exe": "c5d93e549014fa27a9e2f5ffdd577cce54e96e24d7e205e2746c09f92e543508"
+      },
+      "logs_sha256": {
+        "GUEST.TXT": "02980128127179d6e897a5578155a27d98b32cb3897b5c8a12f4b0852f9d26fa",
+        "STATUS.TXT": "a8259fab2a115a37d7783bfede9de0bff062f5a24f6fd38c5ed69cbc1077b618",
+        "PROBE.LOG": "031372853e0e72774e75921b0366f2e3f3de4362e8dd980ae3881f95b7c7c56b",
+        "STRICT.LOG": "ae487c31a9d48b996c5e4439105aa277084beb0b420f70ae439b350aa0acc311",
+        "smoke-report.txt": "437cd794ab89f47b4ccfca65a4967be963f21fdd4943942464eeb6027ee48f02",
+        "copy-result.log": "f698708f93b2bb299ebabd52c53b721de51316d684e38fd7028f754c024a9d92",
+        "run-result.txt": "724dcbbe938068b167ebe4a51f058265d7b229053f7cf6b29955cfe7029c6704",
+        "WINSOCK.LOG": "cdcc41d953d99da0972662d0c45a6e4dc6cbe7a368bee9862cc0780daca17356",
+        "DLLS.LOG": "64434619b5f6f1bfff0dd6bbd951c915087a1b331af13aace5b0673720117c4c",
+        "PING.LOG": "47f3597fce1309280cb85999c58343d281fcc08b4095cf606db8bb7660c46123",
+        "PCI.REG": "8c5ba2e4f4ac602bc5a29c73801ba0b9983b437fcc7e8fbe4907f48535300897"
+      }
+    }
+  }
+}

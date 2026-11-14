@@ -170,6 +170,33 @@ qt4-win-amd64: $(QT4_ARCHIVE_PATH) $(OPENSSL_PATH)
 	$(ONE_BUILD_CHECK)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT4_BUILD_ARGS) -f docker/qt4/windows/amd64/Dockerfile -t $(QT4_WIN_AMD64_IMAGE) .
 
+# Win95 builds a separate upstream LLVM runtime on the existing i386 sysroot.
+QT4_WIN95_LLVM_TOOLCHAIN ?= qt5-win-i386:llvm21-toolchain
+QT4_WIN95_LLVM_IMAGE := qt4-win-i386:llvm21-probe
+QT4_WIN95_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-win-i386-llvm21
+QT4_WIN95_MINGW_PATH := $(DOWNLOAD_DIR)/mingw-w64_4.0.4.orig.tar.bz2
+QT4_WIN95_MINGW_SHA256 := 89356a0aa8cf9f8b9dc8d92bc8dd01a131d4750c3acb30c6350a406316c42199
+
+.PHONY: verify-qt4-win95-mingw
+verify-downloads: verify-qt4-win95-mingw
+verify-qt4-win95-mingw:
+	$(if $(wildcard $(QT4_WIN95_MINGW_PATH)),$(PYTHON) scripts/fetch/fetch.py --check "$(QT4_WIN95_MINGW_PATH)" "$(QT4_WIN95_MINGW_SHA256)")
+
+$(QT4_WIN95_MINGW_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "https://archive.ubuntu.com/ubuntu/pool/universe/m/mingw-w64/mingw-w64_4.0.4.orig.tar.bz2" "$@" "$(QT4_WIN95_MINGW_SHA256)"
+
+.PHONY: qt4-win-i386-llvm-probe qt4-win-i386-llvm qt4-win-i386-llvm-examples
+BUILD_TARGETS += qt4-win-i386-llvm
+qt4-win-i386-llvm-probe qt4-win-i386-llvm qt4-win-i386-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(QT4_WIN95_MINGW_PATH)
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT4_WIN95_LLVM_TOOLCHAIN) $(QT4_WIN_I386_IMAGE)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN95_LLVM_TOOLCHAIN) --build-arg WIN95_IMAGE=$(QT4_WIN_I386_IMAGE) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/windows/i386/Dockerfile-llvm -t $(if $(filter %-probe,$@),$(QT4_WIN95_LLVM_IMAGE),qt4-win-i386:llvm21) .
+	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_WIN95_LLVM_OUT)))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN95_LLVM_OUT):/out" $(QT4_WIN95_LLVM_IMAGE) "cp /opt/llvm-runtime-win95/share/cxx23-probe.exe /out/")
+	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN95_LLVM_OUT):/out" qt4-win-i386:llvm21 "cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-win95/share/cxx23-probe.exe /out/")
+
+qt4-win-i386-llvm qt4-win-i386-llvm-examples: $(QT4_ARCHIVE_PATH)
+
 # The XP x64 SDK reuses the upstream LLVM toolchain stage from Qt 5.
 QT4_WIN_AMD64_LLVM_IMAGE := qt4-win-amd64:llvm21
 QT4_WIN_AMD64_LLVM_TOOLCHAIN ?= qt5-win-amd64:llvm21-toolchain

@@ -19,6 +19,8 @@ Makefile        text eol=lf
 # Unified-diff context uses a single space on otherwise empty lines.
 *.patch         text eol=lf whitespace=-blank-at-eol
 *.diff          text eol=lf whitespace=-blank-at-eol
+# This upstream diff also has context lines whose indentation starts with a tab.
+/patches/winpthreads/windows-95/01-osr2-threading.patch whitespace=-blank-at-eol,-space-before-tab
 *.sh            text eol=lf
 
 # Windows-native scripts, should any be added later, need real CRLF to run.

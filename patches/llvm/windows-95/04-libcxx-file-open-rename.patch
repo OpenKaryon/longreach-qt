@@ -1,0 +1,184 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+#
+# Use the Win95 file API for representable wide paths and preserve existing files on rename failure.
+--- a/libcxx/include/fstream
++++ b/libcxx/include/fstream
+@@ -719,17 +719,26 @@
+ }
+ 
+ #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
++#      if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++_LIBCPP_EXPORTED_FROM_ABI FILE* __win95_filebuf_open(const wchar_t*, const char*);
++#      endif
++
+ // This is basically the same as the char* overload except that it uses _wfopen
+ // and long mode strings.
+ template <class _CharT, class _Traits>
+ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar_t* __s, ios_base::openmode __mode) {
+   if (__file_)
+     return nullptr;
++#      if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  const char* __mdstr = __make_mdstring(__mode);
++  return __mdstr ? __do_open(std::__win95_filebuf_open(__s, __mdstr), __mode) : nullptr;
++#      else
+   const wchar_t* __mdstr = __make_mdwstring(__mode);
+   if (!__mdstr)
+     return nullptr;
+ 
+   return __do_open(_wfopen(__s, __mdstr), __mode);
++#      endif
+ }
+ #    endif
+ 
+--- a/libcxx/src/filesystem/posix_compat.h
++++ b/libcxx/src/filesystem/posix_compat.h
+@@ -32,6 +32,10 @@
+ #include "time_utils.h"
+ 
+ #if defined(_LIBCPP_WIN32API)
++
++#  if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++#    include "../support/win32/win95_path.h"
++#  endif
+ #  define WIN32_LEAN_AND_MEAN
+ #  define NOMINMAX
+ #  include <io.h>
+@@ -123,23 +127,6 @@
+ 
+ #  define O_NONBLOCK 0
+ 
+-#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
+-inline bool win95_ansi_path(const wchar_t* path, char (&out)[MAX_PATH]) {
+-  BOOL substituted = FALSE;
+-  const UINT codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+-  wchar_t roundtrip[MAX_PATH];
+-  const int size = WideCharToMultiByte(codepage, 0, path, -1, out, MAX_PATH, nullptr, &substituted);
+-  if (!size)
+-    return false;
+-  if (substituted || !MultiByteToWideChar(codepage, 0, out, size, roundtrip, MAX_PATH) ||
+-      wcscmp(roundtrip, path) != 0) {
+-    SetLastError(ERROR_NO_UNICODE_TRANSLATION);
+-    return false;
+-  }
+-  return true;
+-}
+-#endif
+-
+ class WinHandle {
+ public:
+   WinHandle(const wchar_t* p, DWORD access, DWORD flags) {
+@@ -241,7 +228,7 @@
+ #if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
+   (void)flags;
+   char ansi[MAX_PATH];
+-  if (!win95_ansi_path(path, ansi))
++  if (!std::__win95::__ansi_path(path, ansi))
+     return -1;
+   const DWORD attributes = GetFileAttributesA(ansi);
+   if (attributes == INVALID_FILE_ATTRIBUTES)
+@@ -285,7 +272,7 @@
+   (void)permissions;
+ #if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
+   char ansi[MAX_PATH];
+-  if (!win95_ansi_path(path, ansi) || !CreateDirectoryA(ansi, nullptr))
++  if (!std::__win95::__ansi_path(path, ansi) || !CreateDirectoryA(ansi, nullptr))
+     return -1;
+ #else
+   if (!CreateDirectoryW(path, nullptr))
+@@ -345,7 +332,7 @@
+ #  if defined(__MINGW32__) && _WIN32_WINNT < 0x0600
+ #    if _WIN32_WINNT == 0x0400
+   char ansi[MAX_PATH];
+-  if (!win95_ansi_path(path, ansi))
++  if (!std::__win95::__ansi_path(path, ansi))
+     return -1;
+   DWORD attributes = GetFileAttributesA(ansi);
+   if (attributes == INVALID_FILE_ATTRIBUTES)
+@@ -401,9 +388,22 @@
+ }
+ 
+ inline int rename(const wchar_t* from, const wchar_t* to) {
++#if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++  char ansi_from[MAX_PATH], ansi_to[MAX_PATH];
++  if (!std::__win95::__ansi_path(from, ansi_from) || !std::__win95::__ansi_path(to, ansi_to))
++    return -1;
++  if (MoveFileExA(ansi_from, ansi_to, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
++    return 0;
++  // Win95's MoveFileExA is a stub. MoveFileA can rename to a free path.
++  // Preserve an existing destination if the OS cannot replace it atomically.
++  if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED && MoveFileA(ansi_from, ansi_to))
++    return 0;
++  return -1;
++#else
+   if (!(MoveFileExW(from, to, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)))
+     return -1;
+   return 0;
++#endif
+ }
+ 
+ inline int chdir(const wchar_t* path) {
+--- a/libcxx/src/fstream.cpp
++++ b/libcxx/src/fstream.cpp
+@@ -15,11 +15,26 @@
+ #  define NOMINMAX
+ #  include <io.h>
+ #  include <windows.h>
++#  if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++#    include "support/win32/win95_path.h"
++#    include <cerrno>
++#  endif
+ #endif
+ 
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+ #if defined(_LIBCPP_WIN32API)
++
++#  if defined(__MINGW32__) && _WIN32_WINNT == 0x0400
++_LIBCPP_EXPORTED_FROM_ABI FILE* __win95_filebuf_open(const wchar_t* path, const char* mode) {
++  char ansi[MAX_PATH];
++  if (!std::__win95::__ansi_path(path, ansi, CP_ACP)) {
++    errno = GetLastError() == ERROR_INSUFFICIENT_BUFFER ? ENAMETOOLONG : EILSEQ;
++    return nullptr;
++  }
++  return fopen(ansi, mode);
++}
++#  endif
+ 
+ // Confirm that `HANDLE` is `void*` as implemented in `basic_filebuf`
+ static_assert(std::same_as<HANDLE, void*>);
+--- /dev/null
++++ b/libcxx/src/support/win32/win95_path.h
+@@ -0,0 +1,32 @@
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++// Copyright (C) 2026 OpenKaryon
++
++#ifndef LIBCXX_SUPPORT_WIN32_WIN95_PATH_H
++#define LIBCXX_SUPPORT_WIN32_WIN95_PATH_H
++
++#include <__config>
++#include <windows.h>
++#include <wchar.h>
++
++_LIBCPP_BEGIN_NAMESPACE_STD
++namespace __win95 {
++inline bool __ansi_path(const wchar_t* path, char (&out)[MAX_PATH], UINT codepage) {
++  BOOL substituted = FALSE;
++  wchar_t roundtrip[MAX_PATH];
++  const int size = WideCharToMultiByte(codepage, 0, path, -1, out, MAX_PATH, nullptr, &substituted);
++  if (!size)
++    return false;
++  if (substituted || !MultiByteToWideChar(codepage, 0, out, size, roundtrip, MAX_PATH) ||
++      wcscmp(roundtrip, path) != 0) {
++    SetLastError(ERROR_NO_UNICODE_TRANSLATION);
++    return false;
++  }
++  return true;
++}
++inline bool __ansi_path(const wchar_t* path, char (&out)[MAX_PATH]) {
++  return __ansi_path(path, out, AreFileApisANSI() ? CP_ACP : CP_OEMCP);
++}
++} // namespace __win95
++_LIBCPP_END_NAMESPACE_STD
++
++#endif // LIBCXX_SUPPORT_WIN32_WIN95_PATH_H

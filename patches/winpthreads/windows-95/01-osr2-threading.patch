@@ -1,0 +1,298 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 OpenKaryon
+#
+# Use Win95 primitives for condition variables and joinable thread handles.
+--- a/src/cond.c
++++ b/src/cond.c
+@@ -32,6 +32,25 @@
+ #include "pthread_time.h"
+ #include "ref.h"
+ #include "cond.h"
++
++/* This internal waiter-count lock is never acquired recursively. Keep
++ * try-lock nonblocking even while another thread holds the gate semaphore. */
++static int try_waiters_lock (volatile LONG *lock)
++{
++  return InterlockedExchange (lock, 1) == 0;
++}
++
++static void take_waiters_lock (volatile LONG *lock)
++{
++  while (!try_waiters_lock (lock))
++    Sleep (0);
++}
++
++static void release_waiters_lock (volatile LONG *lock)
++{
++  InterlockedExchange (lock, 0);
++}
++
+ #include "thread.h"
+ #include "misc.h"
+ #include "winpthread_internal.h"
+@@ -227,7 +246,7 @@
+       free (_c);
+       r = EAGAIN;
+   } else {
+-      InitializeCriticalSection(&_c->waiters_count_lock_);
++      _c->waiters_count_lock_ = 0;
+       InitializeCriticalSection(&_c->waiters_b_lock_);
+       InitializeCriticalSection(&_c->waiters_q_lock_);
+       _c->value_q = 0;
+@@ -267,7 +286,7 @@
+   r = do_sema_b_wait(_c->sema_b, 0, INFINITE,&_c->waiters_b_lock_,&_c->value_b);
+   if (r != 0)
+     return r;
+-  if (!TryEnterCriticalSection (&_c->waiters_count_lock_))
++  if (!try_waiters_lock (&_c->waiters_count_lock_))
+     {
+        do_sema_b_release (_c->sema_b, 1,&_c->waiters_b_lock_,&_c->value_b);
+        return EBUSY;
+@@ -276,7 +295,7 @@
+     {
+       r = do_sema_b_release (_c->sema_b, 1,&_c->waiters_b_lock_,&_c->value_b);
+       if (!r) r = EBUSY;
+-      LeaveCriticalSection(&_c->waiters_count_lock_);
++      release_waiters_lock (&_c->waiters_count_lock_);
+       return r;
+     }
+   *c = NULL;
+@@ -286,8 +305,7 @@
+     r = EINVAL;
+   if (!CloseHandle (_c->sema_b) && !r)
+     r = EINVAL;
+-  LeaveCriticalSection (&_c->waiters_count_lock_);
+-  DeleteCriticalSection(&_c->waiters_count_lock_);
++  release_waiters_lock (&_c->waiters_count_lock_);
+   DeleteCriticalSection(&_c->waiters_b_lock_);
+   DeleteCriticalSection(&_c->waiters_q_lock_);
+   _c->valid  = DEAD_COND;
+@@ -309,13 +327,13 @@
+   else if (_c->valid != (unsigned int)LIFE_COND)
+     return EINVAL;
+ 
+-  EnterCriticalSection (&_c->waiters_count_lock_);
++  take_waiters_lock (&_c->waiters_count_lock_);
+   /* If there aren't any waiters, then this is a no-op.   */
+   if (_c->waiters_count_unblock_ != 0)
+     {
+       if (_c->waiters_count_ == 0)
+       {
+-	LeaveCriticalSection (&_c->waiters_count_lock_);
++	release_waiters_lock (&_c->waiters_count_lock_);
+ 	/* pthread_testcancel(); */
+ 	return 0;
+       }
+@@ -327,7 +345,7 @@
+       r = do_sema_b_wait (_c->sema_b, 1, INFINITE,&_c->waiters_b_lock_,&_c->value_b);
+       if (r != 0)
+       {
+-	LeaveCriticalSection (&_c->waiters_count_lock_);
++	release_waiters_lock (&_c->waiters_count_lock_);
+ 	/* pthread_testcancel(); */
+ 	return r;
+       }
+@@ -341,11 +359,11 @@
+     }
+   else
+     {
+-      LeaveCriticalSection (&_c->waiters_count_lock_);
++      release_waiters_lock (&_c->waiters_count_lock_);
+       /* pthread_testcancel(); */
+       return 0;
+     }
+-  LeaveCriticalSection (&_c->waiters_count_lock_);
++  release_waiters_lock (&_c->waiters_count_lock_);
+   r = do_sema_b_release(_c->sema_q, 1,&_c->waiters_q_lock_,&_c->value_q);
+   /* pthread_testcancel(); */
+   return r;
+@@ -366,13 +384,13 @@
+   else if (_c->valid != (unsigned int)LIFE_COND)
+     return EINVAL;
+ 
+-  EnterCriticalSection (&_c->waiters_count_lock_);
++  take_waiters_lock (&_c->waiters_count_lock_);
+   /* If there aren't any waiters, then this is a no-op.   */
+   if (_c->waiters_count_unblock_ != 0)
+     {
+       if (_c->waiters_count_ == 0)
+       {
+-	LeaveCriticalSection (&_c->waiters_count_lock_);
++	release_waiters_lock (&_c->waiters_count_lock_);
+ 	/* pthread_testcancel(); */
+ 	return 0;
+       }
+@@ -385,7 +403,7 @@
+       r = do_sema_b_wait (_c->sema_b, 1, INFINITE,&_c->waiters_b_lock_,&_c->value_b);
+       if (r != 0)
+       {
+-	LeaveCriticalSection (&_c->waiters_count_lock_);
++	release_waiters_lock (&_c->waiters_count_lock_);
+ 	/* pthread_testcancel(); */
+ 	return r;
+       }
+@@ -400,11 +418,11 @@
+     }
+   else
+     {
+-      LeaveCriticalSection (&_c->waiters_count_lock_);
++      release_waiters_lock (&_c->waiters_count_lock_);
+       /* pthread_testcancel(); */
+       return 0;
+     }
+-  LeaveCriticalSection (&_c->waiters_count_lock_);
++  release_waiters_lock (&_c->waiters_count_lock_);
+   r = do_sema_b_release(_c->sema_q, relCnt,&_c->waiters_q_lock_,&_c->value_q);
+   /* pthread_testcancel(); */
+   return r;
+@@ -434,9 +452,9 @@
+   r = do_sema_b_wait (_c->sema_b, 0, INFINITE,&_c->waiters_b_lock_,&_c->value_b);
+   if (r != 0)
+     return r;
+-  EnterCriticalSection (&_c->waiters_count_lock_);
++  take_waiters_lock (&_c->waiters_count_lock_);
+   _c->waiters_count_++;
+-  LeaveCriticalSection(&_c->waiters_count_lock_);
++  release_waiters_lock (&_c->waiters_count_lock_);
+   r = do_sema_b_release (_c->sema_b, 1,&_c->waiters_b_lock_,&_c->value_b);
+   if (r != 0)
+     return r;
+@@ -528,7 +546,7 @@
+   cond_t *_c;
+ 
+   _c = ch->c;
+-  EnterCriticalSection (&_c->waiters_count_lock_);
++  take_waiters_lock (&_c->waiters_count_lock_);
+   n = _c->waiters_count_unblock_;
+   if (n != 0)
+     _c->waiters_count_unblock_ -= 1;
+@@ -538,7 +556,7 @@
+     r = do_sema_b_wait (_c->sema_b, 1, INFINITE,&_c->waiters_b_lock_,&_c->value_b);
+     if (r != 0)
+     {
+-      LeaveCriticalSection(&_c->waiters_count_lock_);
++      release_waiters_lock (&_c->waiters_count_lock_);
+       ch->r[0] = r;
+       return;
+     }
+@@ -546,7 +564,7 @@
+     r = do_sema_b_release (_c->sema_b, 1,&_c->waiters_b_lock_,&_c->value_b);
+     if (r != 0)
+     {
+-      LeaveCriticalSection(&_c->waiters_count_lock_);
++      release_waiters_lock (&_c->waiters_count_lock_);
+       ch->r[0] = r;
+       return;
+     }
+@@ -554,7 +572,7 @@
+   }
+   else
+     _c->waiters_count_gone_ += 1;
+-  LeaveCriticalSection (&_c->waiters_count_lock_);
++  release_waiters_lock (&_c->waiters_count_lock_);
+ 
+   if (n == 1)
+   {
+@@ -721,13 +739,13 @@
+     return ERANGE;
+   }
+   wc = -val[0];
+-  InterlockedExchangeAdd(val, count);
++  __atomic_fetch_add(val, count, __ATOMIC_SEQ_CST);
+   if (wc <= 0 || ReleaseSemaphore(sema, (wc < count ? wc : count), NULL))
+   {
+     LeaveCriticalSection(cs);
+     return 0;
+   }
+-  InterlockedExchangeAdd(val, -count);
++  __atomic_fetch_add(val, -count, __ATOMIC_SEQ_CST);
+   LeaveCriticalSection(cs);
+   return EINVAL;  
+ }
+--- a/src/cond.h
++++ b/src/cond.h
+@@ -43,7 +43,7 @@
+     LONG waiters_count_; /* Number of waiting threads.  */
+     LONG waiters_count_unblock_; /* Number of waiting threads whitch can be unblocked.  */
+     LONG waiters_count_gone_; /* Number of waiters which are gone.  */
+-    CRITICAL_SECTION waiters_count_lock_; /* Serialize access to <waiters_count_>.  */
++    volatile LONG waiters_count_lock_; /* Serialize access to <waiters_count_>.  */
+     CRITICAL_SECTION waiters_q_lock_; /* Serialize access to sema_q.  */
+     LONG value_q;
+     CRITICAL_SECTION waiters_b_lock_; /* Serialize access to sema_b.  */
+--- a/src/thread.c
++++ b/src/thread.c
+@@ -614,7 +614,14 @@
+ 	      r++;
+ 	    }
+ 	}
+-      SetProcessAffinityMask (GetCurrentProcess (),ProcessNewAffinityMask);
++      typedef BOOL (WINAPI *set_affinity_fn) (HANDLE, DWORD_PTR);
++      HMODULE kernel = GetModuleHandleA ("kernel32.dll");
++      set_affinity_fn set_affinity = kernel
++        ? (set_affinity_fn) GetProcAddress (kernel, "SetProcessAffinityMask") : NULL;
++      if (!set_affinity)
++        return n == 1 ? 1 : 0;
++      if (!set_affinity (GetCurrentProcess (), ProcessNewAffinityMask))
++        return 0;
+     }
+   return r;
+ }
+@@ -1528,14 +1535,24 @@
+   return 0;
+ }
+ 
++static BOOL valid_join_handle (HANDLE handle)
++{
++  /* Win95 exports GetHandleInformation but does not implement it for
++     thread handles. A zero-time wait validates both running and exited
++     threads without changing their state. */
++  if (handle == NULL || handle == INVALID_HANDLE_VALUE)
++    return FALSE;
++  DWORD result = WaitForSingleObject (handle, 0);
++  return result == WAIT_OBJECT_0 || result == WAIT_TIMEOUT;
++}
++
+ int
+ pthread_join (pthread_t t, void **res)
+ {
+-  DWORD dwFlags;
+   struct _pthread_v *tv = __pth_gpointer_locked (t);
+   pthread_spinlock_t new_spin_keys = PTHREAD_SPINLOCK_INITIALIZER;
+ 
+-  if (!tv || tv->h == NULL || !GetHandleInformation(tv->h, &dwFlags))
++  if (!tv || !valid_join_handle (tv->h))
+     return ESRCH;
+   if ((tv->p_state & PTHREAD_CREATE_DETACHED) != 0)
+     return EINVAL;
+@@ -1562,14 +1579,13 @@
+ int
+ _pthread_tryjoin (pthread_t t, void **res)
+ {
+-  DWORD dwFlags;
+   struct _pthread_v *tv;
+   pthread_spinlock_t new_spin_keys = PTHREAD_SPINLOCK_INITIALIZER;
+ 
+   pthread_mutex_lock (&mtx_pthr_locked);
+   tv = __pthread_get_pointer (t);
+ 
+-  if (!tv || tv->h == NULL || !GetHandleInformation(tv->h, &dwFlags))
++  if (!tv || !valid_join_handle (tv->h))
+     {
+       pthread_mutex_unlock (&mtx_pthr_locked);
+       return ESRCH;
+@@ -1616,13 +1632,12 @@
+ pthread_detach (pthread_t t)
+ {
+   int r = 0;
+-  DWORD dwFlags;
+   struct _pthread_v *tv = __pth_gpointer_locked (t);
+   HANDLE dw;
+   pthread_spinlock_t new_spin_keys = PTHREAD_SPINLOCK_INITIALIZER;
+ 
+   pthread_mutex_lock (&mtx_pthr_locked);
+-  if (!tv || tv->h == NULL || !GetHandleInformation(tv->h, &dwFlags))
++  if (!tv || !valid_join_handle (tv->h))
+     {
+       pthread_mutex_unlock (&mtx_pthr_locked);
+       return ESRCH;

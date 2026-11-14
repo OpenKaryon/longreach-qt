@@ -72,6 +72,29 @@ required C++23 checks with zero skips. The
 [Tiger LLVM report](../results/qt4-macos-i386-tiger-llvm21-20261113.md)
 records the widget style fix, guest setup and Mach-O audit.
 
+## Jaguar with LLVM 21.1.8
+
+The repository SDK preserved all 16 static Qt libraries. On Jaguar
+10.2 (6C115) in QEMU, QtCore passed 16/16, QtGui passed 11/11 and all
+eight ordinary applications passed. The standalone probe and the
+SDK-linked Qt selftest each passed 25/25 required C++23 checks with
+zero skips. See the [Jaguar LLVM report](../results/qt4-macos-ppc-jaguar-llvm21-20261114.md).
+
+The repository build reuses the existing Jaguar base image for cctools,
+the 10.2.8 and 10.4u SDKs, and OpenSSL. With that image and
+`longreach-llvm:21.1.8-compiler` available locally, build each target
+in sequence:
+
+```sh
+make qt4-macos-ppc-llvm-probe PARALLEL_JOBS=3
+make qt4-macos-ppc-llvm PARALLEL_JOBS=3
+make qt4-macos-ppc-llvm-examples PARALLEL_JOBS=3
+```
+
+The probe and example targets export files under
+`artifacts/tests-qt4-macos-ppc-llvm21`. Run the strict executable
+with `--modern-cpp` from a logged-in Jaguar desktop session.
+
 ## Limits
 
 - Repeated cold boots of Tiger Intel in QEMU are unreliable (IOGraphics);

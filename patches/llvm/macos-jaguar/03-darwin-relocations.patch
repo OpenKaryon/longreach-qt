@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.h
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.h
+@@ -24,6 +24,8 @@
+ class PPCDarwinMCAsmInfo : public MCAsmInfoDarwin {
+ public:
+   PPCDarwinMCAsmInfo();
++  void printSpecifierExpr(raw_ostream &OS,
++                          const MCSpecifierExpr &Expr) const override;
+ };
+ 
+ class PPCELFMCAsmInfo : public MCAsmInfoELF {
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
+@@ -12,6 +12,7 @@
+ 
+ #include "MCTargetDesc/PPCMCAsmInfo.h"
+ #include "llvm/MC/MCExpr.h"
++#include "llvm/Support/ErrorHandling.h"
+ #include "llvm/Support/raw_ostream.h"
+ #include "llvm/TargetParser/Triple.h"
+ 
+@@ -22,6 +23,25 @@
+   CodePointerSize = CalleeSaveStackSlotSize = 4;
+   setFullRegisterNames(true);
+   CommentString = ";";
++}
++
++void PPCDarwinMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
++                                            const MCSpecifierExpr &Expr) const {
++  switch (Expr.getSpecifier()) {
++  case PPC::S_LO:
++    OS << "lo16(";
++    break;
++  case PPC::S_HI:
++    OS << "hi16(";
++    break;
++  case PPC::S_HA:
++    OS << "ha16(";
++    break;
++  default:
++    report_fatal_error("Unsupported PowerPC Darwin assembly relocation");
++  }
++  printExpr(OS, *Expr.getSubExpr());
++  OS << ')';
+ }
+ 
+ void PPCELFMCAsmInfo::anchor() { }

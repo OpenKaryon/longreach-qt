@@ -144,7 +144,7 @@
  @end
 --- /dev/null
 +++ b/src/gui/kernel/qt_jaguar_mac.cpp
-@@ -0,0 +1,1702 @@
+@@ -0,0 +1,1715 @@
 +/****************************************************************************
 +**
 +** Mac OS X 10.2 (Jaguar) support for the Carbon port of QtGui; see
@@ -710,6 +710,19 @@
 +        CGContextSetRGBStrokeColor(context, components[0], components[1], components[2], components[3]);
 +}
 +
++// Jaguar's Appearance Manager predates the sized push-button kinds.
++static ThemeButtonKind qt_jaguar_appearanceButtonKind(ThemeButtonKind kind)
++{
++    switch (kind) {
++    case kThemePushButtonNormal:
++    case kThemePushButtonSmall:
++    case kThemePushButtonMini:
++        return kThemePushButton;
++    default:
++        return kind;
++    }
++}
++
 +class QtJaguarButton : public QtJaguarAppearance
 +{
 +public:
@@ -721,7 +734,7 @@
 +        state.state = info.state;
 +        state.value = info.value;
 +        state.adornment = info.adornment;
-+        DrawThemeButton(&bounds, info.kind, &state, 0, 0, 0, 0);
++        DrawThemeButton(&bounds, qt_jaguar_appearanceButtonKind(info.kind), &state, 0, 0, 0, 0);
 +    }
 +    HIRect rect;
 +    HIThemeButtonDrawInfo info;
@@ -1039,8 +1052,8 @@
 +    info.adornment = inDrawInfo->adornment;
 +    Rect result;
 +    const OSStatus err = background
-+        ? GetThemeButtonBackgroundBounds(&bounds, inDrawInfo->kind, &info, &result)
-+        : GetThemeButtonContentBounds(&bounds, inDrawInfo->kind, &info, &result);
++        ? GetThemeButtonBackgroundBounds(&bounds, qt_jaguar_appearanceButtonKind(inDrawInfo->kind), &info, &result)
++        : GetThemeButtonContentBounds(&bounds, qt_jaguar_appearanceButtonKind(inDrawInfo->kind), &info, &result);
 +    if (err == noErr)
 +        *outBounds = CGRectMake(result.left, result.top, result.right - result.left, result.bottom - result.top);
 +    return err;

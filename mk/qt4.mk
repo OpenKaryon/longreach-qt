@@ -143,6 +143,23 @@ qt4-macos-ppc: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(JAGUA
 qt4-macos-ppc-extract-tests:
 	$(PYTHON) scripts/build/qt4-macos-examples.py --platform macos-jaguar-ppc --image "$(QT4_MACOS_PPC_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 
+# PowerPC from Jaguar with the patched LLVM Darwin backend.
+QT4_JAGUAR_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
+QT4_JAGUAR_LLVM_IMAGE := qt4-macos-ppc:llvm21
+QT4_JAGUAR_LLVM_OUT := $(ARTIFACTS_DIR)/tests-qt4-macos-ppc-llvm21
+
+.PHONY: qt4-macos-ppc-llvm qt4-macos-ppc-llvm-probe qt4-macos-ppc-llvm-examples
+BUILD_TARGETS += qt4-macos-ppc-llvm
+qt4-macos-ppc-llvm qt4-macos-ppc-llvm-probe qt4-macos-ppc-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT4_MACOS_PPC_IMAGE) $(QT4_JAGUAR_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg JAGUAR_IMAGE=$(QT4_MACOS_PPC_IMAGE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_JAGUAR_LLVM_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/macos/ppc/Dockerfile-llvm -t $(QT4_JAGUAR_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
+	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_JAGUAR_LLVM_OUT)))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_JAGUAR_LLVM_IMAGE)-probe "cp /out/cxx23-probe /out/cxx23-imports.txt /export/")
+	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_JAGUAR_LLVM_IMAGE) "cp /out/qt4-jaguar-ppc-examples.tar.gz /out/qt-selftest-jaguar-strict /out/qtcore-probe /out/qtgui-probe /out/qt-libraries.txt /export/")
+
+qt4-macos-ppc-llvm qt4-macos-ppc-llvm-examples: $(QT4_ARCHIVE_PATH)
+
 # Windows 95 OSR2 and later: the Win9x backport, one configure.
 qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 	$(ONE_BUILD_CHECK)

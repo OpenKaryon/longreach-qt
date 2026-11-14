@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.h
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.h
+@@ -13,6 +13,7 @@
+ #ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCASMINFO_H
+ #define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCASMINFO_H
+ 
++#include "llvm/MC/MCAsmInfoDarwin.h"
+ #include "llvm/MC/MCAsmInfoELF.h"
+ #include "llvm/MC/MCAsmInfoXCOFF.h"
+ #include "llvm/MC/MCExpr.h"
+@@ -20,6 +21,11 @@
+ 
+ namespace llvm {
+ class Triple;
++
++class PPCDarwinMCAsmInfo : public MCAsmInfoDarwin {
++public:
++  PPCDarwinMCAsmInfo();
++};
+ 
+ class PPCELFMCAsmInfo : public MCAsmInfoELF {
+   void anchor() override;
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
+@@ -16,6 +16,13 @@
+ #include "llvm/TargetParser/Triple.h"
+ 
+ using namespace llvm;
++
++PPCDarwinMCAsmInfo::PPCDarwinMCAsmInfo() {
++  IsLittleEndian = false;
++  CodePointerSize = CalleeSaveStackSlotSize = 4;
++  setFullRegisterNames(true);
++  CommentString = ";";
++}
+ 
+ void PPCELFMCAsmInfo::anchor() { }
+ 
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCTargetDesc.cpp
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCTargetDesc.cpp
+@@ -187,7 +187,9 @@
+                   TheTriple.getArch() == Triple::ppc64le);
+ 
+   MCAsmInfo *MAI;
+-  if (TheTriple.isOSBinFormatXCOFF())
++  if (TheTriple.isOSBinFormatMachO())
++    MAI = new PPCDarwinMCAsmInfo();
++  else if (TheTriple.isOSBinFormatXCOFF())
+     MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple);
+   else
+     MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple);
+--- a/llvm/lib/Target/PowerPC/PPCTargetMachine.cpp
++++ b/llvm/lib/Target/PowerPC/PPCTargetMachine.cpp
+@@ -238,6 +238,8 @@
+ }
+ 
+ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
++  if (TT.isOSBinFormatMachO())
++    return std::make_unique<TargetLoweringObjectFileMachO>();
+   if (TT.isOSAIX())
+     return std::make_unique<TargetLoweringObjectFileXCOFF>();
+ 
+--- a/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
++++ b/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
+@@ -213,6 +213,20 @@
+   }
+ };
+ 
++class PPCDarwinAsmPrinter : public PPCAsmPrinter {
++public:
++  static char ID;
++
++  PPCDarwinAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
++      : PPCAsmPrinter(TM, std::move(Streamer), ID) {}
++
++  StringRef getPassName() const override {
++    return "Darwin PowerPC Assembly Printer";
++  }
++};
++
++char PPCDarwinAsmPrinter::ID = 0;
++
+ /// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
+ class PPCLinuxAsmPrinter : public PPCAsmPrinter {
+ public:
+@@ -3333,5 +3347,7 @@
+ static AsmPrinter *
+ createPPCAsmPrinterPass(TargetMachine &tm,
+                         std::unique_ptr<MCStreamer> &&Streamer) {
++  if (tm.getTargetTriple().isOSBinFormatMachO())
++    return new PPCDarwinAsmPrinter(tm, std::move(Streamer));
+   if (tm.getTargetTriple().isOSAIX())
+     return new PPCAIXAsmPrinter(tm, std::move(Streamer));

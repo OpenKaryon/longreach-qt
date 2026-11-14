@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
+@@ -4291,7 +4291,7 @@
+ 
+   // Reserve space for the linkage area on the stack.
+   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+-  CCInfo.AllocateStack(LinkageSize, PtrAlign);
++  CCInfo.AllocateStack(LinkageSize + (Subtarget.isTargetMachO() ? 32 : 0), PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeFormalArguments(Ins);
+ 
+@@ -6021,8 +6021,8 @@
+   PPCCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+ 
+   // Reserve space for the linkage area on the stack.
+-  CCInfo.AllocateStack(Subtarget.getFrameLowering()->getLinkageSize(),
+-                       PtrAlign);
++  CCInfo.AllocateStack(Subtarget.getFrameLowering()->getLinkageSize() +
++                           (Subtarget.isTargetMachO() ? 32 : 0), PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeCallOperands(Outs);
+ 
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCInstPrinter.cpp
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCInstPrinter.cpp
+@@ -652,6 +652,11 @@
+     if (!ShowVSRNumsAsVR)
+       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
+ 
++    if (STI.getTargetTriple().isOSBinFormatMachO() &&
++        Reg >= PPC::CR0EQ && Reg <= PPC::CR7UN) {
++      O << MRI.getEncodingValue(Reg);
++      return;
++    }
+     const char *RegName;
+     RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
+     if (RegName == nullptr)

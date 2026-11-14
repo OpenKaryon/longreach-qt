@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/clang/lib/CodeGen/Targets/PPC.cpp
++++ b/clang/lib/CodeGen/Targets/PPC.cpp
+@@ -341,6 +341,7 @@
+         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
+ 
+   ABIArgInfo classifyReturnType(QualType RetTy) const;
++  ABIArgInfo classifyArgumentType(QualType Ty) const;
+ 
+   void computeInfo(CGFunctionInfo &FI) const override {
+     if (!getCXXABI().classifyReturnType(FI))
+@@ -423,6 +424,21 @@
+   }
+ 
+   return DefaultABIInfo::classifyReturnType(RetTy);
++}
++
++ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
++  if (getTarget().getTriple().isOSDarwin() && Ty->isRecordType() &&
++      !getRecordArgABI(Ty, getCXXABI())) {
++    uint64_t Size = getContext().getTypeSize(Ty);
++    // Trivial aggregates of whole words use the same argument slots as
++    // integers. Keep partial words and specially aligned types separate.
++    if (Size && Size % 32 == 0 &&
++        getContext().getTypeAlignInChars(Ty).getQuantity() <= 4 &&
++        !isSingleElementStruct(Ty, getContext()))
++      return ABIArgInfo::getDirect(
++          llvm::ArrayType::get(llvm::Type::getInt32Ty(getVMContext()), Size / 32));
++  }
++  return DefaultABIInfo::classifyArgumentType(Ty);
+ }
+ 
+ // TODO: this implementation is now likely redundant with

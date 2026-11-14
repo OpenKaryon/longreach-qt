@@ -1,0 +1,86 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+set -euo pipefail
+sdk=/opt/osxcross-ppc/target/SDK/MacOSX10.4u.sdk
+runtime=/opt/jaguar-llvm-runtime
+scripts=/scripts/jaguar-llvm
+# The classic Mach-O tools require distinct CFString labels. Keep null
+# checks in legacy Qt code when optimizing for this target.
+base=(--target=powerpc-apple-macosx10.2 -mcpu=750 -isysroot "$sdk" -mllvm -ppc-global-merge=false -fno-delete-null-pointer-checks)
+args=()
+action=link
+output=
+source=no
+objc=()
+for arg in "$@"; do
+    if [[ $arg == -c ]]; then action=object; fi
+    if [[ $arg == -E || $arg == -S || $arg == -M || $arg == -MM || $arg == -fsyntax-only || $arg == --version || $arg == -v && $# == 1 ]]; then action=compiler; fi
+    case "$arg" in
+        *.m|*.mm) source=yes; objc=(-fobjc-runtime=macosx-fragile-10.2) ;;
+        *.c|*.cpp|*.cc|*.cxx|*.C|*.S) source=yes ;;
+    esac
+    case "$arg" in
+        -mdynamic-no-pic|-mlong-double-64) ;;
+        *) args+=("$arg") ;;
+    esac
+done
+clang=clang
+language=()
+if [[ ${0##*/} == *cxx ]]; then
+    clang=clang++
+    language=(-nostdinc++ -isystem "$runtime/include" -femulated-tls -fno-use-cxa-atexit -D_LIBCPP_ENABLE_EXPERIMENTAL -DLONGREACH_JAGUAR)
+fi
+if [[ $action == compiler ]]; then
+    exec "$clang" "${base[@]}" "${language[@]}" "${objc[@]}" "${args[@]}"
+fi
+if [[ $action == link && $source == no ]]; then
+    exec /opt/jaguar-gcc/bin/powerpc-apple-darwin8-gcc -B"$runtime/lib/" "${args[@]}" \
+        "$runtime/lib/libc++.a" "$runtime/lib/libc++abi.a" \
+        "$runtime/lib/jaguar-locale.o" "$runtime/lib/jaguar-wide-symbols.o" "$runtime/lib/jaguar-qt-compat.o" "$runtime/lib/emutls.o"
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+compile=()
+link=()
+while (($#)); do
+    case "$1" in
+        -o) output=$2; shift 2; continue ;;
+        -c|-mdynamic-no-pic|-mlong-double-64) ;;
+        -arch) shift ;;
+        -framework) link+=("$1" "$2"); shift ;;
+        -L*|-l*|-Wl,*) link+=("$1") ;;
+        -Xlinker) link+=("$1" "$2"); shift ;;
+        *) compile+=("$1") ;;
+    esac
+    shift
+done
+if [[ -z $output ]]; then
+    if [[ $action == object ]]; then
+        for arg in "${compile[@]}"; do
+            case "$arg" in *.cpp|*.cc|*.c|*.m|*.mm|*.cxx|*.C) output=${arg##*/}; output=${output%.*}.o ;; esac
+        done
+    else
+        output=a.out
+    fi
+fi
+test -n "$output"
+# Darwin cctools assembles the PowerPC assembly and the converted unwind records.
+"$clang" "${base[@]}" "${language[@]}" "${objc[@]}" -fPIC -fno-integrated-as -mllvm -ppc-asm-full-reg-names "${compile[@]}" -S -o "$tmp/unit.s"
+python3 "$scripts/convert-qt-atomics.py" "$tmp/unit.s"
+python3 "$scripts/convert-assembly.py" "$tmp/unit.s" "$tmp/legacy.s"
+if [[ $action == object ]]; then
+    if ! powerpc-apple-darwin8-as -arch ppc750 -o "$output" "$tmp/legacy.s"; then
+        if [[ -n ${JAGUAR_FAILED_ASM:-} ]]; then
+            cp "$tmp/legacy.s" "$JAGUAR_FAILED_ASM/${output##*/}.s"
+        fi
+        exit 1
+    fi
+    exit 0
+fi
+powerpc-apple-darwin8-as -arch ppc750 -o "$tmp/unit.o" "$tmp/legacy.s"
+/opt/jaguar-gcc/bin/powerpc-apple-darwin8-gcc -B"$runtime/lib/" -mmacosx-version-min=10.2 -mcpu=750 "$tmp/unit.o" \
+    -L/opt/jaguar/link-10.4u -Wl,-search_paths_first -F"$sdk/System/Library/Frameworks" \
+    "${link[@]}" "$runtime/lib/libc++.a" "$runtime/lib/libc++abi.a" \
+    "$runtime/lib/jaguar-locale.o" "$runtime/lib/jaguar-wide-symbols.o" "$runtime/lib/jaguar-qt-compat.o" "$runtime/lib/emutls.o" -o "$output"

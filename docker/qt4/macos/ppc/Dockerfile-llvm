@@ -1,0 +1,93 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+ARG JAGUAR_IMAGE=qt4-macos-ppc:latest
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+ARG PARALLEL_JOBS=3
+
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm/macos-jaguar,target=/src/patches \
+    --mount=type=cache,id=qt4-jaguar-llvm21-compiler,target=/work/jaguar,sharing=locked <<'EOF'
+set -eu
+echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  /src/llvm.tar.xz' | sha256sum -c -
+# Key the source and CMake cache by the entire ordered patch series.
+set -- /src/patches/0*.patch /src/patches/10-*.patch /src/patches/11-*.patch
+patch_key=$(sha256sum "$@" | sha256sum | cut -d ' ' -f 1)
+work=/work/jaguar/$patch_key
+src=$work/source
+build=$work/build
+if ! test -f "$src/.longreach-patched"; then
+    rm -rf "$src"
+    mkdir -p "$src"
+    tar -xJf /src/llvm.tar.xz -C "$src" --strip-components=1
+    cd "$src"
+    for patch in "$@"; do
+        git apply "$patch"
+    done
+    touch "$src/.longreach-patched"
+fi
+cmake -G Ninja -S "$src/llvm" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS_RELEASE='-O1 -DNDEBUG' -DCMAKE_CXX_FLAGS_RELEASE='-O1 -DNDEBUG' \
+    -DCMAKE_INSTALL_PREFIX=/opt/jaguar-llvm21 -DLLVM_TARGETS_TO_BUILD=PowerPC -DLLVM_ENABLE_PROJECTS=clang \
+    -DLLVM_DISTRIBUTION_COMPONENTS='clang;clang-resource-headers;llvm-ar;llvm-nm;llvm-objdump' \
+    -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_DOCS=OFF \
+    -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_LIBXML2=OFF \
+    -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF
+cmake --build "$build" --target distribution --parallel "$PARALLEL_JOBS"
+cmake --build "$build" --target install-distribution --parallel 1
+/opt/jaguar-llvm21/bin/clang --version
+/opt/jaguar-llvm21/bin/clang --print-targets
+EOF
+
+FROM ${JAGUAR_IMAGE} AS runtime
+ARG PARALLEL_JOBS=3
+COPY --from=compiler /opt/jaguar-llvm21 /opt/jaguar-llvm21
+ENV PATH=/opt/jaguar-llvm21/bin:${PATH}
+ENTRYPOINT ["/bin/bash", "-c"]
+COPY scripts/build/qt4-macos-jaguar/llvm /scripts/jaguar-llvm
+COPY --chmod=0755 scripts/build/qt4-macos-jaguar/llvm/jaguar-llvm-cc /usr/local/bin/
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm,target=/src/patches \
+    ln -s jaguar-llvm-cc /usr/local/bin/jaguar-llvm-cxx && \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /scripts/jaguar-llvm/build-runtime.sh /src/llvm.tar.xz /src/patches
+
+FROM runtime AS probe
+COPY scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
+COPY scripts/tests/qt6-llvm-probes/main.cpp /probe/scripts/tests/qt6-llvm-probes/
+COPY tests/common/moderncpp_checks.h /probe/tests/common/
+RUN --network=none mkdir -p /out && \
+    jaguar-llvm-cxx -std=c++23 -O2 -c /probe/scripts/tests/qt6-llvm-probes/main.cpp -o /tmp/probe.o && \
+    jaguar-llvm-cxx -mmacosx-version-min=10.2 -mcpu=750 /tmp/probe.o -o /out/cxx23-probe && \
+    python3 /scripts/check-imports.py /out/cxx23-probe /out/cxx23-imports.txt
+
+FROM runtime AS sdk
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos-jaguar/build-qt.sh scripts/build/qt4-macos-jaguar/qmake.conf \
+     scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
+COPY scripts/build/qt4-macos-jaguar/qtcore-probe /scripts/qtcore-probe
+COPY scripts/build/qt4-macos-jaguar/qtgui-probe /scripts/qtgui-probe
+COPY patches/qt4/all /patches/all
+COPY patches/qt4/macos /patches/macos
+COPY patches/qt4/macos-tiger-llvm /patches/tiger-llvm
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/archives/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    mkdir -p /out && \
+    mv /opt/qt4-jaguar /opt/qt4-jaguar-gcc && \
+    sed -i -e '/^JAGUAR_GCC =/,/^QMAKE_CC =/c\QMAKE_CC = jaguar-llvm-cc' \
+           -e 's|^QMAKE_CXX = .*|QMAKE_CXX = jaguar-llvm-cxx|' \
+           -e 's|\$\$JAGUAR_INC ||g' -e 's/-mdynamic-no-pic //g' /scripts/qmake.conf && \
+    JAGUAR_LLVM=1 JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/build-qt.sh && \
+    /opt/qt4-jaguar/bin/qmake -v && \
+    find /opt/qt4-jaguar/lib -maxdepth 1 -name 'libQt*.a' -printf '%f\n' | sort > /out/qt-libraries.txt && \
+    find /opt/qt4-jaguar-gcc/lib -maxdepth 1 -name 'libQt*.a' -printf '%f\n' | sort > /out/gcc-libraries.txt && \
+    diff -u /out/gcc-libraries.txt /out/qt-libraries.txt
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos-jaguar/build-suite.sh scripts/build/qt4-macos/write-bundle.py /scripts/
+COPY tests /input
+RUN --network=none JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/build-suite.sh && \
+    JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/jaguar-llvm/build-strict-selftest.sh

@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
++++ b/llvm/lib/Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
+@@ -19,6 +19,7 @@
+ using namespace llvm;
+ 
+ PPCDarwinMCAsmInfo::PPCDarwinMCAsmInfo() {
++  ExceptionsType = ExceptionHandling::DwarfCFI;
+   IsLittleEndian = false;
+   CodePointerSize = CalleeSaveStackSlotSize = 4;
+   setFullRegisterNames(true);
+--- a/clang/lib/Basic/Targets/PPC.h
++++ b/clang/lib/Basic/Targets/PPC.h
+@@ -391,6 +391,7 @@
+       : PPCTargetInfo(Triple, Opts) {
+     if (Triple.isOSDarwin()) {
+       resetDataLayout("E-m:o-p:32:32-Fn32-i64:32:64-f64:32:64-n32");
++      HasAlignMac68kSupport = true;
+       SizeType = UnsignedLong;
+       PtrDiffType = SignedInt;
+       IntPtrType = SignedLong;

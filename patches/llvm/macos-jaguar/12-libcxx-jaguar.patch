@@ -1,0 +1,260 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/libcxx/include/__atomic/contention_t.h
++++ b/libcxx/include/__atomic/contention_t.h
+@@ -19,7 +19,7 @@
+ 
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+-#if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
++#if defined(LONGREACH_JAGUAR) || defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+ using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
+ #else
+ using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
+--- a/libcxx/include/__cxx03/__atomic/contention_t.h
++++ b/libcxx/include/__cxx03/__atomic/contention_t.h
+@@ -19,7 +19,7 @@
+ 
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+-#if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
++#if defined(LONGREACH_JAGUAR) || defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+ using __cxx_contention_t = int32_t;
+ #else
+ using __cxx_contention_t = int64_t;
+--- a/libcxx/include/__cxx03/locale
++++ b/libcxx/include/__cxx03/locale
+@@ -220,7 +220,7 @@
+ 
+ #  if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+ // Most unix variants have catopen.  These are the specific ones that don't.
+-#    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
++#    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__) && __has_include(<nl_types.h>)
+ #      define _LIBCPP_HAS_CATOPEN 1
+ #      include <nl_types.h>
+ #    endif
+--- a/libcxx/include/__locale_dir/messages.h
++++ b/libcxx/include/__locale_dir/messages.h
+@@ -22,7 +22,7 @@
+ 
+ #  if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+ // Most unix variants have catopen.  These are the specific ones that don't.
+-#    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
++#    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__) && __has_include(<nl_types.h>)
+ #      define _LIBCPP_HAS_CATOPEN 1
+ #      include <nl_types.h>
+ #    else
+--- a/libcxx/include/__memory/aligned_alloc.h
++++ b/libcxx/include/__memory/aligned_alloc.h
+@@ -11,6 +11,7 @@
+ 
+ #include <__config>
+ #include <cstdlib>
++#include <stdint.h>
+ 
+ #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+ #  pragma GCC system_header
+@@ -27,7 +28,20 @@
+ //
+ // Returns the allocated memory, or `nullptr` on failure.
+ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
++  if (__alignment < sizeof(void*))
++    __alignment = sizeof(void*);
++  const size_t overhead = __alignment - 1 + sizeof(void*);
++  if (__size > SIZE_MAX - overhead)
++    return nullptr;
++  void* raw = ::malloc(__size + overhead);
++  if (!raw)
++    return nullptr;
++  uintptr_t address = (reinterpret_cast<uintptr_t>(raw) + overhead) & ~(uintptr_t(__alignment) - 1);
++  void** aligned = reinterpret_cast<void**>(address);
++  aligned[-1] = raw;
++  return aligned;
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   return ::_aligned_malloc(__size, __alignment);
+ #  elif _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_C11_ALIGNED_ALLOC
+   // aligned_alloc() requires that __size is a multiple of __alignment,
+@@ -49,7 +63,10 @@
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
++  if (__ptr)
++    ::free(static_cast<void**>(__ptr)[-1]);
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   ::_aligned_free(__ptr);
+ #  else
+   ::free(__ptr);
+--- a/libcxx/src/chrono.cpp
++++ b/libcxx/src/chrono.cpp
+@@ -15,6 +15,7 @@
+ #include <__system_error/throw_system_error.h>
+ #include <cerrno> // errno
+ #include <chrono>
++#include <cstdint>
+ 
+ #if defined(__MVS__)
+ #  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
+@@ -40,6 +41,12 @@
+ #if defined(__APPLE__) || defined(__gnu_hurd__) || defined(__OpenBSD__) || defined(__AMDGPU__) ||                      \
+     defined(__NVPTX__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
+ #  define _LIBCPP_HAS_CLOCK_GETTIME
++#endif
++
++#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
++#  define _LIBCPP_SNOW_LEOPARD_CLOCKS
++#  undef _LIBCPP_HAS_CLOCK_GETTIME
+ #endif
+ 
+ #if defined(_LIBCPP_WIN32API)
+@@ -170,7 +177,22 @@
+ 
+ #if _LIBCPP_HAS_MONOTONIC_CLOCK
+ 
+-#  if defined(__APPLE__)
++#  if defined(_LIBCPP_SNOW_LEOPARD_CLOCKS)
++
++static steady_clock::time_point __libcpp_steady_clock_now() {
++  static const mach_timebase_info_data_t scale = [] {
++    mach_timebase_info_data_t value{};
++    if (mach_timebase_info(&value) != KERN_SUCCESS || value.denom == 0)
++      std::__throw_system_error(EINVAL, "mach_timebase_info failed");
++    return value;
++  }();
++  const uint64_t ticks = mach_absolute_time();
++  const uint64_t ns = (ticks / scale.denom) * scale.numer +
++                      ((ticks % scale.denom) * scale.numer) / scale.denom;
++  return steady_clock::time_point(nanoseconds(ns));
++}
++
++#  elif defined(__APPLE__)
+ 
+ // On Apple platforms, only CLOCK_UPTIME_RAW, CLOCK_MONOTONIC_RAW or
+ // mach_absolute_time are able to time functions in the nanosecond range.
+--- a/libcxx/src/filesystem/filesystem_clock.cpp
++++ b/libcxx/src/filesystem/filesystem_clock.cpp
+@@ -41,6 +41,11 @@
+ #  define _LIBCPP_HAS_CLOCK_GETTIME
+ #endif
+ 
++#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
++#  undef _LIBCPP_HAS_CLOCK_GETTIME
++#endif
++
+ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+ 
+ _LIBCPP_DIAGNOSTIC_PUSH
+--- a/libcxx/src/filesystem/operations.cpp
++++ b/libcxx/src/filesystem/operations.cpp
+@@ -55,7 +55,7 @@
+ #if __has_include(<sys/sendfile.h>)
+ #  include <sys/sendfile.h>
+ #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
+-#elif defined(__APPLE__) || __has_include(<copyfile.h>)
++#elif __has_include(<copyfile.h>)
+ #  include <copyfile.h>
+ #  define _LIBCPP_FILESYSTEM_USE_COPYFILE
+ #else
+@@ -825,7 +825,9 @@
+ //
+ // The second implementation is used on platforms where `openat()` & friends are available,
+ // and it threads file descriptors through recursive calls to avoid such race conditions.
+-#if defined(_LIBCPP_WIN32API) || defined(__MVS__)
++#if defined(_LIBCPP_WIN32API) || defined(__MVS__) || \
++    (defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
++     __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101000)
+ #  define REMOVE_ALL_USE_DIRECTORY_ITERATOR
+ #endif
+ 
+--- a/libcxx/src/include/refstring.h
++++ b/libcxx/src/include/refstring.h
+@@ -25,7 +25,7 @@
+ // string singleton before manipulating the reference count. This is done so that
+ // if an exception is created with a zero-length string in libstdc++, libc++abi
+ // won't try to delete the memory.
+-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) || defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
++#if !defined(LONGREACH_JAGUAR) && (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) || defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__))
+ #  define _LIBCPP_CHECK_FOR_GCC_EMPTY_STRING_STORAGE
+ #  include <dlfcn.h>
+ #  include <mach-o/dyld.h>
+--- a/libcxx/src/locale.cpp
++++ b/libcxx/src/locale.cpp
+@@ -924,12 +924,17 @@
+ #else
+ const ctype<char>::mask* ctype<char>::classic_table() noexcept {
+ #  if defined(__APPLE__) || defined(__FreeBSD__)
++  #if defined(LONGREACH_JAGUAR)
++  static_assert(sizeof(mask) == sizeof(_DefaultRuneLocale.runetype[0]));
++  return reinterpret_cast<const mask*>(_DefaultRuneLocale.runetype);
++#else
+   return _DefaultRuneLocale.__runetype;
++#endif
+ #  elif defined(__NetBSD__)
+   return _C_ctype_tab_ + 1;
+ #  elif defined(__GLIBC__)
+   return _LIBCPP_GET_C_LOCALE->__ctype_b;
+-#  elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#  elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   return __pctype_func();
+ #  elif defined(__EMSCRIPTEN__)
+   return *__ctype_b_loc();
+@@ -5390,7 +5395,7 @@
+     __frac_digits_ = lc->int_frac_digits;
+   else
+     __frac_digits_ = base::do_frac_digits();
+-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   if (lc->p_sign_posn == 0)
+ #else  // _LIBCPP_MSVCRT
+   if (lc->int_p_sign_posn == 0)
+@@ -5398,7 +5403,7 @@
+     __positive_sign_ = "()";
+   else
+     __positive_sign_ = lc->positive_sign;
+-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   if (lc->n_sign_posn == 0)
+ #else  // _LIBCPP_MSVCRT
+   if (lc->int_n_sign_posn == 0)
+@@ -5410,7 +5415,7 @@
+   // the same places in curr_symbol since there's no way to
+   // represent anything else.
+   string_type __dummy_curr_symbol = __curr_symbol_;
+-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   __init_pat(__pos_format_, __dummy_curr_symbol, true, lc->p_cs_precedes, lc->p_sep_by_space, lc->p_sign_posn, ' ');
+   __init_pat(__neg_format_, __curr_symbol_, true, lc->n_cs_precedes, lc->n_sep_by_space, lc->n_sign_posn, ' ');
+ #else  // _LIBCPP_MSVCRT
+@@ -5507,7 +5512,7 @@
+     __frac_digits_ = lc->int_frac_digits;
+   else
+     __frac_digits_ = base::do_frac_digits();
+-#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   if (lc->p_sign_posn == 0)
+ #  else  // _LIBCPP_MSVCRT
+   if (lc->int_p_sign_posn == 0)
+@@ -5522,7 +5527,7 @@
+     wbe = wbuf + j;
+     __positive_sign_.assign(wbuf, wbe);
+   }
+-#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   if (lc->n_sign_posn == 0)
+ #  else  // _LIBCPP_MSVCRT
+   if (lc->int_n_sign_posn == 0)
+@@ -5541,7 +5546,7 @@
+   // the same places in curr_symbol since there's no way to
+   // represent anything else.
+   string_type __dummy_curr_symbol = __curr_symbol_;
+-#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
++#  if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__) || defined(LONGREACH_JAGUAR)
+   __init_pat(__pos_format_, __dummy_curr_symbol, true, lc->p_cs_precedes, lc->p_sep_by_space, lc->p_sign_posn, L' ');
+   __init_pat(__neg_format_, __curr_symbol_, true, lc->n_cs_precedes, lc->n_sep_by_space, lc->n_sign_posn, L' ');
+ #  else  // _LIBCPP_MSVCRT

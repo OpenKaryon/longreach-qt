@@ -1,0 +1,130 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
+@@ -4029,7 +4029,7 @@
+ 
+   SDLoc dl(Op);
+ 
+-  if (Subtarget.isPPC64() || Subtarget.isAIXABI()) {
++  if (Subtarget.isPPC64() || Subtarget.isAIXABI() || Subtarget.isTargetMachO()) {
+     // vastart just stores the address of the VarArgsFrameIndex slot into the
+     // memory location argument.
+     SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
+@@ -4326,15 +4326,14 @@
+ 
+   // Reserve space for the linkage area on the stack.
+   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+-  bool UseDarwinScalarCC = Subtarget.isTargetMachO() && !isVarArg;
+-  CCInfo.AllocateStack(
+-      LinkageSize + (Subtarget.isTargetMachO() && isVarArg ? 32 : 0),
+-      PtrAlign);
++  bool UseDarwinScalarCC = Subtarget.isTargetMachO();
++  CCInfo.AllocateStack(LinkageSize, PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeFormalArguments(Ins);
+ 
+   CCInfo.AnalyzeFormalArguments(
+       Ins, UseDarwinScalarCC ? CC_PPC32_DarwinScalar : CC_PPC32_SVR4);
++  unsigned DarwinVarArgOffset = CCInfo.getStackSize();
+   if (UseDarwinScalarCC && CCInfo.getStackSize() < LinkageSize + 32)
+     CCInfo.AllocateStack(LinkageSize + 32 - CCInfo.getStackSize(), Align(1));
+   CCInfo.clearWasPPCF128();
+@@ -4455,7 +4454,23 @@
+ 
+   // If the function takes variable number of arguments, make a frame index for
+   // the start of the first vararg value... for expansion of llvm.va_start.
+-  if (isVarArg) {
++  if (isVarArg && UseDarwinScalarCC) {
++    static const MCPhysReg GPArgRegs[] = {PPC::R3, PPC::R4, PPC::R5, PPC::R6,
++                                         PPC::R7, PPC::R8, PPC::R9, PPC::R10};
++    unsigned Offset = DarwinVarArgOffset;
++    FuncInfo->setVarArgsFrameIndex(MFI.CreateFixedObject(4, Offset, false));
++    for (unsigned Index = (Offset - LinkageSize) / 4;
++         Index < std::size(GPArgRegs); ++Index, Offset += 4) {
++      Register VReg = MF.addLiveIn(GPArgRegs[Index], &PPC::GPRCRegClass);
++      SDValue Value = DAG.getCopyFromReg(Chain, dl, VReg, PtrVT);
++      int FI = Offset == DarwinVarArgOffset
++                   ? FuncInfo->getVarArgsFrameIndex()
++                   : MFI.CreateFixedObject(4, Offset, false);
++      SDValue Addr = DAG.getFrameIndex(FI, PtrVT);
++      MemOps.push_back(DAG.getStore(Value.getValue(1), dl, Value, Addr,
++                                   MachinePointerInfo::getFixedStack(MF, FI)));
++    }
++  } else if (isVarArg) {
+     static const MCPhysReg GPArgRegs[] = {
+       PPC::R3, PPC::R4, PPC::R5, PPC::R6,
+       PPC::R7, PPC::R8, PPC::R9, PPC::R10,
+@@ -6062,15 +6077,13 @@
+   PPCCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+ 
+   // Reserve space for the linkage area on the stack.
+-  bool UseDarwinScalarCC = Subtarget.isTargetMachO() && !IsVarArg;
++  bool UseDarwinScalarCC = Subtarget.isTargetMachO();
+   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+-  CCInfo.AllocateStack(
+-      LinkageSize + (Subtarget.isTargetMachO() && IsVarArg ? 32 : 0),
+-      PtrAlign);
++  CCInfo.AllocateStack(LinkageSize, PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeCallOperands(Outs);
+ 
+-  if (IsVarArg) {
++  if (IsVarArg && !UseDarwinScalarCC) {
+     // Handle fixed and variable vector arguments differently.
+     // Fixed vector arguments go into registers as long as registers are
+     // available. Variable vector arguments always go into memory.
+@@ -6147,6 +6160,7 @@
+   // Walk the register/memloc assignments, inserting copies/loads.
+   // i - Tracks the index into the list of registers allocated for the call
+   // RealArgIdx - Tracks the index into the list of actual function arguments
++  unsigned DarwinArgOffset = LinkageSize;
+   // j - Tracks the index into the list of byval arguments
+   for (unsigned i = 0, RealArgIdx = 0, j = 0, e = ArgLocs.size();
+        i != e;
+@@ -6198,6 +6212,36 @@
+     if (Arg.getValueType() == MVT::i1)
+       Arg = DAG.getNode(Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
+                         dl, MVT::i32, Arg);
++
++    if (UseDarwinScalarCC && IsVarArg) {
++      unsigned Size = VA.getLocVT() == MVT::f64 ? 8 : 4;
++      if (!Outs[RealArgIdx].IsFixed && VA.isRegLoc() &&
++          VA.getLocVT().isFloatingPoint()) {
++        static const MCPhysReg GPArgRegs[] = {
++            PPC::R3, PPC::R4, PPC::R5, PPC::R6,
++            PPC::R7, PPC::R8, PPC::R9, PPC::R10};
++        SDValue Bits = DAG.getNode(ISD::BITCAST, dl,
++                                   Size == 8 ? MVT::i64 : MVT::i32, Arg);
++        SDValue Words[2] = {Bits, SDValue()};
++        if (Size == 8)
++          std::tie(Words[1], Words[0]) =
++              DAG.SplitScalar(Bits, dl, MVT::i32, MVT::i32);
++        for (unsigned Byte = 0; Byte < Size; Byte += 4) {
++          unsigned Offset = DarwinArgOffset + Byte;
++          unsigned Index = (Offset - LinkageSize) / 4;
++          SDValue Word = Words[Byte / 4];
++          if (Index < std::size(GPArgRegs)) {
++            RegsToPass.emplace_back(GPArgRegs[Index], Word);
++          } else {
++            SDValue Off = DAG.getIntPtrConstant(Offset, dl);
++            SDValue Addr = DAG.getNode(ISD::ADD, dl, StackPtr.getValueType(), StackPtr, Off);
++            MemOpChains.push_back(
++                DAG.getStore(Chain, dl, Word, Addr, MachinePointerInfo()));
++          }
++        }
++      }
++      DarwinArgOffset += Size;
++    }
+ 
+     if (VA.isRegLoc()) {
+       seenFloatArg |= VA.getLocVT().isFloatingPoint();
+@@ -6246,6 +6290,6 @@
+ 
+   // Set CR bit 6 to true if this is a vararg call with floating args passed in
+   // registers.
+-  if (IsVarArg) {
++  if (IsVarArg && !UseDarwinScalarCC) {
+     SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
+     SDValue Ops[] = { Chain, InGlue };

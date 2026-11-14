@@ -13,7 +13,16 @@ bin=/opt/osxcross-ppc/target/bin
 mkdir -p "$source"
 tar -xzf /archives/qt-everywhere-opensource-src-4.8.7.tar.gz --strip-components=1 -C "$source"
 cd "$source"
-for p in /patches/all/*.patch /patches/macos/*.patch; do patch -p1 --fuzz=0 < "$p" || exit 1; done
+patches=(/patches/all/*.patch /patches/macos/*.patch)
+if [ "${JAGUAR_LLVM:-0}" = 1 ]; then
+    patches+=(/patches/tiger-llvm/*.patch)
+fi
+for p in "${patches[@]}"; do patch -p1 --fuzz=0 < "$p" || exit 1; done
+if [ "${JAGUAR_LLVM:-0}" = 1 ]; then
+    # The computed-goto dispatcher emits ELF TOC references on this backend.
+    sed -i '/^#define USE_COMPUTED_GOTO_FOR_MATCH_RECURSION$/d' \
+        src/3rdparty/javascriptcore/JavaScriptCore/pcre/pcre_exec.cpp
+fi
 mkdir -p "mkspecs/$spec"
 cp mkspecs/macx-g++/qplatformdefs.h "mkspecs/$spec/"
 cp /scripts/qmake.conf "mkspecs/$spec/"

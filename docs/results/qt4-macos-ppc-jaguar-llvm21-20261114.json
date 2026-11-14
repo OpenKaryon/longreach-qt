@@ -1,0 +1,404 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "target": "qt4-macos-ppc-llvm",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "guest": {
+    "os": "Mac OS X 10.2",
+    "build": "6C115",
+    "cpu": "PowerPC G3 (750)",
+    "hypervisor": "QEMU TCG"
+  },
+  "sdk": {
+    "build": "clean trial using the patched PowerPC compiler",
+    "file": "qt4-jaguar-llvm21-sdk.tar.gz",
+    "sha256": "ee8e4e6abd1b19a1cd460cbefd1888a6e2e94c23a6ea7ce851b74ceebd9fb34f",
+    "static_qt_libraries": [
+      "libQt3Support.a",
+      "libQtCore.a",
+      "libQtDeclarative.a",
+      "libQtGui.a",
+      "libQtMultimedia.a",
+      "libQtNetwork.a",
+      "libQtOpenGL.a",
+      "libQtScript.a",
+      "libQtScriptTools.a",
+      "libQtSql.a",
+      "libQtSvg.a",
+      "libQtTest.a",
+      "libQtUiTools.a",
+      "libQtUiTools_debug.a",
+      "libQtXml.a",
+      "libQtXmlPatterns.a"
+    ]
+  },
+  "standalone_probe": {
+    "runtime_build": "repository script and wrapper with the trial compiler",
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "file": "repository-cxx23-probe",
+    "sha256": "5239338e80ab22f96a9dab7935e30fa9230fc1143aa2e2f31ac3ad45ea9c37bf",
+    "guest_md5": "81a215ba17375f9cf9b94437d4ea2779"
+  },
+  "qt_probes": {
+    "qtcore-probe": {
+      "passed": 16,
+      "failed": 0,
+      "file": "qtcore-probe",
+      "sha256": "1db34f0dbc25cfb5efd263a62421181d13af24d6f46a63c5049f08b2939ca9e2",
+      "guest_md5": "11124a5f73ff09bf34c414d8c3b8c731"
+    },
+    "qtgui-probe": {
+      "passed": 11,
+      "failed": 0,
+      "file": "qtgui-probe",
+      "sha256": "4d73dc381590b96e5b52deb63098d84d05714b467c740047a9937fbf7ab66459",
+      "guest_md5": "39595ffe8934de42a59ee0ed7da80a0e"
+    }
+  },
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "file": "qt-selftest-jaguar-strict",
+    "sha256": "9de29bf6e7a53c8d22a1434ed815b782a4e87838df10cc17525d9f4f176ac2f9",
+    "guest_md5": "adfebd4bec593ae9387d0d2bd7349a02"
+  },
+  "ordinary": {
+    "apps_passed": 8,
+    "passed": 363,
+    "failed": 0,
+    "skipped": 157,
+    "file": "qt4-jaguar-ppc-examples.tar.gz",
+    "sha256": "6fd8d212c626874827ef7988898108f902741b38ef597c0d555f43f7ac47a32b",
+    "guest_md5": "ad0ed67495901b266288b5eb9a4c9396",
+    "applications": [
+      {
+        "application": "network-gui",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "qt-selftest",
+        "passed": 121,
+        "failed": 0,
+        "skipped": 139
+      },
+      {
+        "application": "widgets-gallery",
+        "passed": 140,
+        "failed": 0,
+        "skipped": 9
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 29,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 3
+      },
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 4
+      }
+    ]
+  },
+  "import_audits": {
+    "cxx23-probe": {
+      "imports": 139,
+      "libraries": 1,
+      "weak_only": 0,
+      "problems": 0
+    },
+    "gl-heavy-gallery": {
+      "imports": 1256,
+      "libraries": 12,
+      "weak_only": 120,
+      "problems": 0
+    },
+    "graphics-gallery": {
+      "imports": 1149,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "multimedia-lab": {
+      "imports": 1168,
+      "libraries": 13,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "network-gui": {
+      "imports": 1190,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "painting-lab": {
+      "imports": 1149,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qt-selftest": {
+      "imports": 1204,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qt-selftest-jaguar-strict": {
+      "imports": 1206,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qtcore-probe": {
+      "imports": 353,
+      "libraries": 8,
+      "weak_only": 38,
+      "problems": 0
+    },
+    "qtgui-probe": {
+      "imports": 1146,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "quick-qml-gallery": {
+      "imports": 1310,
+      "libraries": 13,
+      "weak_only": 120,
+      "problems": 0
+    },
+    "smoke-runner": {
+      "imports": 356,
+      "libraries": 8,
+      "weak_only": 38,
+      "problems": 0
+    },
+    "widgets-gallery": {
+      "imports": 1222,
+      "libraries": 15,
+      "weak_only": 116,
+      "problems": 0
+    }
+  },
+  "repository_build": {
+    "sdk": {
+      "image": "qt4-macos-ppc:llvm21",
+      "image_id": "sha256:d706f98cf0dd24e2f7f17b0c4c664fa748c3572293a966caa066b17ee2358df4",
+      "qmake": "2.01a",
+      "static_qt_libraries": [
+        "libQt3Support.a",
+        "libQtCore.a",
+        "libQtDeclarative.a",
+        "libQtGui.a",
+        "libQtMultimedia.a",
+        "libQtNetwork.a",
+        "libQtOpenGL.a",
+        "libQtScript.a",
+        "libQtScriptTools.a",
+        "libQtSql.a",
+        "libQtSvg.a",
+        "libQtTest.a",
+        "libQtUiTools.a",
+        "libQtUiTools_debug.a",
+        "libQtXml.a",
+        "libQtXmlPatterns.a"
+      ]
+    },
+    "standalone_probe": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "file": "cxx23-probe",
+      "sha256": "5239338e80ab22f96a9dab7935e30fa9230fc1143aa2e2f31ac3ad45ea9c37bf",
+      "guest_md5": "81a215ba17375f9cf9b94437d4ea2779"
+    },
+    "qt_probes": {
+      "qtcore-probe": {
+        "passed": 16,
+        "failed": 0,
+        "file": "qtcore-probe",
+        "sha256": "ffda1179d3322aed223d26d466ad4c84681b00895dcbe737abbdd5daf115a29f",
+        "guest_md5": "f3146a9bc44604e29de4c76c92b036c1"
+      },
+      "qtgui-probe": {
+        "passed": 11,
+        "failed": 0,
+        "file": "qtgui-probe",
+        "sha256": "f0771b123e567763ab564f1b49e27ff2aef82798d163224f82e081015ad35f63",
+        "guest_md5": "2fe28ac238b70b558aa78395e5ea8abf"
+      }
+    },
+    "modern_cpp": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "file": "qt-selftest-jaguar-strict",
+      "sha256": "369bc817c3c94106ddc1c42f104715e21ef55fa818e5707cc6feb5488f0ad33a",
+      "guest_md5": "497e06e6564abc4e64011ca8f1b5944e"
+    },
+    "ordinary": {
+      "apps_passed": 8,
+      "passed": 363,
+      "failed": 0,
+      "skipped": 157,
+      "file": "qt4-jaguar-ppc-examples.tar.gz",
+      "sha256": "6728a0d47b455bb6a149d619778bb15176c80fce72df12d420abc68ef5e59dcf",
+      "guest_md5": "eaf6c7d7dd2af1a556e609e1f1cd140a",
+      "applications": [
+        {
+          "application": "network-gui",
+          "passed": 6,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "qt-selftest",
+          "passed": 121,
+          "failed": 0,
+          "skipped": 139
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 140,
+          "failed": 0,
+          "skipped": 9
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 29,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 4
+        }
+      ]
+    },
+    "import_audits": {
+      "cxx23-probe": {
+        "imports": 139,
+        "libraries": 1,
+        "weak_only": 0,
+        "problems": 0
+      },
+      "qtcore-probe": {
+        "imports": 353,
+        "libraries": 8,
+        "weak_only": 38,
+        "problems": 0
+      },
+      "qtgui-probe": {
+        "imports": 1146,
+        "libraries": 10,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "qt-selftest-jaguar-strict": {
+        "imports": 1206,
+        "libraries": 11,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "qt-selftest": {
+        "imports": 1204,
+        "libraries": 11,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "widgets-gallery": {
+        "imports": 1222,
+        "libraries": 15,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "graphics-gallery": {
+        "imports": 1149,
+        "libraries": 10,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "painting-lab": {
+        "imports": 1149,
+        "libraries": 10,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "multimedia-lab": {
+        "imports": 1168,
+        "libraries": 13,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "gl-heavy-gallery": {
+        "imports": 1256,
+        "libraries": 12,
+        "weak_only": 120,
+        "problems": 0
+      },
+      "quick-qml-gallery": {
+        "imports": 1310,
+        "libraries": 13,
+        "weak_only": 120,
+        "problems": 0
+      },
+      "network-gui": {
+        "imports": 1190,
+        "libraries": 11,
+        "weak_only": 116,
+        "problems": 0
+      },
+      "smoke-runner": {
+        "imports": 356,
+        "libraries": 8,
+        "weak_only": 38,
+        "problems": 0
+      }
+    }
+  }
+}

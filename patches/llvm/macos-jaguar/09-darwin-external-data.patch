@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
+@@ -3730,6 +3730,21 @@
+     return getTOCEntry(DAG, DL, GA);
+   }
+ 
++  if (IsPIC && Subtarget.isTargetMachO() && !GV->isDSOLocal() &&
++      !isa<Function>(GV)) {
++    SDValue Hi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
++                                           PPCII::MO_DARWIN_NLP_HA);
++    SDValue Lo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
++                                           PPCII::MO_DARWIN_NLP_LO);
++    SDValue Slot = LowerLabelRef(Hi, Lo, true, DAG);
++    SDValue Addr = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Slot,
++                               MachinePointerInfo::getGOT(DAG.getMachineFunction()));
++    if (GSDN->getOffset())
++      Addr = DAG.getNode(ISD::ADD, DL, PtrVT, Addr,
++                         DAG.getConstant(GSDN->getOffset(), DL, PtrVT));
++    return Addr;
++  }
++
+   SDValue GAHi =
+     DAG.getTargetGlobalAddress(GV, DL, PtrVT, GSDN->getOffset(), MOHiFlag);
+   SDValue GALo =
+--- a/llvm/lib/Target/PowerPC/PPCMCInstLower.cpp
++++ b/llvm/lib/Target/PowerPC/PPCMCInstLower.cpp
+@@ -57,6 +57,11 @@
+   PPCMCExpr::Specifier RefKind = PPC::S_None;
+ 
+   unsigned access = MO.getTargetFlags();
++  if (access == PPCII::MO_DARWIN_NLP_HA || access == PPCII::MO_DARWIN_NLP_LO) {
++    Symbol = Ctx.getOrCreateSymbol(Twine("L") + Symbol->getName() + "$non_lazy_ptr");
++    access = access == PPCII::MO_DARWIN_NLP_HA ? PPCII::MO_PIC_HA_FLAG
++                                             : PPCII::MO_PIC_LO_FLAG;
++  }
+ 
+   switch (access) {
+     case PPCII::MO_TPREL_LO:
+@@ -150,9 +155,8 @@
+                                    Ctx);
+ 
+   // Subtract off the PIC base if required.
+-  if (MO.getTargetFlags() == PPCII::MO_PIC_FLAG ||
+-      MO.getTargetFlags() == PPCII::MO_PIC_HA_FLAG ||
+-      MO.getTargetFlags() == PPCII::MO_PIC_LO_FLAG) {
++  if (access == PPCII::MO_PIC_FLAG || access == PPCII::MO_PIC_HA_FLAG ||
++      access == PPCII::MO_PIC_LO_FLAG) {
+     const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+ 
+     const MCExpr *PB = MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
+--- a/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
++++ b/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
+@@ -215,6 +215,7 @@
+ 
+ class PPCDarwinAsmPrinter : public PPCAsmPrinter {
+   SmallSetVector<const MCSymbol *, 8> Stubs;
++  SmallSetVector<const GlobalValue *, 8> NonLazyPointers;
+ 
+ public:
+   static char ID;
+@@ -227,6 +228,11 @@
+   }
+ 
+   void emitInstruction(const MachineInstr *MI) override {
++    for (const MachineOperand &MO : MI->operands())
++      if (MO.isGlobal() && (MO.getTargetFlags() == PPCII::MO_DARWIN_NLP_HA ||
++                           MO.getTargetFlags() == PPCII::MO_DARWIN_NLP_LO))
++        NonLazyPointers.insert(MO.getGlobal());
++
+     unsigned Opcode = MI->getOpcode();
+     if (Opcode != PPC::BL && Opcode != PPC::BL_RM &&
+         Opcode != PPC::TAILB) {
+@@ -255,6 +261,14 @@
+   }
+ 
+   void emitEndOfAsmFile(Module &M) override {
++    for (const GlobalValue *GV : NonLazyPointers) {
++      StringRef Name = getSymbol(GV)->getName();
++      std::string Body;
++      raw_string_ostream OS(Body);
++      OS << "\t.non_lazy_symbol_pointer\nL" << Name << "$non_lazy_ptr:\n"
++         << "\t.indirect_symbol " << Name << "\n\t.long 0\n";
++      OutStreamer->emitRawText(OS.str());
++    }
+     for (const MCSymbol *Symbol : Stubs) {
+       StringRef Name = Symbol->getName();
+       std::string Prefix = (Twine("L") + Name).str();
+--- a/llvm/lib/Target/PowerPC/PPC.h
++++ b/llvm/lib/Target/PowerPC/PPC.h
+@@ -193,5 +193,8 @@
+     /// MO_PIC_LO_FLAG = MO_PIC_FLAG | MO_LO
+     MO_PIC_LO_FLAG,
+ 
++    MO_DARWIN_NLP_HA,
++    MO_DARWIN_NLP_LO,
++
+     /// MO_TPREL_PCREL_FLAG = MO_PCREL_FLAG | MO_TPREL_FLAG
+     MO_TPREL_PCREL_FLAG,

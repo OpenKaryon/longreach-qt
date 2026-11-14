@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
+@@ -4240,6 +4240,41 @@
+                                      InVals);
+ }
+ 
++static bool CC_PPC32_DarwinScalar(unsigned ValNo, MVT ValVT, MVT LocVT,
++                                  CCValAssign::LocInfo LocInfo,
++                                  ISD::ArgFlagsTy ArgFlags, CCState &State) {
++  static const MCPhysReg GPRs[] = {PPC::R3, PPC::R4, PPC::R5, PPC::R6,
++                                 PPC::R7, PPC::R8, PPC::R9, PPC::R10};
++  static const MCPhysReg FPRs[] = {PPC::F1, PPC::F2,  PPC::F3,  PPC::F4,
++                                 PPC::F5, PPC::F6,  PPC::F7,  PPC::F8,
++                                 PPC::F9, PPC::F10, PPC::F11, PPC::F12,
++                                 PPC::F13};
++
++  if (LocVT == MVT::i1) {
++    LocVT = MVT::i32;
++    LocInfo = ArgFlags.isSExt() ? CCValAssign::SExt : CCValAssign::ZExt;
++  }
++  if (LocVT != MVT::i32 && LocVT != MVT::f32 && LocVT != MVT::f64)
++    return CC_PPC32_SVR4(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State);
++
++  // Darwin numbers the GPRs by argument word, even when a fixed floating-point
++  // argument is passed in an FPR. A split i64 uses two consecutive words.
++  unsigned Size = LocVT == MVT::f64 ? 8 : 4;
++  unsigned Offset = State.AllocateStack(Size, Align(4));
++  MCRegister Reg = State.AllocateReg(GPRs);
++  if (LocVT != MVT::i32) {
++    if (Size == 8)
++      State.AllocateReg(GPRs);
++    Reg = State.AllocateReg(FPRs);
++  }
++
++  if (Reg)
++    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
++  else
++    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
++  return false;
++}
++
+ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
+     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+@@ -4291,11 +4326,17 @@
+ 
+   // Reserve space for the linkage area on the stack.
+   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+-  CCInfo.AllocateStack(LinkageSize + (Subtarget.isTargetMachO() ? 32 : 0), PtrAlign);
++  bool UseDarwinScalarCC = Subtarget.isTargetMachO() && !isVarArg;
++  CCInfo.AllocateStack(
++      LinkageSize + (Subtarget.isTargetMachO() && isVarArg ? 32 : 0),
++      PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeFormalArguments(Ins);
+ 
+-  CCInfo.AnalyzeFormalArguments(Ins, CC_PPC32_SVR4);
++  CCInfo.AnalyzeFormalArguments(
++      Ins, UseDarwinScalarCC ? CC_PPC32_DarwinScalar : CC_PPC32_SVR4);
++  if (UseDarwinScalarCC && CCInfo.getStackSize() < LinkageSize + 32)
++    CCInfo.AllocateStack(LinkageSize + 32 - CCInfo.getStackSize(), Align(1));
+   CCInfo.clearWasPPCF128();
+ 
+   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+@@ -6021,8 +6062,11 @@
+   PPCCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+ 
+   // Reserve space for the linkage area on the stack.
+-  CCInfo.AllocateStack(Subtarget.getFrameLowering()->getLinkageSize() +
+-                           (Subtarget.isTargetMachO() ? 32 : 0), PtrAlign);
++  bool UseDarwinScalarCC = Subtarget.isTargetMachO() && !IsVarArg;
++  unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
++  CCInfo.AllocateStack(
++      LinkageSize + (Subtarget.isTargetMachO() && IsVarArg ? 32 : 0),
++      PtrAlign);
+   if (useSoftFloat())
+     CCInfo.PreAnalyzeCallOperands(Outs);
+ 
+@@ -6055,6 +6099,9 @@
+     }
+   } else {
+     // All arguments are treated the same.
+-    CCInfo.AnalyzeCallOperands(Outs, CC_PPC32_SVR4);
++    CCInfo.AnalyzeCallOperands(
++        Outs, UseDarwinScalarCC ? CC_PPC32_DarwinScalar : CC_PPC32_SVR4);
++    if (UseDarwinScalarCC && CCInfo.getStackSize() < LinkageSize + 32)
++      CCInfo.AllocateStack(LinkageSize + 32 - CCInfo.getStackSize(), Align(1));
+   }
+   CCInfo.clearWasPPCF128();

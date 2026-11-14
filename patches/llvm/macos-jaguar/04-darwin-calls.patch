@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCISelLowering.cpp
+@@ -3226,7 +3226,7 @@
+   bool IsPIC = isPositionIndependent();
+   getLabelAccessInfo(IsPIC, Subtarget, MOHiFlag, MOLoFlag);
+ 
+-  if (IsPIC && Subtarget.isSVR4ABI()) {
++  if (IsPIC && Subtarget.is32BitELFABI() && !Subtarget.isTargetMachO()) {
+     SDValue GA =
+         DAG.getTargetConstantPool(C, PtrVT, CP->getAlign(), PPCII::MO_PIC_FLAG);
+     return getTOCEntry(DAG, SDLoc(CP), GA);
+@@ -3314,7 +3314,7 @@
+   bool IsPIC = isPositionIndependent();
+   getLabelAccessInfo(IsPIC, Subtarget, MOHiFlag, MOLoFlag);
+ 
+-  if (IsPIC && Subtarget.isSVR4ABI()) {
++  if (IsPIC && Subtarget.is32BitELFABI() && !Subtarget.isTargetMachO()) {
+     SDValue GA = DAG.getTargetJumpTable(JT->getIndex(), PtrVT,
+                                         PPCII::MO_PIC_FLAG);
+     return getTOCEntry(DAG, SDLoc(GA), GA);
+@@ -3723,7 +3723,7 @@
+   bool IsPIC = isPositionIndependent();
+   getLabelAccessInfo(IsPIC, Subtarget, MOHiFlag, MOLoFlag, GV);
+ 
+-  if (IsPIC && Subtarget.isSVR4ABI()) {
++  if (IsPIC && Subtarget.is32BitELFABI() && !Subtarget.isTargetMachO()) {
+     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, PtrVT,
+                                             GSDN->getOffset(),
+                                             PPCII::MO_PIC_FLAG);
+@@ -5534,7 +5534,7 @@
+   // least) to force BSS-PLT, instead of secure-PLT, even if all objects are
+   // built with secure-PLT.
+   bool UsePlt =
+-      Subtarget.is32BitELFABI() && !isLocalCallee() &&
++      Subtarget.is32BitELFABI() && !Subtarget.isTargetMachO() && !isLocalCallee() &&
+       Subtarget.getTargetMachine().getRelocationModel() == Reloc::PIC_;
+ 
+   const auto getAIXFuncEntryPointSymbolSDNode = [&](const GlobalValue *GV) {
+@@ -6072,6 +6072,8 @@
+   // space variable where copies of aggregates which are passed by value are
+   // stored.
+   unsigned NumBytes = CCByValInfo.getStackSize();
++  if (Subtarget.isTargetMachO())
++    NumBytes = std::max(NumBytes, 56u); // Linkage area and eight argument words.
+ 
+   // Calculate by how many bytes the stack has to be adjusted in case of tail
+   // call optimization.
+--- a/llvm/lib/Target/PowerPC/PPCFrameLowering.cpp
++++ b/llvm/lib/Target/PowerPC/PPCFrameLowering.cpp
+@@ -41,6 +41,8 @@
+                      cl::init(false), cl::Hidden);
+ 
+ static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
++  if (STI.isTargetMachO())
++    return 8;
+   if (STI.isAIXABI())
+     return STI.isPPC64() ? 16 : 8;
+   // SVR4 ABI:
+@@ -59,6 +61,8 @@
+ }
+ 
+ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
++  if (STI.isTargetMachO())
++    return 24;
+   if (STI.isAIXABI() || STI.isPPC64())
+     return (STI.isELFv2ABI() ? 4 : 6) * (STI.isPPC64() ? 8 : 4);
+ 
+@@ -76,6 +80,8 @@
+ }
+ 
+ static unsigned computeCRSaveOffset(const PPCSubtarget &STI) {
++  if (STI.isTargetMachO())
++    return 4;
+   return (STI.isAIXABI() && !STI.isPPC64()) ? 4 : 8;
+ }
+ 
+--- a/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
++++ b/llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp
+@@ -214,6 +214,8 @@
+ };
+ 
+ class PPCDarwinAsmPrinter : public PPCAsmPrinter {
++  SmallSetVector<const MCSymbol *, 8> Stubs;
++
+ public:
+   static char ID;
+ 
+@@ -222,5 +224,55 @@
+ 
+   StringRef getPassName() const override {
+     return "Darwin PowerPC Assembly Printer";
++  }
++
++  void emitInstruction(const MachineInstr *MI) override {
++    unsigned Opcode = MI->getOpcode();
++    if (Opcode != PPC::BL && Opcode != PPC::BL_RM &&
++        Opcode != PPC::TAILB) {
++      PPCAsmPrinter::emitInstruction(MI);
++      return;
++    }
++
++    const MachineOperand &Target = MI->getOperand(0);
++    const MCSymbol *Symbol = nullptr;
++    if (Target.isGlobal() && Target.getGlobal()->isDeclarationForLinker())
++      Symbol = getSymbol(Target.getGlobal());
++    else if (Target.isSymbol())
++      Symbol = GetExternalSymbolSymbol(Target.getSymbolName());
++
++    if (!Symbol) {
++      PPCAsmPrinter::emitInstruction(MI);
++      return;
++    }
++
++    Stubs.insert(Symbol);
++    MCSymbol *Stub = OutContext.getOrCreateSymbol(
++        Twine("L") + Symbol->getName() + "$stub");
++    EmitToStreamer(*OutStreamer,
++                   MCInstBuilder(Opcode == PPC::TAILB ? PPC::B : PPC::BL)
++                       .addExpr(MCSymbolRefExpr::create(Stub, OutContext)));
++  }
++
++  void emitEndOfAsmFile(Module &M) override {
++    for (const MCSymbol *Symbol : Stubs) {
++      StringRef Name = Symbol->getName();
++      std::string Prefix = (Twine("L") + Name).str();
++      std::string Body;
++      raw_string_ostream OS(Body);
++      OS << "\t.section __TEXT,__picsymbolstub1,symbol_stubs,pure_instructions,32\n"
++         << "\t.align 5\n" << Prefix << "$stub:\n"
++         << "\t.indirect_symbol " << Name << "\n"
++         << "\tmflr r0\n\tbcl 20,31," << Prefix << "$pb\n"
++         << Prefix << "$pb:\n\tmflr r11\n"
++         << "\taddis r11,r11,ha16(" << Prefix << "$lazy_ptr-" << Prefix << "$pb)\n"
++         << "\tmtlr r0\n\tlwzu r12,lo16(" << Prefix << "$lazy_ptr-"
++         << Prefix << "$pb)(r11)\n\tmtctr r12\n\tbctr\n"
++         << "\t.lazy_symbol_pointer\n" << Prefix << "$lazy_ptr:\n"
++         << "\t.indirect_symbol " << Name << "\n"
++         << "\t.long dyld_stub_binding_helper\n";
++      OutStreamer->emitRawText(OS.str());
++    }
++    PPCAsmPrinter::emitEndOfAsmFile(M);
+   }
+ };

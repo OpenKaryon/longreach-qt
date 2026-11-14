@@ -58,6 +58,7 @@ it has been repeated; built-only ARM targets retain that status.
 | `qt4-macos-i386-llvm` | Mac OS X 10.4 Tiger (Intel) | Tiger 10.4.10 (8R3032, QEMU, Core Duo) | 8/8 ordinary applications; standalone and SDK-linked probes each passed 25/25 required C++23 checks with zero skips ([result](results/qt4-macos-i386-tiger-llvm21-20261113.md)) |
 | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 and 10.2.8 (QEMU, G4) | 8/8 each, 361 passed, 0 failed ([10.2](results/qt4-macos-ppc-jaguar-10.2-qemu-20261014.json), [10.2.8](results/qt4-macos-ppc-jaguar-10.2.8-qemu-20261014.json)); earlier 24/24 also on an emulated G3 ([json](results/qt4-jaguar-suite-20261005.json)) |
 | | | Tiger 10.4.10 (QEMU, G4) | 8/8, 363 passed, 0 failed ([json](results/qt4-macos-ppc-tiger-qemu-20261014.json)) |
+| `qt4-macos-ppc-llvm` | Mac OS X 10.2 Jaguar (PowerPC) | Jaguar 10.2 (6C115, QEMU, G3) | 8/8 ordinary applications; standalone and SDK-linked probes each passed 25/25 required C++23 checks with zero skips ([result](results/qt4-macos-ppc-jaguar-llvm21-20261114.md)) |
 
 Windows Me is expected to behave like Windows 98 SE and has not been run.
 

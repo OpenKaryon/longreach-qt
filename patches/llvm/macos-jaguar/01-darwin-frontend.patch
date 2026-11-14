@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+
+--- a/clang/lib/Driver/ToolChains/Darwin.cpp
++++ b/clang/lib/Driver/ToolChains/Darwin.cpp
+@@ -55,6 +55,7 @@
+       .Cases("pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4",
+              llvm::Triple::x86)
+       .Cases("x86_64", "x86_64h", llvm::Triple::x86_64)
++      .Case("ppc", llvm::Triple::ppc)
+       // This is derived from the driver.
+       .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
+       .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
+@@ -1065,6 +1066,9 @@
+ 
+ StringRef MachO::getMachOArchName(const ArgList &Args) const {
+   switch (getTriple().getArch()) {
++  case llvm::Triple::ppc:
++    return "ppc";
++
+   default:
+     return getDefaultUniversalArchName();
+ 
+--- a/clang/lib/Basic/Targets.cpp
++++ b/clang/lib/Basic/Targets.cpp
+@@ -362,6 +362,8 @@
+     }
+ 
+   case llvm::Triple::ppc:
++    if (Triple.isOSDarwin())
++      return std::make_unique<DarwinTargetInfo<PPC32TargetInfo>>(Triple, Opts);
+     switch (os) {
+     case llvm::Triple::Linux:
+       return std::make_unique<LinuxTargetInfo<PPC32TargetInfo>>(Triple, Opts);
+--- a/clang/lib/Basic/Targets/PPC.h
++++ b/clang/lib/Basic/Targets/PPC.h
+@@ -389,7 +389,18 @@
+ public:
+   PPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+       : PPCTargetInfo(Triple, Opts) {
+-    if (Triple.isOSAIX())
++    if (Triple.isOSDarwin()) {
++      resetDataLayout("E-m:o-p:32:32-Fn32-i64:32:64-f64:32:64-n32");
++      SizeType = UnsignedLong;
++      PtrDiffType = SignedInt;
++      IntPtrType = SignedLong;
++      DoubleAlign = LongLongAlign = 32;
++      if (Triple.isMacOSXVersionLT(10, 4)) {
++        LongDoubleWidth = 64;
++        LongDoubleAlign = 32;
++        LongDoubleFormat = &llvm::APFloat::IEEEdouble();
++      }
++    } else if (Triple.isOSAIX())
+       resetDataLayout("E-m:a-p:32:32-Fi32-i64:64-n32");
+     else if (Triple.getArch() == llvm::Triple::ppcle)
+       resetDataLayout("e-m:e-p:32:32-Fn32-i64:64-n32");
+@@ -427,7 +438,8 @@
+   }
+ 
+   BuiltinVaListKind getBuiltinVaListKind() const override {
+-    // This is the ELF definition
++    if (getTriple().isOSDarwin())
++      return TargetInfo::CharPtrBuiltinVaList;
+     return TargetInfo::PowerABIBuiltinVaList;
+   }
+ 
+--- a/llvm/lib/Target/PowerPC/PPCTargetMachine.cpp
++++ b/llvm/lib/Target/PowerPC/PPCTargetMachine.cpp
+@@ -155,5 +155,7 @@
+ 
+ /// Return the datalayout string of a subtarget.
+ static std::string getDataLayoutString(const Triple &T) {
++  if (T.isOSDarwin() && T.getArch() == Triple::ppc)
++    return "E-m:o-p:32:32-Fn32-i64:32:64-f64:32:64-n32";
+   bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
+   std::string Ret;

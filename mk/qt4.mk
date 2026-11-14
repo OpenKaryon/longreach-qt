@@ -100,6 +100,24 @@ qt4-macos-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(GCC5
 	$(ONE_BUILD_CHECK)
 	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg LAB_GIT=$(LAB_GIT) -f docker/qt4/macos/i386/Dockerfile -t $(QT4_MACOS_I386_IMAGE) .
 
+# The Tiger LLVM profile shares the patched Darwin compiler from Qt 5.
+QT4_TIGER_LLVM_BASE ?= qt4-macos-i386:latest
+QT4_TIGER_LLVM_COMPILER ?= longreach-llvm:21.1.8-snow-tls
+QT4_TIGER_LLVM_IMAGE := qt4-macos-i386:llvm21
+QT4_TIGER_LLVM_OUT := $(ARTIFACTS_DIR)/tests-qt4-macos-i386-llvm21
+
+.PHONY: qt4-macos-i386-llvm qt4-macos-i386-llvm-probe qt4-macos-i386-llvm-examples
+BUILD_TARGETS += qt4-macos-i386-llvm
+qt4-macos-i386-llvm qt4-macos-i386-llvm-probe qt4-macos-i386-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT4_TIGER_LLVM_BASE) $(QT4_TIGER_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg TIGER_IMAGE=$(QT4_TIGER_LLVM_BASE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_TIGER_LLVM_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/macos/i386/Dockerfile-llvm -t $(QT4_TIGER_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
+	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_TIGER_LLVM_OUT)))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_TIGER_LLVM_IMAGE)-probe "cp /out/cxx23-probe /export/")
+	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_TIGER_LLVM_IMAGE) "cp /out/*.tar.gz /out/macho-audit*.json /out/README.txt /out/*LICENSE* /out/*COPYING* /out/*EXCEPTION* /export/")
+
+qt4-macos-i386-llvm qt4-macos-i386-llvm-examples: $(QT4_ARCHIVE_PATH)
+
 $(TIGER_SDK_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(TIGER_SDK_URL)" "$@" "$(TIGER_SDK_SHA256)"
 

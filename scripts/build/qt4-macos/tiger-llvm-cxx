@@ -1,0 +1,48 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+set -euo pipefail
+sdk=/opt/tiger-toolchain/SDK/MacOSX10.4u.sdk
+runtime=/opt/tiger-llvm-runtime
+action=link
+if [ "$#" -eq 1 ] && [ "$1" = -v ]; then
+    action=compile
+fi
+objc=no
+has_source=no
+for arg in "$@"; do
+    case "$arg" in
+        -c|-E|-S|-fsyntax-only|-M|-MM|-dump*|-print*|--version|--help) action=compile ;;
+        *.m)
+            objc=yes
+            has_source=yes
+            ;;
+        *.cc|*.cpp|*.cxx|*.mm|*.c|*.C|-) has_source=yes ;;
+    esac
+done
+if [ "$objc" = yes ] && [ "$action" = compile ]; then
+    flags=()
+    for arg in "$@"; do
+        case "$arg" in
+            -std=*++*) ;;
+            *) flags+=("$arg") ;;
+        esac
+    done
+    exec tiger-llvm-cc "${flags[@]}"
+fi
+runtime_args=()
+driver=/opt/llvm-21/bin/clang++
+target_args=(--target=i386-apple-macosx10.4 -isysroot "$sdk" -fno-blocks -femulated-tls)
+if [ "$action" = link ]; then
+    runtime_args=(-nostdlib++ "$runtime/lib/emutls.o" "$runtime/lib/cxa_thread_atexit.o"
+        "$runtime/lib/libc++.a" "$runtime/lib/libc++abi.a"
+        "$sdk/usr/lib/gcc/i686-apple-darwin10/4.0.1/libgcc.a" -lgcc_s.10.4)
+    if [ "$has_source" = no ]; then
+        # The osxcross driver selects Tiger startup objects and legacy ld64.
+        driver=i386-apple-darwin8-clang++
+        target_args=()
+    else
+        target_args+=(--ld-path=/opt/tiger-toolchain/bin/i386-apple-darwin8-ld)
+    fi
+fi
+exec "$driver" "${target_args[@]}" -nostdinc++ -isystem "$runtime/include/c++/v1" "$@" "${runtime_args[@]}"

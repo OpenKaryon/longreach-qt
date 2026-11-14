@@ -48,6 +48,30 @@ With the earlier 24-application layout: Intel 24/24 (524 checks) on Tiger
 See [platforms](../platforms.md#qt-487). The Jaguar build is a target of its
 own from 0.1.0 on; before, it was built by probe scripts.
 
+## Tiger with LLVM 21.1.8
+
+The opt-in LLVM build uses the existing Tiger image for the 10.4u SDK,
+legacy linker and OpenSSL, and the same emulated TLS compiler as the
+Qt 5 Snow Leopard build. If the compiler image is missing, build it
+from the existing compiler stage:
+
+```sh
+docker build --target compiler -f docker/qt5/macos/i386/Dockerfile-llvm -t longreach-llvm:21.1.8-snow-tls .
+```
+
+Run `make qt4-macos-i386-llvm-probe` for the standalone C++23 probe,
+`make qt4-macos-i386-llvm` for the SDK, or
+`make qt4-macos-i386-llvm-examples` for the ordinary app bundles and
+a separate C++23 Qt selftest bundle. Probe and example exports go to
+`artifacts/tests-qt4-macos-i386-llvm21`. Run the strict bundle's
+`Contents/MacOS/qt-selftest --modern-cpp` in a Tiger desktop session.
+
+On Tiger 10.4.10 in QEMU, all eight ordinary applications passed.
+The standalone probe and the SDK-linked selftest each passed all 25
+required C++23 checks with zero skips. The
+[Tiger LLVM report](../results/qt4-macos-i386-tiger-llvm21-20261113.md)
+records the widget style fix, guest setup and Mach-O audit.
+
 ## Limits
 
 - Repeated cold boots of Tiger Intel in QEMU are unreliable (IOGraphics);

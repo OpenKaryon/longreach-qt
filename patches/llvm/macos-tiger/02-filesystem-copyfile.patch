@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+# Select the existing stream fallback when copyfile.h is unavailable.
+--- a/libcxx/src/filesystem/operations.cpp
++++ b/libcxx/src/filesystem/operations.cpp
+@@ -55,7 +55,7 @@
+ #if __has_include(<sys/sendfile.h>)
+ #  include <sys/sendfile.h>
+ #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
+-#elif defined(__APPLE__) || __has_include(<copyfile.h>)
++#elif __has_include(<copyfile.h>)
+ #  include <copyfile.h>
+ #  define _LIBCPP_FILESYSTEM_USE_COPYFILE
+ #else

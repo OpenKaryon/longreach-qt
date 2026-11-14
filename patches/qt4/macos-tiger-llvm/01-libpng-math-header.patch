@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Use math.h with Clang on Mac OS X.
+--- a/src/3rdparty/libpng/pngpriv.h
++++ b/src/3rdparty/libpng/pngpriv.h
+@@ -409,7 +409,7 @@
+ #  include <float.h>
+ 
+ #  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
+-    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
++    defined(THINK_C) || defined(__SC__)
+      /* We need to check that <math.h> hasn't already been included earlier
+       * as it seems it doesn't agree with <fp.h>, yet we should really use
+       * <fp.h> if possible.

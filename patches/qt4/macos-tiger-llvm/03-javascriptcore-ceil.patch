@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Keep the Darwin signed-zero fix local to JavaScriptCore calls.
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/wtf/MathExtras.h
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/wtf/MathExtras.h
+@@ -67,7 +67,8 @@
+ // Work around a bug in the Mac OS X libc where ceil(-0.1) return +0.
+ inline double wtf_ceil(double x) { return copysign(ceil(x), x); }
+ 
+-#define ceil(x) wtf_ceil(x)
++#else
++inline double wtf_ceil(double x) { return ceil(x); }
+ 
+ #endif
+ 
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/runtime/MathObject.cpp
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/runtime/MathObject.cpp
+@@ -139,7 +139,7 @@
+ 
+ JSValue JSC_HOST_CALL mathProtoFuncCeil(ExecState* exec, JSObject*, JSValue, const ArgList& args)
+ {
+-    return jsNumber(exec, ceil(args.at(0).toNumber(exec)));
++    return jsNumber(exec, wtf_ceil(args.at(0).toNumber(exec)));
+ }
+ 
+ JSValue JSC_HOST_CALL mathProtoFuncCos(ExecState* exec, JSObject*, JSValue, const ArgList& args)
+@@ -218,7 +218,7 @@
+     double arg = args.at(0).toNumber(exec);
+     if (signbit(arg) && arg >= -0.5)
+          return jsNumber(exec, -0.0);
+-    double integer = ceil(arg);
++    double integer = wtf_ceil(arg);
+     return jsNumber(exec, integer - (integer - arg > 0.5));
+ }
+ 
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/runtime/NumberPrototype.cpp
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/runtime/NumberPrototype.cpp
+@@ -335,7 +335,7 @@
+         x /= pow(10.0, logx);
+         const double tenToTheF = pow(10.0, fractionalDigits);
+         double fx = floor(x * tenToTheF) / tenToTheF;
+-        double cx = ceil(x * tenToTheF) / tenToTheF;
++        double cx = wtf_ceil(x * tenToTheF) / tenToTheF;
+ 
+         if (fabs(fx - x) < fabs(cx - x))
+             x = fx;
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/runtime/JSGlobalObjectFunctions.cpp
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/runtime/JSGlobalObjectFunctions.cpp
+@@ -310,7 +310,7 @@
+     if (value.isDouble()) {
+         double d = value.asDouble();
+         if (isfinite(d))
+-            return jsNumber(exec, (d > 0) ? floor(d) : ceil(d));
++            return jsNumber(exec, (d > 0) ? floor(d) : wtf_ceil(d));
+         if (isnan(d) || isinf(d))
+             return jsNaN(exec);
+         return jsNumber(exec, 0);

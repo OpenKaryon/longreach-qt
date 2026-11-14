@@ -1,0 +1,6 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+set -euo pipefail
+exec /opt/llvm-21/bin/clang --target=i386-apple-macosx10.4 -fno-blocks \
+    -isysroot /opt/tiger-toolchain/SDK/MacOSX10.4u.sdk "$@"

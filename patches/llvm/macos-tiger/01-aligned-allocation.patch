@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (C) 2026 OpenKaryon
+# Provide aligned allocation on Darwin without posix_memalign.
+--- a/libcxx/include/__memory/aligned_alloc.h
++++ b/libcxx/include/__memory/aligned_alloc.h
+@@ -11,6 +11,7 @@
+ 
+ #include <__config>
+ #include <cstdlib>
++#include <stdint.h>
+ 
+ #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+ #  pragma GCC system_header
+@@ -27,7 +28,20 @@
+ //
+ // Returns the allocated memory, or `nullptr` on failure.
+ inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
++  if (__alignment < sizeof(void*))
++    __alignment = sizeof(void*);
++  const size_t overhead = __alignment - 1 + sizeof(void*);
++  if (__size > SIZE_MAX - overhead)
++    return nullptr;
++  void* raw = ::malloc(__size + overhead);
++  if (!raw)
++    return nullptr;
++  uintptr_t address = (reinterpret_cast<uintptr_t>(raw) + overhead) & ~(uintptr_t(__alignment) - 1);
++  void** aligned = reinterpret_cast<void**>(address);
++  aligned[-1] = raw;
++  return aligned;
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   return ::_aligned_malloc(__size, __alignment);
+ #  elif _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_C11_ALIGNED_ALLOC
+   // aligned_alloc() requires that __size is a multiple of __alignment,
+@@ -49,7 +63,10 @@
+ }
+ 
+ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
+-#  if defined(_LIBCPP_MSVCRT_LIKE)
++#  if defined(__APPLE__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
++  if (__ptr)
++    ::free(static_cast<void**>(__ptr)[-1]);
++#  elif defined(_LIBCPP_MSVCRT_LIKE)
+   ::_aligned_free(__ptr);
+ #  else
+   ::free(__ptr);

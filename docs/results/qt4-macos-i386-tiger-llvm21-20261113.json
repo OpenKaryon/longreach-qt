@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "target": "qt4-macos-i386-llvm",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "guest": {
+    "os": "Mac OS X 10.4.10",
+    "build": "8R3032",
+    "cpu": "Core Duo",
+    "hypervisor": "QEMU TCG"
+  },
+  "sdk": {
+    "image": "qt4-macos-i386:llvm21",
+    "image_id": "sha256:bf5c72d3dcb8a36d0d199a2a8545018c268f063f373e60775baab649a7e6c744",
+    "static_qt_archive_paths": 36
+  },
+  "standalone_probe": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "file": "cxx23-probe",
+    "sha256": "27fdaf4a09fa8a0df6443bb769a0527a8883a1c7ee127ec86d825b51f3908404",
+    "guest_sha1": "8049499883e20ab8c418779391c981e79d15d10c"
+  },
+  "modern_cpp": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "file": "qt4-tiger-i386-strict.tar.gz",
+    "sha256": "943ab9f4827f9aa5431625ebb5932d589be4a988c47536ad01456c369b78c45a",
+    "guest_sha1": "1efeb348c2cd6815e42a0f17607e4afad56ff523"
+  },
+  "ordinary": {
+    "apps_passed": 8,
+    "passed": 366,
+    "failed": 0,
+    "skipped": 154,
+    "file": "qt4-tiger-i386-examples.tar.gz",
+    "sha256": "c2f45ae4099f2ebc0a9ef61a8022dd67a4b1113b2e4b39714d3195cb1d50e593",
+    "guest_md5": "9d17df0a6c5443043b35f2a503a63717",
+    "applications": [
+      {
+        "application": "network-gui",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "qt-selftest",
+        "passed": 121,
+        "failed": 0,
+        "skipped": 139
+      },
+      {
+        "application": "widgets-gallery",
+        "passed": 140,
+        "failed": 0,
+        "skipped": 9
+      },
+      {
+        "application": "graphics-gallery",
+        "passed": 32,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "painting-lab",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "application": "quick-qml-gallery",
+        "passed": 29,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "application": "multimedia-lab",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 3
+      },
+      {
+        "application": "gl-heavy-gallery",
+        "passed": 13,
+        "failed": 0,
+        "skipped": 1
+      }
+    ]
+  },
+  "macho_audit": {
+    "ordinary": [
+      {
+        "binary": "gl-heavy-gallery",
+        "sha256": "42900905f690cbe8f61568cf225b6e60781d29777500ceed0b84c5f78794b0cd",
+        "bytes": 16388988,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL",
+          "/System/Library/Frameworks/AGL.framework/Versions/A/AGL",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "graphics-gallery",
+        "sha256": "33ea2d5d992b0304a12df110acd9b44eb2e064f614ed96fdc6d837ec9058d7f2",
+        "bytes": 15836716,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "multimedia-lab",
+        "sha256": "2f15a7e600ba13ad88b8c49ca0391e9de591100c37de840bc7646ab3004f823f",
+        "bytes": 15679112,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio",
+          "/System/Library/Frameworks/AudioUnit.framework/Versions/A/AudioUnit",
+          "/System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "network-gui",
+        "sha256": "bf6a8b483d262cd30c7fcee4683d92eddc1faec50cb8db6bfb180c73b5968029",
+        "bytes": 18863060,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration",
+          "/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "painting-lab",
+        "sha256": "42675adf11b6434903a6e7da5064bdd6ff899a9559856de300e43ac0d4f65895",
+        "bytes": 15786712,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "qt-selftest",
+        "sha256": "c743eec51914f5c6b12ac94268c99ae2ca69f0534e6d367a0bd3c5c3ac91230d",
+        "bytes": 27045272,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration",
+          "/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "quick-qml-gallery",
+        "sha256": "0d1ecc6190eb83ce853104896ea31043df6db216e68b65974c6381b62dfb0972",
+        "bytes": 30249192,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration",
+          "/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices",
+          "/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL",
+          "/System/Library/Frameworks/AGL.framework/Versions/A/AGL",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "smoke-runner",
+        "sha256": "be272dcb38c5a41f287c5856f344c2344402b50fe57f3d3baa90e5e9b87f1c3f",
+        "bytes": 4836964,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      },
+      {
+        "binary": "widgets-gallery",
+        "sha256": "05139651fe1efc53082bc7bd5dfb1bf860ba771b6f29d4aece6ec2fc0653093a",
+        "bytes": 23042132,
+        "arch": "i386",
+        "cpu_subtype": 3,
+        "minimum_os": "10.4.0",
+        "bundle_minimum_os": "10.4",
+        "legacy_unixthread_entry": true,
+        "libraries": [
+          "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+          "/System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio",
+          "/System/Library/Frameworks/AudioUnit.framework/Versions/A/AudioUnit",
+          "/System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox",
+          "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/IOKit.framework/Versions/A/IOKit",
+          "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration",
+          "/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices",
+          "/usr/lib/libresolv.9.dylib",
+          "/usr/lib/libz.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libgcc_s.1.dylib"
+        ]
+      }
+    ],
+    "strict": {
+      "binary": "qt-selftest",
+      "sha256": "f3fa7917b1c196fb85a2987a82dbc18557708bd07a99c911e8ccdc69c2e051ae",
+      "bytes": 27149708,
+      "arch": "i386",
+      "cpu_subtype": 3,
+      "minimum_os": "10.4.0",
+      "bundle_minimum_os": "10.4",
+      "legacy_unixthread_entry": true,
+      "libraries": [
+        "/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices",
+        "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+        "/System/Library/Frameworks/Security.framework/Versions/A/Security",
+        "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+        "/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon",
+        "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration",
+        "/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices",
+        "/usr/lib/libz.1.dylib",
+        "/usr/lib/libSystem.B.dylib",
+        "/usr/lib/libgcc_s.1.dylib"
+      ]
+    }
+  }
+}

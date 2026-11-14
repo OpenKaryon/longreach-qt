@@ -14,8 +14,22 @@ mkdir -p "$source"
 # only while it was made from this archive and exactly these patches; with
 # one removed, renamed or changed it starts again, since a patch no longer
 # here would otherwise stay applied.
-tree_key=$( { sha256sum /archives/qt-everywhere-opensource-src-4.8.7.tar.gz;
-              cd /patches && sha256sum all/*.patch macos/*.patch; } | sha256sum | cut -d" " -f1)
+patches=(/patches/all/*.patch /patches/macos/*.patch)
+if [ "${TIGER_EXTRA_PATCHES:-0}" = 1 ]; then
+    patches+=(/patches/tiger-llvm/*.patch)
+fi
+tree_key=$(
+    {
+        sha256sum /archives/qt-everywhere-opensource-src-4.8.7.tar.gz
+        (
+            cd /patches
+            sha256sum "${patches[@]#/patches/}"
+        )
+        if [ -n "${TIGER_CACHE_KEY:-}" ]; then
+            printf '%s\n' "$TIGER_CACHE_KEY"
+        fi
+    } | sha256sum | cut -d" " -f1
+)
 if [ -f "$source/configure" ] && [ "$(cat "$source/.kit-tree-key" 2>/dev/null || true)" != "$tree_key" ]; then
     echo "build-qt.sh: the archive or the patches changed, or patching stopped halfway; starting from a clean tree"
     find "$source" -mindepth 1 -delete
@@ -37,7 +51,9 @@ apply_patch() {
 # The key only once every patch is on: a run stopped halfway leaves none, and
 # the next one starts from a clean tree instead of patching a half-patched one.
 rm -f "$source/.kit-tree-key"
-for p in /patches/all/*.patch /patches/macos/*.patch; do apply_patch "$p"; done
+for p in "${patches[@]}"; do
+    apply_patch "$p"
+done
 printf '%s\n' "$tree_key" > "$source/.kit-tree-key"
 mkdir -p "mkspecs/$qmake_spec"
 cp mkspecs/macx-g++/qplatformdefs.h "mkspecs/$qmake_spec/"

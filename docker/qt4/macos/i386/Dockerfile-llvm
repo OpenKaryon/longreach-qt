@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 OpenKaryon
+ARG TIGER_IMAGE=qt4-macos-i386:latest
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-snow-tls
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+FROM ${TIGER_IMAGE} AS runtime
+ARG PARALLEL_JOBS=3
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=compiler /opt/cmake-3.27.9-linux-x86_64 /opt/cmake-3.27.9-linux-x86_64
+ENV PATH=/opt/llvm-21/bin:/opt/cmake-3.27.9-linux-x86_64/bin:${PATH}
+ENV TIGER_SPEC=macx-tiger-llvm
+ENTRYPOINT ["/bin/bash", "-c"]
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm,target=/src/patches \
+    --mount=type=bind,source=scripts/build/qt4-macos/build-tiger-libcxx.sh,target=/src/build-libcxx.sh \
+    clang --version | grep -E '^clang version 21\.1\.8([[:space:]]|$)' && \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-libcxx.sh /src/llvm.tar.xz /src/patches
+COPY --chmod=0755 scripts/build/qt4-macos/tiger-llvm-cc scripts/build/qt4-macos/tiger-llvm-cxx /usr/local/bin/
+
+FROM runtime AS probe
+COPY scripts/tests/qt6-llvm-probes/main.cpp /probe/scripts/tests/qt6-llvm-probes/
+COPY tests/common/moderncpp_checks.h /probe/tests/common/
+RUN --network=none mkdir /out && \
+    tiger-llvm-cxx -std=c++23 -O2 -c /probe/scripts/tests/qt6-llvm-probes/main.cpp -o /tmp/probe.o && \
+    tiger-llvm-cxx /tmp/probe.o -o /out/cxx23-probe && \
+    tiger-llvm-cxx -std=c++23 -O2 /probe/scripts/tests/qt6-llvm-probes/main.cpp -o /tmp/probe-direct && \
+    i386-apple-darwin8-otool -L /out/cxx23-probe /tmp/probe-direct
+
+FROM runtime AS sdk
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos/build-qt.sh scripts/build/qt4-macos/qmake.conf /scripts/
+COPY patches/qt4/all /patches/all
+COPY patches/qt4/macos /patches/macos
+COPY patches/qt4/macos-tiger-llvm /patches/tiger-llvm
+COPY patches/qt4/linux-sarge-llvm/02-widget-style-optimization.patch /patches/tiger-llvm/04-widget-style-optimization.patch
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/archives/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    --mount=type=cache,id=qt4-tiger-i386-llvm21-qt,target=/work/qt-source,sharing=locked \
+    mkdir -p /work/openssl-source && \
+    cp /opt/qt4-licenses/OPENSSL-LICENSE.txt /work/openssl-source/LICENSE && \
+    rm -rf /opt/qt4-tiger && \
+    sed -i -e 's/^QMAKE_CC = .*/QMAKE_CC = tiger-llvm-cc/' \
+           -e 's/^QMAKE_CXX = .*/QMAKE_CXX = tiger-llvm-cxx/' /scripts/qmake.conf && \
+    TIGER_CACHE_KEY=$(sha256sum /opt/llvm-21/bin/clang /opt/tiger-llvm-runtime/lib/* \
+        /opt/openssl-tiger/lib/*.a /usr/local/bin/tiger-llvm-* /scripts/build-qt.sh /scripts/qmake.conf) && \
+    TIGER_CACHE_KEY="$TIGER_CACHE_KEY" TIGER_EXTRA_PATCHES=1 TIGER_JOBS="$PARALLEL_JOBS" bash /scripts/build-qt.sh && \
+    /opt/qt4-tiger/bin/qmake -v
+
+FROM sdk AS examples
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos/build-examples.sh scripts/build/qt4-macos/build-examples-llvm.sh \
+     scripts/build/qt4-macos/write-bundle.py scripts/build/qt4-macos/audit-macho.py /scripts/
+COPY tests /input
+RUN --network=none TIGER_JOBS="$PARALLEL_JOBS" bash /scripts/build-examples-llvm.sh

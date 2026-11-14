@@ -66,10 +66,11 @@ for the CPU floor, runtime changes and test scope.
 
 ## amd64 with LLVM 21.1.8
 
-The amd64 build uses the same LLVM recipe with the unofficial Sarge amd64
-sysroot. The two locale-aware integer conversions in libc++ use the
-older symbols that the sysroot exports at `GLIBC_2.2.5`. This keeps the
-final ABI ceiling at `GLIBC_2.3.2`.
+Both architectures use `docker/qt4/linux/Dockerfile-llvm`. The amd64
+build uses the unofficial Sarge amd64 sysroot. The two locale-aware
+integer conversions in libc++ use the older symbols that the sysroot
+exports at `GLIBC_2.2.5`. This keeps the final ABI ceiling at
+`GLIBC_2.3.2`.
 
 With the compiler inputs above, `qt4-linux-amd64:latest`, and a local
 QEMU runner image available, run the commands in order:

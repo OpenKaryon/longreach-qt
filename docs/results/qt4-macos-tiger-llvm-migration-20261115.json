@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "target": "qt4-macos-i386",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "build": {
+    "command": "make qt4-macos-i386-examples PARALLEL_JOBS=3",
+    "dockerfile": "docker/qt4/macos/i386/Dockerfile",
+    "sdk_image": "qt4-macos-i386-llvm21",
+    "sdk_image_id": "sha256:892637a495fad215195270cdcbf8cd3954b73c613acf61e616eda246dfe67a92",
+    "build_refs": [
+      "4wcwy25zcdg5si6r7w7n6vs6f",
+      "9nvea0soj858yzdjizx6ahz8c"
+    ],
+    "qmake": "2.01a",
+    "openssl": "1.0.2u"
+  },
+  "guest": {
+    "os": "Mac OS X 10.4.10",
+    "build": "8R3032",
+    "cpu": "Core Duo",
+    "hypervisor": "QEMU TCG"
+  },
+  "archives": {
+    "qt4-tiger-i386-examples.tar.gz": {
+      "sha256": "ae6b7b3ce50409ef6c4cef4e8f8a8db94bc7788a01611cc4e8f8b96f20e9ad0d"
+    },
+    "qt4-tiger-i386-strict.tar.gz": {
+      "sha256": "226ec939c87a587c45c3a6dd0357f1e2abae7cc9590f794df55b18767ef0f7e6"
+    }
+  },
+  "macho": {
+    "arch": "i386",
+    "minimum_os": "10.4.0",
+    "audited_binaries": 10,
+    "archive_hashes_match_audit": true
+  },
+  "ordinary": {
+    "apps_passed": 8,
+    "checks_passed": 366,
+    "checks_failed": 0,
+    "optional_skips": 154,
+    "applications": {
+      "network-gui": {
+        "exit_code": 0,
+        "passed": 6,
+        "failed": 0,
+        "optional_skips": 1
+      },
+      "qt-selftest": {
+        "exit_code": 0,
+        "passed": 121,
+        "failed": 0,
+        "optional_skips": 139
+      },
+      "widgets-gallery": {
+        "exit_code": 0,
+        "passed": 140,
+        "failed": 0,
+        "optional_skips": 9
+      },
+      "graphics-gallery": {
+        "exit_code": 0,
+        "passed": 32,
+        "failed": 0,
+        "optional_skips": 0
+      },
+      "painting-lab": {
+        "exit_code": 0,
+        "passed": 16,
+        "failed": 0,
+        "optional_skips": 0
+      },
+      "quick-qml-gallery": {
+        "exit_code": 0,
+        "passed": 29,
+        "failed": 0,
+        "optional_skips": 1
+      },
+      "multimedia-lab": {
+        "exit_code": 0,
+        "passed": 9,
+        "failed": 0,
+        "optional_skips": 3
+      },
+      "gl-heavy-gallery": {
+        "exit_code": 0,
+        "passed": 13,
+        "failed": 0,
+        "optional_skips": 1
+      }
+    }
+  },
+  "strict_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skips": 0,
+    "exit_code": 0,
+    "checks": [
+      "C++14 generic lambda and init capture",
+      "C++17 structured bindings",
+      "C++17 fold expressions",
+      "C++17 std::optional",
+      "C++17 std::string_view",
+      "C++20 concepts",
+      "C++20 std::span",
+      "C++20 ranges filter and transform",
+      "C++20 std::jthread",
+      "C++20 std::stop_token and callbacks",
+      "C++20 std::format",
+      "C++23 if consteval",
+      "C++23 std::expected",
+      "C++23 std::byteswap",
+      "C++23 std::ranges::to",
+      "C++23 std::print",
+      "C++20 stop_token condition_variable_any cancellation",
+      "C++20 jthread destructor stop and join",
+      "C++20 atomic wait and notify handoff",
+      "C++20 jthread thread_local destruction",
+      "C++11 exception unwinding and RAII",
+      "C++17 Unicode filesystem round trip",
+      "C++20 format_error propagation",
+      "C++23 expected monadic error propagation",
+      "C++23 Unicode format and print"
+    ]
+  }
+}

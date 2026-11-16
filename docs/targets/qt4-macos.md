@@ -2,8 +2,8 @@
 
 | Target | Image | Floor | Notes |
 |--------|-------|-------|-------|
-| `make qt4-macos-i386` | `qt4-macos-i386` | Mac OS X 10.4 Tiger, Intel | Carbon; osxcross with the 10.4u SDK; clang, libstdc++ from GCC 5.5 |
-| `make qt4-macos-ppc` | `qt4-macos-ppc` | Mac OS X 10.2 Jaguar, PowerPC | Carbon; GCC 5.5 for PowerPC with the 10.2.8 SDK as sysroot |
+| `make qt4-macos-i386` | `qt4-macos-i386-llvm21` | Mac OS X 10.4 Tiger, Intel | Carbon, LLVM 21.1.8 and the 10.4u SDK |
+| `make qt4-macos-ppc` | `qt4-macos-ppc-llvm21` | Mac OS X 10.2 Jaguar, PowerPC | Carbon, LLVM 21.1.8 and the 10.2.8 SDK |
 
 `make qt4-macos-i386-examples` and `make qt4-macos-ppc-examples` build the test
 suite as application bundles and pack them as a tar.gz (unpack it on the Mac:
@@ -13,87 +13,80 @@ Qt 4.8.7 on the Mac is Carbon for 10.4 and Cocoa for 10.5; Longreach Qt builds
 Carbon, the only one that reaches 10.4 and 10.2. Intel Macs start at 10.4.4, so
 the Intel build stops at Tiger; PowerPC goes down to Jaguar, Qt 3.3's floor.
 
-## How the PowerPC build is made
+## Tiger i386
 
-One Dockerfile, `docker/qt4/macos/ppc`, in stages:
+The [Tiger Dockerfile](../../docker/qt4/macos/i386/Dockerfile) builds
+osxcross from pinned sources and normalizes the 10.4u SDK. It builds
+OpenSSL 1.0.2u with the osxcross Clang wrapper. Qt and the examples
+use upstream LLVM 21.1.8 with patched libc++ and libc++abi. The
+runtime and toolchain retain the 10.4u startup files, legacy linker
+and SDK libgcc support.
 
-1. osxcross (its `ppc-test` branch, pinned) builds cctools and ld64 for
-   PowerPC with the 10.4u SDK;
-2. GCC 5.5 for `powerpc-apple-darwin8` against 10.4u, with the classic
-   cctools linker and a patch for Objective-C++ exceptions, and libstdc++;
-3. a second GCC 5.5 whose sysroot is the 10.2.8 SDK: 10.2 has no wide
-   characters, no `__cxa_atexit` and no `dlopen`, so the compiler is
-   configured without them, libgcc gets its own `dlfcn.h`, and a placeholder
-   `libSystemStubs.a` satisfies the driver; its probes run on 10.2;
-4. OpenSSL 1.0.2u and Qt with the `macx-jaguar-g++` mkspec. Every 10.3 and
-   10.4 API Qt uses is weak-linked and checked before use
-   (`patches/qt4/macos` 12-17); the suite script checks each executable's
-   imports against the 10.2.8 SDK and that no Qt object references a weak
-   import without a check.
-
-The same binaries run on 10.2 through 10.4 (and 10.5, and 10.6 under
-Rosetta). G5 Macs run them as 32-bit; there is no ppc64 build.
-
-## Results
-
-With the current eight-application suite, in QEMU:
-
-- Intel: 8/8 on Mac OS X Tiger 10.4.10 (364 checks) on an emulated Core Duo.
-- PowerPC (the Jaguar build): 8/8 on Mac OS X 10.2 and 10.2.8 (361 checks
-  each) and on Tiger 10.4.10 (363), on an emulated G4.
-
-With the earlier 24-application layout: Intel 24/24 (524 checks) on Tiger
-10.4.10; PowerPC 24/24 on the same three systems and on an emulated G3.
-
-See [platforms](../platforms.md#qt-487). The Jaguar build is a target of its
-own from 0.1.0 on; before, it was built by probe scripts.
-
-## Tiger with LLVM 21.1.8
-
-The opt-in LLVM build uses the existing Tiger image for the 10.4u SDK,
-legacy linker and OpenSSL, and the same emulated TLS compiler as the
-Qt 5 Snow Leopard build. If the compiler image is missing, build it
-from the existing compiler stage:
+Tiger shares the patched emulated TLS compiler with Qt 5 Snow
+Leopard. To bootstrap the compiler image if missing, build the
+compiler stage after the shared LLVM compiler is available:
 
 ```sh
-docker build --target compiler -f docker/qt5/macos/i386/Dockerfile-llvm -t longreach-llvm:21.1.8-snow-tls .
+make qt5-macos-snow-llvm-compiler
+make qt4-macos-i386
+make qt4-macos-i386-examples
+make qt4-macos-i386-probe
 ```
 
-Run `make qt4-macos-i386-llvm-probe` for the standalone C++23 probe,
-`make qt4-macos-i386-llvm` for the SDK, or
-`make qt4-macos-i386-llvm-examples` for the ordinary app bundles and
-a separate C++23 Qt selftest bundle. Probe and example exports go to
-`artifacts/tests-qt4-macos-i386-llvm21`. Run the strict bundle's
-`Contents/MacOS/qt-selftest --modern-cpp` in a Tiger desktop session.
+Probe and example exports go to `artifacts/tests-qt4-macos-i386-llvm21`.
+Run the strict bundle's `Contents/MacOS/qt-selftest --modern-cpp` in a
+Tiger desktop session.
 
-On Tiger 10.4.10 in QEMU, all eight ordinary applications passed.
-The standalone probe and the SDK-linked selftest each passed all 25
-required C++23 checks with zero skips. The
-[Tiger LLVM report](../results/qt4-macos-i386-tiger-llvm21-20261113.md)
-records the widget style fix, guest setup and Mach-O audit.
+## Jaguar PowerPC
 
-## Jaguar with LLVM 21.1.8
+The [Jaguar Dockerfile](../../docker/qt4/macos/ppc/Dockerfile) builds
+osxcross and Apple's classic linker, then the GCC 5.5 driver and CRT
+with the 10.2.8 sysroot. GCC provides the link driver, ABI shims,
+libgcc and the OpenSSL 1.0.2u build. Qt and the examples use the
+patched PowerPC Darwin backend of LLVM 21.1.8, libc++, libc++abi and
+compiler-rt emulated TLS. Mach-O import checks compare binaries
+against the Jaguar SDK and check references to weak imports.
 
-The repository SDK preserved all 16 static Qt libraries. On Jaguar
-10.2 (6C115) in QEMU, QtCore passed 16/16, QtGui passed 11/11 and all
-eight ordinary applications passed. The standalone probe and the
-SDK-linked Qt selftest each passed 25/25 required C++23 checks with
-zero skips. See the [Jaguar LLVM report](../results/qt4-macos-ppc-jaguar-llvm21-20261114.md).
-
-The repository build reuses the existing Jaguar base image for cctools,
-the 10.2.8 and 10.4u SDKs, and OpenSSL. With that image and
-`longreach-llvm:21.1.8-compiler` available locally, build each target
-in sequence:
+With the shared LLVM compiler image available:
 
 ```sh
-make qt4-macos-ppc-llvm-probe PARALLEL_JOBS=3
-make qt4-macos-ppc-llvm PARALLEL_JOBS=3
-make qt4-macos-ppc-llvm-examples PARALLEL_JOBS=3
+make qt4-macos-ppc PARALLEL_JOBS=3
+make qt4-macos-ppc-examples PARALLEL_JOBS=3
+make qt4-macos-ppc-probe PARALLEL_JOBS=3
 ```
 
-The probe and example targets export files under
-`artifacts/tests-qt4-macos-ppc-llvm21`. Run the strict executable
-with `--modern-cpp` from a logged-in Jaguar desktop session.
+Probe and example exports go to `artifacts/tests-qt4-macos-ppc-llvm21`.
+Run `qt-selftest-jaguar-strict --modern-cpp` from a logged-in
+Jaguar desktop session. The SDK targets also accept the previous
+LLVM trial command names.
+
+## Migration validation
+
+On Tiger 10.4.10 (8R3032, Core Duo in QEMU), the canonical SDK passed
+all eight applications (366 checks, zero failures and 154 optional
+skips). The strict selftest passed 25/25 C++23 checks with zero skips.
+The guest verified both archives, and the Mach-O audit confirmed the
+10.4 deployment target for all ten executables. See the
+[Tiger migration record](../results/qt4-macos-tiger-llvm-migration-20261115.json).
+
+On Jaguar 10.2 (6C115, PowerPC G3 in QEMU), the canonical SDK passed
+all eight applications (363 checks, zero failures and 157 optional
+skips). QtCore passed 16/16, QtGui 11/11, and both the standalone
+C++23 probe and strict selftest passed 25/25 without skips. All 16
+static libraries matched the trial inventory. The Mach-O checks found
+zero missing imports across the probes, selftest and examples.
+See the [Jaguar migration record](../results/qt4-macos-jaguar-llvm-migration-20261115.json).
+
+## Previous LLVM validation
+
+The LLVM trial SDKs passed all eight ordinary applications, the
+standalone C++23 probe and the SDK-linked C++23 selftest in QEMU on
+Tiger 10.4.10 and Jaguar 10.2. Each strict run passed 25/25 with zero
+skips. The [Tiger report](../results/qt4-macos-i386-tiger-llvm21-20261113.md)
+records the widget style fix and Mach-O audit. The
+[Jaguar report](../results/qt4-macos-ppc-jaguar-llvm21-20261114.md)
+also records QtCore 16/16, QtGui 11/11 and the inventory of 16 static
+Qt libraries.
 
 ## Limits
 

@@ -39,7 +39,7 @@ if [ "${SARGE_LLVM_SUITE:-0}" = 1 ]; then
     printf '%s\n' /lib/modules/${kernel}/kernel/net/{unix/unix,ipv6/ipv6}.ko: \
         > "$root/lib/modules/$kernel/modules.dep"
 fi
-python /scripts/relativize-sysroot.py
+python3 /scripts/relativize-sysroot.py
 cp /work/kernel/boot/vmlinuz-"$kernel" /out/
 cp /work/kernel/boot/config-"$kernel" /out/
 for item in 'console 5 1 600' 'ttyS0 4 64 600' 'null 1 3 666' 'zero 1 5 666' 'random 1 8 666' 'urandom 1 9 666'; do
@@ -111,4 +111,4 @@ EOF
 chmod +x "$root/init"
 # mount is in util-linux on Sarge. The host binary must never enter the guest.
 test -x "$root/bin/mount" || { echo 'missing Sarge mount binary'; exit 1; }
-python /scripts/pack-initramfs.py
+python3 /scripts/pack-initramfs.py

@@ -1,0 +1,163 @@
+{
+  "date": "2026-11-15",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "compiler_image": "longreach-llvm:21.1.8-compiler-centos7-validation",
+  "compiler_image_id": "sha256:3a2bbd75cecd00d9e027ec9a1be466da2563f1af67c9426862aecc830a98b11d",
+  "targets": {
+    "i386": {
+      "sdk_examples_image": "qt4-linux-i386-llvm21",
+      "sdk_examples_image_id": "sha256:ced8d150eb5ab3ca89595cdb052fcdd9a68d1bdd22b1a81b1e021d9d68bcecb4",
+      "sysroot_image_id": "sha256:328cdff1f4ad35cfb5123a92597bda6de1e8c21806f06f1e3083a0e853fe1f9f",
+      "guest_kernel": "2.6.8-4-386 #1 Wed Feb 20 06:15:54 UTC 2008 i686 GNU/Linux",
+      "max_glibc": "2.3.2",
+      "ordinary": {
+        "applications": {
+          "qt-selftest": {
+            "passed": 121,
+            "failed": 0,
+            "skipped": 139
+          },
+          "widgets-gallery": {
+            "passed": 140,
+            "failed": 0,
+            "skipped": 9
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 1
+          },
+          "gl-heavy-gallery": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 4
+          },
+          "painting-lab": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0
+          },
+          "multimedia-lab": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 3
+          },
+          "network-gui": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 1
+          }
+        },
+        "passed": 363,
+        "failed": 0,
+        "skipped": 157
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "artifact_directory": "artifacts/tests-qt4-linux-i386-llvm21",
+      "binaries_sha256": {
+        "gl-heavy-gallery": "86313aa7fabe71ecc6f64b9759dae45a89e3e112b11522a6fc8329ad1747a66b",
+        "graphics-gallery": "35be962b3f7b5449eb2edd81d26395df1e4a341b8f528affdc599fb895fcf700",
+        "multimedia-lab": "17f74f29fb6e38194efd002b26f9f98a332e8d1c7a6afad8d01d36260cddad53",
+        "network-gui": "cab1b1813ccbe415201b779ac5404d9873a9dd65e403aea8e45103057e732212",
+        "painting-lab": "b629a1f303e54acb83ba060e6d4b7c327464c7852bde6cc9336f3d3abb778f12",
+        "qt-selftest": "427207d4931739c6c30984efbdfc864dd803a06b08b99a6cfc03a6eca2ad5fe9",
+        "qt-selftest-cxx23": "8be91554cd53d67fb67bf523dfafa787b9e7cff3a712655e3b6a2ac88bde9ef8",
+        "quick-qml-gallery": "3c0f3577efa13690d97a3874c0f4a621bf7144d5374b30f27d95dc63139636bc",
+        "smoke-runner": "1e9e6b85320185803b57381a8d2be8ebc68b1cf4e88d1b62a2b39910a5e5a70d",
+        "widgets-gallery": "ce6dbdb2c17159d318d8384cd3b7d02e3f0d3666b6b23a1caa5e5626ad05f121"
+      },
+      "logs_sha256": {
+        "elf-audit.json": "269fd221f559525d350fdc6e8a144fad22aa2aaa2516c9b7917557572241c0fb",
+        "qemu.log": "0f875dabcf9c9d958d7f3d4466df8ce4955c0940efa4c4a4e9454d18477e341c",
+        "cxx23.log": "57573a96320d5b7a937863ba0bdfad3065a5998c3e205c8292073eec7a2d942e"
+      }
+    },
+    "amd64": {
+      "sdk_examples_image": "qt4-linux-amd64-llvm21",
+      "sdk_examples_image_id": "sha256:e7ac6a3e0b5fbf7dd93a806e5fef7f1d59dff7b62b8b3c326a2466de54ab6096",
+      "sysroot_image_id": "sha256:84e6a8d1958cc8634492f74bd8aae23e1960d9cb2cafd5e8fbbde4a29cc32d67",
+      "guest_kernel": "2.6.8-12-amd64-generic #1 Thu Dec 7 17:50:30 UTC 2006 x86_64 GNU/Linux",
+      "max_glibc": "2.3.2",
+      "ordinary": {
+        "applications": {
+          "qt-selftest": {
+            "passed": 121,
+            "failed": 0,
+            "skipped": 139
+          },
+          "widgets-gallery": {
+            "passed": 140,
+            "failed": 0,
+            "skipped": 9
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 1
+          },
+          "gl-heavy-gallery": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 4
+          },
+          "painting-lab": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0
+          },
+          "multimedia-lab": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 3
+          },
+          "network-gui": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 1
+          }
+        },
+        "passed": 363,
+        "failed": 0,
+        "skipped": 157
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "artifact_directory": "artifacts/tests-qt4-linux-amd64-llvm21",
+      "binaries_sha256": {
+        "gl-heavy-gallery": "905f27e62bee2b4f78cb148cfb2bb12059c515d9a66783a5a49cbf598f5c7cf0",
+        "graphics-gallery": "50b2005a23ea403ce8ed25b09a3768a7b237617ceefae5f64dbe1675f80501cd",
+        "multimedia-lab": "68453de4ccbeccb453bdb05970abf09951adb153f4c0b5055ca61e5836c398b5",
+        "network-gui": "78c579abf1dbe6193d7e868ad38d30a2ae4be9d9ef8de8115e0fb01f5185ca64",
+        "painting-lab": "42c84f32688e5403fdc59afbd42d9a044e2348c2f234a51b59e3151c82e24e56",
+        "qt-selftest": "e5125954a07dd2915c8394f9b698a7d5033e6bab6554f66baaa6564cd1eaf8ee",
+        "qt-selftest-cxx23": "c150fa1ef274a41294a3cbaf81f47aed5bdd96672101adb5543c03cc87db918f",
+        "quick-qml-gallery": "01c78cef589b412fe169a0fc27e9600671a9747146c45f1a95128983a6a8ef5c",
+        "smoke-runner": "2539051a9a2109e790a03bfa23110ea3973670ed91d99044b12d6b6a292c098a",
+        "widgets-gallery": "4db3d3f4b0f9a6afe304a817a33b4a6dc395bfa6404b552a94be52f95dfb2c56"
+      },
+      "logs_sha256": {
+        "elf-audit.json": "7832bb59c3073486be993d6f2fd2042015307d1442222922eb4722988e017385",
+        "qemu.log": "eeeaad55f2b078745f0368caebd66571e5dfde1b1e33eadb1be3ef8b7a124c58",
+        "cxx23.log": "57573a96320d5b7a937863ba0bdfad3065a5998c3e205c8292073eec7a2d942e"
+      }
+    }
+  }
+}

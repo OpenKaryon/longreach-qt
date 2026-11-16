@@ -1,0 +1,177 @@
+{
+  "date": "2026-11-15",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "targets": {
+    "i386": {
+      "guest": "Windows 95 OSR2 Simplified Chinese (QEMU)",
+      "buildkit_ref": "nf17ra3fhhqg8etlhdzvlchyc",
+      "image": "qt4-win-i386-llvm21",
+      "image_id": "sha256:24b5bae3091a50e166739f17bea98bfe6af46a6f4c68fcc9bf001de05f99b357",
+      "toolchain_image_id": "sha256:0fa0ffc55bbd228c54b5b7d0c9582b6d3fe0574b27b84885c096a5fd8adbeb34",
+      "iso_sha256": "24f9968c1172f3cd628657934416e0b11e04ea99a3ed44c720c09011b43035e3",
+      "executables_sha256": {
+        "cxx23-probe.exe": "cc67ec08ec248d44da26403d4661e0e78169650e1f6a6e7c78219bc7603f06c1",
+        "gl-heavy-gallery.exe": "7987b7816db32fbbc2020974c2d9b26c0aedb63ab8440d22a9e7a97673bd66ec",
+        "graphics-gallery.exe": "4c34f58188d525ad414ad8dd097878de776018cfb8ed31dc6aca5ec7c8c47e55",
+        "multimedia-lab.exe": "1f76cf2f2ede1e6f86f79490b66ce09875f964c5e24cb000bb9b96b9967f6df1",
+        "network-gui.exe": "d63c85cc93845ecff26040b69b28f3787bb2d7ea3d32b4b247d82c0afbea6e44",
+        "painting-lab.exe": "fae51ef5785b1668d7b94cdcca50f9ae00d928af7e4afd823acbcff8013bdaf6",
+        "qt-selftest-cxx23.exe": "9987cb62253794f6622c0b97805bb413a36265d0d2469161ed6114ea09aede9c",
+        "qt-selftest.exe": "b68c24b2635def7180860189d6cc9bb771e9600c370856c366b7c95ced88ffb7",
+        "quick-qml-gallery.exe": "97c81f9ff4bd56986b6a4657f9a9b39bcda68a592144b68995a4b3e75de4e7d0",
+        "smoke-runner.exe": "6bf51423667fe2bb9e3768d13e89ac398fdc9c27cc77c60e03ab16b84da9cd6b",
+        "widgets-gallery.exe": "e5b82c633ef31fad029e9712ca4dc03a8c42ba5a9f4d09cc03620953fd33f522"
+      },
+      "ordinary": {
+        "applications": {
+          "qt-selftest": {
+            "passed": 121,
+            "failed": 0,
+            "skipped": 139
+          },
+          "widgets-gallery": {
+            "passed": 143,
+            "failed": 0,
+            "skipped": 7
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 1
+          },
+          "gl-heavy-gallery": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 4
+          },
+          "painting-lab": {
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0
+          },
+          "multimedia-lab": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 3
+          },
+          "network-gui": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 1
+          }
+        },
+        "passed": 369,
+        "failed": 0,
+        "skipped": 155
+      },
+      "standalone_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "strict_qt_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "log_directory": "build/qt4-win-llvm-migration-guest/win95-evidence",
+      "logs_sha256": {
+        "smoke-report.txt": "a4ddf4eebe6661ccb75612e9cc8025aa186e7a2d5e6e40aec8ec306dde23c6db",
+        "PROBE.LOG": "031372853e0e72774e75921b0366f2e3f3de4362e8dd980ae3881f95b7c7c56b",
+        "STRICT.LOG": "ae487c31a9d48b996c5e4439105aa277084beb0b420f70ae439b350aa0acc311",
+        "STATUS.TXT": "a8259fab2a115a37d7783bfede9de0bff062f5a24f6fd38c5ed69cbc1077b618"
+      }
+    },
+    "amd64": {
+      "guest": "Windows XP x64 SP2 (VMware)",
+      "buildkit_ref": "escimqf8p58uxc9v5ozapp6mc",
+      "image": "qt4-win-amd64-llvm21",
+      "image_id": "sha256:0571af507f82ff0aee48e533c8d795a52658843207ce2e4daa250123a984daee",
+      "toolchain_image_id": "sha256:f3a5e1adc4dfb640e30efa748416b9b00cbc3373397cbf31f7af7f7bd68d03b4",
+      "iso_sha256": "045c888828aa85d4b2524f70d03cce21a5db10ef0d90adbd96134e158b924cfa",
+      "executables_sha256": {
+        "cxx23-probe.exe": "15b096ce3c0fe2a27122e0e428cb65ed1da970124cddb0b41f57914a09dde6a0",
+        "gl-heavy-gallery.exe": "689e8c2cdb0c7075a647fb48ae101dd2b4e58fd72b80d2b0666fb1d1cab66878",
+        "graphics-gallery.exe": "fa0f531281eba4bcdba75aa6b17f11d64b462c772a8982544764ac9a3a26f4f1",
+        "multimedia-lab.exe": "8c9c593ac3823a3930827c4475de9c7d380585da5598e0e19656fdf54de6ee0b",
+        "network-gui.exe": "cc195650d36d42a388503b3143ac958b6fe54da501f5f6e26f330993e7f28411",
+        "painting-lab.exe": "83e425356fd513a77524049b1bf284553ac998ce3bb1be691a2eee47a4479c98",
+        "qt-selftest-cxx23.exe": "f1a05e4761a48575128dde0a4ad445150023fc4e0f37651e468af354da7a57c0",
+        "qt-selftest.exe": "ccfd17ff80588ac7dbd62a4d68815aa7964451ece1fd32f7fd6142eb222978aa",
+        "quick-qml-gallery.exe": "45ba7a7b082d552dd9bf99e460214748fb563f8db3e4b1f3f001c1e8f46f11fd",
+        "smoke-runner.exe": "ee808d629d5631f16dbc9923dc703b3b23b1e63ab47286f48e119fd4c91ab7ae",
+        "widgets-gallery.exe": "94402c87498c7479662581de24efaa94b9b0744dfd8e4a1db0bb79c3bf26d822"
+      },
+      "ordinary": {
+        "applications": {
+          "qt-selftest": {
+            "passed": 121,
+            "failed": 0,
+            "skipped": 139
+          },
+          "widgets-gallery": {
+            "passed": 141,
+            "failed": 0,
+            "skipped": 7
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0
+          },
+          "quick-qml-gallery": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 1
+          },
+          "gl-heavy-gallery": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 4
+          },
+          "painting-lab": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 5
+          },
+          "multimedia-lab": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 3
+          },
+          "network-gui": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 1
+          }
+        },
+        "passed": 362,
+        "failed": 0,
+        "skipped": 160
+      },
+      "standalone_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "strict_qt_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "log_directory": "build/qt4-win-llvm-migration-guest/xp-evidence",
+      "logs_sha256": {
+        "SMOKE.TXT": "c3b37c160e5c0a1b20ab0b457b5386fa0f7ed0b0dff150a4b9c1c06fff5a2149",
+        "PROBE.LOG": "031372853e0e72774e75921b0366f2e3f3de4362e8dd980ae3881f95b7c7c56b",
+        "STRICT.LOG": "ae487c31a9d48b996c5e4439105aa277084beb0b420f70ae439b350aa0acc311",
+        "STATUS.TXT": "cc5b31f0ad0467aa6477a61ea691427b56c2f445d386aceccd64fa3ac4eb5ccc"
+      }
+    }
+  }
+}

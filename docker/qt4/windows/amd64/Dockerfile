@@ -1,130 +1,30 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-#
-# Qt 4.8.7, static, for Windows x86_64 with MinGW-w64, from XP x64 and Server
-# 2003 (the first 64-bit Windows; no backport needed). Ubuntu 16.04: gcc 5
-# defaults to the C++98 dialect Qt 4.8.7 was written for.
-#
-#   toolchain  the MinGW cross-compiler
-#   builder    OpenSSL 3, then Qt: patch, configure, build, install
-#   final      the toolchain plus the installed SDK
+ARG SDK_IMAGE=sdk
+ARG XP_TOOLCHAIN_IMAGE=qt5-win-amd64:llvm21-toolchain
+FROM ${XP_TOOLCHAIN_IMAGE} AS toolchain
+ENV QT_INSTALL_DIR=/opt/qt4-win-amd64-llvm
+ENV PATH=${QT_INSTALL_DIR}/bin:/opt/llvm-runtime-xp/bin:/opt/llvm-21/bin:/usr/local/bin:/usr/bin:/bin
 
-# ---------------------------------------------------------------------------
-# toolchain: the MinGW cross-compiler, shared by builder and final.
-# ---------------------------------------------------------------------------
+FROM toolchain AS build-qt
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/src/qt.tar.gz \
+    --mount=type=bind,source=patches/qt4,target=/src/patches/qt4 \
+    --mount=type=bind,source=patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch,target=/src/patches/qt5/windows-xp-llvm/01-qtscript-win32-clock.patch \
+    --mount=type=bind,source=scripts/build/qt4-windows-xp/build-qt.sh,target=/src/build-qt.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
 
-# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
-# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
-ARG BASE_REGISTRY=ghcr.io/openkaryonlab
-FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
-# An apt-get update that fails on an index it could not fetch.
-COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
+FROM toolchain AS sdk
+COPY --from=build-qt ${QT_INSTALL_DIR} ${QT_INSTALL_DIR}
+COPY --from=build-qt /work/qt4-xp-src/LICENSE.LGPLv21 /work/qt4-xp-src/LICENSE.LGPLv3 /work/qt4-xp-src/LGPL_EXCEPTION.txt /opt/qt4-windows-xp/licenses/
+ENV QMAKESPEC=win32-g++-longreach-xp
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
 
-# The posix threading alternative, as in the Qt 5 Windows images.
-RUN \
-    set -eux && \
-    export DEBIAN_FRONTEND=noninteractive && \
-    sh /usr/local/bin/apt-update && \
-    apt -y upgrade && \
-    apt -y install \
-        build-essential python perl git wget nano ca-certificates xz-utils \
-        binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 && \
-    update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix && \
-    update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix && \
-    apt -y autoremove && \
-    apt -y autoclean && \
-    apt -y clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    exit 0
-
-# ---------------------------------------------------------------------------
-# builder: unpack, patch, configure, build and install Qt.
-# ---------------------------------------------------------------------------
-FROM toolchain AS builder
-
-ARG QT4_VERSION="4.8.7"
-ARG QT4_DISTRO="qt-everywhere-opensource-src-${QT4_VERSION}.tar.gz"
-# OpenSSL 3, which patches/qt4/all/01-openssl-1.1-api.patch makes Qt 4 accept.
-ARG OPENSSL_VERSION="3.5.7"
-ARG OPENSSL_DISTRO="openssl-${OPENSSL_VERSION}.tar.gz"
-ARG DOWNLOAD_DIR="downloads"
-ARG QT4_SRC_DIR="qt-everywhere-opensource-src-${QT4_VERSION}"
-ARG PARALLEL_JOBS=""
-
-COPY patches/qt4/all /tmp/patches/qt4/all
-COPY patches/qt4/windows /tmp/patches/qt4/windows
-COPY ${DOWNLOAD_DIR}/${QT4_DISTRO} /opt/${QT4_DISTRO}
-COPY ${DOWNLOAD_DIR}/${OPENSSL_DISTRO} /opt/${OPENSSL_DISTRO}
-COPY scripts/build/openssl.sh /tmp/build-openssl.sh
-
-# Qt 4.8.7's own cross invocation (-xplatform win32-g++ with CROSS_COMPILE):
-# configure builds moc, rcc and uic with the host g++, so no host-tools pass is
-# needed. The disabled features are the Linux list minus the X11 ones; Windows
-# uses GDI fonts, so no fontconfig or FreeType. 0x0502 is XP x64 and Server
-# 2003, the first 64-bit Windows.
-#
-# OPENSSL_LIBS reaches Qt 4's configure through the environment; as an
-# argument it is ignored silently, hence the check after configure.
-RUN \
-    set -eux && \
-    cd /opt && \
-    bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO mingw64 /opt/openssl-3 \
-        no-shared no-tests --cross-compile-prefix=x86_64-w64-mingw32- -D_WIN32_WINNT=0x0502 && \
-    tar -xzf $QT4_DISTRO && \
-    mv $QT4_SRC_DIR Qt-4.8 && \
-    rm -f $QT4_DISTRO && \
-    cd /opt/Qt-4.8/ && \
-    for p in /tmp/patches/qt4/all/*.patch /tmp/patches/qt4/windows/*.patch; do echo "applying $p"; patch -p1 --fuzz=0 < "$p" || exit 1; done && \
-    OPENSSL_LIBS="-L/opt/openssl-3/lib64 -L/opt/openssl-3/lib -lssl -lcrypto -lcrypt32 -lws2_32 -lgdi32 -luser32 -ladvapi32" \
-    ./configure -prefix "/usr/local/Qt-4.8" \
-    -opensource -confirm-license -release -static \
-    -platform linux-g++ \
-    -xplatform win32-g++ -device-option CROSS_COMPILE=x86_64-w64-mingw32- \
-    -openssl-linked -I/opt/openssl-3/include -L/opt/openssl-3/lib64 -L/opt/openssl-3/lib \
-    -nomake demos -nomake examples -nomake docs -nomake translations -nomake tests \
-    -no-webkit -no-phonon -no-phonon-backend -no-glib -no-gtkstyle \
-    -no-dbus -no-cups -no-icu -no-pch -no-separate-debug-info -no-openvg \
-    -no-sql-mysql -no-sql-psql -no-sql-odbc -qt-sql-sqlite \
-    -qt-zlib -qt-libpng -qt-libjpeg -qt-libtiff -qt-libmng \
-    -opengl desktop -qt3support -xmlpatterns -script -scripttools -svg -declarative \
-    -multimedia -audio-backend -accessibility -stl -exceptions -largefile && \
-    grep -q "openssl-linked" mkspecs/qconfig.pri || \
-        { echo "configure did not enable linked OpenSSL - check OPENSSL_LIBS" >&2; exit 1; } && \
-    # configure sizes pointers with a test it builds before CROSS_COMPILE applies,
-    # so the test fails and reads as 4; a 32-bit QT_POINTER_SIZE in a 64-bit Qt
-    # makes libtiff assert (tmsize_t).
-    sed -i 's/^#define QT_POINTER_SIZE 4$/#define QT_POINTER_SIZE 8/' src/corelib/global/qconfig.h && \
-    grep -q '^#define QT_POINTER_SIZE 8$' src/corelib/global/qconfig.h || \
-        { echo "QT_POINTER_SIZE is not 8 in qconfig.h" >&2; exit 1; } && \
-    make -j "${PARALLEL_JOBS:-$(nproc)}" && \
-    make install && \
-    echo "SDK prefix to be shipped:" && du -sh /usr/local/Qt-4.8 && \
-    exit 0
-
-# ---------------------------------------------------------------------------
-# final: the toolchain stage plus the installed SDK, with the test suite built
-# against it.
-# ---------------------------------------------------------------------------
-FROM toolchain
-
-ARG PARALLEL_JOBS=""
-
-COPY --from=builder /usr/local/Qt-4.8 /usr/local/Qt-4.8
-# libQtNetwork.prl names -lssl -lcrypto and their -L path, so OpenSSL travels too.
-COPY --from=builder /opt/openssl-3 /opt/openssl-3
-
-ENV PATH="/usr/local/Qt-4.8/bin:${PATH}"
-
-COPY tests /tmp/qt4-smoke-tests
-# qt4-tests.sh finds the dependency check beside itself; here it proves the
-# static libgcc and libstdc++ reached the link.
-COPY scripts/build/qt4-tests.sh scripts/audit/qt4-check-deps.sh /tmp/qt4-build/
-
-# Building the suite against the installed SDK alone proves it self-contained,
-# and exercises the Linux qmake and moc of this cross SDK. The executables
-# in /opt/qt4-smoke-bin run on Windows (make qt4-extract-tests).
-RUN bash /tmp/qt4-build/qt4-tests.sh /usr/local/Qt-4.8 /tmp/qt4-smoke-tests /opt/qt4-smoke-bin "$(nproc)" \
-        -spec /usr/local/Qt-4.8/mkspecs/win32-g++ -unix && \
-    for f in /opt/qt4-smoke-bin/*; do bash /tmp/qt4-build/qt4-check-deps.sh "$f" || exit 1; done
-
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+FROM ${SDK_IMAGE} AS examples
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build,target=/src/scripts/build \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt4-windows-xp/build-examples.sh

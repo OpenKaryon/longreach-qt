@@ -13,12 +13,12 @@ QT4_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT4_ARCHIVE)
 QT4_ARCHIVE_URL ?= https://download.qt.io/archive/qt/$(QT4_SERIES)/$(QT4_VERSION)/$(QT4_ARCHIVE)
 QT4_ARCHIVE_SHA256 ?= e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f626ea0
 
-QT4_WIN_I386_IMAGE := qt4-win-i386
-QT4_WIN_AMD64_IMAGE := qt4-win-amd64
-QT4_LINUX_I386_IMAGE := qt4-linux-i386
-QT4_LINUX_AMD64_IMAGE := qt4-linux-amd64
-QT4_MACOS_I386_IMAGE := qt4-macos-i386
-QT4_MACOS_PPC_IMAGE := qt4-macos-ppc
+QT4_WIN_I386_IMAGE := qt4-win-i386-llvm21
+QT4_WIN_AMD64_IMAGE := qt4-win-amd64-llvm21
+QT4_LINUX_I386_IMAGE := qt4-linux-i386-llvm21
+QT4_LINUX_AMD64_IMAGE := qt4-linux-amd64-llvm21
+QT4_MACOS_I386_IMAGE := qt4-macos-i386-llvm21
+QT4_MACOS_PPC_IMAGE := qt4-macos-ppc-llvm21
 
 .PHONY: download-qt4 download-qt4-openssl \
         qt4-linux-i386 qt4-linux-amd64 qt4-win-i386 qt4-win-amd64 \
@@ -43,52 +43,45 @@ $(QT4_ARCHIVE_PATH):
 
 QT4_BUILD_ARGS = --build-arg QT4_VERSION=$(QT4_VERSION) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
 
-# Linux i386 and amd64 from the pinned Debian 3.1 Sarge packages.
-qt4-linux-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+# Both Sarge SDKs use the same Dockerfile with architecture-specific pinned inputs.
+QT4_SARGE_TARGETS := qt4-linux-i386 qt4-linux-amd64
+QT4_SARGE_ARCH = $(if $(filter qt4-linux-amd64%,$@),amd64,i386)
+QT4_SARGE_IMAGE = $(if $(filter amd64,$(QT4_SARGE_ARCH)),$(QT4_LINUX_AMD64_IMAGE),$(QT4_LINUX_I386_IMAGE))
+QT4_SARGE_INPUTS = qt4-sarge-$(QT4_SARGE_ARCH)-inputs
+QT4_SARGE_COMPILER ?= $(QT6_LLVM_COMPILER_IMAGE)
+QT4_SARGE_QEMU ?= longreach-run-qemu:lucid-$(QT4_SARGE_ARCH)-bookworm
+QT4_SARGE_OUT = $(ARTIFACTS_DIR)/tests-$(QT4_SARGE_IMAGE)
+QT4_SARGE_CRT_VERSION := 5.4.0-6ubuntu1~16.04.12
+QT4_SARGE_BUILD = docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --build-arg SARGE_ARCH=$(QT4_SARGE_ARCH) --build-arg SARGE_CRT_FILENAME=libgcc-5-dev_$(QT4_SARGE_CRT_VERSION)_$(QT4_SARGE_ARCH).deb --build-arg SARGE_CRT_SHA256=$(shell $(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch $(QT4_SARGE_ARCH) --crt-sha256) --build-arg LLVM_COMPILER_IMAGE=$(QT4_SARGE_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/Dockerfile
+
+.PHONY: $(addsuffix -inputs,$(QT4_SARGE_TARGETS)) $(addsuffix -smoke,$(QT4_SARGE_TARGETS)) $(addsuffix -qemu,$(QT4_SARGE_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_TARGETS))
+$(QT4_SARGE_TARGETS): $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+$(QT4_SARGE_TARGETS) $(addsuffix -inputs,$(QT4_SARGE_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_TARGETS)): $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+$(QT4_SARGE_TARGETS) $(addsuffix -probe,$(QT4_SARGE_TARGETS)): build-qt6-llvm-compiler
+$(QT4_SARGE_TARGETS) $(addsuffix -inputs,$(QT4_SARGE_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_TARGETS)) $(addsuffix -smoke,$(QT4_SARGE_TARGETS)):
 	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch i386
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/386 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/i386/Dockerfile -t $(QT4_LINUX_I386_IMAGE) .
+	$(if $(filter-out %-smoke,$@),$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch $(QT4_SARGE_ARCH) $(if $(filter %-probe,$@),--vm))
+	$(if $(filter-out %-smoke,$@),$(QT4_SARGE_BUILD) --target sysroot -t $(QT4_SARGE_INPUTS) .)
+	$(if $(filter-out %-inputs,$@),$(QT4_SARGE_BUILD) --target $(if $(filter %-probe,$@),sdk-toolchain,$(if $(filter %-smoke,$@),examples,sdk)) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT4_SARGE_IMAGE)) -t $(QT4_SARGE_IMAGE)$(if $(filter %-smoke,$@),-examples)$(if $(filter %-probe,$@),-probe) .)
+	$(if $(filter %-probe,$@),$(call MKDIR_P,$(QT4_SARGE_OUT)/probe/bin))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_OUT)/probe/bin:/export" --entrypoint cp $(QT4_SARGE_IMAGE)-probe /opt/qt4-sarge/cxx23-probe /export/)
+	$(if $(filter %-probe,$@),$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --probe-only --arch $(QT4_SARGE_ARCH) --out "$(QT4_SARGE_OUT)/probe" --sarge-image "$(QT4_SARGE_INPUTS)" --qemu-image "$(QT4_SARGE_QEMU)")
+	$(if $(filter %-smoke,$@),$(call MKDIR_P,$(QT4_SARGE_OUT)))
+	$(if $(filter %-smoke,$@),$(PYTHON) -c "from pathlib import Path; Path('$(QT4_SARGE_OUT)/elf-audit.json').unlink(missing_ok=True)")
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_OUT):/export" $(QT4_SARGE_IMAGE)-examples -ec "mkdir -p /export/bin && cp /out/bin/* /export/bin/")
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_OUT):/out" -v "$(CURDIR)/scripts/build/qt4-sarge:/scripts:ro" -v "$(CURDIR)/tests/expected-apps.txt:/expected-apps.txt:ro" $(QT4_SARGE_IMAGE) -ec "mkdir -p /work/suite && cp /expected-apps.txt /work/suite/expected-apps.txt && echo qt-selftest-cxx23 >> /work/suite/expected-apps.txt && python3 /scripts/audit-elf.py")
+	$(if $(filter %-smoke,$@),$(PYTHON) scripts/tests/write_manifest.py --out "$(QT4_SARGE_OUT)/bin" --manifest-name ../manifest.json --image "$(QT4_SARGE_IMAGE)" --qt-version "$(QT4_VERSION)" --openssl-version 1.0.2u --kind qt4-build-kit-tests --license-profile lgpl-friendly)
 
-qt4-linux-amd64: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
+$(addsuffix -qemu,$(QT4_SARGE_TARGETS)):
 	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch amd64
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/linux/amd64/Dockerfile -t $(QT4_LINUX_AMD64_IMAGE) .
+	$(PYTHON) scripts/fetch/qt4-sarge-fetch.py --arch $(QT4_SARGE_ARCH) --vm
+	$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --arch $(QT4_SARGE_ARCH) --out "$(QT4_SARGE_OUT)" --sarge-image "$(QT4_SARGE_INPUTS)" --qemu-image "$(QT4_SARGE_QEMU)"
 
-# Opt-in Clang/libc++ SDKs. The existing SDKs supply the pinned Sarge
-# sysroot, CRT startup objects and OpenSSL.
-QT4_SARGE_LLVM_ARCH = $(if $(filter qt4-linux-amd64-llvm%,$@),amd64,i386)
-QT4_SARGE_LLVM_PLATFORM = linux/$(if $(filter amd64,$(QT4_SARGE_LLVM_ARCH)),amd64,386)
-QT4_SARGE_LLVM_TRIPLE = $(if $(filter amd64,$(QT4_SARGE_LLVM_ARCH)),x86_64,i686)-linux-gnu
-QT4_SARGE_LLVM_IMAGE = qt4-linux-$(QT4_SARGE_LLVM_ARCH):llvm21
-QT4_SARGE_LLVM_BASE ?= qt4-linux-$(QT4_SARGE_LLVM_ARCH):latest
-QT4_SARGE_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
-QT4_SARGE_LLVM_HOST ?= host-packages
-QT4_SARGE_LLVM_QEMU ?= longreach-run-qemu:lucid-$(QT4_SARGE_LLVM_ARCH)-bookworm
-QT4_SARGE_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-linux-$(QT4_SARGE_LLVM_ARCH)-llvm21
+# Keep the names used by the LLVM trial.
+.PHONY: $(foreach t,$(QT4_SARGE_TARGETS),$(addprefix $(t)-llvm,-probe -examples -qemu) $(t)-llvm)
+$(foreach t,$(QT4_SARGE_TARGETS),$(foreach suffix,-probe -examples -qemu,$(eval $(t)-llvm$(suffix): $(t)$(suffix)))$(eval $(t)-llvm: build-$(t)))
 
-QT4_SARGE_LLVM_TARGETS := qt4-linux-i386-llvm qt4-linux-amd64-llvm
-.PHONY: $(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -qemu,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_LLVM_TARGETS))
-BUILD_TARGETS += $(QT4_SARGE_LLVM_TARGETS)
-$(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)): $(QT4_ARCHIVE_PATH)
-
-$(QT4_SARGE_LLVM_TARGETS) $(addsuffix -examples,$(QT4_SARGE_LLVM_TARGETS)) $(addsuffix -probe,$(QT4_SARGE_LLVM_TARGETS)): $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
-	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT4_SARGE_LLVM_BASE) $(QT4_SARGE_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg BASE_REGISTRY=$(BASE_REGISTRY) $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) --build-arg SARGE_IMAGE=$(QT4_SARGE_LLVM_BASE) --build-arg SARGE_ARCH=$(QT4_SARGE_LLVM_ARCH) --build-arg SARGE_PLATFORM=$(QT4_SARGE_LLVM_PLATFORM) --build-arg SARGE_GCC_TRIPLE=$(QT4_SARGE_LLVM_TRIPLE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_SARGE_LLVM_COMPILER) --build-arg HOST_IMAGE=$(QT4_SARGE_LLVM_HOST) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),sdk-toolchain,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/linux/Dockerfile-llvm -t $(QT4_SARGE_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
-	$(if $(filter %-probe,$@),$(call MKDIR_P,$(QT4_SARGE_LLVM_OUT)/probe/bin))
-	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT)/probe/bin:/export" --entrypoint cp $(QT4_SARGE_LLVM_IMAGE)-probe /opt/qt4-sarge/cxx23-probe /export/)
-	$(if $(filter %-probe,$@),$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --probe-only --arch $(QT4_SARGE_LLVM_ARCH) --out "$(QT4_SARGE_LLVM_OUT)/probe" --sarge-image "$(QT4_SARGE_LLVM_BASE)" --qemu-image "$(QT4_SARGE_LLVM_QEMU)")
-	$(if $(filter %-examples,$@),$(call MKDIR_P,$(QT4_SARGE_LLVM_OUT)))
-	$(if $(filter %-examples,$@),$(PYTHON) -c "from pathlib import Path; Path('$(QT4_SARGE_LLVM_OUT)/elf-audit.json').unlink(missing_ok=True)")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT):/export" $(QT4_SARGE_LLVM_IMAGE) -ec "mkdir -p /export/bin && cp /out/bin/* /export/bin/")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_SARGE_LLVM_OUT):/out" -v "$(CURDIR)/scripts/build/qt4-sarge:/scripts:ro" -v "$(CURDIR)/tests/expected-apps.txt:/expected-apps.txt:ro" -e SARGE_ARCH=$(QT4_SARGE_LLVM_ARCH) $(QT4_SARGE_LLVM_BASE) -ec "mkdir -p /work/suite && cp /expected-apps.txt /work/suite/expected-apps.txt && echo qt-selftest-cxx23 >> /work/suite/expected-apps.txt && python /scripts/audit-elf.py")
-
-$(addsuffix -qemu,$(QT4_SARGE_LLVM_TARGETS)):
-	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/build/qt4-sarge/run-llvm-qemu.py --arch $(QT4_SARGE_LLVM_ARCH) --out "$(QT4_SARGE_LLVM_OUT)" --sarge-image "$(QT4_SARGE_LLVM_BASE)" --qemu-image "$(QT4_SARGE_LLVM_QEMU)"
-
-.PHONY: qt4-macos-i386
-# Tiger: the Mac OS X 10.4u SDK, and GCC 5.5 for the C++ runtime.
+# Tiger uses the Mac OS X 10.4u SDK and the patched Darwin Clang.
 TIGER_SDK_PATH := $(DOWNLOAD_DIR)/MacOSX10.4u.sdk.tar.xz
 TIGER_SDK_URL ?= https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.4u.sdk.tar.xz
 TIGER_SDK_SHA256 := d28276ce6b0f14af30f3bfdc171f8ef4033652da593578568f8be189506c1021
@@ -96,37 +89,32 @@ GCC55_PATH := $(DOWNLOAD_DIR)/gcc-5.5.0.tar.xz
 GCC55_URL ?= https://ftp.gnu.org/gnu/gcc/gcc-5.5.0/gcc-5.5.0.tar.xz
 GCC55_SHA256 := 530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87
 
-qt4-macos-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(GCC55_PATH)
-	$(ONE_BUILD_CHECK)
-	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg LAB_GIT=$(LAB_GIT) -f docker/qt4/macos/i386/Dockerfile -t $(QT4_MACOS_I386_IMAGE) .
+QT4_TIGER_LLVM_COMPILER ?= $(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE)
+QT4_TIGER_LLVM_OUT := $(ARTIFACTS_DIR)/tests-$(QT4_MACOS_I386_IMAGE)
 
-# The Tiger LLVM profile shares the patched Darwin compiler from Qt 5.
-QT4_TIGER_LLVM_BASE ?= qt4-macos-i386:latest
-QT4_TIGER_LLVM_COMPILER ?= longreach-llvm:21.1.8-snow-tls
-QT4_TIGER_LLVM_IMAGE := qt4-macos-i386:llvm21
-QT4_TIGER_LLVM_OUT := $(ARTIFACTS_DIR)/tests-qt4-macos-i386-llvm21
-
+.PHONY: qt4-macos-i386 qt4-macos-i386-probe qt4-macos-i386-examples qt4-macos-i386-extract-tests
 .PHONY: qt4-macos-i386-llvm qt4-macos-i386-llvm-probe qt4-macos-i386-llvm-examples
-BUILD_TARGETS += qt4-macos-i386-llvm
-qt4-macos-i386-llvm qt4-macos-i386-llvm-probe qt4-macos-i386-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
-	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT4_TIGER_LLVM_BASE) $(QT4_TIGER_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg TIGER_IMAGE=$(QT4_TIGER_LLVM_BASE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_TIGER_LLVM_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/macos/i386/Dockerfile-llvm -t $(QT4_TIGER_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
-	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_TIGER_LLVM_OUT)))
-	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_TIGER_LLVM_IMAGE)-probe "cp /out/cxx23-probe /export/")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_TIGER_LLVM_IMAGE) "cp /out/*.tar.gz /out/macho-audit*.json /out/README.txt /out/*LICENSE* /out/*COPYING* /out/*EXCEPTION* /export/")
+.PHONY: build-qt4-macos-i386 build-qt4-macos-i386-examples
 
-qt4-macos-i386-llvm qt4-macos-i386-llvm-examples: $(QT4_ARCHIVE_PATH)
+qt4-macos-i386: $(QT4_ARCHIVE_PATH)
+qt4-macos-i386 qt4-macos-i386-probe: $(TIGER_SDK_PATH) $(QT4_OPENSSL_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt5-macos-snow-llvm-compiler
+qt4-macos-i386 qt4-macos-i386-probe qt4-macos-i386-smoke:
+	$(ONE_BUILD_CHECK)
+	$(if $(filter-out %-smoke,$@),docker image inspect --format "{{.Id}}" $(QT4_TIGER_LLVM_COMPILER))
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg LAB_GIT=$(LAB_GIT) --build-arg LLVM_COMPILER_IMAGE=$(QT4_TIGER_LLVM_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-smoke,$@),examples,sdk)) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT4_MACOS_I386_IMAGE)) -f docker/qt4/macos/i386/Dockerfile -t $(QT4_MACOS_I386_IMAGE)$(if $(filter %-smoke,$@),-examples)$(if $(filter %-probe,$@),-probe) .
+	$(if $(filter %-probe %-smoke,$@),$(call MKDIR_P,$(QT4_TIGER_LLVM_OUT)))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_MACOS_I386_IMAGE)-probe "cp /out/cxx23-probe /export/")
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_TIGER_LLVM_OUT):/export" $(QT4_MACOS_I386_IMAGE)-examples "cp /out/*.tar.gz /out/macho-audit*.json /out/README.txt /out/*LICENSE* /out/*EXCEPTION* /export/")
+
+qt4-macos-i386-llvm: build-qt4-macos-i386
+qt4-macos-i386-llvm-probe: qt4-macos-i386-probe
+qt4-macos-i386-llvm-examples qt4-macos-i386-extract-tests: qt4-macos-i386-examples
 
 $(TIGER_SDK_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(TIGER_SDK_URL)" "$@" "$(TIGER_SDK_SHA256)"
 
 $(GCC55_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(GCC55_URL)" "$@" "$(GCC55_SHA256)"
-
-.PHONY: qt4-macos-i386-extract-tests qt4-macos-ppc qt4-macos-ppc-extract-tests
-qt4-macos-i386-extract-tests:
-	$(PYTHON) scripts/build/qt4-macos-examples.py --image "$(QT4_MACOS_I386_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
 
 # PowerPC from Jaguar: one Dockerfile builds both compilers, OpenSSL and Qt.
 JAGUAR_SDK_PATH := $(DOWNLOAD_DIR)/MacOSX10.2.8.sdk.tar.xz
@@ -136,43 +124,30 @@ JAGUAR_SDK_SHA256 := 8f30a969f8ae2be2ce9c2fae3a649f342a6b4aeceda9021f978af502fad
 $(JAGUAR_SDK_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(JAGUAR_SDK_URL)" "$@" "$(JAGUAR_SDK_SHA256)"
 
-qt4-macos-ppc: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(JAGUAR_SDK_PATH) $(GCC55_PATH)
-	$(ONE_BUILD_CHECK)
-	docker build --progress=plain $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg JOBS=$(PARALLEL_JOBS) --build-arg LAB_GIT=$(LAB_GIT) -f docker/qt4/macos/ppc/Dockerfile -t $(QT4_MACOS_PPC_IMAGE) .
+QT4_JAGUAR_LLVM_COMPILER ?= $(QT6_LLVM_COMPILER_IMAGE)
+QT4_JAGUAR_LLVM_OUT := $(ARTIFACTS_DIR)/tests-$(QT4_MACOS_PPC_IMAGE)
 
-qt4-macos-ppc-extract-tests:
-	$(PYTHON) scripts/build/qt4-macos-examples.py --platform macos-jaguar-ppc --image "$(QT4_MACOS_PPC_IMAGE)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
-
-# PowerPC from Jaguar with the patched LLVM Darwin backend.
-QT4_JAGUAR_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
-QT4_JAGUAR_LLVM_IMAGE := qt4-macos-ppc:llvm21
-QT4_JAGUAR_LLVM_OUT := $(ARTIFACTS_DIR)/tests-qt4-macos-ppc-llvm21
-
+.PHONY: qt4-macos-ppc qt4-macos-ppc-probe qt4-macos-ppc-examples qt4-macos-ppc-extract-tests
 .PHONY: qt4-macos-ppc-llvm qt4-macos-ppc-llvm-probe qt4-macos-ppc-llvm-examples
-BUILD_TARGETS += qt4-macos-ppc-llvm
-qt4-macos-ppc-llvm qt4-macos-ppc-llvm-probe qt4-macos-ppc-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+.PHONY: build-qt4-macos-ppc build-qt4-macos-ppc-examples
+
+qt4-macos-ppc: $(QT4_ARCHIVE_PATH)
+qt4-macos-ppc qt4-macos-ppc-probe: $(QT4_OPENSSL_PATH) $(TIGER_SDK_PATH) $(JAGUAR_SDK_PATH) $(GCC55_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
+qt4-macos-ppc qt4-macos-ppc-probe qt4-macos-ppc-smoke:
 	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT4_MACOS_PPC_IMAGE) $(QT4_JAGUAR_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg JAGUAR_IMAGE=$(QT4_MACOS_PPC_IMAGE) --build-arg LLVM_COMPILER_IMAGE=$(QT4_JAGUAR_LLVM_COMPILER) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/macos/ppc/Dockerfile-llvm -t $(QT4_JAGUAR_LLVM_IMAGE)$(if $(filter %-probe,$@),-probe) .
-	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_JAGUAR_LLVM_OUT)))
-	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_JAGUAR_LLVM_IMAGE)-probe "cp /out/cxx23-probe /out/cxx23-imports.txt /export/")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_JAGUAR_LLVM_IMAGE) "cp /out/qt4-jaguar-ppc-examples.tar.gz /out/qt-selftest-jaguar-strict /out/qtcore-probe /out/qtgui-probe /out/qt-libraries.txt /export/")
+	$(if $(filter-out %-smoke,$@),docker image inspect --format "{{.Id}}" $(QT4_JAGUAR_LLVM_COMPILER))
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --platform linux/amd64 --build-arg LAB_GIT=$(LAB_GIT) --build-arg LLVM_COMPILER_IMAGE=$(QT4_JAGUAR_LLVM_COMPILER) --build-arg JOBS=$(PARALLEL_JOBS) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-smoke,$@),examples,sdk)) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT4_MACOS_PPC_IMAGE)) -f docker/qt4/macos/ppc/Dockerfile -t $(QT4_MACOS_PPC_IMAGE)$(if $(filter %-smoke,$@),-examples)$(if $(filter %-probe,$@),-probe) .
+	$(if $(filter %-probe %-smoke,$@),$(call MKDIR_P,$(QT4_JAGUAR_LLVM_OUT)))
+	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_MACOS_PPC_IMAGE)-probe "cp /out/cxx23-probe /out/cxx23-imports.txt /export/")
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_JAGUAR_LLVM_OUT):/export" $(QT4_MACOS_PPC_IMAGE)-examples "cp /out/qt4-jaguar-ppc-examples.tar.gz /out/qt-selftest-jaguar-strict /out/qtcore-probe /out/qtgui-probe /out/qt-libraries.txt /export/")
 
-qt4-macos-ppc-llvm qt4-macos-ppc-llvm-examples: $(QT4_ARCHIVE_PATH)
+qt4-macos-ppc-llvm: build-qt4-macos-ppc
+qt4-macos-ppc-llvm-probe: qt4-macos-ppc-probe
+qt4-macos-ppc-llvm-examples qt4-macos-ppc-extract-tests: qt4-macos-ppc-examples
 
-# Windows 95 OSR2 and later: the Win9x backport, one configure.
-qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) -f docker/qt4/windows/i386/Dockerfile -t $(QT4_WIN_I386_IMAGE) .
-
-# 64-bit Windows starts at XP x64 and needs no backport.
-qt4-win-amd64: $(QT4_ARCHIVE_PATH) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT4_BUILD_ARGS) -f docker/qt4/windows/amd64/Dockerfile -t $(QT4_WIN_AMD64_IMAGE) .
-
-# Win95 builds a separate upstream LLVM runtime on the existing i386 sysroot.
-QT4_WIN95_LLVM_TOOLCHAIN ?= qt5-win-i386:llvm21-toolchain
-QT4_WIN95_LLVM_IMAGE := qt4-win-i386:llvm21-probe
+# Win95 builds a separate upstream LLVM runtime on the i386 XP sysroot.
+QT4_WIN95_LLVM_TOOLCHAIN ?= $(QT5_XP_I386_TOOLCHAIN_IMAGE)
+QT4_WIN95_LLVM_IMAGE := $(QT4_WIN_I386_IMAGE)-probe
 QT4_WIN95_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-win-i386-llvm21
 QT4_WIN95_MINGW_PATH := $(DOWNLOAD_DIR)/mingw-w64_4.0.4.orig.tar.bz2
 QT4_WIN95_MINGW_SHA256 := 89356a0aa8cf9f8b9dc8d92bc8dd01a131d4750c3acb30c6350a406316c42199
@@ -186,51 +161,64 @@ $(QT4_WIN95_MINGW_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "https://archive.ubuntu.com/ubuntu/pool/universe/m/mingw-w64/mingw-w64_4.0.4.orig.tar.bz2" "$@" "$(QT4_WIN95_MINGW_SHA256)"
 
 .PHONY: qt4-win-i386-llvm-probe qt4-win-i386-llvm qt4-win-i386-llvm-examples
-BUILD_TARGETS += qt4-win-i386-llvm
-qt4-win-i386-llvm-probe qt4-win-i386-llvm qt4-win-i386-llvm-examples: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(QT4_WIN95_MINGW_PATH)
+.PHONY: qt4-win-i386-examples build-qt4-win-i386 build-qt4-win-i386-examples
+qt4-win-i386-llvm: build-qt4-win-i386
+qt4-win-i386-llvm-examples: qt4-win-i386-examples
+qt4-win-i386-llvm-probe qt4-win-i386: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(QT4_WIN95_MINGW_PATH) build-qt5-win-i386-llvm-toolchain
+qt4-win-i386-llvm-probe qt4-win-i386 qt4-win-i386-smoke:
 	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT4_WIN95_LLVM_TOOLCHAIN) $(QT4_WIN_I386_IMAGE)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN95_LLVM_TOOLCHAIN) --build-arg WIN95_IMAGE=$(QT4_WIN_I386_IMAGE) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-examples,$@),examples,sdk)) -f docker/qt4/windows/i386/Dockerfile-llvm -t $(if $(filter %-probe,$@),$(QT4_WIN95_LLVM_IMAGE),qt4-win-i386:llvm21) .
-	$(if $(filter %-probe %-examples,$@),$(call MKDIR_P,$(QT4_WIN95_LLVM_OUT)))
+	$(if $(filter-out %-smoke,$@),docker image inspect --format "{{.Id}}" $(QT4_WIN95_LLVM_TOOLCHAIN))
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN95_LLVM_TOOLCHAIN) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-probe,$@),probe,$(if $(filter %-smoke,$@),examples,sdk)) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT4_WIN_I386_IMAGE)) -f docker/qt4/windows/i386/Dockerfile -t $(if $(filter %-probe,$@),$(QT4_WIN95_LLVM_IMAGE),$(QT4_WIN_I386_IMAGE)$(if $(filter %-smoke,$@),-examples)) .
+	$(if $(filter %-probe %-smoke,$@),$(call MKDIR_P,$(QT4_WIN95_LLVM_OUT)))
 	$(if $(filter %-probe,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN95_LLVM_OUT):/out" $(QT4_WIN95_LLVM_IMAGE) "cp /opt/llvm-runtime-win95/share/cxx23-probe.exe /out/")
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN95_LLVM_OUT):/out" qt4-win-i386:llvm21 "cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-win95/share/cxx23-probe.exe /out/")
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN95_LLVM_OUT):/out" $(QT4_WIN_I386_IMAGE)-examples "cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-win95/share/cxx23-probe.exe /out/")
+	$(if $(filter %-smoke,$@),$(PYTHON) scripts/tests/write_manifest.py --out "$(QT4_WIN95_LLVM_OUT)" --image "$(QT4_WIN_I386_IMAGE)" --qt-version "$(QT4_VERSION)" --openssl-version 1.0.2u --kind qt4-build-kit-tests --license-profile lgpl-friendly)
 
-qt4-win-i386-llvm qt4-win-i386-llvm-examples: $(QT4_ARCHIVE_PATH)
+qt4-win-i386: $(QT4_ARCHIVE_PATH) $(QT4_OPENSSL_PATH)
 
 # The XP x64 SDK reuses the upstream LLVM toolchain stage from Qt 5.
-QT4_WIN_AMD64_LLVM_IMAGE := qt4-win-amd64:llvm21
-QT4_WIN_AMD64_LLVM_TOOLCHAIN ?= qt5-win-amd64:llvm21-toolchain
+QT4_WIN_AMD64_LLVM_TOOLCHAIN ?= $(QT5_XP_AMD64_TOOLCHAIN_IMAGE)
 QT4_WIN_AMD64_LLVM_OUT = $(ARTIFACTS_DIR)/tests-qt4-win-amd64-llvm21
 
 .PHONY: qt4-win-amd64-llvm-probe qt4-win-amd64-llvm qt4-win-amd64-llvm-examples
-BUILD_TARGETS += qt4-win-amd64-llvm
+.PHONY: qt4-win-amd64-examples build-qt4-win-amd64 build-qt4-win-amd64-examples
+qt4-win-amd64-llvm: build-qt4-win-amd64
+qt4-win-amd64-llvm-examples: qt4-win-amd64-examples
 
-qt4-win-amd64-llvm-probe:
+qt4-win-amd64-llvm-probe: build-qt5-win-amd64-llvm-toolchain
 	$(ONE_BUILD_CHECK)
 	$(call MKDIR_P,$(QT4_WIN_AMD64_LLVM_OUT)/bin)
 	docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN_AMD64_LLVM_OUT)/bin:/out" $(QT4_WIN_AMD64_LLVM_TOOLCHAIN) cp /opt/llvm-runtime-xp/share/cxx23-probe.exe /out/
 
-qt4-win-amd64-llvm qt4-win-amd64-llvm-examples: $(QT4_ARCHIVE_PATH)
+qt4-win-amd64: $(QT4_ARCHIVE_PATH) build-qt5-win-amd64-llvm-toolchain
+qt4-win-amd64 qt4-win-amd64-smoke:
 	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT4_WIN_AMD64_LLVM_TOOLCHAIN)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN_AMD64_LLVM_TOOLCHAIN) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt4/windows/amd64/Dockerfile-llvm -t $(QT4_WIN_AMD64_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(call MKDIR_P,$(QT4_WIN_AMD64_LLVM_OUT)))
-	$(if $(filter %-examples,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN_AMD64_LLVM_OUT):/out" $(QT4_WIN_AMD64_LLVM_IMAGE) "mkdir -p /out/bin && cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-xp/share/cxx23-probe.exe /out/bin/")
+	$(if $(filter-out %-smoke,$@),docker image inspect --format "{{.Id}}" $(QT4_WIN_AMD64_LLVM_TOOLCHAIN))
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg XP_TOOLCHAIN_IMAGE=$(QT4_WIN_AMD64_LLVM_TOOLCHAIN) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target $(if $(filter %-smoke,$@),examples,sdk) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT4_WIN_AMD64_IMAGE)) -f docker/qt4/windows/amd64/Dockerfile -t $(QT4_WIN_AMD64_IMAGE)$(if $(filter %-smoke,$@),-examples) .
+	$(if $(filter %-smoke,$@),$(call MKDIR_P,$(QT4_WIN_AMD64_LLVM_OUT)))
+	$(if $(filter %-smoke,$@),docker run --rm --network none -v "$(CURDIR)/$(QT4_WIN_AMD64_LLVM_OUT):/out" $(QT4_WIN_AMD64_IMAGE)-examples "mkdir -p /out/bin && cp /opt/qt4-smoke-bin/*.exe /opt/llvm-runtime-xp/share/cxx23-probe.exe /out/bin/")
+	$(if $(filter %-smoke,$@),$(PYTHON) scripts/tests/write_manifest.py --out "$(QT4_WIN_AMD64_LLVM_OUT)/bin" --manifest-name ../manifest.json --image "$(QT4_WIN_AMD64_IMAGE)" --qt-version "$(QT4_VERSION)" --openssl-version 3.5.7 --kind qt4-build-kit-tests --license-profile lgpl-friendly)
 
 # The test suite into artifacts/tests-<image>/: Windows i386 and Sarge build it
 # against the installed SDK now, Windows amd64 copies /opt/qt4-smoke-bin out
 # of the image.
-#   make qt4-extract-tests QT4_IMAGE=qt4-win-i386
+#   make qt4-extract-tests QT4_IMAGE=qt4-win-i386-llvm21
 QT4_IMAGE ?= $(QT4_WIN_I386_IMAGE)
 QT4_TESTS_OUT = $(ARTIFACTS_DIR)/tests-$(QT4_IMAGE)
 
 qt4-extract-tests:
 ifeq ($(QT4_IMAGE),$(QT4_WIN_I386_IMAGE))
-	$(PYTHON) scripts/build/qt4-win95-examples.py --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
+	$(MAKE) qt4-win-i386-examples
+else ifeq ($(QT4_IMAGE),$(QT4_WIN_AMD64_IMAGE))
+	$(MAKE) qt4-win-amd64-examples
 else ifeq ($(QT4_IMAGE),$(QT4_LINUX_I386_IMAGE))
-	$(PYTHON) scripts/build/qt4-sarge-examples.py --arch i386 --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
+	$(MAKE) qt4-linux-i386-examples
 else ifeq ($(QT4_IMAGE),$(QT4_LINUX_AMD64_IMAGE))
-	$(PYTHON) scripts/build/qt4-sarge-examples.py --arch amd64 --image "$(QT4_IMAGE)" --out "$(QT4_TESTS_OUT)" --jobs "$(PARALLEL_JOBS)" $(if $(filter 1,$(QT4_BUILD_LOCK_HELD)),--lock-held,)
+	$(MAKE) qt4-linux-amd64-examples
+else ifeq ($(QT4_IMAGE),$(QT4_MACOS_I386_IMAGE))
+	$(MAKE) qt4-macos-i386-examples
+else ifeq ($(QT4_IMAGE),$(QT4_MACOS_PPC_IMAGE))
+	$(MAKE) qt4-macos-ppc-examples
 else
 	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(QT4_TESTS_OUT)"
 	docker run --rm -v "$(CURDIR)/$(QT4_TESTS_OUT):/out" -v "$(CURDIR)/scripts:/scripts:ro" \
@@ -249,10 +237,20 @@ qt4-package-tests: qt4-extract-tests
 		--entrypoint bash $(QT4_IMAGE) -ec "tar -czf /artifacts/tests-$(QT4_IMAGE).tar.gz -C /artifacts/tests-$(QT4_IMAGE) . && sha256sum /artifacts/tests-$(QT4_IMAGE).tar.gz > /artifacts/tests-$(QT4_IMAGE).tar.gz.sha256"
 	@echo "-> $(QT4_TESTS_PACKAGE)"
 
+.PHONY: qt4-linux-i386-smoke
+$(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-linux-i386-smoke,,qt6-llvm-compiler))
 
-$(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,))
-$(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_WIN_AMD64_IMAGE),))
-$(eval $(call simple-build-targets,qt4-linux-i386,qt4-linux-i386,QT4_LINUX_I386_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_I386_IMAGE) QT4_BUILD_LOCK_HELD=1,))
-$(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-extract-tests,QT4_IMAGE=$(QT4_LINUX_AMD64_IMAGE) QT4_BUILD_LOCK_HELD=1,))
-$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-i386-extract-tests,QT4_BUILD_LOCK_HELD=1,))
-$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-extract-tests,QT4_BUILD_LOCK_HELD=1,))
+.PHONY: qt4-linux-amd64-smoke
+$(eval $(call simple-build-targets,qt4-linux-amd64,qt4-linux-amd64,QT4_LINUX_AMD64_IMAGE,qt4-linux-amd64-smoke,,qt6-llvm-compiler))
+
+.PHONY: qt4-macos-i386-smoke
+$(eval $(call simple-build-targets,qt4-macos-i386,qt4-macos-i386,QT4_MACOS_I386_IMAGE,qt4-macos-i386-smoke,,qt5-macos-snow-llvm-compiler qt6-llvm-compiler))
+
+.PHONY: qt4-macos-ppc-smoke
+$(eval $(call simple-build-targets,qt4-macos-ppc,qt4-macos-ppc,QT4_MACOS_PPC_IMAGE,qt4-macos-ppc-smoke,,qt6-llvm-compiler))
+
+.PHONY: qt4-win-i386-smoke
+$(eval $(call simple-build-targets,qt4-win-i386,qt4-win-i386,QT4_WIN_I386_IMAGE,qt4-win-i386-smoke,,qt5-win-i386-llvm-toolchain qt6-llvm-compiler))
+
+.PHONY: qt4-win-amd64-smoke
+$(eval $(call simple-build-targets,qt4-win-amd64,qt4-win-amd64,QT4_WIN_AMD64_IMAGE,qt4-win-amd64-smoke,,qt5-win-amd64-llvm-toolchain qt6-llvm-compiler))

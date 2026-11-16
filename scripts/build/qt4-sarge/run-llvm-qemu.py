@@ -59,7 +59,7 @@ def main():
     parser.add_argument("--qemu-image")
     args = parser.parse_args()
     output = args.out.resolve()
-    sarge_image = args.sarge_image or f"qt4-linux-{args.arch}:latest"
+    sarge_image = args.sarge_image or f"qt4-sarge-{args.arch}-inputs"
     qemu_image = args.qemu_image or f"longreach-run-qemu:lucid-{args.arch}-bookworm"
     packages = "debian-sarge-kernel" if args.arch == "i386" else "debian-sarge-kernel-amd64"
     kernel_path = ROOT / "downloads" / packages
@@ -112,7 +112,7 @@ def verify_examples(output, arch, parser):
         actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                   for p in (output / "bin").iterdir() if p.is_file()}
     except (OSError, ValueError, KeyError, TypeError):
-        parser.error(f"Build and audit the examples with make qt4-linux-{arch}-llvm-examples first")
+        parser.error(f"Build and audit the examples with make qt4-linux-{arch}-examples first")
     if "qt-selftest-cxx23" not in binaries or actual != binaries:
         parser.error("Exported examples do not match the ELF audit")
 

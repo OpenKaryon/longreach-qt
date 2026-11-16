@@ -6,10 +6,7 @@ a separate host compiler.
 
 | Qt | Targets | Compiler |
 |---|---|---|
-| 4 | `qt4-win-i386`, `qt4-win-amd64` | GCC / MinGW-w64 |
-| 4 | `qt4-linux-i386`, `qt4-linux-amd64` | GCC |
-| 4 | `qt4-macos-i386` | Clang via osxcross, GNU libstdc++ |
-| 4 | `qt4-macos-ppc` | GCC |
+| 4 | All six targets | LLVM 21.1.8 and static libc++ |
 | 5 | Linux, Windows XP and Intel macOS | LLVM 21.1.8 and static libc++ |
 | 5 | `qt5-win-arm64` | Clang / LLVM-MinGW |
 | 5 | `qt5-macos-arm64` | Clang via osxcross |
@@ -17,6 +14,7 @@ a separate host compiler.
 | 6 | `qt6-win-arm64` | Clang / LLVM-MinGW |
 | 6 | `qt6-macos-arm64` | Clang via osxcross |
 
+The [migration plan](releases/0.3.0-migration.md) tracks runtime validation.
 The [target pages](targets/) document the OS floors, supported module
 sets and build commands. The older compiler recipes are preserved at
 `v0.2.2`.

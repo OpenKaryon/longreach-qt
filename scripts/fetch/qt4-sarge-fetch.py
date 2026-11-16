@@ -11,12 +11,12 @@ import fetch as fetch_py
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCKS = ROOT / 'scripts/fetch/locks'
-GCC = {
-    'file': 'gcc-5.5.0.tar.xz',
-    'url': 'https://ftp.gnu.org/gnu/gcc/gcc-5.5.0/gcc-5.5.0.tar.xz',
-    'sha256': '530cea139d82fe542b358961130c69cfde8b3d14556370b65823d2f91f0ced87',
+CRT_VERSION = '5.4.0-6ubuntu1~16.04.12'
+CRT_SHA256 = {
+    'i386': 'f6bf03d89454db46ab222ef6cc809b9012dec2fe2b024d196ab1f527359756dc',
+    'amd64': '9fcd5a457cc7f001c62767720953ee8f133744db48b73be2008573768034a684',
 }
-SOURCES = [GCC, {
+SOURCES = [{
     'file': 'qt-everywhere-opensource-src-4.8.7.tar.gz',
     'url': 'https://download.qt.io/archive/qt/4.8/4.8.7/qt-everywhere-opensource-src-4.8.7.tar.gz',
     'sha256': 'e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f626ea0',
@@ -75,7 +75,11 @@ def main():
     parser.add_argument('--verify-only', action='store_true',
                         help='check the packages already downloaded, for every architecture and the VM; '
                              'fetch nothing (make verify-downloads checks the archives)')
+    parser.add_argument('--crt-sha256', action='store_true', help='print the pinned CRT package hash')
     args = parser.parse_args()
+    if args.crt_sha256:
+        print(CRT_SHA256[args.arch])
+        return
     if args.verify_only:
         global VERIFY_ONLY
         VERIFY_ONLY = True
@@ -89,6 +93,12 @@ def main():
     lock = json.loads((LOCKS / f'qt4-sarge-{args.arch}-packages.json').read_text(encoding='utf-8'))
     for item in lock['packages']:
         fetch(item, args.download_dir / f'debian-sarge-{args.arch}')
+    filename = f'libgcc-5-dev_{CRT_VERSION}_{args.arch}.deb'
+    fetch({
+        'file': filename,
+        'url': 'https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-5/' + filename,
+        'sha256': CRT_SHA256[args.arch],
+    }, args.download_dir)
     for item in SOURCES:
         fetch(item, args.download_dir)
     if args.vm:

@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "target": "qt4-macos-ppc",
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "build": {
+    "command": "make qt4-macos-ppc-examples PARALLEL_JOBS=3 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "probe_command": "make qt4-macos-ppc-probe PARALLEL_JOBS=3 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "dockerfile": "docker/qt4/macos/ppc/Dockerfile",
+    "sdk_image": "qt4-macos-ppc-llvm21",
+    "sdk_image_id": "sha256:990d8eda36e35538ba29d6b0d373848325c2be7fa496e2d665bac391053e7778",
+    "build_refs": [
+      "c34qmkx92ue3qe5rcef64o1s4",
+      "4pnfexpfvybppz6jzzzxuzmnz"
+    ],
+    "qmake": "2.01a",
+    "openssl": "1.0.2u",
+    "static_qt_libraries": [
+      "libQt3Support.a",
+      "libQtCore.a",
+      "libQtDeclarative.a",
+      "libQtGui.a",
+      "libQtMultimedia.a",
+      "libQtNetwork.a",
+      "libQtOpenGL.a",
+      "libQtScript.a",
+      "libQtScriptTools.a",
+      "libQtSql.a",
+      "libQtSvg.a",
+      "libQtTest.a",
+      "libQtUiTools.a",
+      "libQtUiTools_debug.a",
+      "libQtXml.a",
+      "libQtXmlPatterns.a"
+    ]
+  },
+  "guest": {
+    "os": "Mac OS X 10.2",
+    "build": "6C115",
+    "cpu": "PowerPC G3 (750)",
+    "hypervisor": "QEMU TCG"
+  },
+  "artifacts": {
+    "cxx23-probe": {
+      "sha256": "5239338e80ab22f96a9dab7935e30fa9230fc1143aa2e2f31ac3ad45ea9c37bf"
+    },
+    "qtcore-probe": {
+      "sha256": "84f8f7442e1e06135ba97e2a96cd0463fbf7a4bb8ab096100f0b021b74727630"
+    },
+    "qtgui-probe": {
+      "sha256": "2b61a5fafce229bf4c26540650a823e8c6c1fed5483d7f20937be8b88e9f7f52"
+    },
+    "qt4-jaguar-ppc-examples.tar.gz": {
+      "sha256": "4af0701ec30aa95cb655bec102d35391520e9ab76fd1d81c474146df8667df31"
+    },
+    "qt-selftest-jaguar-strict": {
+      "sha256": "cb00311ba2df4a7267e1ab5a8e06c6bff23077c6f4290df16e69ec64cc55bc36"
+    }
+  },
+  "macho_imports": {
+    "gl-heavy-gallery": {
+      "imports": 1256,
+      "libraries": 12,
+      "weak_only": 120,
+      "problems": 0
+    },
+    "graphics-gallery": {
+      "imports": 1149,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "multimedia-lab": {
+      "imports": 1168,
+      "libraries": 13,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "network-gui": {
+      "imports": 1190,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "painting-lab": {
+      "imports": 1149,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qt-selftest-jaguar-strict": {
+      "imports": 1206,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qt-selftest": {
+      "imports": 1204,
+      "libraries": 11,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "quick-qml-gallery": {
+      "imports": 1310,
+      "libraries": 13,
+      "weak_only": 120,
+      "problems": 0
+    },
+    "smoke-runner": {
+      "imports": 356,
+      "libraries": 8,
+      "weak_only": 38,
+      "problems": 0
+    },
+    "widgets-gallery": {
+      "imports": 1222,
+      "libraries": 15,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "qtcore-probe-jaguar-imports": {
+      "imports": 353,
+      "libraries": 8,
+      "weak_only": 38,
+      "problems": 0
+    },
+    "qtgui-probe-jaguar-imports": {
+      "imports": 1146,
+      "libraries": 10,
+      "weak_only": 116,
+      "problems": 0
+    },
+    "cxx23-probe": {
+      "imports": 139,
+      "libraries": 1,
+      "weak_only": 0,
+      "problems": 0
+    }
+  },
+  "ordinary": {
+    "apps_passed": 8,
+    "checks_passed": 363,
+    "checks_failed": 0,
+    "optional_skips": 157,
+    "applications": {
+      "network-gui": {
+        "exit_code": 0,
+        "passed": 6,
+        "failed": 0,
+        "optional_skips": 1
+      },
+      "qt-selftest": {
+        "exit_code": 0,
+        "passed": 121,
+        "failed": 0,
+        "optional_skips": 139
+      },
+      "widgets-gallery": {
+        "exit_code": 0,
+        "passed": 140,
+        "failed": 0,
+        "optional_skips": 9
+      },
+      "graphics-gallery": {
+        "exit_code": 0,
+        "passed": 32,
+        "failed": 0,
+        "optional_skips": 0
+      },
+      "painting-lab": {
+        "exit_code": 0,
+        "passed": 16,
+        "failed": 0,
+        "optional_skips": 0
+      },
+      "quick-qml-gallery": {
+        "exit_code": 0,
+        "passed": 29,
+        "failed": 0,
+        "optional_skips": 1
+      },
+      "multimedia-lab": {
+        "exit_code": 0,
+        "passed": 9,
+        "failed": 0,
+        "optional_skips": 3
+      },
+      "gl-heavy-gallery": {
+        "exit_code": 0,
+        "passed": 10,
+        "failed": 0,
+        "optional_skips": 4
+      }
+    }
+  },
+  "qtcore_probe": {
+    "passed": 16,
+    "exit_code": 0
+  },
+  "qtgui_probe": {
+    "passed": 11,
+    "exit_code": 0
+  },
+  "standalone_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skips": 0,
+    "exit_code": 0
+  },
+  "strict_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skips": 0,
+    "exit_code": 0,
+    "checks": [
+      "C++14 generic lambda and init capture",
+      "C++17 structured bindings",
+      "C++17 fold expressions",
+      "C++17 std::optional",
+      "C++17 std::string_view",
+      "C++20 concepts",
+      "C++20 std::span",
+      "C++20 ranges filter and transform",
+      "C++20 std::jthread",
+      "C++20 std::stop_token and callbacks",
+      "C++20 std::format",
+      "C++23 if consteval",
+      "C++23 std::expected",
+      "C++23 std::byteswap",
+      "C++23 std::ranges::to",
+      "C++23 std::print",
+      "C++20 stop_token condition_variable_any cancellation",
+      "C++20 jthread destructor stop and join",
+      "C++20 atomic wait and notify handoff",
+      "C++20 jthread thread_local destruction",
+      "C++11 exception unwinding and RAII",
+      "C++17 Unicode filesystem round trip",
+      "C++20 format_error propagation",
+      "C++23 expected monadic error propagation",
+      "C++23 Unicode format and print"
+    ]
+  }
+}

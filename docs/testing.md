@@ -84,7 +84,7 @@ python scripts/tests/check_coverage.py --gate   # CI: fails below 95% on the wor
 
 ```sh
 python scripts/run/run.py --suite artifacts/tests-qt5-linux-amd64-llvm21 --host docker:centos-7
-python scripts/run/run.py --suite artifacts/tests-qt4-win-i386 --host windows-xp --json docs/results/<name>.json
+python scripts/run/run.py --suite artifacts/tests-qt4-win-i386-llvm21 --host windows-xp --json docs/results/<name>.json
 ```
 
 `docker:<distro>` hosts are built in: a stock container of CentOS 7,

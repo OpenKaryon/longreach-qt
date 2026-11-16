@@ -1,20 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 4.8.7, static, for PowerPC Macs from Mac OS X 10.2 Jaguar: applications run
-# on 10.2 to 10.5 (and on 10.6 under Rosetta).
-#
-#   osxcross     cctools/ld64 for PowerPC with the 10.4u SDK
-#   gcc-*        GCC 5.5 for PowerPC against 10.4u, with libstdc++
-#   jaguar-*     a second GCC 5.5 whose sysroot is the 10.2.8 SDK, and its probes
-#   builder      OpenSSL 1.0.2u and Qt with the macx-jaguar-g++ mkspec
-#   final        the toolchain plus /opt/qt4-jaguar and /opt/openssl-jaguar
+# Qt 4.8.7 with upstream LLVM 21.1.8 for Mac OS X 10.2 Jaguar (PowerPC).
+# Keep cctools and the GCC driver and CRT that provide the Darwin 10.2 ABI.
 
-# ---------------------------------------------------------------------------
-
-# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
-# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG SDK_IMAGE=sdk
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+
 FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS osxcross
 ARG APT_SNAPSHOT
 COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
@@ -71,28 +64,16 @@ RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y --no-in
 RUN cp -a /opt/osxcross-ppc/build/cctools-877.8-ld64-253.9_e2c9d34/cctools /work/classic32 \
     && cd /work/classic32 && make distclean \
     && CC='clang-14 -m32' CXX='clang++-14 -m32' CFLAGS='-O2 -D_FILE_OFFSET_BITS=64' ./configure --target=x86_64-apple-darwin8 --prefix=/opt/osxcross-ppc/target --disable-lto-support --with-llvm-config=/bin/false \
-    && make -C libstuff -j6 \
-    && make -C ld -j6 \
+    && make -C libstuff -j "$JOBS" \
+    && make -C ld -j "$JOBS" \
     && make -C ld install
 RUN ln -sf x86_64-apple-darwin8-ld_classic /opt/osxcross-ppc/target/bin/powerpc-apple-darwin8-ld \
     && powerpc-apple-darwin8-gcc -dumpspecs | sed '/^\*libgcc:$/ {n;s/.*/-lgcc/;}' > /opt/osxcross-ppc/target/lib/gcc/powerpc-apple-darwin8/5.5.0/specs
 RUN printf 'int main(void){return 0;}\n' > /tmp/ppc.c \
     && powerpc-apple-darwin8-gcc -v -static-libgcc -mmacosx-version-min=10.4 /tmp/ppc.c -o /tmp/ppc \
     && file /tmp/ppc && powerpc-apple-darwin8-otool -l /tmp/ppc
-RUN cd /work/ppc-gcc-build \
-    && cp /opt/osxcross-ppc/target/lib/gcc/powerpc-apple-darwin8/5.5.0/specs gcc/specs \
-    && make -j6 CFLAGS_FOR_TARGET='-Os -static-libgcc -mmacosx-version-min=10.4' CXXFLAGS_FOR_TARGET='-Os -static-libgcc -mmacosx-version-min=10.4' all-target-libstdc++-v3 \
-    && make install-target-libstdc++-v3
-COPY scripts/build/qt4-macos-ppc/cxx-probe.cpp /tmp/cxx-probe.cpp
-RUN powerpc-apple-darwin8-g++ -std=c++14 -Os -mmacosx-version-min=10.4 /tmp/cxx-probe.cpp -o /tmp/cxx-probe \
-    && file /tmp/cxx-probe && powerpc-apple-darwin8-otool -L /tmp/cxx-probe
-FROM gcc-runtime AS tiger-gcc
-COPY scripts/build/qt4-macos-ppc/objcxx-probe.mm /tmp/objcxx-probe.mm
-RUN powerpc-apple-darwin8-g++ -std=c++14 -Os -fobjc-exceptions -mmacosx-version-min=10.4 /tmp/objcxx-probe.mm -framework Foundation -o /tmp/objcxx-probe \
-    && file /tmp/objcxx-probe && powerpc-apple-darwin8-otool -L /tmp/objcxx-probe
 
-# ---------------------------------------------------------------------------
-# jaguar: GCC 5.5 for Mac OS X 10.2 / PowerPC, and the probes that prove it.
+# GCC 5.5 driver and CRT for Mac OS X 10.2 / PowerPC.
 #
 # A second compiler on the Tiger one's source tree and classic cctools linker,
 # with the 10.2.8 SDK as sysroot. The Tiger compiler cannot serve Jaguar: its
@@ -100,7 +81,7 @@ RUN powerpc-apple-darwin8-g++ -std=c++14 -Os -fobjc-exceptions -mmacosx-version-
 # libstdc++ expects <wchar.h>, which 10.2 lacks. The unwinder and 64-bit
 # division come from libgcc.a; without __cxa_atexit on 10.2, static
 # destructors go through atexit().
-FROM tiger-gcc AS jaguar-gcc
+FROM gcc-runtime AS jaguar-gcc
 ARG JOBS=6
 ENV PATH=/opt/osxcross-ppc/target/bin:$PATH
 ENV DISABLE_ANNOYING_LD64_ASSERTION=1
@@ -155,38 +136,48 @@ RUN /opt/jaguar-gcc/bin/powerpc-apple-darwin8-gcc -dumpspecs \
     && grep -q 'mlong-double-64' /opt/jaguar-gcc/lib/gcc/powerpc-apple-darwin8/5.5.0/specs \
     && cp /opt/jaguar-gcc/lib/gcc/powerpc-apple-darwin8/5.5.0/specs /work/jaguar-gcc-build/gcc/specs
 
-FROM jaguar-gcc AS jaguar-libstdcxx
-# Jaguar's <sys/errno.h> has no EILSEQ or ENOMSG; guarded like the other
-# optional codes.
-RUN f=/work/ppc-gcc-source/libstdc++-v3/config/os/generic/error_constants.h \
-    && sed -i -e 's|^\( *illegal_byte_sequence = .*EILSEQ,\)$|#ifdef EILSEQ\n\1\n#endif|' \
-              -e 's|^\( *no_message = .*ENOMSG, *\)$|#ifdef ENOMSG\n\1\n#endif|' "$f" \
-    && grep -q '#ifdef EILSEQ' "$f" && grep -q '#ifdef ENOMSG' "$f"
-RUN cd /work/jaguar-gcc-build \
-    && make -j "$JOBS" all-target-libstdc++-v3 \
-       CFLAGS_FOR_TARGET='-Os -mmacosx-version-min=10.2' \
-       CXXFLAGS_FOR_TARGET='-Os -mmacosx-version-min=10.2' \
-    && make install-target-libstdc++-v3
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
+ARG PARALLEL_JOBS=3
 
-FROM jaguar-libstdcxx AS toolchain
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm/macos-jaguar,target=/src/patches \
+    --mount=type=cache,id=qt4-jaguar-llvm21-compiler,target=/work/jaguar,sharing=locked <<'EOF'
+set -eu
+echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  /src/llvm.tar.xz' | sha256sum -c -
+# Key the source and CMake cache by the entire ordered patch series.
+set -- /src/patches/0*.patch /src/patches/10-*.patch /src/patches/11-*.patch
+patch_key=$(sha256sum "$@" | sha256sum | cut -d ' ' -f 1)
+work=/work/jaguar/$patch_key
+src=$work/source
+build=$work/build
+if ! test -f "$src/.longreach-patched"; then
+    rm -rf "$src"
+    mkdir -p "$src"
+    tar -xJf /src/llvm.tar.xz -C "$src" --strip-components=1
+    cd "$src"
+    for patch in "$@"; do
+        git apply "$patch"
+    done
+    touch "$src/.longreach-patched"
+fi
+cmake -G Ninja -S "$src/llvm" -B "$build" -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS_RELEASE='-O1 -DNDEBUG' -DCMAKE_CXX_FLAGS_RELEASE='-O1 -DNDEBUG' \
+    -DCMAKE_INSTALL_PREFIX=/opt/jaguar-llvm21 -DLLVM_TARGETS_TO_BUILD=PowerPC -DLLVM_ENABLE_PROJECTS=clang \
+    -DLLVM_DISTRIBUTION_COMPONENTS='clang;clang-resource-headers;llvm-ar;llvm-nm;llvm-objdump' \
+    -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_DOCS=OFF \
+    -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_LIBXML2=OFF \
+    -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF
+cmake --build "$build" --target distribution --parallel "$PARALLEL_JOBS"
+cmake --build "$build" --target install-distribution --parallel 1
+/opt/jaguar-llvm21/bin/clang --version
+/opt/jaguar-llvm21/bin/clang --print-targets
+EOF
+
+FROM jaguar-gcc AS jaguar-inputs
 ENV PATH=/opt/jaguar-gcc/bin:$PATH
-COPY scripts/build/qt4-macos-jaguar/probes /probes
-COPY scripts/build/qt4-macos-jaguar/check-probes.sh /probes/check-probes.sh
-RUN sh /probes/check-probes.sh
-
-# ---------------------------------------------------------------------------
-# builder: OpenSSL 1.0.2u and Qt 4.8.7 for Mac OS X 10.2 / PowerPC; logs and
-# probes go to /out (docs/targets/qt4-macos.md).
-FROM toolchain AS builder
-ARG JOBS=6
-COPY downloads/qt-everywhere-opensource-src-4.8.7.tar.gz /archives/qt-everywhere-opensource-src-4.8.7.tar.gz
-COPY patches/qt4/all /patches/all
-COPY patches/qt4/macos /patches/macos
-COPY scripts/build/qt4-macos-jaguar/qmake.conf /scripts/qmake.conf
-COPY scripts/build/qt4-macos-jaguar/build-qt.sh /scripts/build-qt.sh
-COPY scripts/build/qt4-macos-jaguar/qtcore-probe /scripts/qtcore-probe
-COPY scripts/build/qt4-macos-jaguar/qtgui-probe /scripts/qtgui-probe
-COPY scripts/build/qt4-macos-jaguar/check-imports.py /scripts/check-imports.py
+COPY scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
 # Only the 10.4u libSystem and libobjc stubs; see QMAKE_LFLAGS in qmake.conf.
 RUN mkdir -p /opt/jaguar/link-10.4u && cd /opt/jaguar/link-10.4u && \
     for lib in libSystem.B.dylib libSystem.dylib libobjc.A.dylib libobjc.dylib; do \
@@ -195,19 +186,55 @@ RUN mkdir -p /opt/jaguar/link-10.4u && cd /opt/jaguar/link-10.4u && \
 COPY downloads/openssl-1.0.2u.tar.gz /archives/openssl-1.0.2u.tar.gz
 COPY scripts/build/qt4-macos-jaguar/build-openssl.sh /scripts/build-openssl.sh
 RUN mkdir -p /out && JAGUAR_JOBS="$JOBS" bash /scripts/build-openssl.sh
-RUN JAGUAR_JOBS="$JOBS" bash /scripts/build-qt.sh
-# The test applications as bundles, import-checked, packed as
-# /out/qt4-jaguar-ppc-examples.tar.gz.
 
-# ---------------------------------------------------------------------------
-FROM toolchain
-COPY --from=builder /opt/qt4-jaguar /opt/qt4-jaguar
-COPY --from=builder /opt/openssl-jaguar /opt/openssl-jaguar
-COPY --from=builder /opt/qt4-licenses /opt/qt4-licenses
-COPY --from=builder /opt/jaguar/link-10.4u /opt/jaguar/link-10.4u
-COPY --from=builder /out /opt/qt4-jaguar-build
-COPY scripts/build/qt4-macos/write-bundle.py scripts/build/qt4-macos-jaguar/build-suite.sh scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
+FROM jaguar-inputs AS runtime
+ARG PARALLEL_JOBS=3
+COPY --from=compiler /opt/jaguar-llvm21 /opt/jaguar-llvm21
+ENV PATH=/opt/jaguar-llvm21/bin:${PATH}
+ENTRYPOINT ["/bin/bash", "-c"]
+COPY scripts/build/qt4-macos-jaguar/llvm /scripts/jaguar-llvm
+COPY --chmod=0755 scripts/build/qt4-macos-jaguar/llvm/jaguar-llvm-cc /usr/local/bin/
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm,target=/src/patches \
+    ln -s jaguar-llvm-cc /usr/local/bin/jaguar-llvm-cxx && \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /scripts/jaguar-llvm/build-runtime.sh /src/llvm.tar.xz /src/patches
+
+FROM runtime AS probe
+COPY scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
+COPY scripts/tests/qt6-llvm-probes/main.cpp /probe/scripts/tests/qt6-llvm-probes/
+COPY tests/common/moderncpp_checks.h /probe/tests/common/
+RUN --network=none mkdir -p /out && \
+    jaguar-llvm-cxx -std=c++23 -O2 -c /probe/scripts/tests/qt6-llvm-probes/main.cpp -o /tmp/probe.o && \
+    jaguar-llvm-cxx -mmacosx-version-min=10.2 -mcpu=750 /tmp/probe.o -o /out/cxx23-probe && \
+    python3 /scripts/check-imports.py /out/cxx23-probe /out/cxx23-imports.txt
+
+FROM runtime AS sdk
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos-jaguar/build-qt.sh scripts/build/qt4-macos-jaguar/qmake.conf \
+     scripts/build/qt4-macos-jaguar/check-imports.py /scripts/
+COPY scripts/build/qt4-macos-jaguar/qtcore-probe /scripts/qtcore-probe
+COPY scripts/build/qt4-macos-jaguar/qtgui-probe /scripts/qtgui-probe
+COPY patches/qt4/all /patches/all
+COPY patches/qt4/macos /patches/macos
+COPY patches/qt4/macos-tiger-llvm /patches/tiger-llvm
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/archives/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    mkdir -p /out && \
+    sed -i -e '/^JAGUAR_GCC =/,/^QMAKE_CC =/c\QMAKE_CC = jaguar-llvm-cc' \
+           -e 's|^QMAKE_CXX = .*|QMAKE_CXX = jaguar-llvm-cxx|' \
+           -e 's|\$\$JAGUAR_INC ||g' -e 's/-mdynamic-no-pic //g' /scripts/qmake.conf && \
+    JAGUAR_LLVM=1 JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/build-qt.sh && \
+    /opt/qt4-jaguar/bin/qmake -v && \
+    find /opt/qt4-jaguar/lib -maxdepth 1 -name 'libQt*.a' -printf '%f\n' | sort > /out/qt-libraries.txt
+
 ENV PATH=/opt/qt4-jaguar/bin:$PATH
 LABEL org.openkaryon.longreach-qt.platform=macos-jaguar-ppc \
       org.openkaryon.longreach-qt.openssl="1.0.2u"
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+
+FROM ${SDK_IMAGE} AS examples
+ARG PARALLEL_JOBS=3
+COPY scripts/build/qt4-macos-jaguar/build-suite.sh scripts/build/qt4-macos/write-bundle.py /scripts/
+COPY tests /input
+RUN --network=none JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/build-suite.sh && \
+    JAGUAR_JOBS="$PARALLEL_JOBS" bash /scripts/jaguar-llvm/build-strict-selftest.sh

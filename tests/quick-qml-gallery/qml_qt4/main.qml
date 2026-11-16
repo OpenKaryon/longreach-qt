@@ -69,15 +69,11 @@ Rectangle {
         Item {
             visible: root.section === 0 || root.section === 1
             anchors.top: description.bottom; anchors.topMargin: 30; width: parent.width; height: 380
-            property bool checked: false
             Rectangle { id: button; width: 180; height: 42; radius: 5; color: buttonMouse.pressed ? "#315b82" : "#4b78a8"
                 Text { anchors.centerIn: parent; text: "Push Button"; color: "white" }
                 MouseArea { id: buttonMouse; anchors.fill: parent }
             }
-            Rectangle { id: check; y: 62; width: 22; height: 22; color: parent.checked ? "#50b848" : "#3a404b"; border.color: "#87909e"
-                Text { anchors.centerIn: parent; text: parent.parent.checked ? "✓" : ""; color: "white" }
-                MouseArea { anchors.fill: parent; onClicked: parent.parent.checked = !parent.parent.checked }
-            }
+            SwitchTile { y: 62 }
             Text { x: 32; y: 64; text: "Check box / switch"; color: "white" }
             Rectangle { y: 112; width: 360; height: 8; radius: 4; color: "#3a404b" }
             Rectangle { y: 112; width: sliderMouse.mouseX < 0 ? 0 : sliderMouse.mouseX > 360 ? 360 : sliderMouse.mouseX; height: 8; radius: 4; color: "#50b848" }

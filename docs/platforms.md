@@ -12,6 +12,20 @@ For macOS a floor counts as reached when every Mac supported there can be
 upgraded to it: Qt 5's x86_64 build stops at 10.6 because 64-bit Cocoa starts
 at 10.5 and every Mac that runs 10.5 runs 10.6.
 
+## Experimental Android target
+
+For Qt 4.8.7 the target floor is Android 1.6 (API 4) on 32-bit ARM
+(`armeabi`). Qt 3.3 had no Android target, so the floor comes from
+Necessitas. The [n0.21 Qt build script](https://github.com/KDE/android-qt/blob/n0.21/androidconfigbuild.sh)
+defaults to API 4 and `armeabi`. The [n0.41 example manifest](https://github.com/KDE/android-qt/blob/d5ee4e8aee8d9db5ad3341785ddd58cf0522c28f/android/quadruplor/AndroidManifest.xml)
+also declares API 4. Those settings establish the historical target.
+[The LLVM 21.1.8 JNI bootstrap](results/qt4-android-donut-armeabi-llvm21-20261116.md)
+ran on Android 1.6. The strict C++23 APK passed all 25 required checks
+and the QtCore 4.8.7 JNI smoke test passed on the same guest.
+A separate Qt Quick 1 APK passed the first-frame, tap and pause/resume
+checks on that guest. The [Android build guide](targets/qt4-android-donut.md)
+covers the diagnostic APKs and emulator runner.
+
 ## Results
 
 All runs below used the kit's test suite (`tests/`, see

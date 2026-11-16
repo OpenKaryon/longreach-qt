@@ -7,6 +7,7 @@ archive=${1:-/src/downloads/llvm-project-21.1.8.src.tar.xz}
 work=${LLVM_BUILD_ROOT:-/work}
 prefix=${LLVM_ROOT:-/opt/llvm-21}
 jobs=${PARALLEL_JOBS:-4}
+targets=${LLVM_TARGETS:-X86;AArch64}
 
 echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  '"$archive" | sha256sum -c -
 mkdir -p "$work/source"
@@ -20,7 +21,7 @@ cmake -S "$work/source/llvm" -B "$work/compiler" -G Ninja \
     -DCMAKE_CXX_FLAGS_RELEASE='-O2 -DNDEBUG' \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
     -DLLVM_ENABLE_PROJECTS='clang;lld' \
-    -DLLVM_TARGETS_TO_BUILD='X86;AArch64' \
+    -DLLVM_TARGETS_TO_BUILD="$targets" \
     -DLLVM_DISTRIBUTION_COMPONENTS='clang;clang-resource-headers;lld;llvm-ar;llvm-ranlib;llvm-nm;llvm-objcopy;llvm-strip;llvm-objdump;llvm-readobj;llvm-rc;llvm-cvtres' \
     -DLLVM_PARALLEL_LINK_JOBS=1 \
     -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF \
@@ -30,6 +31,7 @@ cmake -S "$work/source/llvm" -B "$work/compiler" -G Ninja \
     -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF
 cmake --build "$work/compiler" --target distribution --parallel "$jobs"
 cmake --build "$work/compiler" --target install-distribution --parallel 1
+ln -sf llvm-readobj "$prefix/bin/llvm-readelf"
 ln -sf llvm-ar "$prefix/bin/llvm-dlltool"
 ln -sf llvm-rc "$prefix/bin/llvm-windres"
 "$prefix/bin/clang" --version

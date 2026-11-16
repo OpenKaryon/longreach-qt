@@ -1,0 +1,223 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
+--- a/usr/include/linux/futex.h
++++ b/usr/include/linux/futex.h
+@@ -16,6 +16,9 @@
+ 
+ #define FUTEX_WAIT 0
+ #define FUTEX_WAKE 1
++#define FUTEX_PRIVATE_FLAG 128
++#define FUTEX_WAIT_PRIVATE (FUTEX_WAIT | FUTEX_PRIVATE_FLAG)
++#define FUTEX_WAKE_PRIVATE (FUTEX_WAKE | FUTEX_PRIVATE_FLAG)
+ #define FUTEX_FD 2
+ #define FUTEX_REQUEUE 3
+ #define FUTEX_CMP_REQUEUE 4
+--- a/usr/include/locale.h
++++ b/usr/include/locale.h
+@@ -51,11 +51,8 @@
+ 
+ extern char *setlocale(int category, const char *locale);
+ 
+-#if 1 /* MISSING FROM BIONIC - DEFINED TO MAKE libstdc++-v3 happy */
+-struct lconv { };
+-struct lconv *localeconv(void);
+-#endif /* MISSING */
+-
+ __END_DECLS
+ 
++#include <android/donut-locale.h>
++
+ #endif /* _LOCALE_H_ */
+--- a/usr/include/stdint.h
++++ b/usr/include/stdint.h
+@@ -41,7 +41,7 @@
+ #  define  __STDINT_MACROS
+ #endif
+ 
+-#if !defined __STRICT_ANSI__ || __STDC_VERSION__ >= 199901L
++#if defined(__cplusplus) || !defined __STRICT_ANSI__ || __STDC_VERSION__ >= 199901L
+ #  define __STDC_INT64__
+ #endif
+ 
+--- a/usr/include/stdlib.h
++++ b/usr/include/stdlib.h
+@@ -41,6 +41,8 @@
+ #include <alloca.h>
+ #include <strings.h>
+ #include <memory.h>
++#include <errno.h>
++#include <malloc.h>
+ 
+ __BEGIN_DECLS
+ 
+@@ -70,9 +72,28 @@
+     return (float)strtod(nptr, endptr);
+ }
+ 
++#if __LDBL_MANT_DIG__ == __DBL_MANT_DIG__ && __LDBL_MAX_EXP__ == __DBL_MAX_EXP__
++static __inline__ long double strtold(const char *nptr, char **endptr)
++{
++    return strtod(nptr, endptr);
++}
++#endif
++
+ extern int atoi(const char *);
+ extern long atol(const char *);
+ extern long long atoll(const char *);
++
++static __inline__ int rand_r(unsigned int *state)
++{
++    unsigned int next = *state;
++    next = next * 1103515245u + 12345u;
++    unsigned int result = (next >> 16) & 0x7ffu;
++    next = next * 1103515245u + 12345u;
++    result = (result << 10) | ((next >> 16) & 0x3ffu);
++    next = next * 1103515245u + 12345u;
++    *state = next;
++    return (int)((result << 10) | ((next >> 16) & 0x3ffu));
++}
+ 
+ static __inline__ double atof(const char *nptr)
+ {
+@@ -180,6 +201,22 @@
+ extern int clearenv(void);
+ #endif /* MISSING */
+ 
++static inline int posix_memalign(void **result, size_t alignment, size_t size)
++{
++    if (alignment < sizeof(void *) || alignment % sizeof(void *) != 0 ||
++        (alignment & (alignment - 1)) != 0)
++        return EINVAL;
++
++    const int saved_errno = errno;
++    void *pointer = memalign(alignment, size == 0 ? 1 : size);
++    errno = saved_errno;
++    if (!pointer)
++        return ENOMEM;
++
++    *result = pointer;
++    return 0;
++}
++
+ __END_DECLS
+ 
+ #endif /* _STDLIB_H_ */
+--- a/usr/include/sys/syscall.h
++++ b/usr/include/sys/syscall.h
+@@ -33,6 +33,10 @@
+ #include <sys/types.h>
+ #include <asm/unistd.h>
+ 
++#ifndef SYS_futex
++#define SYS_futex __NR_futex
++#endif
++
+ __BEGIN_DECLS
+ 
+ int syscall(int number, ...);
+--- /dev/null
++++ b/usr/include/link.h
+@@ -0,0 +1,13 @@
++#ifndef LONGREACH_DONUT_LINK_H
++#define LONGREACH_DONUT_LINK_H
++
++#include <sys/cdefs.h>
++#include <stdint.h>
++
++__BEGIN_DECLS
++
++uintptr_t dl_unwind_find_exidx(uintptr_t pc, int *count);
++
++__END_DECLS
++
++#endif
+--- /dev/null
++++ b/usr/include/android/donut-locale.h
+@@ -0,0 +1,87 @@
++#ifndef LONGREACH_DONUT_LOCALE_H
++#define LONGREACH_DONUT_LOCALE_H
++
++#include <ctype.h>
++#include <errno.h>
++#include <limits.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++
++/* Donut has a single C locale. Locale handles all refer to that locale. */
++typedef struct donut_locale *locale_t;
++#define LC_GLOBAL_LOCALE ((locale_t)-1)
++#define LC_CTYPE_MASK (1 << LC_CTYPE)
++#define LC_NUMERIC_MASK (1 << LC_NUMERIC)
++#define LC_TIME_MASK (1 << LC_TIME)
++#define LC_COLLATE_MASK (1 << LC_COLLATE)
++#define LC_MONETARY_MASK (1 << LC_MONETARY)
++#define LC_MESSAGES_MASK (1 << LC_MESSAGES)
++#define LC_ALL_MASK (LC_CTYPE_MASK | LC_NUMERIC_MASK | LC_TIME_MASK | LC_COLLATE_MASK | LC_MONETARY_MASK | LC_MESSAGES_MASK)
++
++struct lconv {
++    char *decimal_point, *thousands_sep, *grouping;
++    char *int_curr_symbol, *currency_symbol, *mon_decimal_point;
++    char *mon_thousands_sep, *mon_grouping, *positive_sign, *negative_sign;
++    char int_frac_digits, frac_digits, p_cs_precedes, p_sep_by_space;
++    char n_cs_precedes, n_sep_by_space, p_sign_posn, n_sign_posn;
++    char int_p_cs_precedes, int_p_sep_by_space, int_n_cs_precedes;
++    char int_n_sep_by_space, int_p_sign_posn, int_n_sign_posn;
++};
++
++static inline struct lconv *localeconv(void)
++{
++    static char decimal[] = ".";
++    static char empty[] = "";
++    static struct lconv classic = {
++        decimal, empty, empty, empty, empty, empty, empty, empty, empty, empty,
++        CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX,
++        CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX, CHAR_MAX
++    };
++    return &classic;
++}
++
++static inline locale_t newlocale(int mask, const char *name, locale_t base)
++{
++    (void)base;
++    if ((mask & ~LC_ALL_MASK) != 0 || !name) {
++        errno = EINVAL;
++        return (locale_t)0;
++    }
++    if (*name && strcmp(name, "C") != 0 && strcmp(name, "POSIX") != 0) {
++        errno = ENOENT;
++        return (locale_t)0;
++    }
++    return (locale_t)1;
++}
++
++static inline locale_t uselocale(locale_t locale)
++{
++    (void)locale;
++    return LC_GLOBAL_LOCALE;
++}
++
++static inline void freelocale(locale_t locale) { (void)locale; }
++
++static inline float strtof_l(const char *s, char **end, locale_t locale)
++{ (void)locale; return strtof(s, end); }
++static inline double strtod_l(const char *s, char **end, locale_t locale)
++{ (void)locale; return strtod(s, end); }
++static inline long double strtold_l(const char *s, char **end, locale_t locale)
++{ (void)locale; return strtold(s, end); }
++static inline long long strtoll_l(const char *s, char **end, int base, locale_t locale)
++{ (void)locale; return strtoll(s, end, base); }
++static inline unsigned long long strtoull_l(const char *s, char **end, int base, locale_t locale)
++{ (void)locale; return strtoull(s, end, base); }
++static inline int isdigit_l(int ch, locale_t locale) { (void)locale; return isdigit(ch); }
++static inline int isxdigit_l(int ch, locale_t locale) { (void)locale; return isxdigit(ch); }
++static inline int toupper_l(int ch, locale_t locale) { (void)locale; return toupper(ch); }
++static inline int tolower_l(int ch, locale_t locale) { (void)locale; return tolower(ch); }
++static inline int strcoll_l(const char *a, const char *b, locale_t locale)
++{ (void)locale; return strcoll(a, b); }
++static inline size_t strxfrm_l(char *dest, const char *source, size_t n, locale_t locale)
++{ (void)locale; return strxfrm(dest, source, n); }
++static inline size_t strftime_l(char *dest, size_t n, const char *fmt, const struct tm *time, locale_t locale)
++{ (void)locale; return strftime(dest, n, fmt, time); }
++
++#endif

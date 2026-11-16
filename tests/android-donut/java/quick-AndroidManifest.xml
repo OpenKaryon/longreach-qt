@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.longreachqt.donut.quick" android:versionCode="1" android:versionName="0.1">
+    <uses-sdk android:minSdkVersion="4" android:targetSdkVersion="4" />
+    <application android:label="Longreach Quick Smoke" android:debuggable="true">
+        <activity android:name=".QuickActivity" android:exported="true" />
+        <activity android:name=".QuickCoverActivity" android:exported="false" />
+    </application>
+    <instrumentation android:name=".QuickInstrumentation"
+        android:targetPackage="org.longreachqt.donut.quick" />
+</manifest>

@@ -3,7 +3,7 @@
 ## The suite
 
 `tests/` holds eight applications and a runner, one directory each, listed in
-`tests/expected-apps.txt`. Every Qt 4, 5 and 6 target builds all of them:
+`tests/expected-apps.txt`. The Qt 4, 5 and 6 desktop targets build all of them:
 
 | Application | What it checks |
 |-------------|----------------|
@@ -60,6 +60,26 @@ also builds and runs the complete console `qt-selftest` separately with
 experimental `std::jthread` and `std::stop_token`. Both named checks must
 report PASS in that run: a SKIP fails the script. The ordinary run retains
 its original flags and SKIP behaviour. No Qt/LLVM rebuild is needed.
+
+## Mobile smoke tests
+
+On Android, separate APKs exercise QtCore, the strict C++23 suite and
+the visual test. Follow the [build and run guide](targets/qt4-android-donut.md)
+to run them in the Android 1.6 emulator. The
+[Android 1.6 report](results/qt4-android-donut-armeabi-llvm21-20261116.md)
+records the results.
+
+The mobile graphics smoke test uses a small scene from the gallery. On
+Qt 4, [MobileSmoke.qml](../tests/quick-qml-gallery/qml_qt4/MobileSmoke.qml)
+loads from the gallery's resources and uses the same switch component as
+its Controls page. The test checks the first rendered frame, a tap
+delivered through the native app, and a redraw with preserved state
+after the app resumes. The app writes the report to its private files
+directory.
+
+Use the same visual and lifecycle checks when an iOS target is available.
+Packaging, launching the app and retrieving its report belong to each
+platform's runner.
 
 ## Coverage
 

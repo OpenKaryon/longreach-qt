@@ -2,17 +2,23 @@
 
 Static Qt SDKs that reach old operating systems. Longreach Qt builds Qt 4.8.7,
 Qt 5.15.19 and Qt 6.8.5 in Docker for Windows, Linux and macOS, and backports
-each one far enough that an application built with it runs on the systems the
-previous Qt generation supported - and on every newer one, from the same
-binary.
+each one to older operating systems. The same application binary can
+serve older and newer systems within a target architecture.
+
+The SDK build pipeline is based on LLVM. Clang builds the target Qt
+libraries and applications. Seventeen targets default to upstream LLVM
+21.1.8 and static libc++. The four Windows and macOS ARM64 profiles use
+their existing Clang toolchains. Bootstrap stages, host tools and legacy
+platform inputs can use other compilers and linkers. See the
+[toolchain matrix](docs/toolchains.md).
 
 | Qt | Windows | Linux | macOS |
 |----|---------|-------|-------|
-| 4.8.7 | Windows 95 OSR2 (i386); XP x64* (amd64) | Debian 3.1 Sarge, glibc 2.3.2 (i386; amd64*) | Mac OS X 10.2 Jaguar (PowerPC); 10.4 Tiger (Intel) |
-| 5.15.19 | Windows XP SP3 (i386); XP x64* (amd64); Windows 10* (arm64) | Ubuntu 10.04 Lucid, glibc 2.11 (amd64, i386); Ubuntu 14.04, glibc 2.19 (arm64) | Mac OS X 10.6 Snow Leopard (x86_64, i386); 11.0* (arm64) |
+| 4.8.7 | Windows 95 OSR2 (i386); XP x64 (amd64) | Debian 3.1 Sarge, glibc 2.3.2 (i386; amd64) | Mac OS X 10.2 Jaguar (PowerPC); 10.4 Tiger (Intel) |
+| 5.15.19 | Windows XP SP3 (i386); XP x64 (amd64); Windows 10* (arm64) | Ubuntu 10.04 Lucid, glibc 2.11 (amd64, i386); Ubuntu 14.04, glibc 2.19 (arm64) | Mac OS X 10.6 Snow Leopard (x86_64, i386); 11.0* (arm64) |
 | 6.8.5 | Windows 7 SP1 (amd64); Windows 10* (arm64) | RHEL/CentOS 7, glibc 2.17 (amd64, arm64) | macOS 10.13 High Sierra (x86_64); 11.0* (arm64) |
 
-\* built and audited, not yet run on that system.
+\* Build and binary-audit evidence is available. Runtime validation is pending.
 
 The floors, how each was reached and what has been run where are in
 [docs/platforms.md](docs/platforms.md). Upstream Qt starts at Windows XP SP3 /
@@ -67,9 +73,9 @@ options (`--only`, `--skip`, `--no-cache`, ...).
   select every API newer than the floor at run time (or from the deployment
   target), so the newest system still takes the modern path
   ([backports](docs/backports.md)).
-- One Dockerfile per target under `docker/qt<N>/<os>/`, three or more stages:
-  toolchain, builder, and a final image holding the toolchain plus the
-  installed SDK.
+- Dockerfiles live under `docker/qt<N>/<os>/`. Architectures share a
+  recipe where their build steps match. The final SDK image holds the
+  toolchain and the installed Qt libraries.
 - Every input is pinned: archives by SHA256 (`scripts/fetch/`), Git projects by
   commit, base images by digest, distribution packages by lock or snapshot date
   (the older releases, frozen, from their own archive); copied to
@@ -88,8 +94,9 @@ keep theirs. Apple's SDKs are fetched for you and never redistributed.
 
 ## Status
 
-Version 0.1.0 was the first source-only pre-release. Version 0.2.0
-is being prepared as another source-only pre-release; prebuilt SDK
-images are deferred. See the [0.2.0 notes](docs/releases/0.2.0.md),
-[CHANGELOG.md](CHANGELOG.md) and [release process](docs/releasing.md).
+Version 0.3.0 is being prepared as a source-only pre-release with the
+LLVM 21.1.8 migration. The latest tag is `v0.2.2`, which preserves the
+previous default GCC and MinGW recipes. See the
+[0.3.0 release notes](docs/releases/0.3.0.md),
+[changelog](CHANGELOG.md) and [release process](docs/releasing.md).
 Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).

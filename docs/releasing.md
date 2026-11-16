@@ -9,8 +9,10 @@ number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 
 ## What a release contains
 
-- [0.1.0](releases/0.1.0.md): the source tree only, as a GitHub pre-release.
-- 0.2.0 (planned): source-only pre-release; prebuilt SDK images deferred.
+- [0.1.0](releases/0.1.0.md) was the first source-only version, tagged `v0.1.0`.
+- `v0.2.0` through `v0.2.2` are source tags.
+- [0.3.0](releases/0.3.0.md) is a source-only pre-release candidate.
+  Prebuilt SDK images are deferred.
 - Later: prebuilt Windows and Linux SDK images for the targets whose results
   are recorded for that release. macOS SDK images will not be published -
   they contain Apple's SDK, which may not be redistributed; build them
@@ -28,9 +30,19 @@ number: moving to a newer Qt 5.15 or 6.8 patch release is a minor version.
 4. `CHANGELOG.md` lists what changed for users.
 5. Tag `vX.Y.Z`, push the tag, create the GitHub release from it.
 
+## 0.3.0 preparation
+
+- [x] Confirm `Repository checks` on `62932c4`.
+- [x] Record all 17 migrated SDKs, 20 passing platform runs and the
+  four deferred ARM64 profiles.
+- [x] Prepare release notes and changelog, and verify the local source
+  archive against the candidate tree.
+- [ ] Review the release documentation and the recorded validation limits.
+- [ ] Tag and publish after release approval.
+
 ## 0.2.0 preparation
 
-The selected scope is a source-only pre-release. The
+Historical notes from before the `v0.2.0` tag. The selected scope is a source-only pre-release. The
 [candidate notes](releases/0.2.0.md) describe its new validation and
 remaining gaps. This is a locally prepared candidate, not a published
 version; README and CHANGELOG retain that distinction.

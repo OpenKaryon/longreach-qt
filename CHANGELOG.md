@@ -1,8 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (candidate)
 
-Local fixes after the `v0.2.0` tag (not yet published):
+Source-only pre-release candidate. See the [release notes](docs/releases/0.3.0.md)
+and [migration results](docs/releases/0.3.0-migration.md).
+
+- Default builds for 17 Qt 4.8.7, 5.15.19 and 6.8.5 SDKs use upstream
+  LLVM 21.1.8 with canonical Dockerfiles. `v0.2.2` preserves the GCC and
+  MinGW build recipes.
+- Make prepares shared compiler, host tool and target inputs, and skips
+  rebuilds when the installed SDK matches its input fingerprint.
+- Qt 6 accepts explicit source archives across its migrated cross targets.
+  Qt 5 macOS amd64 carries the selected deployment minimum into Qt and its
+  examples. Trusty ARM64 uses the QtScript call-frame fix.
+- All 17 migrated SDKs passed the eight ordinary applications and 25
+  required C++23 checks without skips. Four Windows and macOS ARM64
+  targets across Qt 5 and Qt 6 are deferred from the default migration.
+
+## 0.2.2
+
+- Added upstream LLVM 21.1.8 builds for Qt 6, Qt 5 and Qt 4, alongside the
+  existing default SDKs.
+- Added the shared strict C++23 selftest and preserved build objects
+  across repeat and resumed Qt 6 builds.
+- Fixed Qt 5 QtScript and Qt Quick smoke failures on Windows XP x64 SP2.
+
+## 0.2.1
 
 - Source archives support incremental/examples builds without Git metadata.
 - The Qt 6 project builder exports nested application outputs, rejects

@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "arch": "i386",
+  "build": {
+    "dockerfile": "docker/qt5/windows/Dockerfile",
+    "command": "make qt5-win-i386-examples PARALLEL_JOBS=2 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "buildkit_ref": "6ro30j4m8fjac1c5iitsp12tp",
+    "sdk_image": "qt5-win-i386-llvm21",
+    "sdk_image_id": "sha256:4b7b12ac41b853475a81347e58391eef0b18062b41f69b34fe2368c030334e82"
+  },
+  "guest": {
+    "os": "Windows XP SP3 i386 (5.1.2600)",
+    "method": "VMware Workstation with VMware Tools",
+    "guest_hashes_verified": 9,
+    "crt": {
+      "name": "msvcr100.dll",
+      "sha256": "1221a09484964a6f38af5e34ee292b9afefccb3dc6e55435fd3aaf7c235d9067"
+    }
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery.exe",
+      "size": 25860608,
+      "sha256": "f1588ce28ec653b3a018cda0fa86b7fdb675b8abc9e900e0e4355e522bc801f0"
+    },
+    {
+      "name": "graphics-gallery.exe",
+      "size": 11103744,
+      "sha256": "a29a6e785c149b10c47bedf78e404071bdfde9db4fd5cac8b9f2f4b9224d9e2c"
+    },
+    {
+      "name": "multimedia-lab.exe",
+      "size": 17227264,
+      "sha256": "0fe17885d595d0956dd9e480730e20db579a45d991dd4b90023481045ece2337"
+    },
+    {
+      "name": "network-gui.exe",
+      "size": 16845824,
+      "sha256": "da317160beb4f969456c53e5638e05314200f64953ebf52f5eeea6583e45f244"
+    },
+    {
+      "name": "painting-lab.exe",
+      "size": 11313152,
+      "sha256": "988fe40f63aa58017de8acea7d66157bef363d89508fe23027396b98ac403e76"
+    },
+    {
+      "name": "qt-selftest.exe",
+      "size": 31874560,
+      "sha256": "16c25991ad1734e2c87219995bd23b13155b3839e9b9ffc5d2ae691491c77438"
+    },
+    {
+      "name": "quick-qml-gallery.exe",
+      "size": 25640448,
+      "sha256": "6cc1f5e6ae556a2f8781b526da3a642d09e22626332d011a19511df30109609b"
+    },
+    {
+      "name": "smoke-runner.exe",
+      "size": 3439616,
+      "sha256": "e61fe114de7a1b6f784f5d09d12fb98d17bee0122df298757feca3dd227bac39"
+    },
+    {
+      "name": "widgets-gallery.exe",
+      "size": 17767424,
+      "sha256": "fc93fd919e572e54bf13260df07a3c6beebd53a06e3176feb0d27bf5907eeabc"
+    }
+  ],
+  "ordinary": {
+    "gl-heavy-gallery": {
+      "passed": 39,
+      "failed": 0,
+      "skipped": 7
+    },
+    "graphics-gallery": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "multimedia-lab": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "network-gui": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "painting-lab": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 3
+    },
+    "qt-selftest": {
+      "passed": 287,
+      "failed": 0,
+      "skipped": 68
+    },
+    "quick-qml-gallery": {
+      "passed": 24,
+      "failed": 0,
+      "skipped": 14
+    },
+    "widgets-gallery": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 5
+    }
+  },
+  "ordinary_totals": {
+    "passed": 503,
+    "failed": 0,
+    "skipped": 97
+  },
+  "strict_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  }
+}

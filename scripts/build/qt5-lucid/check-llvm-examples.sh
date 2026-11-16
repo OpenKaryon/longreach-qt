@@ -20,6 +20,9 @@ cp -a /src/tests /tmp/qt-smoke-tests
 bash /tmp/build-tests.sh /tmp/qt-smoke-tests "$out"
 while read -r app; do
     case "$app" in ''|\#*) continue ;; esac
+    if [ "${SMOKE_LICENSE_PROFILE:-gpl-enabled}" = lgpl-friendly ] && [ "$app" = gl-heavy-gallery ]; then
+        continue
+    fi
     binary="$out/$app"
     test -x "$binary"
     python3 /tmp/max-glibc.py "$binary" 2.11

@@ -2,16 +2,16 @@
 
 | Target | Image | Floor | |
 |--------|-------|-------|---|
-| `make qt5-macos-amd64` | `qt5-macos-amd64` | Mac OS X 10.6 Snow Leopard, x86_64 | osxcross, SDK 11.3, static libc++ 14 |
-| `make qt5-macos-i386` | `qt5-macos-i386` | Mac OS X 10.6, 32-bit Intel | the same, plus the i386 drivers |
+| `make qt5-macos-amd64` | `qt5-macos-amd64-llvm21` | Mac OS X 10.6 Snow Leopard, x86_64 | Clang 21.1.8, osxcross, SDK 11.3 |
+| `make qt5-macos-i386` | `qt5-macos-i386-llvm21` | Mac OS X 10.6, 32-bit Intel | the same, plus the i386 drivers |
 | `make qt5-macos-arm64` | `qt5-macos-arm64` | macOS 11.0, Apple silicon | osxcross, SDK 11.3 |
 
 The SDK is fetched from Apple's software-update CDN (the package MacPorts
 uses), checked by SHA256, unpacked in a container and never redistributed;
 osxcross is pinned to a commit. Apple licenses its SDKs for use on Apple
-hardware. `QT5_MACOS_TARGET_AMD64` selects a higher deployment target for the
-x86_64 build (10.7 or 10.11, for example), which leaves out the static
-OpenSSL and libc++ the oldest systems need.
+hardware. Both Intel targets use the compiler from
+`make qt5-macos-snow-llvm-compiler`. The Darwin driver and SDK
+inputs are built in their own stages before Qt.
 
 ## Down to 10.6
 
@@ -26,9 +26,10 @@ which a weak import leaves at address 0, are guarded or spelled out:
 | 10.9-10.7 | no App Nap; the gamepad, Bluetooth LE, multimedia and speech plugins check the system first |
 | 10.7 | QtCore keeps thread data in a pthread key instead of `thread_local`; device pixel ratio 1; full screen emulated; no window restoration; wheel in notches; legacy OpenGL profile; legacy scrollers; no GSSAPI; CA certificates by trust setting; no camera or media player (AVFoundation is 10.7), audio works; no store in QtPurchasing; classic Bluetooth only; positions without course or speed |
 
-10.6 has no libc++: the image builds libc++ and libc++abi from LLVM 14.0.6 for
-`x86_64-apple-macosx10.6` and links them statically into every binary, which
-then depends only on libSystem and the system frameworks.
+The Snow Leopard SDK builds libc++ and libc++abi from LLVM 21.1.8
+for the 10.6 deployment target and links them statically into its
+applications. The osxcross setup also builds the legacy startup
+support used by the SDK.
 
 ## 32-bit Intel
 
@@ -96,12 +97,11 @@ next build reuses the Clang 21 patch from the Linux arm64 profile with
 Mapbox GL enabled.
 ([Mapbox GL patch](../../patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch))
 
-Build the SDK and strict C++23 examples from the repository with the local
-`qt5-macos-i386:latest` platform image and the shared upstream LLVM
-21.1.8 compiler image.
+Build the SDK and strict C++23 examples from the repository. Make prepares
+the shared LLVM 21.1.8 compiler and osxcross inputs.
 
 ```sh
-make qt5-macos-i386-llvm-examples PARALLEL_JOBS=3
+make qt5-macos-i386-examples PARALLEL_JOBS=3
 ```
 
 The repository command rebuilt the SDK and strict examples. The exported binaries passed the artifact audit.
@@ -119,7 +119,7 @@ headers and linking. Qt configuration retains QML JIT, Mapbox GL and
 static OpenSSL 3.5.7.
 
 ```sh
-make qt5-macos-amd64-llvm-examples PARALLEL_JOBS=3
+make qt5-macos-amd64-examples PARALLEL_JOBS=3
 ```
 
 The repository build and all nine strict C++23 examples passed the artifact audit. The archive paths, qmake modules and qmake features match the baseline. The Snow Leopard 10.6.3 guest passed all 25 C++23 checks and seven GUI examples. ([build result](../results/qt5-macos-amd64-llvm21-snowleopard-20261112.md))
@@ -149,3 +149,22 @@ The SDK and all nine strict C++23 examples built and passed the artifact audit. 
   builds.
 - Separate native Qt Quick popup windows are disabled in the gallery (they
   render as grey native surfaces in a static build); their API checks run.
+
+## LLVM migration validation
+
+Both rebuilt Intel SDKs passed eight ordinary applications and 25/25
+strict C++23 checks without skips on Snow Leopard 10.6.3. Each suite
+contains nine thin Mach-O binaries with a 10.6 deployment target.
+The i386 SDK includes pinned CMake 3.28.6 so the compiler driver can
+map framework arguments to the 10.7 i386 link SDK. See the
+[migration record](../results/qt5-macos-snow-llvm-migration-20261115.json)
+for the per-application results and executable hashes.
+
+### Deployment target recheck
+
+A fresh amd64 build selected `QT5_MACOS_TARGET_AMD64=10.7`. The installed
+qmake reported 5.15.19 and its mkspec selected 10.7. All nine example
+executables declared macOS 10.7 in their Mach-O headers and matched the
+suite manifest. The repeated SDK build kept the same image ID and
+skipped Docker build. The Ubuntu snapshot returned HTTP 500 during
+dependency setup, so this recheck used `APT_SNAPSHOT=none`.

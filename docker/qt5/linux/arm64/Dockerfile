@@ -1,23 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 5.15 for Linux arm64 from Ubuntu 14.04 (glibc 2.19), cross-built the way
-# the Lucid builds are: make qt5-linux-arm64.
-#
-#   sysroot     the Ubuntu 14.04 arm64 packages of
-#               scripts/build/qt5-linux-arm64/packages.txt, unpacked
-#   toolchain   Ubuntu 16.04's aarch64 GCC 5 pointed at the sysroot, the
-#               Lucid build's static X libraries (libxcb 1.11 extensions,
-#               xcb-util, xkbcommon) and the optional libraries as dlopen
-#               stubs (build-optional-dlopen.sh)
-#   builder     OpenSSL 3 and Qt with the linux-trusty-aarch64-g++ mkspec
-#   final       the SDK plus the tests/ suite
+# Qt 5 for Ubuntu 14.04 on arm64, with upstream LLVM 21.1.8.
 
-# ---------------------------------------------------------------------------
-
-# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
-# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG SDK_IMAGE=sdk
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG LLVM_TOOLCHAIN_IMAGE=longreach-llvm:21.1.8-linux-arm64-runtime
+ARG DOWNLOAD_DIR=downloads
+ARG OPENSSL_DISTRO=openssl-3.5.7.tar.gz
+ARG QT_DISTRO=qt-everywhere-opensource-src-5.15.19.tar.xz
+
 FROM ${BASE_REGISTRY}/ubuntu:14.04@sha256:64483f3496c1373bfd55348e88694d1c4d0c9b660dee6bfef5e12f43b9933b30 AS sysroot
 # An apt-get update that fails on an index it could not fetch.
 COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
@@ -40,10 +32,11 @@ RUN set -eux; \
     ls /debs | wc -l
 
 # ---------------------------------------------------------------------------
-FROM ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS toolchain
+FROM ${BASE_REGISTRY}/ubuntu:16.04@sha256:1f1a2d56de1d604801a9671f301190704c25d604a416f59e03c04f5c6ffee0d6 AS trusty-gcc
 # An apt-get update that fails on an index it could not fetch.
 COPY scripts/build/apt-update.sh /usr/local/bin/apt-update
 ARG PARALLEL_JOBS=6
+ARG DOWNLOAD_DIR
 ENV JOBS=${PARALLEL_JOBS} DEBIAN_FRONTEND=noninteractive
 # The -dev packages give the headers and the function names of the optional
 # libraries; nothing of the build image's own architecture is linked.
@@ -63,7 +56,7 @@ COPY scripts/build/qt5-lucid/relativize-sysroot.py scripts/build/qt5-lucid/max-g
 RUN bash /scripts/prepare.sh
 # Qt 5.15 needs libxcb 1.11 and xkbcommon 0.5; 14.04 has 1.10 and 0.4.1. The
 # Lucid build's static X libraries fill the gap the same way.
-COPY downloads/lucid-xsrc /xsrc
+COPY ${DOWNLOAD_DIR}/lucid-xsrc /xsrc
 COPY scripts/build/qt5-lucid/build-xdeps.sh scripts/build/qt5-lucid/xcb-lucid-compat.c \
      scripts/build/qt5-lucid/x11-xcb-stub.c /scripts/
 RUN XDEPS_CC=aarch64-trusty-gcc XDEPS_CXX=aarch64-trusty-g++ AR=aarch64-linux-gnu-ar LUCID_JOBS=$JOBS \
@@ -84,82 +77,70 @@ RUN for a in /work/sysroot/usr/local/lib/lib*.a; do \
 LABEL org.openkaryon.longreach-qt.platform="ubuntu-trusty-arm64" \
       org.openkaryon.longreach-qt.glibc="2.19"
 
-# ---------------------------------------------------------------------------
-FROM toolchain AS builder
+FROM trusty-gcc AS trusty
+ARG OPENSSL_DISTRO
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${OPENSSL_DISTRO},target=/tmp/openssl.tar.gz \
+    --mount=type=bind,source=scripts/build/openssl.sh,target=/tmp/build-openssl.sh \
+    { CC=aarch64-trusty-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib \
+        PARALLEL_JOBS="$JOBS" bash /tmp/build-openssl.sh /tmp/openssl.tar.gz linux-aarch64 /opt/openssl-3 \
+        no-async no-shared no-tests > /tmp/openssl.log 2>&1 || { tail -40 /tmp/openssl.log; exit 1; }; } && \
+    rm -rf /tmp/openssl-build /tmp/openssl.log
 
-ARG PARALLEL_JOBS=6
-ARG LICENSE_PROFILE="gpl-enabled"
-ARG QT_FULL_VERSION="5.15.19"
-ARG QT_DISTRO="qt-everywhere-opensource-src-${QT_FULL_VERSION}.tar.xz"
-ARG QT_SRC_DIR="qt-everywhere-src-${QT_FULL_VERSION}"
-ARG OPENSSL_VERSION="3.5.7"
-ARG OPENSSL_DISTRO="openssl-${OPENSSL_VERSION}.tar.gz"
-
-COPY downloads/${QT_DISTRO} /opt/${QT_DISTRO}
-COPY downloads/${OPENSSL_DISTRO} /opt/${OPENSSL_DISTRO}
-COPY patches/qt5/all /tmp/patches/all
-COPY patches/qt5/linux /tmp/patches/linux
-COPY scripts/build/qt5-linux-arm64/mkspecs/linux-trusty-aarch64-g++ /tmp/linux-trusty-aarch64-g++
-COPY scripts/build/openssl.sh /tmp/build-openssl.sh
-COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
-
-ENV PKG_CONFIG_SYSROOT_DIR=/work/sysroot \
-    PKG_CONFIG_LIBDIR=/work/sysroot/usr/local/lib/pkgconfig:/work/sysroot/usr/local/share/pkgconfig:/work/sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/work/sysroot/usr/lib/pkgconfig:/work/sysroot/usr/share/pkgconfig
-
-RUN set -eux; cd /opt; \
-    CC=aarch64-trusty-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib PARALLEL_JOBS="$PARALLEL_JOBS" \
-        bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO linux-aarch64 /opt/openssl-3 \
-        no-async no-shared no-tests > /tmp/openssl.log 2>&1 || { tail -40 /tmp/openssl.log; exit 1; }; \
-    tar -xJf $QT_DISTRO; mv $QT_SRC_DIR Qt-5.15; rm -f $QT_DISTRO; cd /opt/Qt-5.15; \
-    for p in /tmp/patches/all/*.patch /tmp/patches/linux/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done; \
-    cp -r /tmp/linux-trusty-aarch64-g++ qtbase/mkspecs/; \
-    ./configure -v -xplatform linux-trusty-aarch64-g++ -prefix /usr/local/Qt-5.15 -pkg-config \
-        OPENSSL_PATH=/opt/openssl-3 \
-        OPENSSL_LIBS="-L/opt/openssl-3/lib -lssl -lcrypto -ldl -pthread" \
-        -c++std c++14 -static -optimize-size -release -opensource -confirm-license \
-        -xcb -bundled-xcb-xinput -xkbcommon -fontconfig -system-freetype \
-        -nomake examples -nomake tests -nomake tools \
-        -no-cups -dbus-runtime -alsa -pulseaudio -gstreamer 1.0 -speechd -gif -no-iconv -no-icu -no-glib \
-        -opengl desktop -openssl-linked -no-openvg -no-pch \
-        -sql-sqlite -qt-sqlite -ssl -no-libudev -no-libinput -no-mtdev -no-tslib \
-        -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib \
-        -skip qtwebengine \
-        $(/tmp/license-configure-args.sh qt5 "$LICENSE_PROFILE") > /tmp/configure.log 2>&1 \
-        || { tail -80 /tmp/configure.log; exit 1; }; \
-    grep -E "XCB|Xlib|GLX|OpenGL|xkbcommon|Fontconfig|FreeType|OpenSSL|Wayland|ALSA|PulseAudio|GStreamer|Speech|BlueZ" /tmp/configure.log | head -60; \
-    make -j "$PARALLEL_JOBS" > /tmp/make.log 2>&1 || { grep -n -E "error|undefined reference" /tmp/make.log | head -60; exit 1; }; \
-    make install > /dev/null; \
-    du -sh /usr/local/Qt-5.15
-
-# ---------------------------------------------------------------------------
-FROM toolchain
-ARG PARALLEL_JOBS=6
-ARG LICENSE_PROFILE="gpl-enabled"
-COPY --from=builder /usr/local/Qt-5.15 /usr/local/Qt-5.15
-COPY --from=builder /opt/openssl-3 /opt/openssl-3
-ENV PATH="/usr/local/Qt-5.15/bin:${PATH}" \
-    PKG_CONFIG_SYSROOT_DIR=/work/sysroot \
-    PKG_CONFIG_LIBDIR=/work/sysroot/usr/local/lib/pkgconfig:/work/sysroot/usr/local/share/pkgconfig:/work/sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/work/sysroot/usr/lib/pkgconfig:/work/sysroot/usr/share/pkgconfig
-
-# CMake for the tests/ suite (Qt 5.15's static plugin import needs 3.15+).
-ARG CMAKE_VERSION="3.28.6"
-RUN sh /usr/local/bin/apt-update && apt-get install -y --no-install-recommends wget ca-certificates libssl-dev && \
+FROM ${LLVM_TOOLCHAIN_IMAGE} AS llvm
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS inputs
+ARG APT_SNAPSHOT
+ENV DEBIAN_FRONTEND=noninteractive
+RUN --mount=type=bind,source=scripts/build/apt-snapshot.sh,target=/tmp/apt-snapshot.sh \
+    sh /tmp/apt-snapshot.sh "$APT_SNAPSHOT" && apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential cmake ninja-build \
+        python3 perl pkg-config git bison flex xz-utils libxml2 libexpat1 && \
     rm -rf /var/lib/apt/lists/*
-# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
-ARG LONGREACH_MIRROR
-COPY scripts/build/cmake.sh /tmp/build-cmake.sh
-RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
-ENV PATH="/opt/cmake/bin:${PATH}"
+COPY --from=trusty /work/sysroot /work/sysroot
+COPY --from=trusty /opt/openssl-3 /opt/openssl-3
+COPY --from=trusty /usr/bin/wayland-scanner /usr/local/bin/wayland-scanner
+COPY --from=llvm /opt/llvm-21 /opt/llvm-21
+COPY --from=llvm /opt/llvm-runtime-21 /opt/llvm-runtime-21
+ENV PATH=/opt/llvm-21/bin:${PATH} \
+    PKG_CONFIG_SYSROOT_DIR=/work/sysroot \
+    PKG_CONFIG_LIBDIR=/work/sysroot/usr/local/lib/pkgconfig:/work/sysroot/usr/local/share/pkgconfig:/work/sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/work/sysroot/usr/lib/pkgconfig:/work/sysroot/usr/share/pkgconfig \
+    LLVM_ROOT=/opt/llvm-21 \
+    QT_INSTALL_DIR=/opt/qt5-linux-arm64-llvm
 
-COPY cmake/qt5/toolchain-linux-arm64.cmake /opt/toolchain-trusty-arm64.cmake
-COPY tests /tmp/qt-smoke-tests
-COPY scripts/build/tests.sh /tmp/build-tests.sh
-RUN SMOKE_CMAKE_TOOLCHAIN=/opt/toolchain-trusty-arm64.cmake SMOKE_OPENSSL_PREFIX=/opt/openssl-3 \
-    SMOKE_LICENSE_PROFILE="$LICENSE_PROFILE" bash /tmp/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin
-# No binary may need a shared library that the static ones replace.
-RUN needed=$(for f in /opt/qt-smoke-bin/*; do aarch64-linux-gnu-readelf -d "$f" 2>/dev/null; done | \
-        sed -n 's/.*(NEEDED).*\[\(lib[^.]*\)\.so.*/\1/p' | sort -u); \
-    for n in $needed; do \
-        if [ -f "/work/sysroot/usr/local/lib/$n.a" ]; then echo "linked shared $n" >&2; exit 1; fi; \
-    done; echo "needed: $needed" | tr '\n' ' '
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+FROM inputs AS build
+ARG PARALLEL_JOBS=4
+ARG DOWNLOAD_DIR
+ARG QT_DISTRO
+ARG QT_FULL_VERSION=5.15.19
+ARG QT_SHA256=173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae
+ARG LICENSE_PROFILE=gpl-enabled
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt5-linux-arm64,target=/src/qt5-linux-arm64 \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/qt5/all \
+    --mount=type=bind,source=patches/qt5/linux,target=/src/patches/qt5/linux \
+    --mount=type=bind,source=patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch,target=/src/qtscript-host-call-flag.patch \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm,target=/src/patches/qt5/linux-arm64-llvm \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${QT_DISTRO},target=/src/qt.tar.xz \
+    --mount=type=bind,source=scripts/build/license-configure-args.sh,target=/src/license-configure-args.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/qt5-linux-arm64/build-llvm.sh
+
+FROM inputs AS sdk
+COPY --from=build /opt/qt5-linux-arm64-llvm /opt/qt5-linux-arm64-llvm
+COPY --from=build /opt/qt5-llvm /opt/qt5-llvm
+COPY cmake/qt5/toolchain-linux-arm64-llvm.cmake /opt/qt5-llvm/toolchain.cmake
+ENV PATH=/opt/qt5-linux-arm64-llvm/bin:/opt/qt5-llvm/bin:${PATH} \
+    CC=/opt/qt5-llvm/bin/target-cc CXX=/opt/qt5-llvm/bin/target-cxx
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
+LABEL org.openkaryon.longreach-qt.platform="ubuntu-trusty-arm64" \
+      org.openkaryon.longreach-qt.glibc="2.19"
+
+FROM ${SDK_IMAGE} AS examples
+ARG PARALLEL_JOBS=4
+ARG LICENSE_PROFILE=gpl-enabled
+RUN --network=none \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/tmp/build-tests.sh \
+    --mount=type=bind,source=scripts/build/qt5-lucid/max-glibc.py,target=/tmp/max-glibc.py \
+    --mount=type=bind,source=scripts/build/qt5-linux-arm64/check-llvm-examples.sh,target=/tmp/check-llvm-examples.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" SMOKE_LICENSE_PROFILE="$LICENSE_PROFILE" bash /tmp/check-llvm-examples.sh

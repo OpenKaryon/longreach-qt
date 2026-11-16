@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "guest": {
+    "os": "Mac OS X 10.6.3 (10D2235)",
+    "method": "VMware Workstation and SSH"
+  },
+  "compiler_ref": "ned7du6p56fvc8mm94dnpfc6c",
+  "osxcross_ref": "imwdi9mrxl28gg31vvoktt4l3",
+  "targets": {
+    "i386": {
+      "dockerfile": "docker/qt5/macos/i386/Dockerfile",
+      "buildkit_ref": "h8pfsjbudua3g7do4iqlk4vfq",
+      "sdk_image": "qt5-macos-i386-llvm21",
+      "sdk_image_id": "sha256:4e75e6be909a4b8d63b5f4b3641b483e24af73a057e0dcd4b01eaaa7bc3c0820",
+      "cmake": "3.28.6",
+      "macho_minimum": "10.6",
+      "guest_hashes_verified": 9,
+      "artifacts": [
+        {
+          "name": "gl-heavy-gallery",
+          "size": 26187852,
+          "sha256": "071922d6ea9d098f2fbb5b258cb9639cced2a962bb1a7f9f8adbbe4395882b25"
+        },
+        {
+          "name": "graphics-gallery",
+          "size": 11489248,
+          "sha256": "67415cbeb418a5e0c892e8f6541a271dbd70c6aa3e411044d946fa1448803d68"
+        },
+        {
+          "name": "multimedia-lab",
+          "size": 16948812,
+          "sha256": "a5ba6ac75642248bf32616257263462df1b4864d96005f673cb9bf850fcf02b0"
+        },
+        {
+          "name": "network-gui",
+          "size": 16478812,
+          "sha256": "8d354074c1c75604983669a6f42b58cde93a7430bb6468e31c2d15bb15ec5274"
+        },
+        {
+          "name": "painting-lab",
+          "size": 11545532,
+          "sha256": "4f3c6def64ec5d22f258fa45e7ae6bfdd10671ee4d7083017cb2afeff8c15b0b"
+        },
+        {
+          "name": "qt-selftest",
+          "size": 31461504,
+          "sha256": "a3d99d93666666e3acb27f6963374682985c54208f62c6f6a1ad0fabaa226c6d"
+        },
+        {
+          "name": "quick-qml-gallery",
+          "size": 26010608,
+          "sha256": "ff2c5143e4796dfaaa5139f8ff1dcec7e0865983883dcb3ae9338f273e6ebbca"
+        },
+        {
+          "name": "smoke-runner",
+          "size": 3159584,
+          "sha256": "c9ab4776b4b27709e76dbc212c01aa9c0712e5c682b0e5487bdc4d60bf23e4c0"
+        },
+        {
+          "name": "widgets-gallery",
+          "size": 16097856,
+          "sha256": "cb20b0e53ce7a3d8748ad0c419b678b9e694ef6daf7f68252c09a685931a210c"
+        }
+      ],
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 291,
+          "failed": 0,
+          "skipped": 64
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 13
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 53,
+          "failed": 0,
+          "skipped": 6
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 519,
+        "checks_failed": 0,
+        "checks_skipped": 87
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "notes": [
+        "The first example build failed because CMake 3.27 emitted framework arguments through -Xlinker.",
+        "Restoring the pinned CMake 3.28.6 kept each framework flag and name together for the i386 driver.",
+        "The retry reused the built Qt SDK and rebuilt the examples."
+      ]
+    },
+    "amd64": {
+      "dockerfile": "docker/qt5/macos/amd64/Dockerfile",
+      "buildkit_ref": "rpcgv71tbacy0noz4ye9solss",
+      "sdk_image": "qt5-macos-amd64-llvm21",
+      "sdk_image_id": "sha256:1a092d89547ddc4b598bdf1bf1a9aaf2c6035f3ff9bc3e172ddd6a03c2e84ea9",
+      "cmake": "3.27.9",
+      "macho_minimum": "10.6",
+      "guest_hashes_verified": 9,
+      "artifacts": [
+        {
+          "name": "gl-heavy-gallery",
+          "size": 31970544,
+          "sha256": "1a3b1eb6fc0c93fdc4351d8d6cf6eadb4ed2e8b2bb6b6cf8cab8af6607f76dff"
+        },
+        {
+          "name": "graphics-gallery",
+          "size": 13516520,
+          "sha256": "0ee186fd6d4e2c7fd63b9f09946ab54a2b9dd5b9df8fb35bb8f11fb889d2d51e"
+        },
+        {
+          "name": "multimedia-lab",
+          "size": 20412080,
+          "sha256": "b082b1d7412e4108cd39d643c19690d9af68db4db881898a262279682adb9193"
+        },
+        {
+          "name": "network-gui",
+          "size": 19739960,
+          "sha256": "5681777b08a7fa212fceebce4bc9e500f3c9747fca6c4c1f223141c48277001a"
+        },
+        {
+          "name": "painting-lab",
+          "size": 13609528,
+          "sha256": "cf5990f2320588a3bca2eff6cb2ea09a9fb52a144d310969006ad72565db73c1"
+        },
+        {
+          "name": "qt-selftest",
+          "size": 37703936,
+          "sha256": "248fecdd95ab28b6a208464e6bbf3a44fd51959ed3401af2b27715f31a4dbf80"
+        },
+        {
+          "name": "quick-qml-gallery",
+          "size": 31639104,
+          "sha256": "8f4929b48f11829c90dfd5e565c64ed8414e3112fa2f3afa3ae24eecbe2ac745"
+        },
+        {
+          "name": "smoke-runner",
+          "size": 3274096,
+          "sha256": "ef02e11dcbf2f69a7eaa1520d3a74eaa8860698cdb72b0887f0c40adc1589b50"
+        },
+        {
+          "name": "widgets-gallery",
+          "size": 19680344,
+          "sha256": "c769560ac1935b20f81adf8d6db2e76ae06f28bea56f538af8a773bf265783ee"
+        }
+      ],
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 291,
+          "failed": 0,
+          "skipped": 64
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 13
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 53,
+          "failed": 0,
+          "skipped": 6
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 519,
+        "checks_failed": 0,
+        "checks_skipped": 87
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  }
+}

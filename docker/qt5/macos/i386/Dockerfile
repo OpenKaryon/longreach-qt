@@ -1,21 +1,37 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 5.15, static, for 32-bit Intel Macs from Mac OS X 10.6 (the last system of
-# the 2006 Core Duo Macs); 64-bit Macs run the binaries up to 10.14.
-#
-# Built on the amd64 image's toolchain stage at 10.6 (BASE_IMAGE), plus the i386
-# compiler drivers of scripts/build/qt5-macos/build-i386-toolchain.sh, which
-# link against the i386 libraries of the 10.7 SDK. Qt itself is the amd64 build
-# with -arch i386; patches/qt5/macos 43-47 handle the 32-bit Objective-C
-# runtime.
+# Qt 5 with upstream LLVM 21.1.8 for Intel Mac OS X 10.6.
 
-ARG BASE_IMAGE="qt5-macos-toolchain-10.6"
+ARG SDK_IMAGE=sdk
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+ARG SNOW_COMPILER_IMAGE=longreach-llvm:21.1.8-snow-tls
+ARG OSXCROSS_IMAGE=qt5-macos-snow-osxcross
+ARG DOWNLOAD_DIR=downloads
+ARG OPENSSL_DISTRO=openssl-3.5.7.tar.gz
+ARG QT_DISTRO=qt-everywhere-opensource-src-5.15.19.tar.xz
 
-# ---------------------------------------------------------------------------
-# toolchain: the amd64 toolchain plus the i386 drivers.
-# ---------------------------------------------------------------------------
-FROM ${BASE_IMAGE} AS toolchain
+FROM ${LLVM_COMPILER_IMAGE} AS snow-compiler
+ARG PARALLEL_JOBS=3
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm/macos-snow-leopard/02-clang-emulated-tls.patch,target=/src/clang.patch \
+    --mount=type=bind,source=scripts/build/qt6-llvm-probes/build-compiler.sh,target=/src/build-compiler.sh \
+    --mount=type=cache,id=qt5-llvm21-snow-compiler,target=/work,sharing=locked \
+    set -eu; \
+    echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  /src/llvm.tar.xz' | sha256sum -c -; \
+    if [ ! -f /work/source/llvm/CMakeLists.txt ]; then \
+        mkdir -p /work/source; tar -xJf /src/llvm.tar.xz -C /work/source --strip-components=1; \
+    fi; \
+    cd /work/source; \
+    if git apply --check /src/clang.patch >/dev/null 2>&1; then git apply /src/clang.patch; \
+    else git apply --reverse --check /src/clang.patch; fi; \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-compiler.sh /src/llvm.tar.xz
+
+FROM ${SNOW_COMPILER_IMAGE} AS compiler
+
+FROM ${OSXCROSS_IMAGE} AS osxcross-i386
 
 ARG DOWNLOAD_DIR="downloads"
 ARG LLVM_SRC="llvm-project-14.0.6.src.tar.xz"
@@ -33,84 +49,67 @@ RUN \
     rm -rf /opt/staging /tmp/qt5-macos && \
     exit 0
 
-# ---------------------------------------------------------------------------
-# builder: unpack, patch, configure, build and install Qt.
-# ---------------------------------------------------------------------------
-FROM toolchain AS builder
+FROM osxcross-i386 AS toolchain
+ARG PARALLEL_JOBS=3
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=compiler /opt/cmake-3.27.9-linux-x86_64 /opt/cmake-3.27.9-linux-x86_64
+ENV PATH=/opt/llvm-21/bin:/opt/cmake-3.27.9-linux-x86_64/bin:${PATH}
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=patches/llvm/macos-snow-leopard/01-legacy-darwin-filesystem-and-clocks.patch,target=/src/libcxx.patch \
+    --mount=type=bind,source=patches/llvm/macos-snow-leopard/03-runtime-emulated-tls.patch,target=/src/tls-runtime.patch \
+    --mount=type=bind,source=scripts/build/qt5-macos/build-snow-libcxx-llvm.sh,target=/src/build-libcxx.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-libcxx.sh /src/llvm.tar.xz /src/libcxx.patch /src/tls-runtime.patch
 
-ARG QT_FULL_VERSION="5.15.19"
-ARG QT_DISTRO="qt-everywhere-opensource-src-${QT_FULL_VERSION}.tar.xz"
-ARG DOWNLOAD_DIR="downloads"
-ARG QT_SRC_DIR="qt-everywhere-src-${QT_FULL_VERSION}"
-ARG PARALLEL_JOBS=""
-ARG OPENSSL_VERSION="3.5.7"
-ARG OPENSSL_DISTRO="openssl-${OPENSSL_VERSION}.tar.gz"
+FROM toolchain AS build-qt
+ARG PARALLEL_JOBS=3
+ARG DOWNLOAD_DIR
+ARG OPENSSL_DISTRO
+ARG QT_DISTRO
+ARG QT_FULL_VERSION=5.15.19
+ARG QT_SHA256=173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${OPENSSL_DISTRO},target=/src/openssl.tar.gz \
+    --mount=type=bind,source=scripts/build/openssl.sh,target=/src/build-openssl.sh \
+    CC=i386-apple-darwin10-clang CXX=i386-apple-darwin10-clang++ \
+    AR=i386-apple-darwin10-ar RANLIB=i386-apple-darwin10-ranlib MACOSX_DEPLOYMENT_TARGET=10.6 \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-openssl.sh \
+        /src/openssl.tar.gz darwin-i386-cc /opt/openssl-3 no-async no-shared no-tests && rm -rf /tmp/openssl-build
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${QT_DISTRO},target=/src/qt.tar.xz \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/all \
+    --mount=type=bind,source=patches/qt5/macos,target=/src/patches/macos \
+    --mount=type=bind,source=patches/qt5/macos-llvm,target=/src/patches/macos-llvm \
+    --mount=type=bind,source=patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch,target=/src/qml-x86.patch \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch,target=/src/mapbox.patch \
+    --mount=type=bind,source=scripts/build/qt5-macos/build-qt-llvm.sh,target=/src/build-qt.sh \
+    --mount=type=cache,id=qt5-macos-i386-llvm21-qt,target=/work,sharing=locked \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh i386
 
-COPY patches/qt5/all /tmp/patches/all
-COPY patches/qt5/macos /tmp/patches/macos
-COPY ${DOWNLOAD_DIR}/${QT_DISTRO} /opt/${QT_DISTRO}
-COPY ${DOWNLOAD_DIR}/${OPENSSL_DISTRO} /opt/${OPENSSL_DISTRO}
-COPY scripts/build/openssl.sh /tmp/build-openssl.sh
+FROM toolchain AS sdk
+COPY --from=build-qt /usr/local/Qt-5.15 /usr/local/Qt-5.15
+COPY --from=build-qt /opt/openssl-3 /opt/openssl-3
+COPY cmake/qt5/toolchain-macos-i386.cmake /opt/longreach-llvm/cmake/toolchain.cmake
+RUN --network=none \
+    driver=/usr/local/osxcross/bin/i386-apple-darwin10-clang++ && \
+    sed -i 's/cxx=(-nostdinc++/cxx=(-femulated-tls -nostdinc++/' "$driver" && \
+    grep -Fq 'cxx=(-femulated-tls -nostdinc++' "$driver"
+# CMake 3.28 emits framework flag/name pairs the i386 driver can map to
+# the 10.7 link SDK. CMake 3.27 expands pairs through -Xlinker.
+ARG DOWNLOAD_DIR=downloads
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/cmake-3.28.6-linux-x86_64.tar.gz,target=/src/cmake.tar.gz \
+    echo '931e3c0d546ee03ca72bb147ccd9b49e3b6252f765f66bf21b9d165519940458  /src/cmake.tar.gz' | sha256sum -c - && \
+    mkdir -p /opt/cmake && tar -xzf /src/cmake.tar.gz -C /opt/cmake --strip-components=1
+ENV PATH=/usr/local/Qt-5.15/bin:/opt/cmake/bin:${PATH}
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
 
-# As in the amd64 image below 10.11 (see its builder stage for each option).
-RUN \
-    set -eux && \
-    prefix=i386-apple-darwin10- && \
-    mkdir -p /opt/openssl-3 && \
-    CC=${prefix}clang CXX=${prefix}clang++ AR=${prefix}ar RANLIB=${prefix}ranlib \
-        MACOSX_DEPLOYMENT_TARGET=10.6 \
-        bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO darwin-i386-cc /opt/openssl-3 \
-        no-async no-shared no-tests && \
-    rm -f /opt/$OPENSSL_DISTRO && \
-    cd /opt && \
-    tar -xJf $QT_DISTRO && \
-    mv $QT_SRC_DIR Qt-5.15 && \
-    rm -f $QT_DISTRO && \
-    cd /opt/Qt-5.15/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done && \
-    sed -i "s|^QMAKE_MACOSX_DEPLOYMENT_TARGET = .*|QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6|" \
-        qtbase/mkspecs/common/macx.conf && \
-    grep -q "^QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6\$" qtbase/mkspecs/common/macx.conf && \
-    MACOSX_DEPLOYMENT_TARGET=10.6 ./configure -v -prefix "/usr/local/Qt-5.15" \
-        -xplatform macx-clang -device-option CROSS_COMPILE=$prefix QMAKE_APPLE_DEVICE_ARCHS=i386 \
-        -no-avx -c++std c++14 -static -optimize-size -release -opensource -confirm-license \
-        -nomake examples -nomake tests -nomake tools -no-cups -dbus-runtime -gif -no-iconv \
-        -no-icu -opengl desktop -openssl-linked -no-securetransport OPENSSL_PATH=/opt/openssl-3 \
-        "OPENSSL_LIBS=-L/opt/openssl-3/lib -lssl -lcrypto" -no-openvg -no-pch -sql-sqlite -qt-sqlite -ssl \
-        -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib -skip wayland -skip qtwebengine && \
-    MACOSX_DEPLOYMENT_TARGET=10.6 make -j "${PARALLEL_JOBS:-$(nproc)}" && \
-    make install && \
-    echo "SDK prefix to be shipped:" && du -sh /usr/local/Qt-5.15 && \
-    exit 0
-
-# ---------------------------------------------------------------------------
-# final: the toolchain stage plus the installed SDK, with tests/ built
-# against it.
-# ---------------------------------------------------------------------------
-FROM toolchain
-
-ARG PARALLEL_JOBS=""
-
-COPY --from=builder /usr/local/Qt-5.15 /usr/local/Qt-5.15
-COPY --from=builder /opt/openssl-3 /opt/openssl-3
-
-ENV PATH="/usr/local/Qt-5.15/bin:$PATH"
-
-# CMake for the tests/ suite; see the amd64 Dockerfile.
-ARG CMAKE_VERSION="3.28.6"
-# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
-ARG LONGREACH_MIRROR
-COPY scripts/build/cmake.sh /tmp/build-cmake.sh
-RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
-
-ENV PATH="/opt/cmake/bin:${PATH}"
-
+FROM ${SDK_IMAGE} AS examples
+ARG PARALLEL_JOBS=3
 COPY tests /tmp/qt-smoke-tests
-COPY cmake/qt5 /tmp/qt-smoke-cmake
-COPY scripts/build/tests.sh /tmp/build-tests.sh
-
-RUN SMOKE_OPENSSL_PREFIX=/opt/openssl-3 \
-    SMOKE_CMAKE_TOOLCHAIN=/tmp/qt-smoke-cmake/toolchain-macos-i386.cmake \
-    bash /tmp/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin
-
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/src/build-tests.sh \
+    SMOKE_CMAKE_TOOLCHAIN=/opt/longreach-llvm/cmake/toolchain.cmake \
+    SMOKE_OPENSSL_PREFIX=/opt/openssl-3 SMOKE_REQUIRE_CXX23=1 PARALLEL_JOBS="$PARALLEL_JOBS" \
+    bash /src/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin

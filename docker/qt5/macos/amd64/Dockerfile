@@ -1,27 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 5.15, static, for Intel Macs from OS X 10.6 Snow Leopard (see
-# MACOS_DEPLOYMENT_TARGET), cross-built with osxcross.
-#
-#   toolchain  cmake + osxcross (+ the static libc++ below 10.7)
-#   builder    patch, configure, build, install
-#   final      the toolchain plus the installed SDK and the tests/ suite
-#
-# The final stage inherits the toolchain stage, so applications are built with
-# exactly the osxcross Qt was built with.
+# Qt 5 with upstream LLVM 21.1.8 for Intel Mac OS X 10.6.
 
-# ---------------------------------------------------------------------------
-# toolchain: cmake + osxcross, shared by the builder and the final image.
-# Ubuntu 22.04: osxcross builds apple-libtapi from current LLVM, which needs
-# newer clang and CMake than 16.04 has; the host's glibc does not matter for a
-# Mach-O cross-build.
-# ---------------------------------------------------------------------------
-
-# Base images are pinned by digest; BASE_REGISTRY is where they are pulled
-# from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
+ARG SDK_IMAGE=sdk
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
-FROM --platform=linux/amd64 ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS toolchain
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-snow-tls
+ARG DOWNLOAD_DIR=downloads
+ARG OPENSSL_DISTRO=openssl-3.5.7.tar.gz
+ARG QT_DISTRO=qt-everywhere-opensource-src-5.15.19.tar.xz
+
+FROM ${BASE_REGISTRY}/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS osxcross
 ARG APT_SNAPSHOT
 COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
@@ -41,6 +30,7 @@ ARG OSXCROSS_REF="27d21e4977c9751d01199c7a226a6faf494c3dd9"
 
 # The compiler's architecture; the darwin version is read from the SDK.
 ARG OSXCROSS_ARCH="x86_64"
+ARG PARALLEL_JOBS=3
 
 # The oldest macOS the binaries load on (the SDK stays current). It is set in
 # both places that decide it: osxcross' clang wrapper (OSX_VERSION_MIN), whose
@@ -91,7 +81,7 @@ RUN \
         apple-libtapi=640b4623929c923c0468143ff2a363a48665fa54 cctools-port=e101a6940dcb5988808a16626bc43851f00dc05f xar=5fa4675419cfec60ac19a9c7f7c2d0e7c831a497 \
         compiler-rt=archive:/opt/llvm-staging/$LLVM_SRC && \
     TP_OSXCROSS_DEV=/opt/osxcross-sources \
-    OCDEBUG=1 OSX_VERSION_MIN=$MACOS_DEPLOYMENT_TARGET UNATTENDED=1 \
+    OCDEBUG=1 OSX_VERSION_MIN=$MACOS_DEPLOYMENT_TARGET UNATTENDED=1 JOBS="$PARALLEL_JOBS" \
         TARGET_DIR=/usr/local/osxcross ./build.sh && \
     ln -s /usr/local/osxcross/bin/xcrun /usr/bin/xcrun && \
     ls /usr/local/osxcross/bin/${OSXCROSS_ARCH}-apple-darwin*-clang++ \
@@ -105,7 +95,7 @@ ENV PATH="/usr/local/osxcross/bin:$PATH"
 RUN \
     set -eux && \
     cd /opt/osxcross && \
-    TP_OSXCROSS_DEV=/opt/osxcross-sources UNATTENDED=1 ENABLE_COMPILER_RT_INSTALL=1 ./build_compiler_rt.sh && \
+    TP_OSXCROSS_DEV=/opt/osxcross-sources UNATTENDED=1 ENABLE_COMPILER_RT_INSTALL=1 JOBS="$PARALLEL_JOBS" ./build_compiler_rt.sh && \
     exit 0
 
 # Self-checks: osxcross' own, and that an availability guard compiles and links.
@@ -118,114 +108,73 @@ RUN \
     "$(cat /opt/osxcross-prefix)clang++" /tmp/availability.cpp -O3 -o /tmp/availability && \
     exit 0
 
-# Below 10.7: the static C++ runtime, installed into the SDK so every C++ link
-# picks it up through -lc++ (scripts/build/qt5-macos/build-libcxx.sh). The
-# LLVM tarball is copied either way; COPY cannot be conditional.
+# Seed the SDK for the static LLVM runtime stage, which replaces this archive.
 COPY scripts/build/qt5-macos/build-libcxx.sh /tmp/build-libcxx.sh
-ARG PARALLEL_JOBS=""
 RUN \
     set -eux && \
-    if [ "$(printf '%s\n' 10.7 "$MACOS_DEPLOYMENT_TARGET" | sort -V | head -1)" != 10.7 ]; then \
-        PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/build-libcxx.sh /opt/llvm-staging/$LLVM_SRC; \
-    fi && \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/build-libcxx.sh /opt/llvm-staging/$LLVM_SRC && \
     rm -rf /opt/llvm-staging /tmp/build-libcxx.sh && \
     exit 0
 
-# ---------------------------------------------------------------------------
-# builder: unpack, patch, configure, build and install Qt.
-# ---------------------------------------------------------------------------
-FROM toolchain AS builder
+FROM ${LLVM_COMPILER_IMAGE} AS compiler
 
-ARG QT_FULL_VERSION="5.15.19"
-ARG QT_DISTRO="qt-everywhere-opensource-src-${QT_FULL_VERSION}.tar.xz"
-ARG DOWNLOAD_DIR="downloads"
-ARG QT_SRC_DIR="qt-everywhere-src-${QT_FULL_VERSION}"
-ARG PARALLEL_JOBS=""
-# ARGs do not cross FROM.
-ARG MACOS_DEPLOYMENT_TARGET
+FROM osxcross AS toolchain
+ARG PARALLEL_JOBS=3
+ARG LEGACY_MACOS_SDK=MacOSX10.7.sdk.tar.xz
+COPY --from=compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=compiler /opt/cmake-3.27.9-linux-x86_64 /opt/cmake-3.27.9-linux-x86_64
+ENV PATH=/opt/llvm-21/bin:/opt/cmake-3.27.9-linux-x86_64/bin:${PATH}
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=downloads/${LEGACY_MACOS_SDK},target=/src/macos10.7.tar.xz \
+    --mount=type=bind,source=patches/llvm/macos-snow-leopard/01-legacy-darwin-filesystem-and-clocks.patch,target=/src/libcxx.patch \
+    --mount=type=bind,source=patches/llvm/macos-snow-leopard/03-runtime-emulated-tls.patch,target=/src/tls-runtime.patch \
+    --mount=type=bind,source=scripts/build/qt5-macos/build-snow-libcxx-llvm.sh,target=/src/build-libcxx.sh \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-libcxx.sh \
+        /src/llvm.tar.xz /src/libcxx.patch /src/tls-runtime.patch x86_64 /src/macos10.7.tar.xz
 
-# patches/qt5/all for every Qt 5 target, patches/qt5/macos for macOS.
-COPY patches/qt5/all /tmp/patches/all
-COPY patches/qt5/macos /tmp/patches/macos
-COPY ${DOWNLOAD_DIR}/${QT_DISTRO} /opt/${QT_DISTRO}
+FROM toolchain AS build-qt
+ARG MACOS_DEPLOYMENT_TARGET=10.6
+ARG PARALLEL_JOBS=3
+ARG DOWNLOAD_DIR
+ARG OPENSSL_DISTRO
+ARG QT_DISTRO
+ARG QT_FULL_VERSION=5.15.19
+ARG QT_SHA256=173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${OPENSSL_DISTRO},target=/src/openssl.tar.gz \
+    --mount=type=bind,source=scripts/build/openssl.sh,target=/src/build-openssl.sh \
+    prefix=$(cat /opt/osxcross-prefix) && \
+    CC="${prefix}clang" CXX="${prefix}clang++" AR="${prefix}ar" RANLIB="${prefix}ranlib" \
+    MACOSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-openssl.sh \
+        /src/openssl.tar.gz darwin64-x86_64-cc /opt/openssl-3 no-async no-shared no-tests && rm -rf /tmp/openssl-build
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${QT_DISTRO},target=/src/qt.tar.xz \
+    --mount=type=bind,source=patches/qt5/all,target=/src/patches/all \
+    --mount=type=bind,source=patches/qt5/macos,target=/src/patches/macos \
+    --mount=type=bind,source=patches/qt5/macos-llvm,target=/src/patches/macos-llvm \
+    --mount=type=bind,source=patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch,target=/src/qml-x86.patch \
+    --mount=type=bind,source=patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch,target=/src/mapbox.patch \
+    --mount=type=bind,source=scripts/build/qt5-macos/build-qt-llvm.sh,target=/src/build-qt.sh \
+    --mount=type=cache,id=qt5-macos-amd64-llvm21-qt,target=/work,sharing=locked \
+    MACOSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh x86_64
 
-# TLS below 10.11 goes through a static OpenSSL: 10.7's SecureTransport stops
-# at TLS 1.0 and lacks the API Qt 5.15 uses.
-ARG OPENSSL_VERSION="3.5.7"
-ARG OPENSSL_DISTRO="openssl-${OPENSSL_VERSION}.tar.gz"
-COPY ${DOWNLOAD_DIR}/${OPENSSL_DISTRO} /opt/${OPENSSL_DISTRO}
-COPY scripts/build/openssl.sh /tmp/build-openssl.sh
+FROM toolchain AS sdk
+COPY --from=build-qt /usr/local/Qt-5.15 /usr/local/Qt-5.15
+COPY --from=build-qt /opt/openssl-3 /opt/openssl-3
+COPY cmake/qt5/toolchain-macos-amd64.cmake /opt/longreach-llvm/cmake/toolchain.cmake
+RUN --network=none \
+    printf '\nstring(APPEND CMAKE_CXX_FLAGS_INIT " -femulated-tls -Wl,-force_load,/opt/longreach-llvm/lib/liblongreach-snow-tls.a")\n' >> /opt/longreach-llvm/cmake/toolchain.cmake && \
+    printf '\nQMAKE_CXXFLAGS += -femulated-tls\nQMAKE_LFLAGS += -Wl,-force_load,/opt/longreach-llvm/lib/liblongreach-snow-tls.a\n' >> /usr/local/Qt-5.15/mkspecs/common/macx.conf
+ENV PATH=/usr/local/Qt-5.15/bin:${PATH}
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["qmake -query QT_VERSION"]
 
-# -opengl desktop gives Qt3D, DataVisualization, Quick3D and QtOpenGL;
-# -dbus-runtime loads libdbus at run time, as the SDK has no D-Bus headers.
-RUN \
-    set -eux && \
-    pre1011= && \
-    if [ "$(printf '%s\n' 10.11 "$MACOS_DEPLOYMENT_TARGET" | sort -V | head -1)" != 10.11 ]; then pre1011=1; fi && \
-    mkdir -p /opt/openssl-3 && \
-    if [ -n "$pre1011" ]; then \
-        prefix=$(cat /opt/osxcross-prefix) && \
-        CC=${prefix}clang CXX=${prefix}clang++ AR=${prefix}ar RANLIB=${prefix}ranlib \
-            bash /tmp/build-openssl.sh /opt/$OPENSSL_DISTRO darwin64-x86_64-cc /opt/openssl-3 \
-            no-async no-shared no-tests && \
-        set -- -openssl-linked -no-securetransport OPENSSL_PATH=/opt/openssl-3 \
-            "OPENSSL_LIBS=-L/opt/openssl-3/lib -lssl -lcrypto"; \
-    else \
-        set -- -no-openssl -securetransport; \
-    fi && \
-    rm -f /opt/$OPENSSL_DISTRO && \
-    cd /opt && \
-    tar -xJf $QT_DISTRO && \
-    mv $QT_SRC_DIR Qt-5.15 && \
-    rm -f $QT_DISTRO && \
-    cd /opt/Qt-5.15/ && \
-    for p in /tmp/patches/all/*.patch /tmp/patches/macos/*.patch; do echo "applying $p"; git apply "$p" || exit 1; done && \
-    sed -i "s|^QMAKE_MACOSX_DEPLOYMENT_TARGET = .*|QMAKE_MACOSX_DEPLOYMENT_TARGET = $MACOS_DEPLOYMENT_TARGET|" \
-        qtbase/mkspecs/common/macx.conf && \
-    grep -q "^QMAKE_MACOSX_DEPLOYMENT_TARGET = $MACOS_DEPLOYMENT_TARGET\$" qtbase/mkspecs/common/macx.conf && \
-    ./configure -v -prefix "/usr/local/Qt-5.15" \
-        -xplatform macx-clang -device-option CROSS_COMPILE="$(cat /opt/osxcross-prefix)" \
-        -no-avx -c++std c++14 -static -optimize-size -release -opensource -confirm-license \
-        -nomake examples -nomake tests -nomake tools -no-cups -dbus-runtime -gif -no-iconv \
-        -no-icu -opengl desktop "$@" -no-openvg -no-pch -sql-sqlite -qt-sqlite -ssl \
-        -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib -skip wayland -skip qtwebengine && \
-    make -j "${PARALLEL_JOBS:-$(nproc)}" && \
-    make install && \
-    echo "SDK prefix to be shipped:" && du -sh /usr/local/Qt-5.15 && \
-    exit 0
-
-# ---------------------------------------------------------------------------
-# final: the toolchain stage plus the installed SDK, with tests/ built
-# against it.
-# ---------------------------------------------------------------------------
-FROM toolchain
-
-ARG PARALLEL_JOBS=""
-
-COPY --from=builder /usr/local/Qt-5.15 /usr/local/Qt-5.15
-# Empty unless the target is below 10.11.
-COPY --from=builder /opt/openssl-3 /opt/openssl-3
-
-ENV PATH="/usr/local/Qt-5.15/bin:$PATH"
-
-# CMake for tests/ (Qt 5.15's static plugin import needs 3.15+), installed
-# here so the builder's cache stays valid.
-ARG CMAKE_VERSION="3.28.6"
-# From the OpenKaryonLab copy (make passes LONGREACH_MIRROR; cmake.sh has the default).
-ARG LONGREACH_MIRROR
-COPY scripts/build/cmake.sh /tmp/build-cmake.sh
-RUN bash /tmp/build-cmake.sh "${CMAKE_VERSION}" /opt/cmake
-
-ENV PATH="/opt/cmake/bin:${PATH}"
-
+FROM ${SDK_IMAGE} AS examples
+ARG PARALLEL_JOBS=3
 COPY tests /tmp/qt-smoke-tests
-COPY cmake/qt5 /tmp/qt-smoke-cmake
-COPY scripts/build/tests.sh /tmp/build-tests.sh
-
-# Building the suite against the installed SDK alone proves it self-contained;
-# running it needs a Mac.
-RUN if [ -d /opt/openssl-3/lib ]; then export SMOKE_OPENSSL_PREFIX=/opt/openssl-3; fi && \
-    SMOKE_CMAKE_TOOLCHAIN=/tmp/qt-smoke-cmake/toolchain-macos-amd64.cmake \
-    bash /tmp/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin
-
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/tests.sh,target=/src/build-tests.sh \
+    SMOKE_CMAKE_TOOLCHAIN=/opt/longreach-llvm/cmake/toolchain.cmake SMOKE_OPENSSL_PREFIX=/opt/openssl-3 \
+    SMOKE_REQUIRE_CXX23=1 PARALLEL_JOBS="$PARALLEL_JOBS" \
+    bash /src/build-tests.sh /tmp/qt-smoke-tests /opt/qt-smoke-bin

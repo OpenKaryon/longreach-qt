@@ -2,20 +2,20 @@
 
 | Target | Image | Floor |
 |--------|-------|-------|
-| `make qt5-linux-amd64` | `qt5-linux-amd64` | Ubuntu 10.04 Lucid amd64: glibc 2.11, libxcb 1.5, libX11 1.3 |
-| `make qt5-linux-i386` | `qt5-linux-i386` | Ubuntu 10.04 Lucid i386 |
-| `make qt5-linux-arm64` | `qt5-linux-arm64` | Ubuntu 14.04 arm64: glibc 2.19 |
+| `make qt5-linux-amd64` | `qt5-linux-amd64-llvm21` | Ubuntu 10.04 Lucid amd64: glibc 2.11, libxcb 1.5, libX11 1.3 |
+| `make qt5-linux-i386` | `qt5-linux-i386-llvm21` | Ubuntu 10.04 Lucid i386 |
+| `make qt5-linux-arm64` | `qt5-linux-arm64-llvm21` | Ubuntu 14.04 arm64: glibc 2.19 |
 
 One build per architecture, from Qt 4.8's Linux floor.
 
 ## How the Lucid build works
 
-amd64 and i386 are the same build, `docker/qt5/linux/amd64` and `i386`. The compiler is
-Ubuntu 16.04's GCC 5.4 (the amd64 or the i386 image); headers and libraries
-come from the pinned Lucid packages
-(`scripts/fetch/locks/qt5-lucid-<arch>-packages.json`). On top of that:
+amd64 and i386 share [one Dockerfile](../../docker/qt5/linux/Dockerfile).
+It reconstructs both sysroots from the pinned Lucid package lists in
+`scripts/fetch/locks`. The Xenial stages build the X libraries, optional
+stubs and OpenSSL with the legacy compiler. Qt and the examples use
+Clang, LLD and the static LLVM runtimes built against each sysroot.
 
-- libstdc++ is rebuilt from GCC 5.5 against glibc 2.11 and linked statically;
 - the xcb libraries Qt's xcb plugin needs beyond Lucid's (the xcb-util
   family and xkbcommon 0.7.2; XInput is Qt's bundled copy) are built
   statically over Lucid's own libxcb 1.5, with a small compatibility layer
@@ -34,37 +34,21 @@ come from the pinned Lucid packages
   or no Bluetooth adapter; `patches/qt5/linux/04` keeps the GStreamer
   services from starting when GStreamer cannot be initialized.
 
-## arm64
-
-`docker/qt5/linux/arm64` is the same build cross-compiled for Ubuntu 14.04
-arm64: Ubuntu 16.04's aarch64 GCC 5 with a sysroot of the 14.04 packages in
-`scripts/build/qt5-linux-arm64/packages.txt`, the `linux-trusty-aarch64-g++`
-mkspec, a static libstdc++ (glibc's aarch64 symbols start at 2.17, so GCC 5's
-own runtime fits 14.04's 2.19), and Lucid's static X libraries: the libxcb
-1.11 extensions, xcb-util and xkbcommon 0.7.2 (14.04 has libxcb 1.10 and
-xkbcommon 0.4.1). The binaries need the same system libraries as on Lucid
-(libxcb, libX11, libGL, fontconfig, FreeType); the optional ones are stubbed
-the same way.
-
 ## amd64 with LLVM 21.1.8
 
-The opt-in `qt5-linux-amd64-llvm` build uses upstream Clang and LLD with
-static compiler-rt, libunwind, libc++abi and libc++ built against the pinned
-Ubuntu 10.04 sysroot. The existing `qt5-linux-amd64:latest` image supplies
-that sysroot, OpenSSL and the native Wayland scanner. Qt uses the existing
-GPL-enabled module configuration and a Clang qmake spec. Its examples
-compile in required C++23 mode.
+The amd64 build uses the static compiler-rt, libunwind, libc++abi and
+libc++ built against the Ubuntu 10.04 sysroot. Its examples compile
+in required C++23 mode.
 
-Stage the Qt 5.15.19 and LLVM 21.1.8 archives under `downloads/`, and
-prepare `longreach-llvm:21.1.8-compiler` as described in the
-[LLVM probe guide](qt6-llvm-probes.md). From the repository root, run:
+Make stages the pinned archives under `downloads/` and prepares the
+shared LLVM compiler. From the repository root, run:
 
 ```sh
-make qt5-linux-amd64-llvm-examples PARALLEL_JOBS=4
+make qt5-linux-amd64-examples PARALLEL_JOBS=4
 ```
 
-Use `make qt5-linux-amd64-llvm` for the SDK alone. The local image is
-`qt5-linux-amd64:llvm21`, with the SDK at `/opt/qt5-linux-amd64-llvm`
+Use `make qt5-linux-amd64` for the SDK alone. The local image is
+`qt5-linux-amd64-llvm21`, with the SDK at `/opt/qt5-linux-amd64-llvm`
 and its CMake toolchain at `/opt/llvm-runtime-lucid/toolchain.cmake`.
 The examples target extracts the binaries to
 `artifacts/tests-qt5-linux-amd64-llvm21/`.
@@ -77,8 +61,8 @@ and the scope of the run.
 ## i386 with LLVM 21.1.8
 
 The i386 profile shares the [Lucid build recipe](#amd64-with-llvm-2118).
-It takes the i386 sysroot and OpenSSL from `qt5-linux-i386:latest`.
-The host still runs the amd64 compiler and Wayland scanner. The LLVM
+It builds the i386 sysroot and OpenSSL in separate stages.
+The host uses the amd64 compiler and Wayland scanner. The LLVM
 runtimes and all target Qt libraries are built for i686 against glibc 2.11.
 The i386 FreeType header keeps its original assembly constraints and
 omits the obsolete `register` specifier on the output variable.
@@ -86,11 +70,11 @@ omits the obsolete `register` specifier on the output variable.
 With the same pinned sources and compiler staged, run:
 
 ```sh
-make qt5-linux-i386-llvm-examples PARALLEL_JOBS=4
+make qt5-linux-i386-examples PARALLEL_JOBS=4
 ```
 
-The SDK alone is `make qt5-linux-i386-llvm`. It installs to
-`/opt/qt5-linux-i386-llvm` in `qt5-linux-i386:llvm21`. The examples go to
+The SDK alone is `make qt5-linux-i386`. It installs to
+`/opt/qt5-linux-i386-llvm` in `qt5-linux-i386-llvm21`. The examples go to
 `artifacts/tests-qt5-linux-i386-llvm21/`. The staged and clean repository
 builds both passed all 25 required C++23 checks and all seven GUI examples
 under Ubuntu's 32-bit 2.6.32 kernel and Lucid userland in QEMU.
@@ -99,30 +83,41 @@ and the scope of the run.
 
 ## arm64 with LLVM 21.1.8
 
-The opt-in `qt5-linux-arm64-llvm` target builds the static GPL-enabled SDK
-with upstream Clang, LLD and libc++. It reuses the existing Qt 5 arm64
-image's Trusty sysroot and OpenSSL, and the upstream ARM64 runtimes from the
-Qt 6 LLVM toolchain. Qt 5 host tools such as qmake and moc are built
-natively in the Debian 12 build stage. The Qt libraries build in C++14
-mode, and the example consumers build in strict C++23 mode.
-
-From the repository root, stage the default `qt5-linux-arm64:latest`
-image and `qt6-linux-arm64:llvm21-toolchain`. See the
-[Qt 6 toolchain instructions](../results/qt6-linux-arm64-llvm21-sdk-20261111.md#reproduce)
-for the latter. Then run one build at a time.
+The [Trusty Dockerfile](../../docker/qt5/linux/arm64/Dockerfile)
+prepares the Ubuntu 14.04 sysroot, X libraries and OpenSSL in separate
+stages. The common ARM64 runtime is built at the CentOS 7 glibc 2.17
+floor. Debian 12 builds the native qmake and moc. Target Qt libraries
+build with upstream Clang in C++14 mode, and the examples use C++23.
 
 ```sh
-make qt5-linux-arm64-llvm-examples PARALLEL_JOBS=4
+make qt5-linux-arm64-examples PARALLEL_JOBS=4
 ```
 
-Use `make qt5-linux-arm64-llvm` for the SDK alone. Both use the local tag
-`qt5-linux-arm64:llvm21` and install the SDK to
-`/opt/qt5-linux-arm64-llvm`. CMake consumers can use
-`/opt/qt5-llvm/toolchain.cmake`. The examples target also extracts the
-suite to `artifacts/tests-qt5-linux-arm64-llvm21/`. Docker reuses the SDK
-layers when only the examples change. The
-[run record](../results/qt5-linux-arm64-llvm21-sdk-20261111.md) includes
-the Ubuntu 14.04 commands and results.
+Use `make qt5-linux-arm64` for the SDK alone. It installs to
+`/opt/qt5-linux-arm64-llvm` in `qt5-linux-arm64-llvm21`. The
+CMake toolchain is `/opt/qt5-llvm/toolchain.cmake`; the examples
+go to `artifacts/tests-qt5-linux-arm64-llvm21/`. The
+[previous run record](../results/qt5-linux-arm64-llvm21-sdk-20261111.md)
+includes the Ubuntu 14.04 runtime commands.
+
+The [Trusty migration record](../results/qt5-linux-arm64-llvm-migration-20261115.json)
+records all eight ordinary applications and the 25 required C++23
+checks with zero skips. The ordinary QtScript function call passes
+with the same tagged call frame fix used by the Windows XP profiles.
+
+## Lucid migration validation
+
+Both SDKs built through the standard Make targets and ran on Ubuntu
+10.04 with the 2.6.32-38 kernel in QEMU. Each passed all eight ordinary
+applications and 25/25 required C++23 checks with zero skips. All nine
+executables on each architecture matched the build manifest in the
+guest. The ELF audit found glibc symbol requirements through 2.10.
+
+The GUI examples use XCB against Debian 12 Xvfb with GLX disabled.
+The ordinary console runs on the offscreen platform with GLX disabled,
+a tmpfs root and local hostname resolution. Those fixture settings let
+the console exercise QStorageInfo and loopback networking. See the
+[Lucid migration record](../results/qt5-linux-lucid-llvm-migration-20261115.json).
 
 ## Results
 

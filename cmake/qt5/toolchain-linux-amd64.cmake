@@ -6,7 +6,7 @@
 # static libstdc++ rebuilt against its glibc 2.11. Qt's CMake packages carry
 # absolute paths into that sysroot, so only the compilers and the library
 # search path need setting. The binaries do not run in the build container
-# (see docker/qt5/linux/amd64/Dockerfile), hence the explicit
+# (in the v0.2.2 GCC images), hence the explicit
 # cross-compiling flag.
 set(CMAKE_SYSTEM_NAME Linux)
 # The compiler's own target, not uname: the i386 image runs on a 64-bit kernel.

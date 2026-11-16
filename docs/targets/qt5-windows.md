@@ -2,8 +2,8 @@
 
 | Target | Image | Floor | Toolchain |
 |--------|-------|-------|-----------|
-| `make qt5-win-i386` | `qt5-win-i386` | Windows XP SP3 | MinGW-w64 GCC 7.3, runtime v5 (Ubuntu 18.04) |
-| `make qt5-win-amd64` | `qt5-win-amd64` | Windows XP x64 SP2 | same |
+| `make qt5-win-i386` | `qt5-win-i386-llvm21` | Windows XP SP3 | Clang 21.1.8, MinGW-w64 v5 CRT |
+| `make qt5-win-amd64` | `qt5-win-amd64-llvm21` | Windows XP x64 SP2 | same |
 | `make qt5-win-arm64` | `qt5-win-arm64` | Windows 10 on ARM | LLVM-MinGW 20241217 (UCRT, clang 19) |
 
 `make qt5-win-i386-examples` copies the test suite
@@ -32,18 +32,20 @@ geoservices plugin (clang 19 rejects the boost and rapidjson it vendors).
 
 ## i386 with LLVM 21.1.8
 
-The opt-in profile uses upstream Clang, LLD, compiler-rt and libc++. It takes
-the MinGW-w64 v5 XP sysroot and OpenSSL from `qt5-win-i386:latest`. Prepare
+The [shared XP Dockerfile](../../docker/qt5/windows/Dockerfile) uses
+upstream Clang, LLD, compiler-rt and libc++. It takes
+the MinGW-w64 v5 XP sysroot from pinned Ubuntu 18.04 packages and builds
+static OpenSSL from the pinned source archive. Prepare
 `longreach-llvm:21.1.8-compiler` using the
 [LLVM compiler instructions](qt5-linux.md#amd64-with-llvm-2118), then run
 one build at a time.
 
 ```sh
-make qt5-win-i386-llvm-examples PARALLEL_JOBS=4
+make qt5-win-i386-examples PARALLEL_JOBS=4
 ```
 
-`make qt5-win-i386-llvm` builds the SDK alone. The SDK installs to
-`/opt/qt5-win-i386-llvm` in `qt5-win-i386:llvm21`. The examples go to
+`make qt5-win-i386` builds the SDK alone. The SDK installs to
+`/opt/qt5-win-i386-llvm` in `qt5-win-i386-llvm21`. The examples go to
 `artifacts/tests-qt5-win-i386-llvm21/`. The validated deployment on XP SP3
 places the 32-bit Visual C++ 2010 CRT (`msvcr100.dll`) alongside the
 executables. The build image and extracted suite contain the import
@@ -57,21 +59,25 @@ describes the C++23 and GUI results and the experimental filesystem limits.
 ## amd64 with LLVM 21.1.8
 
 The amd64 profile shares the XP recipe and uses the 64-bit MinGW-w64 v5
-sysroot and OpenSSL archives from `qt5-win-amd64:latest`. The example binaries
+sysroot and static OpenSSL build for AMD64. The example binaries
 target subsystem 5.2 and use the 64-bit Visual C++ 2010 CRT beside the
 executable.
 
 ```sh
-make qt5-win-amd64-llvm-examples PARALLEL_JOBS=3
+make qt5-win-amd64-examples PARALLEL_JOBS=3
 ```
 
-Use `make qt5-win-amd64-llvm` for the SDK alone. Both targets use
-`qt5-win-amd64:llvm21`, with the SDK in `/opt/qt5-win-amd64-llvm`.
+Use `make qt5-win-amd64` for the SDK alone. Both targets use
+`qt5-win-amd64-llvm21`, with the SDK in `/opt/qt5-win-amd64-llvm`.
 The [build and run record](../results/qt5-win-amd64-llvm21-xp-20261112.md)
 documents the runtime results on Windows 7, Windows 11 and Windows XP x64 SP2.
 XP x64 SP2 passed all 25 required C++23 checks without skips and all eight
 ordinary applications. The guest's OpenGL 1.1 driver skipped the Qt 5 scene
 graph renderer check because it lacks the required graphics features.
+
+The [AMD64 migration record](../results/qt5-win-amd64-llvm-migration-20261115.json)
+records the fresh SDK and repeat guest run, including the PE 5.2
+audit, both QtScript regressions and the strict C++23 results.
 
 ## arm64 with LLVM 21.1.8
 
@@ -90,9 +96,12 @@ compiled examples and the deferred Windows on ARM runtime checks.
 
 ## Results
 
-8/8 (478 checks) on Windows XP SP3 in VMware with the i386 build; the XP
-backport was first validated on real XP hardware. The arm64 build is checked
-by building only ([platforms](../platforms.md#qt-51519)).
+The rebuilt i386 LLVM SDK passed all eight ordinary applications on Windows
+XP SP3 in VMware, with 503 checks passed and 97 optional checks skipped.
+The separate C++23 run passed all 25 required checks with zero skips. The
+[migration record](../results/qt5-win-i386-llvm-migration-20261115.json)
+includes executable hashes and per-application results. Windows ARM64
+runtime validation remains deferred.
 
 ## Limits
 

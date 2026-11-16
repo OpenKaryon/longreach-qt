@@ -3,19 +3,22 @@
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
 
-source=/build/qt-everywhere-src-5.15.19
+version=${QT_FULL_VERSION:-5.15.19}
+source=/build/qt-everywhere-src-$version
 archive=/src/qt.tar.xz
 patches=/src/patches/qt5
 prefix=/opt/qt5-linux-arm64-llvm
 
-echo "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae  $archive" | sha256sum -c -
+echo "${QT_SHA256:?}  $archive" | sha256sum -c -
 /opt/llvm-21/bin/clang --version | grep -E '^clang version 21\.1\.8([[:space:]]|$)'
+license_args=$(sh /src/license-configure-args.sh qt5 "${LICENSE_PROFILE:-gpl-enabled}")
 wayland-scanner --version
 
 mkdir -p /build /opt/qt5-llvm/bin
 tar -xJf "$archive" -C /build --exclude='*/qtwebengine/*'
 cd "$source"
-for patch in "$patches"/{all,linux,linux-arm64-llvm}/*.patch; do
+# Clang can fold the tagged QtScript return-frame test, as on Windows XP.
+for patch in "$patches"/{all,linux,linux-arm64-llvm}/*.patch /src/qtscript-host-call-flag.patch; do
     git apply "$patch"
 done
 
@@ -60,7 +63,7 @@ cd /build/qt
     -opengl desktop -openssl-linked -no-openvg -no-pch \
     -sql-sqlite -qt-sqlite -ssl -no-libudev -no-libinput -no-mtdev -no-tslib \
     -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib \
-    -skip qtwebengine
+    -skip qtwebengine $license_args
 
 # Missing host tools can silently remove both of these modules.
 grep -E '^Qt Wayland Client \.+ yes$' config.summary
@@ -71,4 +74,4 @@ install -m 644 config.summary "$prefix/qt-config.summary"
 for module in Core Widgets WaylandClient WaylandCompositor; do
     test -f "$prefix/lib/libQt5$module.a"
 done
-test "$("$prefix/bin/qmake" -query QT_VERSION)" = 5.15.19
+test "$("$prefix/bin/qmake" -query QT_VERSION)" = "$version"

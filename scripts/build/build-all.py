@@ -130,7 +130,7 @@ def docker_memory_gb() -> float | None:
 
 def image_of(target: str, profile: str) -> str:
     suffix = f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else ''
-    if target in QT6_LLVM_TARGETS:
+    if target in QT6_LLVM_TARGETS or (target.startswith('qt5-') and target not in {'qt5-win-arm64', 'qt5-macos-arm64'}):
         return f'{target}-llvm21{suffix}'
     return f'{target}{suffix}'
 

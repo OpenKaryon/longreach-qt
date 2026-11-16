@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "qmake": "3.1",
+  "build": {
+    "dockerfile": "docker/qt5/linux/Dockerfile",
+    "command": "make -j2 qt5-linux-amd64-examples qt5-linux-i386-examples PARALLEL_JOBS=2 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "build_refs": [
+      "oib9c17tu5qlnnersue9p04ih",
+      "qn7mu9qmvao6bebtg0rrw9u6e"
+    ]
+  },
+  "guest": {
+    "os": "Ubuntu 10.04 Lucid",
+    "method": "QEMU system mode with the Lucid kernel and userland",
+    "display": "Debian 12 Xvfb outside the guest with GLX disabled",
+    "ordinary_console": "Offscreen with GLX disabled, tmpfs root and local localhost resolution"
+  },
+  "targets": {
+    "amd64": {
+      "sdk_image": "qt5-linux-amd64-llvm21",
+      "sdk_image_id": "sha256:d593642e44de773ca20173730383cf019f9874bed7337e65b4bf2c13d7e06d86",
+      "guest_kernel": "Linux (none) 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:12:07 UTC 2012 x86_64 GNU/Linux",
+      "kernel_package": "linux-image-2.6.32-38-generic_2.6.32-38.83_amd64.deb",
+      "kernel_package_sha256": "a5badc2ee2729472b589225359709876f1d1752efdd37e94c3c6aca25c8491a0",
+      "guest_hashes_verified": 9,
+      "artifacts": [
+        {
+          "name": "gl-heavy-gallery",
+          "size": 31685576,
+          "sha256": "f12419bad7a43f2ffd1b96b81be534363937358eb0f6d2e8f4f7e294ae4f4423"
+        },
+        {
+          "name": "graphics-gallery",
+          "size": 13863888,
+          "sha256": "c398d719df8c243e32d8f1475d6d6bf978288df5ae9739a20417c376c5907fd5"
+        },
+        {
+          "name": "multimedia-lab",
+          "size": 22118592,
+          "sha256": "c154f650cb62251dbd05e433f10909ed0951aeac3cfc87f80a6fbc88dbf5b6e0"
+        },
+        {
+          "name": "network-gui",
+          "size": 20100944,
+          "sha256": "fc88e447bb1592e009e916f3d9f755a4b9e2d14825aac6a4c88369e1fd691256"
+        },
+        {
+          "name": "painting-lab",
+          "size": 14067120,
+          "sha256": "6e31ee040f1168ca5a859cb99b135668d3fb813d19e39122768abc416b2236e2"
+        },
+        {
+          "name": "qt-selftest",
+          "size": 39520048,
+          "sha256": "c57c87378ef02a61ff670f2815b779cce398acee4217614098e1add8b35dd2dd"
+        },
+        {
+          "name": "quick-qml-gallery",
+          "size": 33762184,
+          "sha256": "38102a1ac905f1ee5798e5378c21cc966450fbcd9114167fd68e8d958481d511"
+        },
+        {
+          "name": "smoke-runner",
+          "size": 3168480,
+          "sha256": "287d5057a1e114dd54cef8f782824d1d87e16d9b27be1ca8ff8cb1bb0275f31d"
+        },
+        {
+          "name": "widgets-gallery",
+          "size": 22549448,
+          "sha256": "ae36721325bd497ad1a9a231d288660afeb319ecf8da191cc8aca05195d7f329"
+        }
+      ],
+      "max_glibc_by_binary": {
+        "gl-heavy-gallery": "2.10",
+        "graphics-gallery": "2.9",
+        "multimedia-lab": "2.10",
+        "network-gui": "2.10",
+        "painting-lab": "2.9",
+        "qt-selftest": "2.10",
+        "quick-qml-gallery": "2.10",
+        "smoke-runner": "2.9",
+        "widgets-gallery": "2.9"
+      },
+      "ordinary": {
+        "apps_passed": 8,
+        "checks_passed": 519,
+        "checks_failed": 0,
+        "optional_skips": 91,
+        "applications": {
+          "gl-heavy-gallery": {
+            "passed": 39,
+            "failed": 0,
+            "optional_skips": 7
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "multimedia-lab": {
+            "passed": 2,
+            "failed": 0,
+            "optional_skips": 2
+          },
+          "network-gui": {
+            "passed": 7,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "painting-lab": {
+            "passed": 16,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "qt-selftest": {
+            "passed": 303,
+            "failed": 0,
+            "optional_skips": 64
+          },
+          "quick-qml-gallery": {
+            "passed": 30,
+            "failed": 0,
+            "optional_skips": 13
+          },
+          "widgets-gallery": {
+            "passed": 90,
+            "failed": 0,
+            "optional_skips": 5
+          }
+        }
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skips": 0,
+        "exit_code": 0
+      }
+    },
+    "i386": {
+      "sdk_image": "qt5-linux-i386-llvm21",
+      "sdk_image_id": "sha256:b7a93738531fc0fafd5b5d48975b18d7be6a58e387fb555a72a87ce312a0b6c3",
+      "guest_kernel": "Linux (none) 2.6.32-38-generic #83-Ubuntu SMP Wed Jan 4 11:13:04 UTC 2012 i686 GNU/Linux",
+      "kernel_package": "linux-image-2.6.32-38-generic_2.6.32-38.83_i386.deb",
+      "kernel_package_sha256": "f594b2e876bc365e34993dff14c5771403bd1ba0d01974882fee451153ff6a14",
+      "guest_hashes_verified": 9,
+      "artifacts": [
+        {
+          "name": "gl-heavy-gallery",
+          "size": 37069196,
+          "sha256": "e7f858966240b12591d38a75cd80e41e3ee39f5d5c69512da0a0573be3455e55"
+        },
+        {
+          "name": "graphics-gallery",
+          "size": 16088460,
+          "sha256": "1573353bd02cc78b493e2dc498c008853520bc16ecdf2aca4d510fd71d1530aa"
+        },
+        {
+          "name": "multimedia-lab",
+          "size": 24489716,
+          "sha256": "0b07f2ec9d896ac3bfa938e8261d1c2a1bb708bc9ca16b01c838d69ab8b08f48"
+        },
+        {
+          "name": "network-gui",
+          "size": 23081744,
+          "sha256": "6e63ffadccaf72a1bb71c4aa7a4c0cd8330ac3e2846d3e9c7c4bb419dc6c27ab"
+        },
+        {
+          "name": "painting-lab",
+          "size": 16333132,
+          "sha256": "0209402bd5056de7bac12dbd35bb0acd83641ede256cbd501b2ef3ab0ec92e99"
+        },
+        {
+          "name": "qt-selftest",
+          "size": 45486360,
+          "sha256": "68d69e84106cfe90275cf72e78269f70e009ddec7e4e33127176c8da363f0ada"
+        },
+        {
+          "name": "quick-qml-gallery",
+          "size": 39029000,
+          "sha256": "79688016ef23e661fb5b76f2c67e711123f3b16515dfe21dd016bef1f68e0f6d"
+        },
+        {
+          "name": "smoke-runner",
+          "size": 3461916,
+          "sha256": "d57cf5dfd8e0555fa83850b1e0e12fec0fcb63ee6484c0eeb9cf90a53cbea3d8"
+        },
+        {
+          "name": "widgets-gallery",
+          "size": 25083268,
+          "sha256": "8c5154f228ffed20da3bd3bb49149f1828c842c5b82078fa85df7cb0ac57fe2c"
+        }
+      ],
+      "max_glibc_by_binary": {
+        "gl-heavy-gallery": "2.10",
+        "graphics-gallery": "2.9",
+        "multimedia-lab": "2.10",
+        "network-gui": "2.10",
+        "painting-lab": "2.9",
+        "qt-selftest": "2.10",
+        "quick-qml-gallery": "2.10",
+        "smoke-runner": "2.9",
+        "widgets-gallery": "2.9"
+      },
+      "ordinary": {
+        "apps_passed": 8,
+        "checks_passed": 519,
+        "checks_failed": 0,
+        "optional_skips": 91,
+        "applications": {
+          "gl-heavy-gallery": {
+            "passed": 39,
+            "failed": 0,
+            "optional_skips": 7
+          },
+          "graphics-gallery": {
+            "passed": 32,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "multimedia-lab": {
+            "passed": 2,
+            "failed": 0,
+            "optional_skips": 2
+          },
+          "network-gui": {
+            "passed": 7,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "painting-lab": {
+            "passed": 16,
+            "failed": 0,
+            "optional_skips": 0
+          },
+          "qt-selftest": {
+            "passed": 303,
+            "failed": 0,
+            "optional_skips": 64
+          },
+          "quick-qml-gallery": {
+            "passed": 30,
+            "failed": 0,
+            "optional_skips": 13
+          },
+          "widgets-gallery": {
+            "passed": 90,
+            "failed": 0,
+            "optional_skips": 5
+          }
+        }
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skips": 0,
+        "exit_code": 0
+      }
+    }
+  }
+}

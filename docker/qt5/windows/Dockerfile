@@ -1,14 +1,43 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
-ARG BASE_REGISTRY=docker.io/library
-ARG XP_IMAGE=qt5-win-i386:latest
+# Qt 5 with upstream LLVM 21.1.8 for Windows XP on i386 and amd64.
+ARG SDK_IMAGE=sdk
+ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG XP_ARCH=i386
 ARG XP_CROSS=i686-w64-mingw32
 ARG XP_OPENSSL_LIBDIR=lib
 ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+ARG DOWNLOAD_DIR=downloads
+ARG OPENSSL_DISTRO=openssl-3.5.7.tar.gz
+ARG QT_DISTRO=qt-everywhere-opensource-src-5.15.19.tar.xz
 
-FROM ${XP_IMAGE} AS xp
+# Bionic supplies the XP-compatible MinGW-w64 v5 headers and CRT.
+FROM ${BASE_REGISTRY}/ubuntu:18.04@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98 AS xp
+ARG XP_ARCH
 ARG XP_CROSS
+ARG DOWNLOAD_DIR
+ARG OPENSSL_DISTRO
+ARG PARALLEL_JOBS=4
+ENV DEBIAN_FRONTEND=noninteractive
+RUN --mount=type=bind,source=scripts/build/apt-update.sh,target=/tmp/apt-update.sh \
+    set -eu; \
+    case "$XP_ARCH" in i386) family=i686 ;; amd64) family=x86-64 ;; *) exit 2 ;; esac; \
+    sh /tmp/apt-update.sh; \
+    apt-get install -y --no-install-recommends make perl ca-certificates \
+        "binutils-mingw-w64-$family=2.30-7ubuntu1+8ubuntu1" \
+        "mingw-w64-$family-dev=5.0.3-1" mingw-w64-common=5.0.3-1 \
+        "gcc-mingw-w64-$family=7.3.0-11ubuntu1+20.2build1"; \
+    update-alternatives --set "$XP_CROSS-gcc" "/usr/bin/$XP_CROSS-gcc-posix"; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN --network=none \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${OPENSSL_DISTRO},target=/tmp/openssl.tar.gz \
+    --mount=type=bind,source=scripts/build/openssl.sh,target=/tmp/build-openssl.sh \
+    set -eu; \
+    case "$XP_ARCH" in i386) target=mingw ;; amd64) target=mingw64 ;; *) exit 2 ;; esac; \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /tmp/build-openssl.sh /tmp/openssl.tar.gz "$target" /opt/openssl-3 \
+        no-async no-shared no-tests --cross-compile-prefix="$XP_CROSS-" -D_WIN32_WINNT=0x0501; \
+    rm -rf /tmp/openssl-build
 # The older CRT calls this stack probe and emits TLS startup metadata in
 # .tls. Put the directory outside the data and sort the start marker first.
 RUN --network=none cd /tmp && \
@@ -62,6 +91,11 @@ COPY --from=build-runtime /opt/llvm-runtime-xp /opt/llvm-runtime-xp
 
 FROM toolchain AS build-qt
 ARG PARALLEL_JOBS=4
+ARG DOWNLOAD_DIR
+ARG QT_DISTRO
+ARG QT_FULL_VERSION=5.15.19
+ARG QT_SHA256=173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae
+ARG QT_OPENGL_CONFIG="-opengl desktop"
 RUN --network=none \
     --mount=type=bind,source=scripts/build/qt5-windows-xp/build-qt.sh,target=/src/build-qt.sh \
     --mount=type=bind,source=patches/qt5/all,target=/src/patches/qt5/all \
@@ -69,7 +103,7 @@ RUN --network=none \
     --mount=type=bind,source=patches/qt5/windows-xp-llvm,target=/src/patches/qt5/windows-xp-llvm \
     --mount=type=bind,source=patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch,target=/src/qml-x86.patch \
     --mount=type=bind,source=patches/qt5/linux-arm64-llvm/02-mapbox-clang21.patch,target=/src/mapbox-clang21.patch \
-    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/src/qt.tar.xz \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${QT_DISTRO},target=/src/qt.tar.xz \
     PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/build-qt.sh
 
 FROM toolchain AS sdk
@@ -81,7 +115,7 @@ ENV PATH=${QT_INSTALL_DIR}/bin:/opt/llvm-runtime-xp/bin:${PATH} \
 ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["qmake -query QT_VERSION"]
 
-FROM sdk AS examples
+FROM ${SDK_IMAGE} AS examples
 ARG PARALLEL_JOBS=4
 RUN --network=none \
     --mount=type=bind,source=tests,target=/src/tests \

@@ -10,10 +10,9 @@ a separate host compiler.
 | 4 | `qt4-linux-i386`, `qt4-linux-amd64` | GCC |
 | 4 | `qt4-macos-i386` | Clang via osxcross, GNU libstdc++ |
 | 4 | `qt4-macos-ppc` | GCC |
-| 5 | `qt5-win-i386`, `qt5-win-amd64` | GCC / MinGW-w64 |
+| 5 | Linux, Windows XP and Intel macOS | LLVM 21.1.8 and static libc++ |
 | 5 | `qt5-win-arm64` | Clang / LLVM-MinGW |
-| 5 | `qt5-linux-i386`, `qt5-linux-amd64`, `qt5-linux-arm64` | GCC |
-| 5 | `qt5-macos-i386`, `qt5-macos-amd64`, `qt5-macos-arm64` | Clang via osxcross |
+| 5 | `qt5-macos-arm64` | Clang via osxcross |
 | 6 | Linux amd64/arm64, Windows amd64, macOS amd64 | LLVM 21.1.8 and static libc++ |
 | 6 | `qt6-win-arm64` | Clang / LLVM-MinGW |
 | 6 | `qt6-macos-arm64` | Clang via osxcross |

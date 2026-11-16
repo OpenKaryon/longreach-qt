@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "arch": "arm64",
+  "build": {
+    "dockerfile": "docker/qt5/linux/arm64/Dockerfile",
+    "command": "make qt5-linux-arm64-examples PARALLEL_JOBS=2 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "buildkit_ref": "h4iue10b650s5zk0wvdshqmsh",
+    "sdk_image": "qt5-linux-arm64-llvm21",
+    "sdk_image_id": "sha256:ad74c3288e94010b19761186dffe756aec4130a7833a9731615530bfc7cb58c6",
+    "max_glibc": "2.18"
+  },
+  "guest": {
+    "os": "Ubuntu 14.04.6 LTS arm64",
+    "libc": "Ubuntu EGLIBC 2.19-0ubuntu6.15",
+    "image": "arm64v8/ubuntu@sha256:5ed16aa332467821529d451800e6fe599d83e30471e91b096752f8696d9bf6e9",
+    "method": "QEMU user mode, Ubuntu guest userland, Docker host kernel",
+    "display": "Xvfb for GUI examples; offscreen and GLX disabled for the ordinary console",
+    "guest_hashes_verified": 9
+  },
+  "regression": {
+    "previous_buildkit_ref": "qerutx99o0jfjdvbx4qbw11bn",
+    "ordinary_check": "script/function-call-context",
+    "root_cause": "Clang removed the host call frame tag check and QtScript tried to dispatch from a null return PC.",
+    "patch": "patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch",
+    "patch_sha256": "e60082f4e5166a5296e2ab7e652b69a2fe0f9c87948d12c6cb47a7b78fd48502",
+    "result": "PASS after reusing the host call frame patch"
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery",
+      "size": 30714032,
+      "sha256": "b1c0f11741b0ba38d763f66627394a104c058bab135331d669bf2f1c2ac71617"
+    },
+    {
+      "name": "graphics-gallery",
+      "size": 13465512,
+      "sha256": "85683b70add807dd41c51bcbcabe02a5fa820baf0b931b114b91c05d23a5a5d0"
+    },
+    {
+      "name": "multimedia-lab",
+      "size": 21053912,
+      "sha256": "2a468c76cc2e35c57d83f1ae61e74bc2323dd4c471a86eec540283f9cb6023c3"
+    },
+    {
+      "name": "network-gui",
+      "size": 19215096,
+      "sha256": "bf4e0fc4cfb87c0225e46b6df04d97812aecde98ef069dede624159911e0a261"
+    },
+    {
+      "name": "painting-lab",
+      "size": 13656056,
+      "sha256": "266e3c26a60a7182c4807b70b1ff803ac329221a1612676773a60db2c325f38f"
+    },
+    {
+      "name": "qt-selftest",
+      "size": 38407896,
+      "sha256": "8c72e7fb4328e3bfe6ae8396c3fd95b717d32ef5b3e571d753301b7eefb89ea7"
+    },
+    {
+      "name": "quick-qml-gallery",
+      "size": 30979072,
+      "sha256": "97409f67b7c62aa0cabcd66d88b6481b7589d0cc68417f952a7be4b7021870f7"
+    },
+    {
+      "name": "smoke-runner",
+      "size": 3128896,
+      "sha256": "9117be9e27a658efe6138dd507e6655e6b607b6e7db108c44d7652bc59396657"
+    },
+    {
+      "name": "widgets-gallery",
+      "size": 21538688,
+      "sha256": "1aa8a7f62010d3a5fee2c429e0684921990995da32937e25cdbcff85fc87ff14"
+    }
+  ],
+  "ordinary": {
+    "gl-heavy-gallery": {
+      "passed": 53,
+      "failed": 0,
+      "skipped": 6
+    },
+    "graphics-gallery": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "multimedia-lab": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 2
+    },
+    "network-gui": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "painting-lab": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "qt-selftest": {
+      "passed": 303,
+      "failed": 0,
+      "skipped": 64
+    },
+    "quick-qml-gallery": {
+      "passed": 31,
+      "failed": 0,
+      "skipped": 12
+    },
+    "widgets-gallery": {
+      "passed": 90,
+      "failed": 0,
+      "skipped": 5
+    }
+  },
+  "ordinary_totals": {
+    "passed": 534,
+    "failed": 0,
+    "skipped": 89
+  },
+  "strict_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  }
+}

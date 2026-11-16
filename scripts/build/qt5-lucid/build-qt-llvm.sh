@@ -4,10 +4,13 @@
 
 set -euo pipefail
 
-source=/build/qt-everywhere-src-5.15.19
+version=${QT_FULL_VERSION:-5.15.19}
+source=/build/qt-everywhere-src-$version
 archive=/src/qt.tar.xz
 prefix=${QT_INSTALL_DIR:?}
-echo "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae  $archive" | sha256sum -c -
+echo "${QT_SHA256:?}  $archive" | sha256sum -c -
+profile=${LICENSE_PROFILE:-gpl-enabled}
+license_args=$(sh /src/license-configure-args.sh qt5 "$profile")
 wayland-scanner --version
 
 mkdir -p /build/qt
@@ -30,7 +33,7 @@ cd /build/qt
     -no-cups -dbus-runtime -alsa -pulseaudio -gstreamer 1.0 -speechd -gif -no-iconv -no-icu -no-glib \
     -opengl desktop -openssl-linked -no-openvg -no-pch \
     -sql-sqlite -qt-sqlite -ssl -no-libudev -no-libinput -no-mtdev -no-tslib \
-    -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib -skip qtwebengine
+    -make libs -qt-harfbuzz -qt-libjpeg -qt-libpng -qt-pcre -qt-zlib -skip qtwebengine $license_args
 
 grep -E '^Qt Wayland Client \.+ yes$' config.summary
 grep -E '^Qt Wayland Compositor \.+ yes$' config.summary
@@ -41,10 +44,12 @@ for module in Core Widgets WaylandClient WaylandCompositor; do
     test -f "$prefix/lib/libQt5$module.a"
 done
 test -f "$prefix/plugins/geoservices/libqtgeoservices_mapboxgl.a"
-for importer in assimp uip; do
-    test -f "$prefix/plugins/assetimporters/lib$importer.a"
-done
-for tool in balsam meshdebug; do
-    test -x "$prefix/bin/$tool"
-done
-test "$("$prefix/bin/qmake" -query QT_VERSION)" = 5.15.19
+if [ "$profile" != lgpl-friendly ]; then
+    for importer in assimp uip; do
+        test -f "$prefix/plugins/assetimporters/lib$importer.a"
+    done
+    for tool in balsam meshdebug; do
+        test -x "$prefix/bin/$tool"
+    done
+fi
+test "$("$prefix/bin/qmake" -query QT_VERSION)" = "$version"

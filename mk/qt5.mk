@@ -7,15 +7,15 @@
 QT5_VERSION ?= 5.15.19
 QT5_SERIES := $(basename $(QT5_VERSION))
 
-QT5_WIN_I386_IMAGE := qt5-win-i386$(LICENSE_SUFFIX)
-QT5_WIN_AMD64_IMAGE := qt5-win-amd64$(LICENSE_SUFFIX)
+QT5_WIN_I386_IMAGE := qt5-win-i386-llvm21$(LICENSE_SUFFIX)
+QT5_WIN_AMD64_IMAGE := qt5-win-amd64-llvm21$(LICENSE_SUFFIX)
 QT5_WIN_ARM64_IMAGE := qt5-win-arm64$(LICENSE_SUFFIX)
-QT5_LINUX_I386_IMAGE := qt5-linux-i386$(LICENSE_SUFFIX)
-QT5_LINUX_AMD64_IMAGE := qt5-linux-amd64$(LICENSE_SUFFIX)
-QT5_LINUX_ARM64_IMAGE := qt5-linux-arm64$(LICENSE_SUFFIX)
-QT5_MACOS_AMD64_IMAGE := qt5-macos-amd64$(LICENSE_SUFFIX)
+QT5_LINUX_I386_IMAGE := qt5-linux-i386-llvm21$(LICENSE_SUFFIX)
+QT5_LINUX_AMD64_IMAGE := qt5-linux-amd64-llvm21$(LICENSE_SUFFIX)
+QT5_LINUX_ARM64_IMAGE := qt5-linux-arm64-llvm21$(LICENSE_SUFFIX)
+QT5_MACOS_AMD64_IMAGE := qt5-macos-amd64-llvm21$(LICENSE_SUFFIX)
 QT5_MACOS_ARM64_IMAGE := qt5-macos-arm64$(LICENSE_SUFFIX)
-QT5_MACOS_I386_IMAGE := qt5-macos-i386$(LICENSE_SUFFIX)
+QT5_MACOS_I386_IMAGE := qt5-macos-i386-llvm21$(LICENSE_SUFFIX)
 
 # One source archive for every image. Another version needs its SHA256 too.
 QT5_ARCHIVE := qt-everywhere-opensource-src-$(QT5_VERSION).tar.xz
@@ -59,9 +59,6 @@ QT5_MACOS_I386_LINK_SDK ?= MacOSX10.7.sdk.tar.xz
 QT5_MACOS_I386_LINK_SDK_PATH := $(DOWNLOAD_DIR)/$(QT5_MACOS_I386_LINK_SDK)
 QT5_MACOS_I386_LINK_SDK_URL ?= https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.7.sdk.tar.xz
 QT5_MACOS_I386_LINK_SDK_SHA256 ?= e5cf1c4026fa2b538201268d1b057854eb6e47676ff31a336d19b981c6fd4d2a
-# The amd64 toolchain stage at 10.6, which the i386 image builds on.
-QT5_MACOS_TOOLCHAIN_106_IMAGE := qt5-macos-toolchain-10.6
-
 QT5_MACOS_BUILD_ARGS = $(QT5_BUILD_ARGS) --build-arg LAB_GIT="$(LAB_GIT)" --build-arg OSXCROSS_REF="$(OSXCROSS_REF)"
 
 QT5_BUILD_ARGS = --build-arg QT_FULL_VERSION=$(QT5_VERSION) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg LICENSE_PROFILE=$(LICENSE_PROFILE)
@@ -77,18 +74,6 @@ download-qt5: $(QT5_ARCHIVE_PATH)
 
 $(QT5_ARCHIVE_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT5_ARCHIVE_URL)" "$@" "$(QT5_ARCHIVE_SHA256)"
-
-# Windows: the XP backport; one binary takes the newer paths at run time up to
-# Windows 11.
-qt5-win-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/i386/Dockerfile -t $(QT5_WIN_I386_IMAGE) .
-
-qt5-win-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_WINDOWS_BUILD_ARGS) -f docker/qt5/windows/amd64/Dockerfile -t $(QT5_WIN_AMD64_IMAGE) .
 
 # Windows on ARM starts at Windows 10; the same patches apply.
 qt5-win-arm64: $(QT5_INPUTS) $(LLVM_MINGW_PATH)
@@ -106,98 +91,74 @@ $(QT5_MACOS_I386_LINK_SDK_PATH):
 
 download-qt5-macos-i386-link-sdk: $(QT5_MACOS_I386_LINK_SDK_PATH)
 
-# Linux amd64 and i386 from Ubuntu 10.04 Lucid (glibc 2.11, libxcb 1.5): see
-# docs/targets/qt5-linux.md.
-qt5-linux-amd64: $(QT5_INPUTS) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --arch amd64
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/amd64/Dockerfile -t $(QT5_LINUX_AMD64_IMAGE) .
+# The common ARM64 LLVM runtime is built against CentOS 7's glibc 2.17.
+QT5_ARM64_LLVM_ARGS = $(SOURCE_ARGS) $(QT5_BUILD_ARGS) --build-arg LLVM_TOOLCHAIN_IMAGE=$(QT6_ARM64_LLVM_RUNTIME_IMAGE) --build-arg QT_DISTRO=$(QT5_ARCHIVE) --build-arg QT_SHA256=$(QT5_ARCHIVE_SHA256) --build-arg OPENSSL_DISTRO=$(OPENSSL_ARCHIVE)
 
-qt5-linux-i386: $(QT5_INPUTS) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --arch i386
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/i386/Dockerfile -t $(QT5_LINUX_I386_IMAGE) .
-
-qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH)
-	$(ONE_BUILD_CHECK)
-	$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --sources-only
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_BUILD_ARGS) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE) .
-
-# Opt-in LLVM profile. The default GCC image supplies the Trusty sysroot and
-# OpenSSL; the Qt 6 LLVM toolchain supplies only the upstream ARM64 runtimes.
-QT5_ARM64_LLVM_IMAGE := qt5-linux-arm64:llvm21
-QT5_ARM64_LLVM_TRUSTY ?= qt5-linux-arm64:latest
-QT5_ARM64_LLVM_TOOLCHAIN ?= qt6-linux-arm64:llvm21-toolchain
-QT5_ARM64_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
-    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
-    --build-arg TRUSTY_IMAGE=$(QT5_ARM64_LLVM_TRUSTY) \
-    --build-arg LLVM_TOOLCHAIN_IMAGE=$(QT5_ARM64_LLVM_TOOLCHAIN) \
-    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
-
+.PHONY: qt5-linux-arm64-examples build-qt5-linux-arm64 build-qt5-linux-arm64-examples
 .PHONY: qt5-linux-arm64-llvm qt5-linux-arm64-llvm-examples
-BUILD_TARGETS += qt5-linux-arm64-llvm
-qt5-linux-arm64-llvm qt5-linux-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz
+
+qt5-linux-arm64: $(QT5_INPUTS) $(OPENSSL_PATH) build-qt6-linux-arm64-llvm-runtime
+qt5-linux-arm64 qt5-linux-arm64-smoke:
 	$(ONE_BUILD_CHECK)
-	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
-	docker image inspect --format "{{.Id}}" $(QT5_ARM64_LLVM_TRUSTY) $(QT5_ARM64_LLVM_TOOLCHAIN)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/arm64/Dockerfile-llvm -t $(QT5_ARM64_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19)
+	$(if $(filter-out %-smoke,$@),$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --sources-only)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_ARM64_LLVM_ARGS) --target $(if $(filter %-smoke,$@),examples,sdk) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT5_LINUX_ARM64_IMAGE)) -f docker/qt5/linux/arm64/Dockerfile -t $(QT5_LINUX_ARM64_IMAGE)$(if $(filter %-smoke,$@),-examples) .
+	$(if $(filter %-smoke,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_LINUX_ARM64_IMAGE))
 
-# Lucid needs LLVM runtimes for each architecture at the glibc 2.11 floor.
-QT5_LUCID_LLVM_ARCH = $(if $(filter qt5-linux-i386-llvm%,$@),i386,amd64)
-QT5_LUCID_LLVM_IMAGE = qt5-linux-$(QT5_LUCID_LLVM_ARCH):llvm21
-QT5_LUCID_LLVM_SYSROOT ?= qt5-linux-$(QT5_LUCID_LLVM_ARCH):latest
-QT5_LUCID_LLVM_SCANNER ?= qt5-linux-amd64:latest
-QT5_LUCID_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
-QT5_LUCID_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
-    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
-    --build-arg LUCID_ARCH=$(QT5_LUCID_LLVM_ARCH) \
-    --build-arg LUCID_IMAGE=$(QT5_LUCID_LLVM_SYSROOT) \
-    --build-arg LUCID_SCANNER_IMAGE=$(QT5_LUCID_LLVM_SCANNER) \
-    --build-arg LLVM_COMPILER_IMAGE=$(QT5_LUCID_LLVM_COMPILER) \
-    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+qt5-linux-arm64-llvm: build-qt5-linux-arm64
+qt5-linux-arm64-llvm-examples: qt5-linux-arm64-examples
 
-QT5_LUCID_LLVM_TARGETS := qt5-linux-amd64-llvm qt5-linux-i386-llvm
-.PHONY: $(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS))
-BUILD_TARGETS += $(QT5_LUCID_LLVM_TARGETS)
-$(QT5_LUCID_LLVM_TARGETS) $(addsuffix -examples,$(QT5_LUCID_LLVM_TARGETS)): $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+# Build both Lucid SDKs with the same recipe and their pinned sysroot inputs.
+QT5_LUCID_TARGETS := qt5-linux-amd64 qt5-linux-i386
+QT5_LUCID_ARCH = $(if $(filter qt5-linux-i386%,$@),i386,amd64)
+QT5_LUCID_PLATFORM = $(if $(filter i386,$(QT5_LUCID_ARCH)),386,amd64)
+QT5_LUCID_IMAGE = $(if $(filter i386,$(QT5_LUCID_ARCH)),$(QT5_LINUX_I386_IMAGE),$(QT5_LINUX_AMD64_IMAGE))
+QT5_LUCID_LLVM_COMPILER ?= $(QT6_LLVM_COMPILER_IMAGE)
+QT5_LUCID_ARGS = $(SOURCE_ARGS) $(QT5_BUILD_ARGS) --build-arg QT_DISTRO=$(QT5_ARCHIVE) --build-arg QT_SHA256=$(QT5_ARCHIVE_SHA256) --build-arg OPENSSL_DISTRO=$(OPENSSL_ARCHIVE) --build-arg LUCID_ARCH=$(QT5_LUCID_ARCH) --build-arg LUCID_PLATFORM=$(QT5_LUCID_PLATFORM) --build-arg LLVM_COMPILER_IMAGE=$(QT5_LUCID_LLVM_COMPILER)
+
+.PHONY: $(addsuffix -examples,$(QT5_LUCID_TARGETS)) $(addprefix build-,$(QT5_LUCID_TARGETS)) $(addprefix build-,$(addsuffix -examples,$(QT5_LUCID_TARGETS)))
+.PHONY: $(addsuffix -llvm,$(QT5_LUCID_TARGETS)) $(addsuffix -llvm-examples,$(QT5_LUCID_TARGETS))
+
+
+$(QT5_LUCID_TARGETS): $(QT5_INPUTS) $(OPENSSL_PATH) $(GCC55_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
+$(QT5_LUCID_TARGETS) $(addsuffix -smoke,$(QT5_LUCID_TARGETS)):
 	$(ONE_BUILD_CHECK)
-	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
-	docker image inspect --format "{{.Id}}" $(sort $(QT5_LUCID_LLVM_SYSROOT) $(QT5_LUCID_LLVM_SCANNER) $(QT5_LUCID_LLVM_COMPILER))
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_LUCID_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/linux/amd64/Dockerfile-llvm -t $(QT5_LUCID_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_LUCID_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-lucid/include/openssl/opensslv.h)
+	$(if $(filter-out %-smoke,$@),$(PYTHON) scripts/fetch/qt5-lucid-fetch.py --arch $(QT5_LUCID_ARCH))
+	docker image inspect --format "{{.Id}}" $(QT5_LUCID_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 $(QT5_LUCID_ARGS) --target $(if $(filter %-smoke,$@),examples,sdk) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT5_LUCID_IMAGE)) -f docker/qt5/linux/Dockerfile -t $(QT5_LUCID_IMAGE)$(if $(filter %-smoke,$@),-examples) .
+	$(if $(filter %-smoke,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_LUCID_IMAGE))
 
-# XP needs its existing CRT and OpenSSL as inputs to the upstream LLVM build.
-QT5_XP_LLVM_ARCH = $(if $(filter qt5-win-amd64-llvm%,$@),amd64,i386)
-QT5_XP_LLVM_CROSS = $(if $(filter amd64,$(QT5_XP_LLVM_ARCH)),x86_64,i686)-w64-mingw32
-QT5_XP_LLVM_OPENSSL_LIBDIR = $(if $(filter amd64,$(QT5_XP_LLVM_ARCH)),lib64,lib)
-QT5_XP_LLVM_IMAGE = qt5-win-$(QT5_XP_LLVM_ARCH):llvm21
-QT5_XP_LLVM_SYSROOT ?= qt5-win-$(QT5_XP_LLVM_ARCH):latest
-QT5_XP_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
-QT5_XP_LLVM_ARGS = --build-arg BASE_REGISTRY=$(BASE_REGISTRY) \
-    $(if $(APT_SNAPSHOT),--build-arg APT_SNAPSHOT=$(APT_SNAPSHOT)) \
-    --build-arg XP_IMAGE=$(QT5_XP_LLVM_SYSROOT) \
-    --build-arg XP_ARCH=$(QT5_XP_LLVM_ARCH) \
-    --build-arg XP_CROSS=$(QT5_XP_LLVM_CROSS) \
-    --build-arg XP_OPENSSL_LIBDIR=$(QT5_XP_LLVM_OPENSSL_LIBDIR) \
-    --build-arg LLVM_COMPILER_IMAGE=$(QT5_XP_LLVM_COMPILER) \
-    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+$(foreach target,$(QT5_LUCID_TARGETS),$(eval $(target)-llvm: build-$(target))$(eval $(target)-llvm-examples: $(target)-examples))
 
-QT5_XP_LLVM_TARGETS := qt5-win-i386-llvm qt5-win-amd64-llvm
-.PHONY: $(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS))
-BUILD_TARGETS += $(QT5_XP_LLVM_TARGETS)
-$(QT5_XP_LLVM_TARGETS) $(addsuffix -examples,$(QT5_XP_LLVM_TARGETS)): $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+# XP uses the Bionic MinGW-w64 v5 CRT and static OpenSSL inputs.
+QT5_XP_TARGETS := qt5-win-i386 qt5-win-amd64
+QT5_XP_ARCH = $(if $(filter qt5-win-amd64%,$@),amd64,i386)
+QT5_XP_CROSS = $(if $(filter amd64,$(QT5_XP_ARCH)),x86_64,i686)-w64-mingw32
+QT5_XP_OPENSSL_LIBDIR = $(if $(filter amd64,$(QT5_XP_ARCH)),lib64,lib)
+QT5_XP_IMAGE = $(if $(filter amd64,$(QT5_XP_ARCH)),$(QT5_WIN_AMD64_IMAGE),$(QT5_WIN_I386_IMAGE))
+QT5_XP_LLVM_COMPILER ?= $(QT6_LLVM_COMPILER_IMAGE)
+QT5_XP_ARGS = $(SOURCE_ARGS) $(QT5_WINDOWS_BUILD_ARGS) --build-arg XP_ARCH=$(QT5_XP_ARCH) --build-arg XP_CROSS=$(QT5_XP_CROSS) --build-arg XP_OPENSSL_LIBDIR=$(QT5_XP_OPENSSL_LIBDIR) --build-arg LLVM_COMPILER_IMAGE=$(QT5_XP_LLVM_COMPILER) --build-arg QT_DISTRO=$(QT5_ARCHIVE) --build-arg QT_SHA256=$(QT5_ARCHIVE_SHA256) --build-arg OPENSSL_DISTRO=$(OPENSSL_ARCHIVE)
+
+.PHONY: $(addsuffix -examples,$(QT5_XP_TARGETS)) $(addprefix build-,$(QT5_XP_TARGETS)) $(addprefix build-,$(addsuffix -examples,$(QT5_XP_TARGETS)))
+.PHONY: $(addsuffix -llvm,$(QT5_XP_TARGETS)) $(addsuffix -llvm-examples,$(QT5_XP_TARGETS)) $(addsuffix -llvm-toolchain,$(QT5_XP_TARGETS))
+QT5_XP_I386_TOOLCHAIN_IMAGE ?= qt5-win-i386:llvm21-toolchain
+QT5_XP_AMD64_TOOLCHAIN_IMAGE ?= qt5-win-amd64:llvm21-toolchain
+QT5_XP_TOOLCHAIN_IMAGE = $(if $(filter amd64,$(QT5_XP_ARCH)),$(QT5_XP_AMD64_TOOLCHAIN_IMAGE),$(QT5_XP_I386_TOOLCHAIN_IMAGE))
+
+$(QT5_XP_TARGETS): $(QT5_INPUTS) $(OPENSSL_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
+$(QT5_XP_TARGETS) $(addsuffix -smoke,$(QT5_XP_TARGETS)):
 	$(ONE_BUILD_CHECK)
-	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
-	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_SYSROOT) $(QT5_XP_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_XP_LLVM_IMAGE) QT5_VERSION=5.15.19 QT5_TESTS_OPENSSL_HEADER=/opt/openssl-3/include/openssl/opensslv.h)
+	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
+	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_ARGS) --target $(if $(filter %-smoke,$@),examples,sdk) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT5_XP_IMAGE)) -f docker/qt5/windows/Dockerfile -t $(QT5_XP_IMAGE)$(if $(filter %-smoke,$@),-examples) .
+	$(if $(filter %-smoke,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_XP_IMAGE))
 
-.PHONY: qt5-win-i386-llvm-toolchain qt5-win-amd64-llvm-toolchain
-qt5-win-i386-llvm-toolchain qt5-win-amd64-llvm-toolchain: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz
+$(foreach target,$(QT5_XP_TARGETS),$(eval $(target)-llvm: build-$(target))$(eval $(target)-llvm-examples: $(target)-examples))
+
+# The Qt 4 Windows SDKs use the same XP inputs.
+$(addsuffix -llvm-toolchain,$(QT5_XP_TARGETS)): $(OPENSSL_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
 	$(ONE_BUILD_CHECK)
-	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_SYSROOT) $(QT5_XP_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_LLVM_ARGS) --target toolchain -f docker/qt5/windows/i386/Dockerfile-llvm -t $(QT5_XP_LLVM_IMAGE)-toolchain .
+	docker image inspect --format "{{.Id}}" $(QT5_XP_LLVM_COMPILER)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_XP_ARGS) --target toolchain -f docker/qt5/windows/Dockerfile -t $(QT5_XP_TOOLCHAIN_IMAGE) .
 
 # ARM64 uses the Windows 10 UCRT toolchain already built from upstream LLVM.
 QT5_WINDOWS_ARM64_LLVM_IMAGE := qt5-win-arm64:llvm21
@@ -216,51 +177,48 @@ qt5-win-arm64-llvm qt5-win-arm64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-op
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_WINDOWS_ARM64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/windows/arm64/Dockerfile-llvm -t $(QT5_WINDOWS_ARM64_LLVM_IMAGE) .
 	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_WINDOWS_ARM64_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=)
 
-QT5_MACOS_I386_LLVM_IMAGE := qt5-macos-i386:llvm21
-QT5_MACOS_I386_LLVM_PLATFORM ?= qt5-macos-i386:latest
-QT5_MACOS_I386_LLVM_COMPILER ?= longreach-llvm:21.1.8-compiler
-QT5_MACOS_I386_LLVM_ARGS = --build-arg MACOS_PLATFORM_IMAGE=$(QT5_MACOS_I386_LLVM_PLATFORM) \
-    --build-arg LLVM_COMPILER_IMAGE=$(QT5_MACOS_I386_LLVM_COMPILER) \
-    --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
+# The two Snow Leopard SDKs share the patched emulated TLS compiler.
+QT5_SNOW_TARGETS := qt5-macos-amd64 qt5-macos-i386
+QT5_SNOW_ARCH = $(if $(filter qt5-macos-i386%,$@),i386,amd64)
+QT5_SNOW_IMAGE = $(if $(filter i386,$(QT5_SNOW_ARCH)),$(QT5_MACOS_I386_IMAGE),$(QT5_MACOS_AMD64_IMAGE))
+QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE ?= longreach-llvm:21.1.8-snow-tls
+QT5_MACOS_SNOW_OSXCROSS_IMAGE ?= qt5-macos-snow-osxcross
+QT5_SNOW_OSXCROSS_ARGS = --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)"
+QT5_SNOW_ARGS = $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) $(QT5_SNOW_OSXCROSS_ARGS) --build-arg QT_DISTRO=$(QT5_ARCHIVE) --build-arg QT_SHA256=$(QT5_ARCHIVE_SHA256) --build-arg OPENSSL_DISTRO=$(OPENSSL_ARCHIVE)
+QT5_SNOW_I386_ARGS = --build-arg SNOW_COMPILER_IMAGE=$(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) --build-arg OSXCROSS_IMAGE=$(QT5_MACOS_SNOW_OSXCROSS_IMAGE) --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)"
+QT5_SNOW_AMD64_ARGS = --build-arg LLVM_COMPILER_IMAGE=$(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) --build-arg LEGACY_MACOS_SDK="$(QT5_MACOS_I386_LINK_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)"
 
-.PHONY: qt5-macos-i386-llvm qt5-macos-i386-llvm-examples
-BUILD_TARGETS += qt5-macos-i386-llvm
-qt5-macos-i386-llvm qt5-macos-i386-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(DOWNLOAD_DIR)/openssl-3.5.7.tar.gz
+.PHONY: qt5-macos-snow-llvm-compiler qt5-macos-snow-osxcross
+qt5-macos-snow-llvm-compiler: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
 	$(ONE_BUILD_CHECK)
-	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
-	docker image inspect --format "{{.Id}}" $(QT5_MACOS_I386_LLVM_PLATFORM) $(QT5_MACOS_I386_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_I386_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/macos/i386/Dockerfile-llvm -t $(QT5_MACOS_I386_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_MACOS_I386_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=3.5.7)
+	docker image inspect --format "{{.Id}}" $(QT6_LLVM_COMPILER_IMAGE)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --platform linux/amd64 --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target snow-compiler -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) .
 
-QT5_MACOS_AMD64_LLVM_IMAGE := qt5-macos-amd64:llvm21
-QT5_MACOS_AMD64_LLVM_PLATFORM ?= qt5-macos-amd64:latest
-QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE := longreach-llvm:21.1.8-snow-tls
-QT5_MACOS_AMD64_LLVM_ARGS = --build-arg MACOS_PLATFORM_IMAGE=$(QT5_MACOS_AMD64_LLVM_PLATFORM) \
-    --build-arg LLVM_COMPILER_IMAGE=$(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) \
-    --build-arg LEGACY_MACOS_SDK=$(QT5_MACOS_I386_LINK_SDK) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS)
-
-.PHONY: qt5-macos-amd64-llvm qt5-macos-amd64-llvm-examples
-BUILD_TARGETS += qt5-macos-amd64-llvm
-qt5-macos-amd64-llvm qt5-macos-amd64-llvm-examples: $(DOWNLOAD_DIR)/qt-everywhere-opensource-src-5.15.19.tar.xz $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(DOWNLOAD_DIR)/openssl-3.5.7.tar.gz $(QT5_MACOS_I386_LINK_SDK_PATH)
+qt5-macos-snow-osxcross: $(QT5_MACOS_SDK_PATH) $(QT5_LLVM_SRC_PATH)
 	$(ONE_BUILD_CHECK)
-	$(if $(filter-out gpl-enabled,$(LICENSE_PROFILE)),$(error $@: only LICENSE_PROFILE=gpl-enabled is supported))
-	docker image inspect --format "{{.Id}}" $(QT5_MACOS_AMD64_LLVM_PLATFORM) $(QT5_MACOS_I386_LLVM_COMPILER)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_I386_LLVM_ARGS) --target compiler -f docker/qt5/macos/i386/Dockerfile-llvm -t $(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE) .
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_MACOS_AMD64_LLVM_ARGS) --target $(if $(filter %-examples,$@),examples,sdk) -f docker/qt5/macos/amd64/Dockerfile-llvm -t $(QT5_MACOS_AMD64_LLVM_IMAGE) .
-	$(if $(filter %-examples,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_MACOS_AMD64_LLVM_IMAGE) QT5_VERSION=5.15.19 OPENSSL_VERSION=3.5.7)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) $(QT5_SNOW_OSXCROSS_ARGS) --platform linux/amd64 --target osxcross -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_SNOW_OSXCROSS_IMAGE) .
 
-qt5-macos-amd64: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH)
-	$(ONE_BUILD_CHECK)
-	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	@echo "Using SDK $(QT5_MACOS_SDK), deployment target $(QT5_MACOS_TARGET_AMD64)"
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET="$(QT5_MACOS_TARGET_AMD64)" --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_AMD64_IMAGE) .
+.PHONY: $(addsuffix -examples,$(QT5_SNOW_TARGETS)) $(addprefix build-,$(QT5_SNOW_TARGETS)) $(addprefix build-,$(addsuffix -examples,$(QT5_SNOW_TARGETS)))
+.PHONY: $(addsuffix -llvm,$(QT5_SNOW_TARGETS)) $(addsuffix -llvm-examples,$(QT5_SNOW_TARGETS))
 
-# 32-bit Intel from 10.6: the amd64 toolchain stage, then docker/qt5/macos/i386.
-qt5-macos-i386: $(QT5_INPUTS) $(QT5_MACOS_SDK_PATH) $(OPENSSL_PATH) $(QT5_LLVM_SRC_PATH) $(QT5_MACOS_I386_LINK_SDK_PATH)
+
+QT5_MACOS_I386_CMAKE := cmake-3.28.6-linux-x86_64.tar.gz
+QT5_MACOS_I386_CMAKE_PATH := $(DOWNLOAD_DIR)/$(QT5_MACOS_I386_CMAKE)
+QT5_MACOS_I386_CMAKE_SHA256 := 931e3c0d546ee03ca72bb147ccd9b49e3b6252f765f66bf21b9d165519940458
+QT5_MACOS_I386_CMAKE_URL := https://github.com/Kitware/CMake/releases/download/v3.28.6/$(QT5_MACOS_I386_CMAKE)
+
+$(QT5_MACOS_I386_CMAKE_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT5_MACOS_I386_CMAKE_URL)" "$@" "$(QT5_MACOS_I386_CMAKE_SHA256)"
+
+qt5-macos-i386: $(QT5_MACOS_I386_CMAKE_PATH) build-qt5-macos-snow-osxcross
+$(QT5_SNOW_TARGETS): $(QT5_INPUTS) $(OPENSSL_PATH) $(QT5_MACOS_SDK_PATH) $(QT5_LLVM_SRC_PATH) $(QT5_MACOS_I386_LINK_SDK_PATH) build-qt5-macos-snow-llvm-compiler
+$(QT5_SNOW_TARGETS) $(addsuffix -smoke,$(QT5_SNOW_TARGETS)):
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg OSX_SDK="$(QT5_MACOS_SDK)" --build-arg MACOS_DEPLOYMENT_TARGET=10.6 --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --target toolchain -f docker/qt5/macos/amd64/Dockerfile -t $(QT5_MACOS_TOOLCHAIN_106_IMAGE) .
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT5_MACOS_BUILD_ARGS) --build-arg BASE_IMAGE=$(QT5_MACOS_TOOLCHAIN_106_IMAGE) --build-arg LLVM_SRC="$(QT5_LLVM_SRC_ARCHIVE)" --build-arg I386_LINK_SDK="$(QT5_MACOS_I386_LINK_SDK)" -f docker/qt5/macos/i386/Dockerfile -t $(QT5_MACOS_I386_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT5_SNOW_ARGS) $(if $(filter i386,$(QT5_SNOW_ARCH)),$(QT5_SNOW_I386_ARGS),$(QT5_SNOW_AMD64_ARGS)) --platform linux/amd64 --target $(if $(filter %-smoke,$@),examples,sdk) $(if $(filter %-smoke,$@),--build-arg SDK_IMAGE=$(QT5_SNOW_IMAGE)) -f docker/qt5/macos/$(QT5_SNOW_ARCH)/Dockerfile -t $(QT5_SNOW_IMAGE)$(if $(filter %-smoke,$@),-examples) .
+	$(if $(filter %-smoke,$@),$(MAKE) qt5-extract-tests QT5_IMAGE=$(QT5_SNOW_IMAGE))
+
+$(foreach target,$(QT5_SNOW_TARGETS),$(eval $(target)-llvm: build-$(target))$(eval $(target)-llvm-examples: $(target)-examples))
 
 QT5_MACOS_ARM64_LLVM_IMAGE := qt5-macos-arm64:llvm21
 QT5_MACOS_ARM64_LLVM_PLATFORM ?= qt5-macos-arm64:latest
@@ -302,14 +260,16 @@ $(QT5_MACOS_SDK_PATH):
 
 # Copy an image's test suite to artifacts/tests-<image>/, with the same
 # LICENSE_PROFILE as its build:
-#   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64
+#   make qt5-extract-tests QT5_IMAGE=qt5-macos-amd64-llvm21
 QT5_IMAGE ?= $(QT5_WIN_I386_IMAGE)
+QT5_MIGRATED_IMAGES := $(QT5_WIN_I386_IMAGE) $(QT5_WIN_AMD64_IMAGE) $(QT5_LINUX_I386_IMAGE) $(QT5_LINUX_AMD64_IMAGE) $(QT5_LINUX_ARM64_IMAGE) $(QT5_MACOS_I386_IMAGE) $(QT5_MACOS_AMD64_IMAGE)
+QT5_TESTS_IMAGE ?= $(if $(filter $(QT5_MIGRATED_IMAGES),$(QT5_IMAGE)),$(QT5_IMAGE)-examples,$(QT5_IMAGE))
 QT5_TESTS_NAME := tests-$(subst :,-,$(QT5_IMAGE))
 QT5_TESTS_OUT := $(ARTIFACTS_DIR)/$(QT5_TESTS_NAME)
 QT5_TESTS_PACKAGE := $(QT5_TESTS_OUT).tar.gz
-ifneq ($(filter qt5-linux-amd64:llvm21 qt5-linux-i386:llvm21,$(QT5_IMAGE)),)
+ifneq ($(filter qt5-linux-amd64-llvm21% qt5-linux-i386-llvm21% qt5-linux-amd64:llvm21 qt5-linux-i386:llvm21,$(QT5_IMAGE)),)
 QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-lucid/include/openssl/opensslv.h
-else ifneq ($(filter qt5-win-amd64:llvm21 qt5-win-i386:llvm21,$(QT5_IMAGE)),)
+else ifneq ($(filter qt5-win-amd64-llvm21% qt5-win-i386-llvm21% qt5-win-amd64:llvm21 qt5-win-i386:llvm21 qt5-macos-amd64-llvm21% qt5-macos-i386-llvm21%,$(QT5_IMAGE)),)
 QT5_TESTS_OPENSSL_HEADER ?= /opt/openssl-3/include/openssl/opensslv.h
 endif
 QT5_TESTS_OPENSSL_ARG = $(if $(QT5_TESTS_OPENSSL_HEADER),--openssl-header "$(QT5_TESTS_OPENSSL_HEADER)",--openssl-version "$(OPENSSL_VERSION)")
@@ -317,7 +277,7 @@ QT5_TESTS_OPENSSL_ARG = $(if $(QT5_TESTS_OPENSSL_HEADER),--openssl-header "$(QT5
 qt5-extract-tests:
 	$(PYTHON) -c "import os, sys; os.makedirs(sys.argv[1], exist_ok=True)" "$(QT5_TESTS_OUT)"
 	docker run --rm -v "$(CURDIR)/$(QT5_TESTS_OUT):/out" -v "$(CURDIR)/scripts:/scripts:ro" \
-		$(QT5_IMAGE) "bash /scripts/tests/extract.sh"
+		$(QT5_TESTS_IMAGE) "bash /scripts/tests/extract.sh"
 	$(PYTHON) scripts/tests/write_manifest.py --out "$(QT5_TESTS_OUT)" --image "$(QT5_IMAGE)" --qt-version "$(QT5_VERSION)" $(QT5_TESTS_OPENSSL_ARG) --license-profile "$(LICENSE_PROFILE)"
 	@echo "-> $(QT5_TESTS_OUT)"
 
@@ -327,12 +287,24 @@ qt5-package-tests: qt5-extract-tests
 	@echo "-> $(QT5_TESTS_PACKAGE)"
 
 
-$(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_I386_IMAGE),))
-$(eval $(call simple-build-targets,qt5-win-amd64,qt5-win-amd64,QT5_WIN_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_AMD64_IMAGE),))
 $(eval $(call simple-build-targets,qt5-win-arm64,qt5-win-arm64,QT5_WIN_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_WIN_ARM64_IMAGE),))
-$(eval $(call simple-build-targets,qt5-linux-i386,qt5-linux-i386,QT5_LINUX_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_I386_IMAGE),))
-$(eval $(call simple-build-targets,qt5-linux-amd64,qt5-linux-amd64,QT5_LINUX_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_AMD64_IMAGE),))
-$(eval $(call simple-build-targets,qt5-linux-arm64,qt5-linux-arm64,QT5_LINUX_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_LINUX_ARM64_IMAGE),))
-$(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_AMD64_IMAGE),))
 $(eval $(call simple-build-targets,qt5-macos-arm64,qt5-macos-arm64,QT5_MACOS_ARM64_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_ARM64_IMAGE),))
-$(eval $(call simple-build-targets,qt5-macos-i386,qt5-macos-i386,QT5_MACOS_I386_IMAGE,qt5-extract-tests,QT5_IMAGE=$(QT5_MACOS_I386_IMAGE),))
+$(eval $(call simple-build-targets,qt5-linux-arm64,qt5-linux-arm64,QT5_LINUX_ARM64_IMAGE,qt5-linux-arm64-smoke,,qt6-linux-arm64-llvm-runtime qt6-llvm-compiler))
+.PHONY: qt5-linux-arm64-smoke
+$(eval $(call simple-build-targets,qt5-linux-i386,qt5-linux-i386,QT5_LINUX_I386_IMAGE,qt5-linux-i386-smoke,,qt6-llvm-compiler))
+.PHONY: qt5-linux-i386-smoke
+$(eval $(call simple-build-targets,qt5-linux-amd64,qt5-linux-amd64,QT5_LINUX_AMD64_IMAGE,qt5-linux-amd64-smoke,,qt6-llvm-compiler))
+.PHONY: qt5-linux-amd64-smoke
+$(eval $(call simple-build-targets,qt5-win-i386,qt5-win-i386,QT5_WIN_I386_IMAGE,qt5-win-i386-smoke,,qt6-llvm-compiler))
+.PHONY: qt5-win-i386-smoke
+$(eval $(call simple-build-targets,qt5-win-amd64,qt5-win-amd64,QT5_WIN_AMD64_IMAGE,qt5-win-amd64-smoke,,qt6-llvm-compiler))
+.PHONY: qt5-win-amd64-smoke
+$(eval $(call simple-build-targets,qt5-macos-i386,qt5-macos-i386,QT5_MACOS_I386_IMAGE,qt5-macos-i386-smoke,,qt6-llvm-compiler qt5-macos-snow-llvm-compiler qt5-macos-snow-osxcross))
+.PHONY: qt5-macos-i386-smoke
+$(eval $(call simple-build-targets,qt5-macos-amd64,qt5-macos-amd64,QT5_MACOS_AMD64_IMAGE,qt5-macos-amd64-smoke,,qt6-llvm-compiler qt5-macos-snow-llvm-compiler))
+.PHONY: qt5-macos-amd64-smoke
+
+$(eval $(call ensure-build-image,qt5-win-i386-llvm-toolchain,$(QT5_XP_I386_TOOLCHAIN_IMAGE),qt6-llvm-compiler))
+$(eval $(call ensure-build-image,qt5-win-amd64-llvm-toolchain,$(QT5_XP_AMD64_TOOLCHAIN_IMAGE),qt6-llvm-compiler))
+$(eval $(call ensure-build-image,qt5-macos-snow-llvm-compiler,$(QT5_MACOS_SNOW_LLVM_COMPILER_IMAGE),qt6-llvm-compiler))
+$(eval $(call ensure-build-image,qt5-macos-snow-osxcross,$(QT5_MACOS_SNOW_OSXCROSS_IMAGE)))

@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "5.15.19",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "arch": "amd64",
+  "build": {
+    "dockerfile": "docker/qt5/windows/Dockerfile",
+    "command": "make qt5-win-amd64-examples PARALLEL_JOBS=2 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "buildkit_ref": "zga4buwcsm3ez7jfjko99j6yl",
+    "sdk_image": "qt5-win-amd64-llvm21",
+    "sdk_image_id": "sha256:22bdae7edcb685058fe53df3d833c8da203ceebc346ad7729bf8f058091e786f",
+    "pe_subsystem": "5.2"
+  },
+  "guest": {
+    "os": "Windows XP Professional x64 Edition SP2 (5.2.3790)",
+    "method": "VMware Workstation and loopback VNC; verified ISO and result floppy",
+    "guest_hashes_verified": 9,
+    "crt": {
+      "name": "msvcr100.dll",
+      "sha256": "ae3cb6c6afba9a4aa5c85f66023c35338ca579b30326dd02918f9d55259503d5"
+    }
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery.exe",
+      "size": 29755904,
+      "sha256": "c147aa54baecf43b9670b793dd756b06e8fc328e3358dc68e62997cb3f3a4a35"
+    },
+    {
+      "name": "graphics-gallery.exe",
+      "size": 12009472,
+      "sha256": "9db7a0bf00856df11b6b15a9f8e42f055f8a4c4e5d465f26430178766a95a5a3"
+    },
+    {
+      "name": "multimedia-lab.exe",
+      "size": 19584512,
+      "sha256": "cbefeff460b008194f25cc02dd8109016c15870b3b06913eb1bd86c79c8b1184"
+    },
+    {
+      "name": "network-gui.exe",
+      "size": 19091456,
+      "sha256": "71e2df6d778342305628435787ef9a745c215d2ed0bd106becff04d49d8a8d82"
+    },
+    {
+      "name": "painting-lab.exe",
+      "size": 12226048,
+      "sha256": "d5c751dd0e22889fcd0f1407f8f4ed252e2662775bbc9a903a6c62631453b405"
+    },
+    {
+      "name": "qt-selftest.exe",
+      "size": 34039296,
+      "sha256": "f53a85ab83b80e04944751b41a3b20c877355c725c83872c3e471938ff42a163"
+    },
+    {
+      "name": "quick-qml-gallery.exe",
+      "size": 29491200,
+      "sha256": "4dfdd6c5a4f9a75da285a53dad49ee687294b107df80b3f78ef58d456ee2d79b"
+    },
+    {
+      "name": "smoke-runner.exe",
+      "size": 3000832,
+      "sha256": "b61184887d1761fd914d2e357a0ad388bc20841eb294214cfc41240ca98d448c"
+    },
+    {
+      "name": "widgets-gallery.exe",
+      "size": 20121088,
+      "sha256": "3a6125a1ff935e4a9a266909f8c21a658710eb833df51a22f53406b5db68e694"
+    }
+  ],
+  "ordinary": {
+    "qt-selftest": {
+      "passed": 288,
+      "failed": 0,
+      "skipped": 67
+    },
+    "widgets-gallery": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 5
+    },
+    "graphics-gallery": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "quick-qml-gallery": {
+      "passed": 24,
+      "failed": 0,
+      "skipped": 14
+    },
+    "gl-heavy-gallery": {
+      "passed": 39,
+      "failed": 0,
+      "skipped": 7
+    },
+    "painting-lab": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 3
+    },
+    "multimedia-lab": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "network-gui": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "ordinary_totals": {
+    "passed": 504,
+    "failed": 0,
+    "skipped": 96
+  },
+  "strict_cpp23": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "notes": [
+    "QtScript function-call context and debugger passed.",
+    "The Qt 5 scene graph renderer skipped because the guest OpenGL 1.1 driver lacks framebuffer objects or shaders."
+  ]
+}

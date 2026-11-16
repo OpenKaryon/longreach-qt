@@ -24,7 +24,7 @@ if [ "$arch" = arm64 ]; then
     tls=(-no-openssl -securetransport)
     patches+=(/src/patches/arm64-llvm/*.patch)
 else
-    minimum=10.6
+    minimum=${MACOSX_DEPLOYMENT_TARGET:-10.6}
     tls=(-openssl-linked -no-securetransport OPENSSL_PATH=/opt/openssl-3
          'OPENSSL_LIBS=-L/opt/openssl-3/lib -lssl -lcrypto')
     patches+=(/src/qml-x86.patch /src/mapbox.patch)
@@ -33,13 +33,15 @@ fi
 
 archive=/src/qt.tar.xz
 install_dir=/usr/local/Qt-5.15
-echo "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae  $archive" | sha256sum -c -
+version=${QT_FULL_VERSION:-5.15.19}
+expected=${QT_SHA256:-173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae}
+echo "$expected  $archive" | sha256sum -c -
 # Hash the installed SDK, wrappers, linker and runtime together. Include paths,
 # modes and symlink targets, but ignore timestamps and ownership from image builds.
 toolchain_hash=$(tar -C / --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
     -cf - "${toolchain[@]}" | sha256sum)
 inputs=$(sha256sum "$archive" "$0" "${patches[@]}")
-fingerprint=$(printf '%s\n' "$arch" "$prefix" "$inputs" "$toolchain_hash" | sha256sum)
+fingerprint=$(printf '%s\n' "$arch" "$minimum" "$prefix" "$inputs" "$toolchain_hash" | sha256sum)
 build="/work/${fingerprint%% *}"
 source="$build/qt"
 mkdir -p "$build"
@@ -76,4 +78,4 @@ if ! make -s -j"${PARALLEL_JOBS:-3}" > "$build/make.log" 2>&1; then
 fi
 make -s install
 install -m 644 config.summary "$install_dir/qt-config.summary"
-test "$("$install_dir/bin/qmake" -query QT_VERSION)" = 5.15.19
+test "$("$install_dir/bin/qmake" -query QT_VERSION)" = "$version"

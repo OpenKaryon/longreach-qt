@@ -56,6 +56,27 @@ class SourceArchiveTests(unittest.TestCase):
                 self.assertNotEqual(before, ensure.fingerprint('config', 'qt6', []))
 
 
+class DockerInputTests(unittest.TestCase):
+    def test_selected_stage_uses_only_its_reachable_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dockerfile = Path(tmp) / 'Dockerfile'
+            dockerfile.write_text(
+                "ARG SDK_IMAGE=sdk\n"
+                "FROM scratch AS tools\n"
+                "COPY compiler /compiler\n"
+                "FROM tools AS sdk\n"
+                "RUN --mount=type=bind,source=qt.tar,target=/qt.tar ./build.sh\n"
+                "FROM ${SDK_IMAGE} AS examples\n"
+                "COPY tests /tests\n",
+                encoding='utf-8',
+            )
+            self.assertCountEqual(ensure.context_sources(dockerfile, {}, 'tools'), ['compiler'])
+            self.assertCountEqual(ensure.context_sources(dockerfile, {}), ['compiler', 'qt.tar', 'tests'])
+            self.assertCountEqual(
+                ensure.context_sources(dockerfile, {'SDK_IMAGE': 'qt-sdk:current'}), ['tests'],
+            )
+
+
 class ConsumerBuildTests(unittest.TestCase):
     def test_explicit_jobs_reaches_consumer_build(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(builder.subprocess, 'run') as run:

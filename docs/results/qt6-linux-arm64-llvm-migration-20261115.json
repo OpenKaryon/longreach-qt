@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "6.8.5",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "arch": "arm64",
+  "build": {
+    "dockerfile": "docker/qt6/linux/arm64/Dockerfile",
+    "command": "make -o build-qt6-linux-amd64 qt6-linux-arm64 PARALLEL_JOBS=4 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "examples": "make qt6-linux-arm64-smoke PARALLEL_JOBS=4 ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "buildkit_ref": "lx6qtw7egumtamr8b2s6rff98",
+    "sdk_image": "qt6-linux-arm64-llvm21",
+    "sdk_image_id": "sha256:a6420f5b70297b7579439de20490e9d1392283a09bac0b9ecf21e41082082100",
+    "host_qt_image_id": "sha256:ba9b36bbb5a3225cdf9db2e56a631c0be72f898ecab7fc3a2aa499cab05b7788",
+    "elf_max_glibc": "2.17",
+    "shared_cpp_runtime_dependencies": []
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery",
+      "size": 42134984,
+      "sha256": "c7723d374ef61757188635bc65de921cc603c780857f7904bd75650476914b81"
+    },
+    {
+      "name": "graphics-gallery",
+      "size": 16574192,
+      "sha256": "33713d9d3842b619f134198bc45d09f15e79aba041b7714a65f385e3cb913697"
+    },
+    {
+      "name": "multimedia-lab",
+      "size": 23498072,
+      "sha256": "baf4f4a210bc49ee60eb884a98b6ea73784e5932a8c7114530241997cc76f6de"
+    },
+    {
+      "name": "network-gui",
+      "size": 23014008,
+      "sha256": "30840697d15aed04c3ebb96524b3ae47966aa759b2094ad8e64aa8068d21eaf2"
+    },
+    {
+      "name": "painting-lab",
+      "size": 16626576,
+      "sha256": "ff519ec1b1841df9b5523a56b42663b1b1316ba82dd46d4b474c1db5f66b7a11"
+    },
+    {
+      "name": "qt-selftest",
+      "size": 40578768,
+      "sha256": "01bc809ef0207ffa0fd513590f960936ebdbdf46727e9f30e2101b3eb648cfb3"
+    },
+    {
+      "name": "quick-qml-gallery",
+      "size": 48134080,
+      "sha256": "63d49f185bd6f8a29fbeab4edc4c76b24191e3f6d452d6b03245354ab331cd21"
+    },
+    {
+      "name": "smoke-runner",
+      "size": 3217224,
+      "sha256": "c1126b19070065d3c01d02c10b5e9cdb709d92ba40c7ce8516dad9ab7a7af7ed"
+    },
+    {
+      "name": "widgets-gallery",
+      "size": 24891496,
+      "sha256": "a0a27bf0604e4bb1b6a796519b857635d8b9821da5a6ef8b41aa733cc520161c"
+    }
+  ],
+  "runtime": {
+    "centos-7-arm64": {
+      "os": "NAME=\"CentOS Linux\"",
+      "image_id": "sha256:73f11afcbb50d8bc70eab9f0850b3fa30e61a419bc48cf426e63527d14a8373b",
+      "method": "QEMU user mode, ARM64 distribution userland, Docker host kernel; Xvfb",
+      "guest_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 308,
+          "failed": 0,
+          "skipped": 38
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 553,
+        "checks_failed": 0,
+        "checks_skipped": 51
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "debian-12-arm64": {
+      "os": "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"",
+      "image_id": "sha256:488b6b1d593bd744a457fc5ce30cea150bedb13b6072bed5046d963eb1aaba0e",
+      "method": "QEMU user mode, ARM64 distribution userland, Docker host kernel; Xvfb",
+      "guest_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 308,
+          "failed": 0,
+          "skipped": 38
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 553,
+        "checks_failed": 0,
+        "checks_skipped": 51
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  }
+}

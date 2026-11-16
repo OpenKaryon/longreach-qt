@@ -2,17 +2,20 @@
 
 This profile rebuilds static Qt 6.8.5 with upstream Clang/LLD 21.1.8 and
 static libc++, libc++abi, libunwind and compiler-rt. It retains the CentOS 7
-userland and GLIBC 2.17 floor. The ordinary `qt6-linux-amd64` make target
-continues to use GCC; the LLVM SDK uses the separate local image tag
-`qt6-linux-amd64:llvm21` and prefix `/opt/qt6-linux-amd64-llvm`.
+userland and GLIBC 2.17 floor. The `qt6-linux-amd64` Make target builds the
+LLVM SDK in `qt6-linux-amd64-llvm21`, also tagged as `qt6-linux-amd64:llvm21`
+for the default license profile. The SDK prefix is `/opt/qt6-linux-amd64-llvm`.
+Use `make qt6-linux-amd64-examples PARALLEL_JOBS=2` to build the SDK and
+the C++23 example suite.
 
 The shared compiler comes from
-[`docker/qt6/host/Dockerfile-llvm`](../../docker/qt6/host/Dockerfile-llvm).
+[`docker/qt6/host/Dockerfile`](../../docker/qt6/host/Dockerfile).
 It is upstream LLVM, not LLVM-MinGW. The seed image contains the pinned
 CentOS RPM dependencies, patched Qt 6.8.5 source, static OpenSSL and Wayland
 dlopen stubs. Those C dependencies are reused; Qt is compiled again with
-Clang and libc++. The fixed profile includes the GPL-enabled module set
-and excludes Qt WebEngine/WebView, matching the earlier Linux LLVM pilot.
+Clang and libc++. The default profile builds the GPL-enabled module set,
+with an `lgpl-friendly` profile also available. Both exclude
+Qt WebEngine/WebView.
 
 ## Pinned inputs
 
@@ -21,10 +24,12 @@ pins LLVM 21.1.8 to SHA256
 `4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142`.
 Stage the archive at `downloads/llvm-project-21.1.8.src.tar.xz` and prepare
 the shared compiler image as described in the
-[six-target probe guide](qt6-llvm-probes.md). The current shared compiler
-image was built from the locked-RPM GCC seed
-`qt6-linux-amd64:centos7-rpm-lock-check`; see its
-[RPM build report](../results/qt6-linux-amd64-centos7-rpm-lock-20261104.md).
+[six-target probe guide](qt6-llvm-probes.md). Build the shared compiler with `make build-qt6-llvm-compiler PARALLEL_JOBS=3`.
+This builds `qt6-centos7-amd64-inputs` from the locked RPMs and source
+archives, then bootstraps Clang and LLD. The inputs stage supplies GCC
+as the host bootstrap compiler and has no installed Qt SDK. See the
+[RPM build report](../results/qt6-linux-amd64-centos7-rpm-lock-20261104.md)
+for the original package validation.
 
 The toolchain helper builds the native x86_64 LLVM runtimes in two stages:
 compiler-rt builtins first, then libunwind/libc++abi/libc++. Linux explicitly
@@ -48,7 +53,7 @@ stage while another container is running. The default sequence builds the
 toolchain, builds Qt, then runs the required SDK checks. It uses one container at a time,
 four CPUs, an 8 GiB memory limit and no network. Ninja gets four compile
 jobs and a single link pool. The compiler bootstrap is reused; the native
-runtimes and Qt are built by the same helpers used in `Dockerfile-llvm`.
+runtimes and Qt are built by the same helpers used in the canonical Dockerfile.
 
 The toolchain stage saves `qt6-linux-amd64:llvm21-toolchain`; the Qt stage
 saves `qt6-linux-amd64:llvm21`. Image commits preserve the installed files
@@ -74,7 +79,7 @@ already enforce their own resource limits:
 ```sh
 docker build --network=none --progress=plain \
   --build-arg PARALLEL_JOBS=4 --target qt \
-  -f docker/qt6/linux/amd64/Dockerfile-llvm \
+  -f docker/qt6/linux/amd64/Dockerfile \
   -t qt6-linux-amd64:llvm21 .
 ```
 

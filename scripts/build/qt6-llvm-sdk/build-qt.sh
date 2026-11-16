@@ -3,6 +3,8 @@
 # Copyright (C) 2026 OpenKaryon
 set -euo pipefail
 target=${1:?target required}
+version=${QT_VERSION:-6.8.5}
+license_profile=${LICENSE_PROFILE:-gpl-enabled}
 patches=(/src/patches/qt6/all/*.patch)
 platform_args=(-openssl-linked)
 platform_cmake=(-DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON)
@@ -25,15 +27,35 @@ case "$target" in
         ;;
     *) exit 2 ;;
 esac
-archive=/src/downloads/qt-everywhere-src-6.8.5.tar.xz
-echo 'c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9  '"$archive" | sha256sum -c -
-source=/build/qt-everywhere-src-6.8.5
+archive=${QT_ARCHIVE_PATH:-/src/downloads/qt-everywhere-src-$version.tar.xz}
+expected=${QT_ARCHIVE_SHA256-c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9}
+archive_hash=$(sha256sum "$archive")
+if [ -n "$expected" ] && [ "${archive_hash%% *}" != "$expected" ]; then
+    echo "Qt source archive checksum mismatch: $archive" >&2
+    exit 1
+fi
+
+work=/build
+if [ -n "${QT_CACHE_ROOT:-}" ]; then
+    # BuildKit caches each compatible source/configuration separately. The
+    # coordinator keeps using its validated named volume and patch receipts.
+    key=$({
+        printf '%s\n' "$archive_hash" "$target" "$version" "$license_profile"
+        sha256sum "$0" "${patches[@]}" /opt/longreach-llvm/cmake/toolchain.cmake \
+            /opt/longreach-llvm/bin/target-{cc,cxx} /opt/llvm-21/bin/clang
+    } | sha256sum)
+    work="$QT_CACHE_ROOT/${key%% *}"
+fi
+source=$work/qt-everywhere-src-$version
+mkdir -p "$work"
+license_opts=$(bash /src/scripts/build/license-configure-args.sh qt6 "$license_profile")
+read -r -a license_args <<< "$license_opts"
 # A receipt per patch allows an interrupted build to accept additional patches
 # without silently reusing an old source tree. Changed applied patches require
 # a fresh source volume rather than assuming their old contents still match.
 receipts="$source/.longreach-patch-receipts"
 if [ ! -f "$source/.longreach-extracted" ] && [ ! -f "$source/.longreach-patched" ]; then
-    tar -xJf "$archive" -C /build --exclude='*/qtwebengine/*' --exclude='*/qtwebview/*'
+    tar -xJf "$archive" -C "$work" --exclude='*/qtwebengine/*' --exclude='*/qtwebview/*'
     touch "$source/.longreach-extracted"
 fi
 if [ -f "$source/.longreach-patched" ] && [ ! -d "$receipts" ]; then
@@ -66,12 +88,13 @@ done
 touch "$source/.longreach-patched"
 
 prefix=/opt/qt6-$target-llvm
-mkdir -p /build/qt
-cd /build/qt
+mkdir -p "$work/qt"
+cd "$work/qt"
 "$source/configure" -opensource -confirm-license -prefix "$prefix" \
     -qt-host-path /opt/qt6-host-llvm21 -release -optimize-size -static \
     -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
     -nomake examples -nomake tests -skip qtwebengine -skip qtwebview "${platform_args[@]}" \
+    ${license_args[@]+"${license_args[@]}"} \
     -- -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-llvm/cmake/toolchain.cmake \
        -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
        -DCMAKE_JOB_POOLS=link_pool=1 -DCMAKE_JOB_POOL_LINK=link_pool \

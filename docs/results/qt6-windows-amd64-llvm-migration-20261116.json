@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-16",
+  "qt": "6.8.5",
+  "llvm": "21.1.8",
+  "arch": "amd64",
+  "build": {
+    "dockerfile": "docker/qt6/windows/amd64/Dockerfile",
+    "command": "make -o build-qt6-linux-amd64 qt6-win-amd64 PARALLEL_JOBS=4 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "examples": "make qt6-win-amd64-smoke PARALLEL_JOBS=4 ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "audit": "make qt6-win-amd64-audit ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "buildkit_ref": "idglrd2cij0nqyhzcduwltd2b",
+    "sdk_image": "qt6-win-amd64-llvm21",
+    "sdk_image_id": "sha256:53a7422e9a87932ee3b32b70be4b9fa3659da284f4c82d184ba81377de342b12",
+    "host_qt_image_id": "sha256:ba9b36bbb5a3225cdf9db2e56a631c0be72f898ecab7fc3a2aa499cab05b7788",
+    "audited_pe_executables": 9,
+    "pe_subsystem": "6.1"
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery.exe",
+      "size": 36273664,
+      "sha256": "8302d002736263a44ae48af98762af6e3f0cd3ca65135b34df92532b98bde49e"
+    },
+    {
+      "name": "graphics-gallery.exe",
+      "size": 16276480,
+      "sha256": "c59852086e0ea5bf1de02de50bd5c15770f08fffbfeda6bbc22fa137dab9890a"
+    },
+    {
+      "name": "multimedia-lab.exe",
+      "size": 18200064,
+      "sha256": "b0a9dd2eaf3fd1daac7f0d94c20d3dec66ab6f7a2053b4d44d9081c96508a4af"
+    },
+    {
+      "name": "network-gui.exe",
+      "size": 17379840,
+      "sha256": "c34d2c5786718efbc202405dc8b94133610a43f409becdc91869cc4be90e4479"
+    },
+    {
+      "name": "painting-lab.exe",
+      "size": 16443904,
+      "sha256": "4050b6bb13360c28b5d981dcbc1d9c49df036f731fd1ae1a9e178f2db8380608"
+    },
+    {
+      "name": "qt-selftest.exe",
+      "size": 32863744,
+      "sha256": "3a0bde5ae889b7f118aa9afa3e4ed8cbda487545bb7c17fbf5b936dd854cf3de"
+    },
+    {
+      "name": "quick-qml-gallery.exe",
+      "size": 41695232,
+      "sha256": "cfa5b8666f186d49b3c177e9df14a62676e86b96415a464abb119ead03e32f7f"
+    },
+    {
+      "name": "smoke-runner.exe",
+      "size": 3232256,
+      "sha256": "eaa0a8a38a5833356bda2d98f869293306a79f0fd983c075c7b47ca34ebe1a8b"
+    },
+    {
+      "name": "widgets-gallery.exe",
+      "size": 19505664,
+      "sha256": "f10ed1f0f66137649567668ce08c5eb60bc6850bb34ac1587939ed78ac3e0946"
+    }
+  ],
+  "runtime": {
+    "windows-7-background": {
+      "system": "Microsoft Windows [Version 6.1.7601]",
+      "method": "VMware Tools, background session",
+      "binary_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 288,
+          "failed": 1,
+          "skipped": 44
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 33,
+          "failed": 0,
+          "skipped": 7
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 5
+        },
+        {
+          "application": "painting-lab",
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_summary": {
+        "apps_passed": 7,
+        "apps_failed": 1,
+        "checks_passed": 516,
+        "checks_failed": 1,
+        "checks_skipped": 59
+      },
+      "failed_checks": [
+        "FAIL: net/tls-loopback-handshake - handshake timeout client='The remote host closed the connection' server='No credentials'"
+      ],
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "windows-7": {
+      "system": "Microsoft Windows [Version 6.1.7601]",
+      "method": "VMware, interactive desktop",
+      "binary_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 290,
+          "failed": 0,
+          "skipped": 43
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 34,
+          "failed": 0,
+          "skipped": 6
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_summary": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 533,
+        "checks_failed": 0,
+        "checks_skipped": 56
+      },
+      "failed_checks": [],
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "windows-11": {
+      "system": "Microsoft Windows [Version 10.0.26200.9711]",
+      "method": "VMware, interactive desktop",
+      "binary_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 290,
+          "failed": 0,
+          "skipped": 43
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 36,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 19,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_summary": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 535,
+        "checks_failed": 0,
+        "checks_skipped": 54
+      },
+      "failed_checks": [],
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  }
+}

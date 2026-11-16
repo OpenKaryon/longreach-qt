@@ -2,7 +2,7 @@
 # Copyright (C) 2026 OpenKaryon
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR @PROCESSOR@)
-set(CMAKE_OSX_SYSROOT /opt/osxcross/target/SDK/MacOSX14.0.sdk CACHE PATH "Pinned macOS SDK" FORCE)
+set(CMAKE_OSX_SYSROOT /opt/osxcross/target/SDK/MacOSX@SDK_VERSION@.sdk CACHE PATH "Pinned macOS SDK" FORCE)
 set(CMAKE_OSX_ARCHITECTURES @PROCESSOR@ CACHE STRING "Target architecture" FORCE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET @VERSION@ CACHE STRING "Supported macOS floor" FORCE)
 set(CMAKE_C_COMPILER /opt/longreach-llvm/bin/target-cc)

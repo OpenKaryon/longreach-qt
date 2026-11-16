@@ -1,20 +1,19 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.5 for Linux amd64 from RHEL/CentOS 7.6 (glibc 2.17), built on CentOS 7
-# from the vault.centos.org archive with Developer Toolset's GCC 11, which links
-# the newer parts of libstdc++ statically: the result needs only RHEL 7's own
-# libraries. xcb-util-cursor (not in RHEL 7) is built statically too.
+# Qt 6 for Linux amd64 from RHEL/CentOS 7.6 (glibc 2.17).
+# The locked CentOS input stage provides the bootstrap compiler, glibc,
+# Qt dependencies and sources. Qt and applications use upstream LLVM.
 
 # Base images are pinned by digest; BASE_REGISTRY is where they are pulled
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
-FROM ${BASE_REGISTRY}/centos:7.9.2009@sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
+FROM ${BASE_REGISTRY}/centos:7.9.2009@sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4 AS inputs
 
 ARG PARALLEL_JOBS=8
 ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
-ARG LICENSE_PROFILE="gpl-enabled"
 
 # The RPMs are staged by make and installed with all repositories disabled.
 RUN --network=none \
@@ -85,27 +84,6 @@ COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
 RUN cd /opt/qt-everywhere-src-${QT_VERSION} && \
     for p in /tmp/patches-qt6-all/*.patch; do git apply "$p" || exit 1; done
 
-RUN mkdir -p /opt/qt-build && \
-    cd /opt/qt-build && \
-    /opt/qt-everywhere-src-${QT_VERSION}/configure \
-        -opensource -confirm-license \
-        -prefix /opt/qt6-linux-amd64 \
-        -release -optimize-size -static \
-        -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
-        -nomake examples -nomake tests \
-        -skip qtwebengine -skip qtwebview \
-        -openssl-linked \
-        $(/tmp/license-configure-args.sh qt6 "$LICENSE_PROFILE") \
-        -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
-           -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON && \
-    cmake --build . --parallel "${PARALLEL_JOBS}" && \
-    cmake --install . && \
-    cd / && rm -rf /opt/qt-build && \
-    if grep -rIl '/usr/lib64/libwayland' /opt/qt6-linux-amd64/lib/cmake; then \
-        echo "Qt links libwayland instead of the stubs" >&2; exit 1; fi
-
-RUN mkdir -p /opt/qt6-linux-amd64/lib && ln -s /usr/share/fonts/dejavu /opt/qt6-linux-amd64/lib/fonts
-
 # As a RHEL 7 desktop has them: Mesa's software rasterizer (Xvfb has no GLX
 # without swrast_dri.so) and a machine id (the image's is empty, and libdbus
 # aborts without one).
@@ -116,4 +94,31 @@ RUN --network=none \
     /usr/bin/python /install-locked-rpms.py /rpms.json /rpms runtime && \
     rm -rf /var/cache/yum && dbus-uuidgen > /etc/machine-id
 
-CMD ["sh", "-c", "ldd --version | head -1; gcc --version | head -1"]
+FROM ${LLVM_COMPILER_IMAGE} AS toolchain
+ARG PARALLEL_JOBS=4
+ENV LLVM_ROOT=/opt/llvm-21
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/tmp/llvm.tar.xz \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=cache,id=qt6-llvm21-linux-amd64,target=/work,sharing=locked \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" \
+        bash /src/scripts/build/qt6-linux-amd64/prepare-toolchain.sh /tmp/llvm.tar.xz
+ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-21/bin:${PATH} \
+    CC=/opt/longreach-llvm/bin/clang-c \
+    CXX=/opt/longreach-llvm/bin/clang-cxx \
+    AR=/opt/llvm-21/bin/llvm-ar \
+    RANLIB=/opt/llvm-21/bin/llvm-ranlib \
+    NM=/opt/llvm-21/bin/llvm-nm
+
+FROM toolchain AS qt
+ARG PARALLEL_JOBS=4
+ARG QT_VERSION=6.8.5
+ARG LICENSE_PROFILE=gpl-enabled
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt6-linux-amd64/build-qt.sh,target=/tmp/build-qt.sh \
+    --mount=type=cache,id=qt6-llvm21-linux-amd64-qt-${QT_VERSION}-${LICENSE_PROFILE},target=/opt/qt-build-llvm,sharing=locked \
+    PARALLEL_JOBS="$PARALLEL_JOBS" QT_VERSION="$QT_VERSION" LICENSE_PROFILE="$LICENSE_PROFILE" \
+        bash /tmp/build-qt.sh
+ENV QT_INSTALL_DIR=/opt/qt6-linux-amd64-llvm
+CMD ["sh", "-c", "clang-cxx --version | head -1; /opt/qt6-linux-amd64-llvm/bin/qtpaths --qt-version"]

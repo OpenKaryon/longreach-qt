@@ -63,16 +63,17 @@ using the URLs and hashes in the input record. Existing SDK images supply
 the locked CentOS 7 sysroots and macOS SDK. Build steps have no network.
 
 The shared compiler recipe is
-[`Dockerfile-llvm`](../../docker/qt6/host/Dockerfile-llvm); all helper scripts
-live under scripts/. For a hard 4-CPU/8-GiB bound, run its helper in a
-container instead of relying on build-job counts alone:
+[`Dockerfile`](../../docker/qt6/host/Dockerfile).
+Build it with `make qt6-llvm-compiler PARALLEL_JOBS=3`. For a hard
+4-CPU/8-GiB bound, first run `make qt6-llvm-compiler-inputs` and then
+run the compiler helper in a resource-limited container:
 
 ```sh
 docker create --name longreach-llvm21-compiler --cpus 4 --memory 8g \
   --network none --entrypoint /bin/bash \
   --mount type=bind,src="$PWD",dst=/src,readonly \
   --mount type=volume,src=longreach-llvm21-probes-build,dst=/work \
-  --env PARALLEL_JOBS=4 qt6-linux-amd64:centos7-rpm-lock-check \
+  --env PARALLEL_JOBS=4 qt6-centos7-amd64-inputs \
   /src/scripts/build/qt6-llvm-probes/build-compiler.sh
 docker start -a longreach-llvm21-compiler
 ```
@@ -90,19 +91,21 @@ docker run --rm --pull never --cpus 1 --memory 1g --network none \
   -c 'test ! -e /work/toolchain && cp -a /opt/llvm-21 /work/toolchain'
 ```
 
-The macOS SDK images do not include Python. Copy the build-only Debian 12
-interpreter and its standard library into the work volume before the macOS
-stages; the target programs do not depend on Python:
+Prepare the common Debian host with `make qt6-llvm-cross-host`. Copy its
+build-only Python interpreter and standard library into the work volume
+before the macOS stages. The target programs do not depend on Python.
 
 ```sh
 docker run --rm --pull never --cpus 1 --memory 1g --network none \
   --entrypoint /bin/bash \
   --mount type=bind,src="$PWD",dst=/src,readonly \
   --mount type=volume,src=longreach-llvm21-probes-build,dst=/work \
-  qt6-linux-arm64:latest /src/scripts/build/qt6-llvm-probes/prepare-host-tools.sh
+  qt6-llvm-cross-host /src/scripts/build/qt6-llvm-probes/prepare-host-tools.sh
 ```
 
-Then run the probes individually or let the runner select all six in order:
+Build `qt6-linux-arm64` and `qt6-macos-amd64` with their standard Make
+targets before running their probes. The runner uses their `-llvm21` images.
+It can run individual probes or all six in order.
 
 ```sh
 python scripts/tests/qt6-llvm-probes/run.py --target linux-amd64
@@ -125,3 +128,7 @@ The [initial six-target results](../results/qt6-llvm21-probes-20261110.md) retai
 their original 16-check evidence. See the [25-check follow-up](../results/modern-cpp-behavior-20261110.md)
 for the expanded behavior run and Qt/legacy integration. Native macOS and
 Windows arm64 execution, minimum-OS VM runs and full Qt rebuilds remain separate.
+
+The standalone Linux ARM64 and macOS amd64 probes were rechecked
+against these canonical images. Linux ARM64 passed 25 required checks
+in QEMU with zero skips. The macOS amd64 probe compiled to x86_64 Mach-O.

@@ -2,15 +2,16 @@
 
 ## Upstream LLVM 21.1.8 SDK
 
-The current `docker/qt6/windows/amd64/Dockerfile-llvm` cross-builds
+The current `docker/qt6/windows/amd64/Dockerfile` cross-builds
 Qt 6.8.5 with upstream Clang/LLD and the LLVM C++ runtimes. Its MSVCRT
 headers and import libraries come from the pinned mingw-w64 13.0.0 sources.
 The target is Windows amd64 with a Windows 7 SP1 floor.
 
-Stage the [pinned sources](../../scripts/build/qt6-llvm-probes/inputs.json)
-and the local compiler, Linux host Qt and Debian-based build images used
-by the [SDK queue](../results/qt6-llvm21-sdk-queue-20261111.md). From the
-repository root, with Docker idle:
+Build the SDK and examples with `make qt6-win-amd64-examples
+PARALLEL_JOBS=2`. For the sequential coordinator, stage the
+[pinned sources](../../scripts/build/qt6-llvm-probes/inputs.json),
+build the Linux amd64 LLVM SDK and run `make qt6-llvm-cross-host`.
+From the repository root, with Docker idle:
 
 ```powershell
 python scripts/build/qt6-llvm-sdk/run.py --target windows-amd64 --wait
@@ -25,7 +26,7 @@ includes both Windows guest runs.
 
 ## Historical LLVM-MinGW 19 consumer profile
 
-The ordinary Windows amd64 SDK already uses LLVM-MinGW 20241217 / Clang
+The previous Windows amd64 SDK used LLVM-MinGW 20241217 / Clang
 19.1.6 and libc++ with MSVCRT. The Dockerfile at commit `bd0cf0a9b86f` reuses that installed Qt
 6.8.5 SDK and adds Git, Python 3, a native host compiler (for tools such as
 protoc), and the pinned Kitware CMake 3.28.6 binary. Qt and LLVM are not

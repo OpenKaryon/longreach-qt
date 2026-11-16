@@ -61,7 +61,7 @@ elif [[ "$target" = macos-* ]]; then
     version=11.0
     if [ "$arch" = amd64 ]; then
         processor=x86_64
-        version=10.13
+        version=${MACOSX_DEPLOYMENT_TARGET:-10.13}
         mv /opt/longreach-llvm/bin/target-cxx /opt/longreach-llvm/bin/target-cxx-runtime
         cat > /opt/longreach-llvm/bin/target-cxx <<'EOF'
 #!/bin/sh
@@ -69,7 +69,7 @@ exec /opt/longreach-llvm/bin/target-cxx-runtime -faligned-allocation "$@"
 EOF
         chmod +x /opt/longreach-llvm/bin/target-cxx
     fi
-    sed -e "s/@ARCH@/$arch/g" -e "s/@PROCESSOR@/$processor/g" -e "s/@VERSION@/$version/g" \
+    sed -e "s/@ARCH@/$arch/g" -e "s/@PROCESSOR@/$processor/g" -e "s/@VERSION@/$version/g" -e "s/@SDK_VERSION@/${OSXCROSS_SDK_VERSION:-14.0}/g" \
         /src/scripts/build/qt6-llvm-sdk/macos-toolchain.cmake.in \
         > /opt/longreach-llvm/cmake/toolchain.cmake
 else

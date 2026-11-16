@@ -344,11 +344,13 @@ def declared_args(dockerfile: Path) -> set[str]:
             for item in shlex.split(rest)}
 
 
-def context_sources(dockerfile: Path, build_args: dict[str, str]) -> list[str]:
-    """The build-context paths a Dockerfile copies or bind-mounts."""
+def context_sources(dockerfile: Path, build_args: dict[str, str], target: str = "") -> list[str]:
+    """Context paths for the stages reachable from --target (or the final stage)."""
     values = dict(build_args)
-    stages: set[str] = set()
-    sources = []
+    stages: dict[str, tuple[list[str], set[str]]] = {}
+    order: list[str] = []
+    sources: list[str] = []
+    dependencies: set[str] = set()
     for keyword, rest in instructions(dockerfile):
         if keyword == "ARG":
             for item in shlex.split(rest):
@@ -356,13 +358,18 @@ def context_sources(dockerfile: Path, build_args: dict[str, str]) -> list[str]:
                 if has_default and name not in build_args:
                     values[name] = substitute(default, values)
         elif keyword == "FROM":
-            words = rest.split()
-            if len(words) >= 3 and words[-2].upper() == "AS":
-                stages.add(words[-1])
+            base, *alias = (word for word in rest.split() if not word.startswith("--"))
+            name = alias[-1].lower() if alias else str(len(order))
+            sources = []
+            dependencies = {substitute(base, values).lower()}
+            stages[name] = sources, dependencies
+            order.append(name)
         elif keyword in ("COPY", "ADD"):
             words = rest.split()
             flags = [w for w in words if w.startswith("--")]
-            if any(f.startswith("--from=") for f in flags):
+            parents = [flag.removeprefix("--from=") for flag in flags if flag.startswith("--from=")]
+            if parents:
+                dependencies.update(substitute(parent, values).lower() for parent in parents)
                 continue
             items = [w for w in words if not w.startswith("--")]
             if items and items[0].startswith("["):
@@ -372,10 +379,27 @@ def context_sources(dockerfile: Path, build_args: dict[str, str]) -> list[str]:
         elif keyword == "RUN":
             for mount in re.findall(r"--mount=(\S+)", rest):
                 fields = dict(f.split("=", 1) if "=" in f else (f, "") for f in mount.split(","))
-                if fields.get("type") == "bind" and "from" not in fields:
+                if "from" in fields:
+                    dependencies.add(substitute(fields["from"], values).lower())
+                elif fields.get("type") == "bind":
                     sources.append(substitute(fields.get("source", fields.get("src", ".")), values))
-    return sources
 
+    if not order:
+        return []
+    pending = [target.lower() if target else order[-1]]
+    visited = set()
+    selected = []
+    while pending:
+        name = pending.pop()
+        if name.isdecimal() and int(name) < len(order):
+            name = order[int(name)]
+        if name not in stages or name in visited:
+            continue
+        visited.add(name)
+        sources, dependencies = stages[name]
+        selected.extend(sources)
+        pending.extend(dependencies)
+    return selected
 
 def context_files(context: Path, sources: list[str]) -> list[tuple[str, Path | None]]:
     """Each source expanded to files. In folders Git tracks, only the files
@@ -425,7 +449,7 @@ def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> t
         digest.update(options.encode() + b"\0")
         digest.update(hashes.of(dockerfile).encode() + b"\0")
         items[f"docker build {number}"] = options + " " + hashes.of(dockerfile)
-        for relative, path in context_files(context, context_sources(dockerfile, build["args"])):
+        for relative, path in context_files(context, context_sources(dockerfile, build["args"], build["target"])):
             digest.update(relative.encode("utf-8") + b"\0")
             if path is None:
                 complete = False
@@ -433,7 +457,8 @@ def target_inputs(make: str, target: str, needs: list[str], hashes: Hashes) -> t
             digest.update(value.encode() + b"\0")
             items[relative] = value
     for need in needs:
-        need_digest, _, need_items = target_inputs(make, need, [], hashes)
+        need_digest, need_complete, need_items = target_inputs(make, need, [], hashes)
+        complete = complete and need_complete
         digest.update(f"needs {need} ".encode() + need_digest.encode() + b"\0")
         items.update({f"{need}: {name}": value for name, value in need_items.items()})
     return digest.hexdigest(), complete, items
@@ -573,7 +598,8 @@ def build_and_examples(args, flags, expected, complete, inputs, hashes, current)
     if args.examples_target:
         return subprocess.run(
             [args.make, "--no-print-directory", "-j1", args.examples_target,
-             *args.examples_args.split()], cwd=ROOT, check=False
+             *args.examples_args.split()], cwd=ROOT, check=False,
+            env=dict(os.environ, **{NESTED: "1"})
         ).returncode
     return 0
 

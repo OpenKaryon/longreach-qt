@@ -10,6 +10,18 @@ ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
+ARG LLVM_COMPILER_BASE=qt6-centos7-amd64-inputs
+
+# Shared upstream LLVM compiler for the SDKs.
+FROM ${LLVM_COMPILER_BASE} AS compiler
+ARG PARALLEL_JOBS=4
+ENV LLVM_ROOT=/opt/llvm-21
+COPY scripts/build/qt6-llvm-probes/build-compiler.sh /tmp/build-compiler.sh
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/tmp/llvm.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-compiler,target=/work \
+    PARALLEL_JOBS="${PARALLEL_JOBS}" bash /tmp/build-compiler.sh /tmp/llvm.tar.xz
+CMD ["/opt/llvm-21/bin/clang", "--version"]
 
 # ---------------------------------------------------------------------------
 # qt-src: the Qt source archive
@@ -88,7 +100,7 @@ RUN ${QT_SRC_DIR}/configure \
 # final: the installed host Qt only
 # ---------------------------------------------------------------------------
 
-FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM ${BASE_REGISTRY}/debian:12-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS host-qt
 ARG APT_SNAPSHOT
 COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 

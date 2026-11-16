@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-15",
+  "qt": "6.8.5",
+  "llvm": "21.1.8",
+  "openssl": "3.5.7",
+  "arch": "amd64",
+  "build": {
+    "dockerfile": "docker/qt6/linux/amd64/Dockerfile",
+    "command": "make -o qt6-llvm-compiler qt6-linux-amd64 PARALLEL_JOBS=4 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "examples": "make qt6-linux-amd64-smoke PARALLEL_JOBS=4 ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "buildkit_ref": "9lzmvhfnmf0dmw64zvklhluwe",
+    "sdk_image": "qt6-linux-amd64-llvm21",
+    "sdk_image_id": "sha256:ba9b36bbb5a3225cdf9db2e56a631c0be72f898ecab7fc3a2aa499cab05b7788",
+    "elf_max_glibc": "2.17",
+    "shared_cpp_runtime_dependencies": []
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery",
+      "size": 44832832,
+      "sha256": "3ad0e018fb65a87da6e64de5f0d8d4986ff93fc011f60763efbff6aaa2e0c0d3"
+    },
+    {
+      "name": "graphics-gallery",
+      "size": 17580208,
+      "sha256": "ecffe74f4dab59f53cb7ed2669c3e3d691f8b661d33d8c13908f8af129976bb1"
+    },
+    {
+      "name": "multimedia-lab",
+      "size": 25085760,
+      "sha256": "1f312b84f8f1881b41cd18c334ac0c0169b6b7a4151c2bece835e061a33603c8"
+    },
+    {
+      "name": "network-gui",
+      "size": 24611232,
+      "sha256": "4a6b604f80ab111ed15f24199af0466882317a29e8dcaddd350d8bca57515fe2"
+    },
+    {
+      "name": "painting-lab",
+      "size": 17644376,
+      "sha256": "356890dd18038463d3e54a00fcd5e51a3a79da0f76e1d86ca71c50b02a583fb4"
+    },
+    {
+      "name": "qt-selftest",
+      "size": 42764792,
+      "sha256": "5a6cced2ea1ff95df4eb34467612fad920cb12b2db03f38892d5ebba7ae65335"
+    },
+    {
+      "name": "quick-qml-gallery",
+      "size": 50947384,
+      "sha256": "0da03c456e21ee22b828dbfba17aa63f42c38c84781cae7ffea7e537590ff135"
+    },
+    {
+      "name": "smoke-runner",
+      "size": 3349560,
+      "sha256": "6e4b0c35be9203766ce6735b37be216db2d4996e34bec08c1077051b745a56ed"
+    },
+    {
+      "name": "widgets-gallery",
+      "size": 26499752,
+      "sha256": "f1d2813c81e18442c8951a12ac8e4c793d06f16ea98bb8b3f9192bd04fe37fcc"
+    }
+  ],
+  "runtime": {
+    "debian-13": {
+      "os": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"",
+      "image_id": "sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6",
+      "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb",
+      "guest_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 308,
+          "failed": 0,
+          "skipped": 38
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 553,
+        "checks_failed": 0,
+        "checks_skipped": 51
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "centos-7": {
+      "os": "NAME=\"CentOS Linux\"",
+      "image_id": "sha256:be65f488b7764ad3638f236b7b515b3678369a5124c47b8d32916d6487418ea4",
+      "method": "suite unpacked in a stock container and checked by SHA256; smoke-runner under Xvfb",
+      "guest_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 308,
+          "failed": 0,
+          "skipped": 38
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_totals": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 553,
+        "checks_failed": 0,
+        "checks_skipped": 51
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  }
+}

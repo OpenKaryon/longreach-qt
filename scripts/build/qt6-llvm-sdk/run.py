@@ -17,12 +17,16 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 TOOLCHAIN_INPUTS_LABEL = "org.longreach.qt6-llvm-sdk.toolchain-inputs"
 QT_INPUTS_LABEL = "org.longreach.qt6-llvm-sdk.qt-inputs"
-PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt6/linux/arm64/Dockerfile-llvm",
+PROFILES = {"linux-arm64": {"image": "qt6-linux-arm64", "dockerfile": "docker/qt6/linux/arm64/Dockerfile",
+                             "input_images": {"QT_TARGET_INPUTS_IMAGE": "qt6-linux-arm64-cross-deps"},
                              "prefix": "/opt/qt6-linux-arm64-llvm"}}
 PROFILES["windows-amd64"] = {"image": "qt6-win-amd64",
-    "dockerfile": "docker/qt6/windows/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-amd64-llvm"}
+    "dockerfile": "docker/qt6/windows/amd64/Dockerfile",
+    "input_images": {"QT_TARGET_INPUTS_IMAGE": "qt6-llvm-cross-host"}, "prefix": "/opt/qt6-windows-amd64-llvm"}
 PROFILES["macos-amd64"] = {"image": "qt6-macos-amd64",
-    "dockerfile": "docker/qt6/macos/amd64/Dockerfile-llvm", "prefix": "/opt/qt6-macos-amd64-llvm"}
+    "dockerfile": "docker/qt6/macos/amd64/Dockerfile",
+    "input_images": {"QT_TARGET_INPUTS_IMAGE": "qt6-llvm-cross-host",
+                     "OSX_SDK_IMAGE": "qt6-macos-amd64-osxcross"}, "prefix": "/opt/qt6-macos-amd64-llvm"}
 PROFILES["windows-arm64"] = {"image": "qt6-win-arm64",
     "dockerfile": "docker/qt6/windows/arm64/Dockerfile-llvm", "prefix": "/opt/qt6-windows-arm64-llvm"}
 PROFILES["macos-arm64"] = {"image": "qt6-macos-arm64",
@@ -79,7 +83,7 @@ def build_input_key(target: str, phase: str, base_id: str) -> str:
     if phase == "qt":
         labels = json.loads(docker("image", "inspect", "--format", "{{json .Config.Labels}}", base_id)) or {}
         toolchain_key = labels.get(TOOLCHAIN_INPUTS_LABEL, base_id)
-        return input_key(toolchain_key, [sdk / "build-qt.sh", *qt_patches(target)])
+        return input_key(toolchain_key, [sdk / "build-qt.sh", sdk.parent / "license-configure-args.sh", *qt_patches(target)])
 
     probes = ROOT / "scripts/build/qt6-llvm-probes"
     files = [sdk / "prepare.sh", probes / "build-runtime.sh", probes / "inputs.json"]
@@ -140,7 +144,11 @@ def stage(target: str, phase: str, suite: Path, wait: bool, resume: bool) -> dic
     result = dict(target=target, phase=phase, cpus=4, memory="8g", network="none", log=log.name)
     if phase == "inputs":
         arguments = ["docker", "build", "--network=none", "--pull=false", "--progress=plain", "--target", "inputs",
-                     "-f", profile["dockerfile"], "-t", tag + "-inputs", "."]
+                     "-f", profile["dockerfile"], "-t", tag + "-inputs"]
+        for argument, image in profile.get("input_images", {}).items():
+            docker("image", "inspect", image)
+            arguments.extend(["--build-arg", f"{argument}={image}"])
+        arguments.append(".")
         with log.open("wb") as stream:
             subprocess.run(arguments, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT, check=True)
         result.update(status="PASS", image=tag+"-inputs", image_id=docker("image", "inspect", "--format", "{{.Id}}", tag+"-inputs"),

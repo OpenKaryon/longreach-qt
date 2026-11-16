@@ -12,11 +12,13 @@ QT6_SOURCE ?=
 QT6_SERIES := $(basename $(QT6_VERSION))
 
 QT6_HOST_IMAGE := qt6-host$(LICENSE_SUFFIX)
-QT6_WIN_AMD64_IMAGE := qt6-win-amd64$(LICENSE_SUFFIX)
+QT6_LLVM_COMPILER_INPUTS_IMAGE ?= qt6-centos7-amd64-inputs
+QT6_LLVM_COMPILER_IMAGE ?= longreach-llvm:21.1.8-compiler
+QT6_WIN_AMD64_IMAGE := qt6-win-amd64-llvm21$(LICENSE_SUFFIX)
 QT6_WIN_ARM64_IMAGE := qt6-win-arm64$(LICENSE_SUFFIX)
-QT6_LINUX_AMD64_IMAGE := qt6-linux-amd64$(LICENSE_SUFFIX)
-QT6_LINUX_ARM64_IMAGE := qt6-linux-arm64$(LICENSE_SUFFIX)
-QT6_MACOS_AMD64_IMAGE := qt6-macos-amd64$(LICENSE_SUFFIX)
+QT6_LINUX_AMD64_IMAGE := qt6-linux-amd64-llvm21$(LICENSE_SUFFIX)
+QT6_LINUX_ARM64_IMAGE := qt6-linux-arm64-llvm21$(LICENSE_SUFFIX)
+QT6_MACOS_AMD64_IMAGE := qt6-macos-amd64-llvm21$(LICENSE_SUFFIX)
 QT6_MACOS_ARM64_IMAGE := qt6-macos-arm64$(LICENSE_SUFFIX)
 
 # Releases are published as qt-everywhere-src or -opensource-src;
@@ -27,11 +29,11 @@ QT6_ARCHIVE := qt-everywhere-src-$(QT6_VERSION).tar.xz
 QT6_ARCHIVE_SHA256 ?= $(if $(filter 6.8.5,$(QT6_VERSION)),c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9,)
 QT6_ARCHIVE_PATH := $(DOWNLOAD_DIR)/$(QT6_ARCHIVE)
 
-# The MSVCRT build of LLVM-MinGW for Windows 7 (the UCRT one needs Windows 10).
-QT6_WIN7_LLVM_MINGW_ARCHIVE := llvm-mingw-$(LLVM_MINGW_VERSION)-msvcrt-ubuntu-20.04-x86_64.tar.xz
-QT6_WIN7_LLVM_MINGW_PATH := $(DOWNLOAD_DIR)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
-QT6_WIN7_LLVM_MINGW_SHA256 := eb878636e95c358452e4f4c95f032d81360096d0f1cd8ab6d24d5d09ca481372
-QT6_WIN7_LLVM_MINGW_URL := https://github.com/mstorsjo/llvm-mingw/releases/download/$(LLVM_MINGW_VERSION)/$(QT6_WIN7_LLVM_MINGW_ARCHIVE)
+# Windows 7's CRT and headers are built from the pinned MinGW-w64 sources.
+QT6_MINGW_CRT_ARCHIVE := mingw-w64-v13.0.0.tar.bz2
+QT6_MINGW_CRT_PATH := $(DOWNLOAD_DIR)/$(QT6_MINGW_CRT_ARCHIVE)
+QT6_MINGW_CRT_SHA256 := 5afe822af5c4edbf67daaf45eec61d538f49eef6b19524de64897c6b95828caf
+QT6_MINGW_CRT_URL := https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/$(QT6_MINGW_CRT_ARCHIVE)
 
 # Sources the Linux Dockerfiles copy from downloads/: ninja (CentOS 7 has none
 # new enough; amd64 only) and xcb-util-cursor, linked statically.
@@ -71,8 +73,8 @@ QT6_MACOS_ARM64_SDK_PATH := $(DOWNLOAD_DIR)/$(QT6_MACOS_ARM64_SDK)
         qt6-macos-amd64-smoke qt6-macos-amd64-audit qt6-macos-arm64-smoke qt6-macos-arm64-audit \
         qt6-host-smoke
 
-$(QT6_WIN7_LLVM_MINGW_PATH):
-	$(PYTHON) scripts/fetch/fetch.py "$(QT6_WIN7_LLVM_MINGW_URL)" "$@" "$(QT6_WIN7_LLVM_MINGW_SHA256)"
+$(QT6_MINGW_CRT_PATH):
+	$(PYTHON) scripts/fetch/fetch.py "$(QT6_MINGW_CRT_URL)" "$@" "$(QT6_MINGW_CRT_SHA256)"
 
 # CMake for the CentOS 7 build, downloaded from the Lab release via fetch.py.
 QT6_CENTOS_CMAKE_VERSION := 3.27.9
@@ -104,6 +106,7 @@ $(QT6_ARCHIVE_PATH):
 	$(PYTHON) scripts/fetch/qt6-fetch-source.py "$(QT6_VERSION)" "$(DOWNLOAD_DIR)" $(if $(QT6_SOURCE),--source "$(QT6_SOURCE)",$(if $(QT6_ARCHIVE_SHA256),--sha256 "$(QT6_ARCHIVE_SHA256)"))
 	$(if $(and $(QT6_ARCHIVE_SHA256),$(if $(QT6_SOURCE),,1)),$(PYTHON) scripts/fetch/fetch.py --check "$@" "$(QT6_ARCHIVE_SHA256)")
 
+QT6_SOURCE_SHA256 = $(if $(QT6_SOURCE),,$(QT6_ARCHIVE_SHA256))
 QT6_BUILD_ARGS = --build-arg QT_VERSION=$(QT6_VERSION) --build-arg QT_ARCHIVE=$(QT6_ARCHIVE) --build-arg DOWNLOAD_DIR=$(DOWNLOAD_DIR) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --build-arg LICENSE_PROFILE=$(LICENSE_PROFILE)
 
 # Host Qt tools (moc, rcc, ...), which every cross target copies from this image.
@@ -116,27 +119,59 @@ qt6-host: $(QT6_ARCHIVE_PATH)
 build-qt6-host:
 	$(PYTHON) scripts/build/ensure-image.py --image "$(QT6_HOST_IMAGE)" --target qt6-host --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 
-# Windows x86_64 is the Windows 7 backport, built against MSVCRT.
-qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(QT6_WIN7_LLVM_MINGW_PATH) build-qt6-host
+.PHONY: qt6-llvm-cross-host
+qt6-llvm-cross-host:
+	$(ONE_BUILD_CHECK)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --target cross-host -f docker/qt6/linux/arm64/Dockerfile -t qt6-llvm-cross-host .
+
+# The Windows 7 CRT is built from MinGW-w64 sources by upstream Clang.
+qt6-win-amd64: $(QT6_ARCHIVE_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz $(QT6_MINGW_CRT_PATH) build-qt6-linux-amd64 qt6-llvm-cross-host
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(QT6_WIN7_LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(QT6_WIN7_LLVM_MINGW_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --build-arg QT_HOST_IMAGE=$(QT6_LINUX_AMD64_IMAGE) --build-arg QT_SHA256=$(QT6_SOURCE_SHA256) -f docker/qt6/windows/amd64/Dockerfile -t $(QT6_WIN_AMD64_IMAGE) -t qt6-win-amd64:llvm21 .
 
 qt6-win-arm64: $(QT6_ARCHIVE_PATH) $(LLVM_MINGW_PATH) build-qt6-host
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
 	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg LLVM_MINGW_VERSION=$(LLVM_MINGW_VERSION) --build-arg LLVM_MINGW_ARCHIVE=$(LLVM_MINGW_ARCHIVE) --build-arg LLVM_MINGW_SHA256=$(LLVM_MINGW_SHA256) -f docker/qt6/windows/arm64/Dockerfile -t $(QT6_WIN_ARM64_IMAGE) .
 
-# glibc 2.17 (RHEL/CentOS 7.6), built natively on CentOS 7, without the host
-# image.
-qt6-linux-amd64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH) $(QT6_CENTOS_CMAKE_PATH)
+# Build the shared LLVM compiler from the locked CentOS userland and source
+# inputs. The inputs stage assembles dependencies without building Qt.
+.PHONY: qt6-llvm-compiler-inputs qt6-llvm-compiler
+qt6-llvm-compiler-inputs: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_NINJA_PATH) $(QT6_XCB_CURSOR_PATH) $(QT6_CENTOS_CMAKE_PATH)
 	$(ONE_BUILD_CHECK)
 	$(PYTHON) scripts/fetch/qt6-centos7-fetch.py
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --target inputs -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LLVM_COMPILER_INPUTS_IMAGE) .
 
-qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) build-qt6-host
+qt6-llvm-compiler: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz qt6-llvm-compiler-inputs
 	$(ONE_BUILD_CHECK)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) --build-arg LLVM_COMPILER_BASE=$(QT6_LLVM_COMPILER_INPUTS_IMAGE) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target compiler -f docker/qt6/host/Dockerfile -t $(QT6_LLVM_COMPILER_IMAGE) .
+
+# The CentOS 7 ARM64 runtime is also used by the Qt 5 Trusty SDK.
+QT6_ARM64_LLVM_RUNTIME_IMAGE ?= longreach-llvm:21.1.8-linux-arm64-runtime
+.PHONY: qt6-linux-arm64-llvm-runtime
+qt6-linux-arm64-llvm-runtime: $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-llvm-compiler
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT6_LLVM_COMPILER_IMAGE)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target llvm-runtime -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_ARM64_LLVM_RUNTIME_IMAGE) .
+
+$(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz:
+	$(PYTHON) scripts/fetch/fetch.py "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz" "$@" "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+
+# The native SDK also supplies the LLVM host Qt tools for cross-builds.
+qt6-linux-amd64: build-qt6-llvm-compiler
+	$(ONE_BUILD_CHECK)
+	docker image inspect --format "{{.Id}}" $(QT6_LLVM_COMPILER_IMAGE)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --target qt -f docker/qt6/linux/amd64/Dockerfile -t $(QT6_LINUX_AMD64_IMAGE) $(if $(filter gpl-enabled,$(LICENSE_PROFILE)),-t qt6-linux-amd64:llvm21) .
+
+.PHONY: qt6-linux-arm64-cross-deps
+qt6-linux-arm64-cross-deps: $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH)
+	$(ONE_BUILD_CHECK)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg PARALLEL_JOBS=$(PARALLEL_JOBS) --target deps -f docker/qt6/linux/arm64/Dockerfile -t qt6-linux-arm64-cross-deps .
+
+qt6-linux-arm64: $(QT6_ARCHIVE_PATH) $(OPENSSL_PATH) $(QT6_XCB_CURSOR_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-linux-amd64
+	$(ONE_BUILD_CHECK)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --build-arg QT_HOST_IMAGE=$(QT6_LINUX_AMD64_IMAGE) --build-arg OPENSSL_VERSION=$(OPENSSL_VERSION) --build-arg QT_SHA256=$(QT6_SOURCE_SHA256) -f docker/qt6/linux/arm64/Dockerfile -t $(QT6_LINUX_ARM64_IMAGE) $(if $(filter gpl-enabled,$(LICENSE_PROFILE)),-t qt6-linux-arm64:llvm21) .
 
 # A quick headless run of tests/ against the host image's Qt (no Qt 3D, so
 # gl-heavy-gallery skips); qt6-linux-amd64-smoke is the full one.
@@ -153,10 +188,17 @@ $(QT6_MACOS_ARM64_SDK_PATH):
 	$(PYTHON) scripts/fetch/fetch.py "$(QT6_MACOS_ARM64_SDK_URL)" "$@" "$(QT6_MACOS_ARM64_SDK_SHA256)"
 endif
 
-qt6-macos-amd64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_SDK_PATH) build-qt6-host
+QT6_MACOS_AMD64_OSXCROSS_ARGS = --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF)
+
+.PHONY: qt6-macos-amd64-osxcross
+qt6-macos-amd64-osxcross: $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_SDK_PATH)
+	$(ONE_BUILD_CHECK)
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) $(QT6_MACOS_AMD64_OSXCROSS_ARGS) --target osxcross-builder -f docker/qt6/macos/amd64/Dockerfile -t qt6-macos-amd64-osxcross .
+
+qt6-macos-amd64: $(QT6_ARCHIVE_PATH) $(DOWNLOAD_DIR)/llvm-project-21.1.8.src.tar.xz build-qt6-linux-amd64 qt6-llvm-cross-host qt6-macos-amd64-osxcross
 	$(ONE_BUILD_CHECK)
 	$(call LICENSE_ENFORCED_ONLY_ON_LINUX,$@)
-	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(SOURCE_ARGS) $(QT6_BUILD_ARGS) --build-arg QT6_HOST_IMAGE=$(QT6_HOST_IMAGE) --build-arg OSX_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) --build-arg OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET) --build-arg OSX_SDK=$(QT6_MACOS_SDK) --build-arg OSX_SDK_SHA256=$(QT6_MACOS_SDK_SHA256) --build-arg LAB_GIT=$(LAB_GIT) --build-arg OSXCROSS_REF=$(QT6_MACOS_OSXCROSS_REF) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) .
+	docker build $(DOCKER_CACHE_FLAG) $(DOCKER_BUILD_FLAGS) $(QT6_BUILD_ARGS) $(QT6_MACOS_AMD64_OSXCROSS_ARGS) --build-arg OSX_SDK_IMAGE=qt6-macos-amd64-osxcross --build-arg LLVM_COMPILER_IMAGE=$(QT6_LLVM_COMPILER_IMAGE) --build-arg QT_HOST_IMAGE=$(QT6_LINUX_AMD64_IMAGE) --build-arg QT_SHA256=$(QT6_SOURCE_SHA256) -f docker/qt6/macos/amd64/Dockerfile -t $(QT6_MACOS_AMD64_IMAGE) -t qt6-macos-amd64:llvm21 .
 
 qt6-macos-arm64: $(QT6_ARCHIVE_PATH) $(QT6_OS_VERSION_CHECK_PATH) $(QT6_MACOS_ARM64_SDK_PATH) build-qt6-host
 	$(ONE_BUILD_CHECK)
@@ -187,7 +229,8 @@ QT6_RUN_OFFSCREEN := cd /out && xvfb-run -a -s "-screen 0 1280x1024x24" env QT_Q
 QT6_RUN_NONE := true
 
 qt6-win-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_WIN_AMD64_IMAGE)
-qt6-win-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-amd64
+qt6-win-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-windows-amd64-llvm
+qt6-win-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-llvm/cmake/toolchain.cmake -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DSMOKE_REQUIRE_CXX23=ON
 qt6-win-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_EXE)
 qt6-win-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-win-amd64-smoke:
@@ -205,23 +248,24 @@ qt6-win-arm64-smoke:
 	$(qt6-build-smoke)
 
 qt6-linux-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_AMD64_IMAGE)
-qt6-linux-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-amd64
-qt6-linux-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON
+qt6-linux-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-amd64-llvm
+qt6-linux-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DSMOKE_REQUIRE_CXX23=ON -DCMAKE_EXE_LINKER_FLAGS=-no-pie
 qt6-linux-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_ELF)
 qt6-linux-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_OFFSCREEN)
 qt6-linux-amd64-smoke:
 	$(qt6-build-smoke)
 
 qt6-linux-arm64-smoke: QT6_SMOKE_IMAGE := $(QT6_LINUX_ARM64_IMAGE)
-qt6-linux-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-arm64
+qt6-linux-arm64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-linux-arm64-llvm
+qt6-linux-arm64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-llvm/cmake/toolchain.cmake -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DSMOKE_REQUIRE_CXX23=ON -DCMAKE_EXE_LINKER_FLAGS=-no-pie
 qt6-linux-arm64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_ELF)
 qt6-linux-arm64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-linux-arm64-smoke:
 	$(qt6-build-smoke)
 
 qt6-macos-amd64-smoke: QT6_SMOKE_IMAGE := $(QT6_MACOS_AMD64_IMAGE)
-qt6-macos-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-amd64
-qt6-macos-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET)
+qt6-macos-amd64-smoke: QT6_SMOKE_QT_DIR := /opt/qt6-macos-amd64-llvm
+qt6-macos-amd64-smoke: QT6_SMOKE_CMAKE_ARGS := -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-llvm/cmake/toolchain.cmake -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DSMOKE_REQUIRE_CXX23=ON -DCMAKE_MACOSX_BUNDLE=TRUE -DOSXCROSS_SDK_VERSION=$(QT6_MACOS_SDK_VERSION) -DCMAKE_OSX_DEPLOYMENT_TARGET=$(QT6_MACOS_DEPLOYMENT_TARGET)
 qt6-macos-amd64-smoke: QT6_SMOKE_COLLECT := $(QT6_COLLECT_APP)
 qt6-macos-amd64-smoke: QT6_SMOKE_RUN := $(QT6_RUN_NONE)
 qt6-macos-amd64-smoke:
@@ -244,11 +288,14 @@ qt6-macos-arm64-audit:
 	docker run --rm --entrypoint sh -v "$(CURDIR)/$(QT6_SMOKE_OUT):/in:ro" -v "$(CURDIR)/scripts/audit/qt6-macos-audit.sh:/audit.sh:ro" $(QT6_MACOS_ARM64_IMAGE) -c 'MACHO_AUDIT_ARCH=arm64 sh /audit.sh $(QT6_MACOS_ARM64_DEPLOYMENT_TARGET) /in/*'
 
 
-$(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,qt6-host))
+$(eval $(call ensure-build-image,qt6-llvm-compiler,$(QT6_LLVM_COMPILER_IMAGE)))
+$(eval $(call ensure-build-image,qt6-linux-arm64-llvm-runtime,$(QT6_ARM64_LLVM_RUNTIME_IMAGE),qt6-llvm-compiler))
+
+$(eval $(call simple-build-targets,qt6-win-amd64,qt6-win-amd64,QT6_WIN_AMD64_IMAGE,qt6-win-amd64-smoke,,qt6-linux-amd64 qt6-llvm-compiler))
 $(eval $(call simple-build-targets,qt6-win-arm64,qt6-win-arm64,QT6_WIN_ARM64_IMAGE,qt6-win-arm64-smoke,,qt6-host))
-$(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,))
-$(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,qt6-host))
-$(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,qt6-host))
+$(eval $(call simple-build-targets,qt6-linux-amd64,qt6-linux-amd64,QT6_LINUX_AMD64_IMAGE,qt6-linux-amd64-smoke,,qt6-llvm-compiler))
+$(eval $(call simple-build-targets,qt6-linux-arm64,qt6-linux-arm64,QT6_LINUX_ARM64_IMAGE,qt6-linux-arm64-smoke,,qt6-linux-amd64 qt6-llvm-compiler))
+$(eval $(call simple-build-targets,qt6-macos-amd64,qt6-macos-amd64,QT6_MACOS_AMD64_IMAGE,qt6-macos-amd64-smoke,,qt6-linux-amd64 qt6-llvm-compiler))
 $(eval $(call simple-build-targets,qt6-macos-arm64,qt6-macos-arm64,QT6_MACOS_ARM64_IMAGE,qt6-macos-arm64-smoke,,qt6-host))
 
 # QT6_SOURCE goes into downloads/ before ensure-image.py fingerprints the

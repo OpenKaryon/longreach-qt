@@ -17,10 +17,10 @@ Each target runs `make <target>-examples` (`make build-<target>` with
 --sdk-only): the SDK image is built when one of
 its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
-machine. qt6-host, which the cross-built Qt 6 targets copy their tools from,
-comes first, built like the SDKs only when its inputs changed. A failed
-target does not stop the others; at the end the failed ones are built again,
-one at a time (--retries, default once).
+machine. Make prepares the required LLVM compiler and target toolchain
+images. qt6-host is prepared first for Qt 6 targets that still use it.
+A failed target does not stop the others and is retried at the end
+(--retries, default once).
 
 --jobs sets how many targets build at the same time; --make-jobs the compiler
 jobs inside each (PARALLEL_JOBS). A Qt link can take several GB, so a new
@@ -74,13 +74,14 @@ TARGETS = {
     'qt5-macos-amd64': (True, False),
     'qt5-macos-i386': (True, False),
     'qt5-macos-arm64': (True, False),
-    'qt6-win-amd64': (True, True),
+    'qt6-win-amd64': (True, False),
     'qt6-win-arm64': (True, True),
     'qt6-linux-amd64': (True, False),
-    'qt6-linux-arm64': (True, True),
-    'qt6-macos-amd64': (True, True),
+    'qt6-linux-arm64': (True, False),
+    'qt6-macos-amd64': (True, False),
     'qt6-macos-arm64': (True, True),
 }
+QT6_LLVM_TARGETS = {'qt6-linux-amd64', 'qt6-linux-arm64', 'qt6-win-amd64', 'qt6-macos-amd64'}
 # Seconds a stopped build gets to end by itself before it is killed.
 STOP_GRACE = 60
 # Binary audits run after the examples where the Makefile has them.
@@ -128,7 +129,10 @@ def docker_memory_gb() -> float | None:
 
 
 def image_of(target: str, profile: str) -> str:
-    return target + (f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else '')
+    suffix = f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else ''
+    if target in QT6_LLVM_TARGETS:
+        return f'{target}-llvm21{suffix}'
+    return f'{target}{suffix}'
 
 
 # Stopping build-all reaches every process it started, however deep (make,
@@ -552,7 +556,7 @@ def main() -> int:
         if any(TARGETS[t][1] for t in targets):
             host_job = Job('qt6-host', [[args.make, '--no-print-directory', 'build-qt6-host', *make_vars]], log_dir, env)
             jobs.append(host_job)
-            say('started qt6-host (the Qt 6 cross targets wait for it)')
+            say('started qt6-host (its dependent targets wait for it)')
 
         while pending or jobs:
             check_stop()

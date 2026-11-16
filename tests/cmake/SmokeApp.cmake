@@ -217,9 +217,9 @@ function(smoke_apply_platform_flags target)
                      LINK_FLAGS " -Wl,--allow-multiple-definition")
     endif()
 
-    # As qmake built them: -Os (Qt is built -optimize-size) and a stripped link;
-    # CMake's -O3 unstripped made gl-heavy-gallery 76 MB instead of 33.
-    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT MSVC)
+    # Strip release binaries where the linker accepts -s. Darwin uses
+    # -dead_strip in tests/CMakeLists.txt, and ld64.lld rejects -s.
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT MSVC AND NOT APPLE)
         set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-s")
     endif()
 endfunction()

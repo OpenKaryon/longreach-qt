@@ -48,8 +48,8 @@ PLATFORMS = {
 # profile; another profile adds -<profile>, as there.
 PLATFORM_CONFIG = {
     "win-amd64": {
-        "image": "qt6-win-amd64",
-        "qt_path": "/opt/qt6-amd64",
+        "image": "qt6-win-amd64-llvm21",
+        "qt_path": "/opt/qt6-windows-amd64-llvm",
         "artifact_pattern": "*.exe",
     },
     "win-arm64": {
@@ -58,18 +58,18 @@ PLATFORM_CONFIG = {
         "artifact_pattern": "*.exe",
     },
     "linux-amd64": {
-        "image": "qt6-linux-amd64",
-        "qt_path": "/opt/qt6-linux-amd64",
+        "image": "qt6-linux-amd64-llvm21",
+        "qt_path": "/opt/qt6-linux-amd64-llvm",
         "artifact_pattern": None,  # executables without extension
     },
     "linux-arm64": {
-        "image": "qt6-linux-arm64",
-        "qt_path": "/opt/qt6-linux-arm64",
+        "image": "qt6-linux-arm64-llvm21",
+        "qt_path": "/opt/qt6-linux-arm64-llvm",
         "artifact_pattern": None,
     },
     "macos-amd64": {
-        "image": "qt6-macos-amd64",
-        "qt_path": "/opt/qt6-macos-amd64",
+        "image": "qt6-macos-amd64-llvm21",
+        "qt_path": "/opt/qt6-macos-amd64-llvm",
         "artifact_pattern": "*.app",
     },
     "macos-arm64": {

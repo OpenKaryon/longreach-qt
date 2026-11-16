@@ -21,10 +21,10 @@ ROOT = Path(__file__).resolve().parents[3]
 COMPILER_IMAGE = "longreach-llvm:21.1.8-compiler"
 TARGET_IMAGES = {
     "linux-amd64": COMPILER_IMAGE,
-    "linux-arm64": "qt6-linux-arm64:latest",
+    "linux-arm64": "qt6-linux-arm64-llvm21",
     "windows-amd64": COMPILER_IMAGE,
     "windows-arm64": COMPILER_IMAGE,
-    "macos-amd64": "qt6-macos-amd64:latest",
+    "macos-amd64": "qt6-macos-amd64-llvm21",
     "macos-arm64": "qt6-macos-arm64:latest",
 }
 

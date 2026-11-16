@@ -129,10 +129,11 @@ case "$target" in
                     -DLIBCXX_HAS_WIN32_THREAD_API=ON -DLIBCXX_HAS_PTHREAD_API=OFF)
         ;;
     macos-amd64|macos-arm64)
-        sysroot=/opt/osxcross/target/SDK/MacOSX14.0.sdk
+        sdk_version=${OSXCROSS_SDK_VERSION:-14.0}
+        sysroot=/opt/osxcross/target/SDK/MacOSX$sdk_version.sdk
         if [ "$target" = macos-amd64 ]; then
             arch=x86_64
-            minimum=10.13
+            minimum=${MACOSX_DEPLOYMENT_TARGET:-10.13}
         else
             arch=arm64
             minimum=11.0
@@ -152,7 +153,7 @@ case "$target" in
                     -DCOMPILER_RT_OSX_ARCHITECTURES="$arch" -DDARWIN_osx_ARCHS="$arch"
                     -DDARWIN_osx_BUILTIN_ARCHS="$arch"
                     -DDARWIN_osx_SYSROOT="$sysroot" -DDARWIN_macosx_CACHED_SYSROOT="$sysroot"
-                    -DDARWIN_macosx_OVERRIDE_SDK_VERSION=14.0
+                    -DDARWIN_macosx_OVERRIDE_SDK_VERSION="$sdk_version"
                     -DCOMPILER_RT_ENABLE_IOS=OFF -DCOMPILER_RT_ENABLE_TVOS=OFF
                     -DCOMPILER_RT_ENABLE_WATCHOS=OFF -DCOMPILER_RT_ENABLE_VISIONOS=OFF
                     -DLIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS=OFF)

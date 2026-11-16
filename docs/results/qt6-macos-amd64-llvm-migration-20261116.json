@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-16",
+  "qt": "6.8.5",
+  "llvm": "21.1.8",
+  "arch": "amd64",
+  "build": {
+    "dockerfile": "docker/qt6/macos/amd64/Dockerfile",
+    "command": "make -o build-qt6-linux-amd64 qt6-macos-amd64 PARALLEL_JOBS=4 QT6_LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler-centos7-validation",
+    "examples": "make qt6-macos-amd64-smoke PARALLEL_JOBS=4 ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "audit": "make qt6-macos-amd64-audit ARTIFACTS_DIR=artifacts/llvm-migration-20261115",
+    "buildkit_ref": "r7ruhcggz3nyh6ddv6wf5fq84",
+    "sdk_image": "qt6-macos-amd64-llvm21",
+    "sdk_image_id": "sha256:24e4c7ef3557488dfc5179d562e80c7e19ea654f0db9a3721aff625c7ee12173",
+    "host_qt_image_id": "sha256:ba9b36bbb5a3225cdf9db2e56a631c0be72f898ecab7fc3a2aa499cab05b7788",
+    "osxcross_buildkit_ref": "r6f4wpuxkxsv1ywjuixbjcz8z",
+    "osxcross_image_id": "sha256:5cdbfa650c5003b26e58455deb516921ecfad52e9f3be5cfb30a716a02b9d1c7",
+    "apple_sdk": "14.0",
+    "macho_deployment_minimum": "10.13",
+    "audited_x86_64_executables": 9,
+    "unresolved_aligned_allocation": false
+  },
+  "artifacts": [
+    {
+      "name": "gl-heavy-gallery",
+      "size": 51127424,
+      "sha256": "f1fc4fcd899f4359c7816a55fda734ff18d2fed038bd98f733524be809dd2876"
+    },
+    {
+      "name": "graphics-gallery",
+      "size": 21088144,
+      "sha256": "a4219c8655f8c8d6879a4ccf4e10d14b176793adef8f05858c4d3a76fc0cea62"
+    },
+    {
+      "name": "multimedia-lab",
+      "size": 24039048,
+      "sha256": "b7dcfe11744607d84665c0a940712df477b23249433cdd4aa511a6e6d7a436c3"
+    },
+    {
+      "name": "network-gui",
+      "size": 22523336,
+      "sha256": "3615b668e7a13f408872cec027d1acb3f1cb81e6bc11b55e026ef1242d5c07fa"
+    },
+    {
+      "name": "painting-lab",
+      "size": 21077352,
+      "sha256": "e2a86e848bf1e2024961f49d83ab351d5f7685ee722a17ae41021df56cd32470"
+    },
+    {
+      "name": "qt-selftest",
+      "size": 47170136,
+      "sha256": "ddbf809d56ee4add8e35af680b498a1ba406716f2e70dafe6ce8036072914704"
+    },
+    {
+      "name": "quick-qml-gallery",
+      "size": 58141720,
+      "sha256": "f65dbc639a04105c69bd5c43ca57e7a838be7c28975233d3b770334638ba915f"
+    },
+    {
+      "name": "smoke-runner",
+      "size": 4060080,
+      "sha256": "2f30fc4603ae7148c608a3f688c0977cef6db0796ce6079240d757fd80cd36e3"
+    },
+    {
+      "name": "widgets-gallery",
+      "size": 26213288,
+      "sha256": "03c6caf5643dbac0a0f7e5db5361d851b49ec1bebdc7d8deede067c029d0d5c4"
+    }
+  ],
+  "runtime": {
+    "high-sierra": {
+      "system": "ProductName:\tMac OS X\nProductVersion:\t10.13.6\nBuildVersion:\t17G66\nDarwin Mac-admin.local 17.7.0 Darwin Kernel Version 17.7.0: Thu Jun 21 22:53:14 PDT 2018; root:xnu-4570.71.2~1/RELEASE_X86_64 x86_64",
+      "method": "suite copied over SSH and checked by SHA256; smoke-runner over SSH",
+      "binary_hashes_verified": 9,
+      "ordinary": [
+        {
+          "application": "qt-selftest",
+          "passed": 289,
+          "failed": 0,
+          "skipped": 44
+        },
+        {
+          "application": "widgets-gallery",
+          "passed": 92,
+          "failed": 0,
+          "skipped": 3
+        },
+        {
+          "application": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "quick-qml-gallery",
+          "passed": 35,
+          "failed": 0,
+          "skipped": 5
+        },
+        {
+          "application": "gl-heavy-gallery",
+          "passed": 55,
+          "failed": 0,
+          "skipped": 4
+        },
+        {
+          "application": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0
+        },
+        {
+          "application": "multimedia-lab",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 1
+        },
+        {
+          "application": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0
+        }
+      ],
+      "ordinary_summary": {
+        "apps_passed": 8,
+        "apps_failed": 0,
+        "checks_passed": 529,
+        "checks_failed": 0,
+        "checks_skipped": 57
+      },
+      "strict_cpp23": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  }
+}

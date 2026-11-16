@@ -4,18 +4,21 @@
 set -euo pipefail
 
 jobs=${PARALLEL_JOBS:-4}
+version=${QT_VERSION:-6.8.5}
 prefix=/opt/qt6-linux-amd64-llvm
 build=/opt/qt-build-llvm
 test "${LLVM_ROOT:?}" = /opt/llvm-21
 "$CXX" --version | head -1 | grep -F '21.1.8'
 mkdir -p "$build"
 cd "$build"
-/opt/qt-everywhere-src-6.8.5/configure \
+license_options=$(bash /tmp/license-configure-args.sh qt6 "${LICENSE_PROFILE:-gpl-enabled}")
+read -r -a license_args <<< "$license_options"
+"/opt/qt-everywhere-src-$version/configure" \
     -opensource -confirm-license -prefix "$prefix" \
     -release -optimize-size -static \
     -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
     -nomake examples -nomake tests -skip qtwebengine -skip qtwebview \
-    -openssl-linked \
+    -openssl-linked ${license_args[@]+"${license_args[@]}"} \
     -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
        -DCMAKE_JOB_POOLS=link_pool=1 -DCMAKE_JOB_POOL_LINK=link_pool \
        -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON

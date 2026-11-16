@@ -132,12 +132,17 @@ $(LLVM_MINGW_PATH):
 # $(1) public name, $(2) SDK target, $(3) image variable, $(4) examples
 # target, $(5) examples arguments, $(6) the targets of images it is built
 # FROM (scripts/build/ensure-image.py --needs).
+define ensure-build-image
+.PHONY: build-$(1)
+build-$(1):
+	$(PYTHON) scripts/build/ensure-image.py --image "$(2)" --target "$(or $(4),$(1))" $(foreach n,$(3),--needs $(n)) --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
+endef
+
 define simple-build-targets
 BUILD_TARGETS += $(1)
-.PHONY: build-$(1) build-$(1)-examples $(1)-examples
+$(call ensure-build-image,$(1),$($(3)),$(6),$(2))
+.PHONY: build-$(1)-examples $(1)-examples
 $(1)-examples: build-$(1)-examples
-build-$(1):
-	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" $(foreach n,$(6),--needs $(n)) --docker-build-flags="$(DOCKER_BUILD_FLAGS)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 build-$(1)-examples:
 	$(PYTHON) scripts/build/ensure-image.py --image "$($(3))" --target "$(2)" $(foreach n,$(6),--needs $(n)) --docker-build-flags="$(DOCKER_BUILD_FLAGS)" --examples-target "$(4)" --examples-args "$(5)" $(if $(filter 1,$(NO_CACHE) $(FORCE)),--force,)
 endef
@@ -173,7 +178,7 @@ help:
 # Re-check the pinned inputs already in downloads/, and the Sarge and Lucid
 # packages against their locks; what is not downloaded yet is counted, not
 # failed. A QT6_SOURCE archive is not the pinned one, so it is left out.
-VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE $(if $(QT6_SOURCE),,QT6_ARCHIVE) OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_WIN7_LLVM_MINGW \
+VERIFY_DOWNLOADS = QT4_ARCHIVE QT5_ARCHIVE $(if $(QT6_SOURCE),,QT6_ARCHIVE) OPENSSL QT4_OPENSSL GCC55 LLVM_MINGW QT6_MINGW_CRT \
                    QT5_LLVM_SRC QT6_NINJA QT6_XCB_CURSOR QT6_OS_VERSION_CHECK QT6_CENTOS_CMAKE \
                    TIGER_SDK JAGUAR_SDK QT5_MACOS_I386_LINK_SDK QT6_MACOS_SDK QT6_MACOS_ARM64_SDK
 VERIFY_PINS = $(sort $(foreach f,$(VERIFY_DOWNLOADS),$(if $($(f)_SHA256),$($(f)_PATH)=$($(f)_SHA256))))

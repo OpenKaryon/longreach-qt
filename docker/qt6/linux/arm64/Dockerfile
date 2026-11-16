@@ -1,31 +1,30 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 #
-# Qt 6.8.5 for Linux arm64 from RHEL/CentOS 7 aarch64 (glibc 2.17), the floor
-# of the amd64 build. Cross-built on Debian 12 with its aarch64 GCC 11 against
-# a sysroot of CentOS 7.9 aarch64 packages (scripts/build/rpm-sysroot.py) and
-# Developer Toolset 10's C++ library, linked as Developer Toolset links it:
-# RHEL 7's libstdc++.so.6 plus the newer parts statically. The host tools come
-# from the qt6-host image. As for amd64, the result needs only RHEL 7's own
-# libraries: OpenSSL and xcb-util-cursor are static, D-Bus is loaded at run
-# time, and Wayland is linked through dlopen stubs.
-
+# Qt 6 for Linux arm64 from RHEL/CentOS 7 aarch64 (glibc 2.17).
+# The CentOS sysroot and C dependencies come from the locked packages
+# and source archives. Qt and the examples use upstream Clang and libc++.
 # Base images are pinned by digest; BASE_REGISTRY is where they are pulled
 # from (the OpenKaryonLab copy, or docker.io/library: docs/sources.md).
 ARG BASE_REGISTRY=ghcr.io/openkaryonlab
 ARG QT_VERSION=6.8.5
 ARG QT_ARCHIVE=qt-everywhere-src-${QT_VERSION}.tar.xz
 ARG PARALLEL_JOBS=""
-# The host Qt image by its tag, which carries the licence profile.
-ARG QT6_HOST_IMAGE=qt6-host
+ARG QT_HOST_IMAGE=qt6-linux-amd64:llvm21
+ARG QT_TARGET_INPUTS_IMAGE=deps
+ARG LLVM_COMPILER_IMAGE=longreach-llvm:21.1.8-compiler
 
-FROM ${QT6_HOST_IMAGE} AS host-qt
+FROM ${QT_HOST_IMAGE} AS host-qt
+RUN --network=none \
+    --mount=type=bind,source=scripts/build/qt6-llvm-sdk/host-libs.sh,target=/tmp/host-libs.sh \
+    bash /tmp/host-libs.sh
+FROM ${LLVM_COMPILER_IMAGE} AS llvm-compiler
 
 # ---------------------------------------------------------------------------
 # toolchain: the cross-compiler, the CentOS 7 aarch64 sysroot and the host Qt
 # ---------------------------------------------------------------------------
 
-FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS toolchain
+FROM ${BASE_REGISTRY}/debian:12@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS cross-host
 ARG APT_SNAPSHOT
 COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
 
@@ -44,6 +43,7 @@ RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" && apt-get update && apt-get 
         libwayland-client0 libwayland-cursor0 libwayland-server0 && \
     rm -rf /var/lib/apt/lists/*
 
+FROM cross-host AS centos-inputs
 ENV SYSROOT=/opt/sysroot-arm64
 # The CentOS 7.9 aarch64 packages, each by URL and SHA256 from the lock
 # (scripts/build/qt6-linux-arm64/packages.txt says how it is made).
@@ -52,6 +52,29 @@ RUN python3 /tmp/sysroot/rpm-sysroot.py --lock /tmp/sysroot/qt6-centos7-aarch64-
         --dest ${SYSROOT} --merged-usr > /tmp/sysroot/installed.txt && \
     wc -l < /tmp/sysroot/installed.txt && rm -rf /tmp/sysroot
 
+# Build the shared aarch64 runtime at the CentOS 7 glibc floor.
+FROM centos-inputs AS llvm-runtime
+ARG PARALLEL_JOBS=4
+COPY --from=llvm-compiler /opt/llvm-21 /opt/llvm-21
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/llvm.tar.xz \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests/common,target=/src/tests/common \
+    --mount=type=cache,id=llvm21-linux-arm64-runtime,target=/work/llvm,sharing=locked <<'EOF'
+set -eu
+echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  /src/llvm.tar.xz' | sha256sum -c -
+if [ ! -f /work/llvm/source/.longreach-ready ]; then
+    rm -rf /work/llvm/source
+    mkdir -p /work/llvm/source
+    tar -xJf /src/llvm.tar.xz -C /work/llvm/source --strip-components=1
+    touch /work/llvm/source/.longreach-ready
+fi
+LLVM_ROOT=/opt/llvm-21 LLVM_BUILD_ROOT=/work/llvm PARALLEL_JOBS="$PARALLEL_JOBS" \
+    bash /src/scripts/build/qt6-llvm-probes/build-runtime.sh linux-arm64
+cp -a /work/llvm/runtimes/linux-arm64 /opt/llvm-runtime-21
+EOF
+
+FROM centos-inputs AS deps-toolchain
 COPY scripts/build/qt6-linux-arm64/gcc /opt/cross/bin/aarch64-centos7-gcc
 COPY scripts/build/qt6-linux-arm64/g++ /opt/cross/bin/aarch64-centos7-g++
 COPY scripts/build/qt6-linux-arm64/wayland-scanner /opt/cross/bin/wayland-scanner
@@ -63,13 +86,11 @@ COPY scripts/build/qt5-lucid/probe.cpp scripts/build/qt5-lucid/max-glibc.py /tmp
 RUN aarch64-centos7-g++ -std=c++17 -O2 -pthread /tmp/probe/probe.cpp -o /tmp/probe/probe && \
     python3 /tmp/probe/max-glibc.py /tmp/probe/probe 2.17 && rm -rf /tmp/probe
 
-COPY --from=host-qt /opt/qt6-host /opt/qt6-host
-
 # ---------------------------------------------------------------------------
 # deps: what Qt links statically, and the Wayland stubs
 # ---------------------------------------------------------------------------
 
-FROM toolchain AS deps
+FROM deps-toolchain AS deps
 ARG PARALLEL_JOBS
 
 # Static OpenSSL 3.
@@ -107,63 +128,37 @@ RUN CC=aarch64-centos7-gcc NM=aarch64-linux-gnu-nm AR=aarch64-linux-gnu-ar \
         bash /tmp/dlopen/wayland.sh ${SYSROOT}/usr/local /usr/local && \
     rm -rf /tmp/dlopen
 
-# ---------------------------------------------------------------------------
-# builder: Qt
-# ---------------------------------------------------------------------------
+FROM ${QT_TARGET_INPUTS_IMAGE} AS inputs
+COPY --from=llvm-compiler /opt/llvm-21 /opt/llvm-21
+COPY --from=host-qt /opt/qt6-linux-amd64-llvm /opt/qt6-host-llvm21
+COPY --from=host-qt /opt/longreach-host-libs /opt/longreach-host-libs
+ENV LD_LIBRARY_PATH=/opt/longreach-host-libs
 
-FROM deps AS builder
+FROM inputs AS toolchain
+ARG PARALLEL_JOBS=4
+RUN --network=none \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=tests,target=/src/tests \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/src/downloads/llvm-project-21.1.8.src.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-cross-runtime,target=/work,sharing=locked \
+    mkdir -p /out && \
+    PARALLEL_JOBS="$PARALLEL_JOBS" bash /src/scripts/build/qt6-llvm-sdk/prepare.sh linux-arm64
+ENV PATH=/opt/longreach-llvm/bin:/opt/llvm-21/bin:/opt/qt6-host-llvm21/bin:${PATH} \
+    CC=/opt/longreach-llvm/bin/target-cc CXX=/opt/longreach-llvm/bin/target-cxx
+
+FROM toolchain AS qt
+ARG PARALLEL_JOBS=4
 ARG QT_VERSION
 ARG QT_ARCHIVE
-ARG PARALLEL_JOBS
-ARG LICENSE_PROFILE="gpl-enabled"
-
-COPY downloads/${QT_ARCHIVE} /tmp/qt-src.tar.xz
-RUN tar -xJf /tmp/qt-src.tar.xz -C /opt \
-        --exclude="qt-everywhere-src-${QT_VERSION}/qtwebengine/*" \
-        --exclude="qt-everywhere-src-${QT_VERSION}/qtwebview/*" && \
-    rm /tmp/qt-src.tar.xz
-
-COPY patches/qt6/all /tmp/patches-qt6-all
-COPY scripts/build/license-configure-args.sh /tmp/license-configure-args.sh
-RUN cd /opt/qt-everywhere-src-${QT_VERSION} && \
-    for p in /tmp/patches-qt6-all/*.patch; do git apply "$p" || exit 1; done
-
-COPY cmake/qt6/qt-toolchain-linux-arm64.cmake /workspace/qt-build/toolchain.cmake
-
-# The module set of the amd64 build: not built are qtwebengine and qtwebview
-# (Chromium).
-RUN mkdir -p /opt/qt-build && cd /opt/qt-build && \
-    /opt/qt-everywhere-src-${QT_VERSION}/configure \
-        -opensource -confirm-license \
-        -prefix /opt/qt6-linux-arm64 \
-        -qt-host-path /opt/qt6-host \
-        -release -optimize-size -static \
-        -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -qt-harfbuzz \
-        -nomake examples -nomake tests \
-        -skip qtwebengine -skip qtwebview \
-        -openssl-linked \
-        $(/tmp/license-configure-args.sh qt6 "$LICENSE_PROFILE") \
-        -- -DCMAKE_TOOLCHAIN_FILE=/workspace/qt-build/toolchain.cmake \
-           -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
-           -DOPENSSL_ROOT_DIR=/opt/openssl-3 -DOPENSSL_USE_STATIC_LIBS=ON && \
-    cmake --build . --parallel "${PARALLEL_JOBS:-$(nproc)}" && \
-    cmake --install . && \
-    cd / && rm -rf /opt/qt-build && \
-    if grep -rIl 'usr/lib64/libwayland' /opt/qt6-linux-arm64/lib/cmake; then \
-        echo "Qt links libwayland instead of the stubs" >&2; exit 1; fi
-
-# ---------------------------------------------------------------------------
-# final: the toolchain, the sysroot, the host tools and the SDK
-# ---------------------------------------------------------------------------
-
-FROM deps
-
-COPY --from=builder /opt/qt6-linux-arm64 /opt/qt6-linux-arm64
-COPY --from=builder /workspace/qt-build/toolchain.cmake /workspace/qt-build/toolchain.cmake
-
-ENV QT_INSTALL_DIR=/opt/qt6-linux-arm64
-ENV PATH="${QT_INSTALL_DIR}/bin:${PATH}"
-
-WORKDIR /workspace
-
-CMD ["bash", "-c", "echo 'Qt 6 for Linux arm64 (RHEL/CentOS 7 aarch64)'; echo 'Qt: /opt/qt6-linux-arm64'; echo 'Sysroot: /opt/sysroot-arm64'"]
+ARG DOWNLOAD_DIR=downloads
+ARG QT_SHA256=c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9
+ARG LICENSE_PROFILE=gpl-enabled
+RUN --network=none \
+    --mount=type=bind,source=scripts,target=/src/scripts \
+    --mount=type=bind,source=patches,target=/src/patches \
+    --mount=type=bind,source=${DOWNLOAD_DIR}/${QT_ARCHIVE},target=/src/qt.tar.xz \
+    --mount=type=cache,id=qt6-llvm21-linux-arm64-qt,target=/build,sharing=locked \
+    PARALLEL_JOBS="$PARALLEL_JOBS" QT_VERSION="$QT_VERSION" LICENSE_PROFILE="$LICENSE_PROFILE" \
+        QT_ARCHIVE_PATH=/src/qt.tar.xz QT_ARCHIVE_SHA256="$QT_SHA256" QT_CACHE_ROOT=/build \
+        bash /src/scripts/build/qt6-llvm-sdk/build-qt.sh linux-arm64
+ENV QT_INSTALL_DIR=/opt/qt6-linux-arm64-llvm

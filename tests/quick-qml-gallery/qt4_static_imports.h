@@ -9,9 +9,38 @@
 #include <QLibraryInfo>
 #include <QDeclarativeContext>
 #include <QDeclarativeView>
+#include <QDeclarativeExtensionPlugin>
+#ifndef QT_NO_OPENGL
 #include <QGLWidget>
 #include <QGLShaderProgram>
 #include <QGLFramebufferObject>
+#endif
+
+extern QObject *qt_plugin_instance_qmlfolderlistmodelplugin();
+extern QObject *qt_plugin_instance_qmlgesturesplugin();
+extern QObject *qt_plugin_instance_qmlparticlesplugin();
+#ifndef QT_NO_OPENGL
+extern QObject *qt_plugin_instance_qmlshadersplugin();
+#endif
+
+inline void registerQt4QmlPlugins()
+{
+    struct PluginRegistration { QObject *instance; const char *uri; };
+    const PluginRegistration plugins[] = {
+        { qt_plugin_instance_qmlfolderlistmodelplugin(), "Qt.labs.folderlistmodel" },
+        { qt_plugin_instance_qmlgesturesplugin(), "Qt.labs.gestures" },
+        { qt_plugin_instance_qmlparticlesplugin(), "Qt.labs.particles" },
+#ifndef QT_NO_OPENGL
+        { qt_plugin_instance_qmlshadersplugin(), "Qt.labs.shaders" },
+#endif
+    };
+    for (unsigned i = 0; i < sizeof(plugins) / sizeof(plugins[0]); ++i) {
+        QDeclarativeExtensionPlugin *plugin =
+            qobject_cast<QDeclarativeExtensionPlugin *>(plugins[i].instance);
+        if (plugin)
+            plugin->registerTypes(plugins[i].uri);
+    }
+}
 
 // Qt4's disk qmldir loader cannot resolve linked-in static plugin instances.
 // The app registers every Qt.labs module itself. Avoid rediscovering the SDK's
@@ -39,8 +68,9 @@ inline bool configureQt4QmlView(QDeclarativeView &view)
     configureStaticQt4Imports(view.engine());
     // ShaderEffectSource needs FBOs and GLSL. GL1.1 systems retain the full
     // raster gallery and explicitly report this unavailable driver feature.
-    QGLWidget *candidate = new QGLWidget(&view);
     bool shaderEffects = false;
+#ifndef QT_NO_OPENGL
+    QGLWidget *candidate = new QGLWidget(&view);
     if (candidate->isValid()) {
         candidate->makeCurrent();
         shaderEffects = QGLShaderProgram::hasOpenGLShaderPrograms(candidate->context())
@@ -52,6 +82,7 @@ inline bool configureQt4QmlView(QDeclarativeView &view)
     } else {
         delete candidate;
     }
+#endif
     view.engine()->rootContext()->setContextProperty("appShaderEffectsAvailable", shaderEffects);
     view.setResizeMode(QDeclarativeView::SizeRootObjectToView);
     return shaderEffects;

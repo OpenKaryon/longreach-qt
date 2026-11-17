@@ -41,7 +41,7 @@ Invoke-DonutCommand docker @(
     '--workdir', '/work', $image, 'bash', '/repo/scripts/build/qt4-android/build-native.sh'
 )
 
-foreach ($profile in 'bootstrap', 'strict', 'core', 'quick') {
+foreach ($profile in 'bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting') {
     & "$PSScriptRoot/qt4-android/package.ps1" -Profile $profile -NativeDirectory $native `
         -OutputDirectory $output -AndroidSdk $AndroidSdk -AndroidJar $api4
 }

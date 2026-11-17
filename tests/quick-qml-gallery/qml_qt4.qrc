@@ -2,6 +2,7 @@
     <qresource prefix="/qml_qt4">
         <file>qml_qt4/main.qml</file>
         <file>qml_qt4/SwitchTile.qml</file>
+        <file>qml_qt4/ShaderExample.qml</file>
         <file>qml_qt4/MobileSmoke.qml</file>
         <file>qml_qt4/particle.xpm</file>
         <file>qml_qt4/particle-linear.xpm</file>

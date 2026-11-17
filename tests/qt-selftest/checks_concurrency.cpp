@@ -218,6 +218,10 @@ void checkConcurrency(SmokeReporter &r)
         return !QProcessEnvironment::systemEnvironment().isEmpty();
     });
     r.check("process/run", [&r](QString &d) {
+#ifdef LONGREACH_DONUT_JNI
+        r.skip(d, "Qt runs in the Android Activity process");
+        return false;
+#else
         QProcess process;
         QElapsedTimer elapsed;
         elapsed.start();
@@ -249,6 +253,7 @@ void checkConcurrency(SmokeReporter &r)
             process.waitForFinished(5000);
         }
         return ok;
+#endif
     });
 #endif
 }

@@ -82,7 +82,7 @@ static void checkGalleryPages(SmokeReporter &r)
         });
     }
     r.check("graphics/page-contact-sheet", [&sheet](QString &d) {
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("graphics-gallery-pages.png");
+        d = smokeArtifactDirectory().filePath("graphics-gallery-pages.png");
         return sheet.save(d, "PNG");
     });
     r.check("graphics/shaped-window-menu", [&win, shape](QString &d) {
@@ -102,7 +102,7 @@ static void checkGalleryPages(SmokeReporter &r)
         QPainter painter(&image);
         shaped->render(&painter);
         painter.end();
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("graphics-shaped-window.png");
+        d = smokeArtifactDirectory().filePath("graphics-shaped-window.png");
         const bool saved = image.save(d, "PNG");
         shaped->close();
         QCoreApplication::sendPostedEvents(0, QEvent::DeferredDelete);

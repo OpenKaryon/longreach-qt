@@ -224,11 +224,11 @@ void checkTransforms(SmokeReporter &r)
         QTransform t;
         t.translate(10, 20).scale(2, 2);
         QPointF p = t.map(QPointF(5, 5));   // (10+2*5, 20+2*5) = (20,30)
-        bool ok = qFuzzyCompare(p.x(), 20.0) && qFuzzyCompare(p.y(), 30.0);
+        bool ok = qFuzzyCompare(p.x(), qreal(20.0)) && qFuzzyCompare(p.y(), qreal(30.0));
         bool invertible = false;
         QTransform inv = t.inverted(&invertible);
         QPointF back = inv.map(p);
-        return ok && invertible && qFuzzyCompare(back.x(), 5.0) && qFuzzyCompare(back.y(), 5.0);
+        return ok && invertible && qFuzzyCompare(back.x(), qreal(5.0)) && qFuzzyCompare(back.y(), qreal(5.0));
     });
     r.check("transform/painter-shear-renders", [&](QString &d) {
         QImage img(60, 60, QImage::Format_ARGB32);
@@ -326,7 +326,7 @@ void checkAnimations(SmokeReporter &r)
         qreal v0 = ease.valueForProgress(0.0);
         qreal v1 = ease.valueForProgress(1.0);
         qreal vm = ease.valueForProgress(0.5);
-        return qFuzzyCompare(v0 + 1, 1.0) && qFuzzyCompare(v1, 1.0)
+        return qFuzzyCompare(v0 + 1, qreal(1.0)) && qFuzzyCompare(v1, qreal(1.0))
             && vm > 0.4 && vm < 0.6 && ease.type() == QEasingCurve::InOutQuad;
     });
     r.check("anim/variant-animation-interpolate", [&](QString &d) {
@@ -425,7 +425,7 @@ void checkGraphicsEffectsAndItems(SmokeReporter &r)
 
         QGraphicsOpacityEffect opacity; opacity.setOpacity(0.5);
         rect->setGraphicsEffect(&opacity);
-        bool okOpacity = rect->graphicsEffect() == &opacity && qFuzzyCompare(opacity.opacity(), 0.5);
+        bool okOpacity = rect->graphicsEffect() == &opacity && qFuzzyCompare(opacity.opacity(), qreal(0.5));
 
         QGraphicsColorizeEffect colorize; colorize.setColor(Qt::red);
         QGraphicsBlurEffect blur; blur.setBlurRadius(4);

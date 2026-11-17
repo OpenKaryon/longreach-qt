@@ -71,8 +71,10 @@ int main(int argc, char *argv[])
 
     SmokeReporter r("qt-selftest");
 
-    checkModernCpp(r);
-    if (app.arguments().contains("--modern-cpp"))
+    const bool modernOnly = app.arguments().contains("--modern-cpp");
+    if (modernOnly || !app.arguments().contains("--qt-checks-only"))
+        checkModernCpp(r);
+    if (modernOnly)
         return r.summary();
     checkCore(r);
     checkTime(r);

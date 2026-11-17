@@ -4,7 +4,7 @@ param(
     [string] $InputDirectory,
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME,
-    [ValidateSet('bootstrap', 'strict', 'core', 'quick')] [string[]] $Profiles = @('bootstrap', 'strict', 'core', 'quick')
+    [ValidateSet('bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting')] [string[]] $Profiles = @('bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,10 +29,18 @@ $expected = @{
     strict = 'Native probe returned 0'
     core = 'Native probe returned 0'
 }
+$suites = @{
+    selftest = 'qt-selftest'
+    graphics = 'graphics'
+    network = 'network-gui'
+    painting = 'painting-lab'
+}
 $quickChecks = @(
     'PASS: qrc and first frame',
     'PASS: Android tap updates QML and frame',
-    'PASS: Android pause and resume preserve input and rendering'
+    'PASS: Android pause and resume preserve input and rendering',
+    'PASS: shared Qt Quick Gallery renders and navigates',
+    'PASS: shared Widgets Gallery toggles a checkbox and changes tabs'
 )
 
 function Read-DonutProperty([string] $Name) {
@@ -104,6 +112,24 @@ function Invoke-DonutRun([string] $Profile) {
                 if ($check -notin $report.Trim()) { throw "Missing Quick test result: $check" }
             }
             $report | Write-Output
+        } elseif ($suites.ContainsKey($Profile)) {
+            $suite = $suites[$Profile]
+            Invoke-DonutCommand $adb @('-s', $serial, 'shell', 'am', 'start', '-n', 'org.longreachqt.donut/.ProbeActivity')
+            $complete = @()
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+                Start-Sleep -Seconds 2
+                $logs = & $adb -s $serial shell logcat -d -v brief
+                $complete = $logs -match 'LongreachDonut.*Native probe returned '
+                if ($complete -or ($logs -match 'Process org\.longreachqt\.donut \(pid \d+\) has died')) { break }
+            }
+            $report = Invoke-DonutCommand $adb @('-s', $serial, 'shell', 'cat',
+                '/data/data/org.longreachqt.donut/files/suite.log')
+            $report | Set-Content -Encoding utf8 -LiteralPath "$run/$suite-guest.stdout"
+            $report | Write-Output
+            $summary = '^---- ' + [regex]::Escape($suite) + ': [1-9][0-9]* passed, 0 failed, \d+ skipped ----\s*$'
+            if (!($complete -match 'Native probe returned 0\s*$') -or !($report -match $summary)) {
+                throw "The $suite checks did not pass."
+            }
         } else {
             Invoke-DonutCommand $adb @('-s', $serial, 'shell', 'am', 'start', '-n', 'org.longreachqt.donut/.ProbeActivity')
             $logs = @()

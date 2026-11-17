@@ -37,7 +37,15 @@ public class QuickInstrumentation extends Instrumentation {
                                         + ", actual " + Integer.toHexString(app.frameColor));
     }
 
-    private void tap(final QuickActivity app) {
+    private void tap(QuickActivity app) {
+        tapAt(app, 0.5f, 0.5f);
+    }
+
+    private void tapAt(QuickActivity app, float x, float y) {
+        tapAt(app, x, y, -1);
+    }
+
+    private void tapAt(final QuickActivity app, final float x, final float y, final int control) {
         long deadline = SystemClock.uptimeMillis() + 8000;
         while (!app.focused && SystemClock.uptimeMillis() < deadline)
             SystemClock.sleep(50);
@@ -48,8 +56,16 @@ public class QuickInstrumentation extends Instrumentation {
             public void run() {
                 View view = app.display();
                 view.getLocationOnScreen(point);
-                point[0] += view.getWidth() / 2;
-                point[1] += view.getHeight() / 2;
+                if (control < 0) {
+                    point[0] += (int) (view.getWidth() * x);
+                    point[1] += (int) (view.getHeight() * y);
+                } else {
+                    int[] center = app.controlCenter(control);
+                    if (center == null)
+                        throw new IllegalStateException("Gallery control is missing");
+                    point[0] += (int) ((center[0] + 0.5f) * view.getWidth() / app.frameWidth);
+                    point[1] += (int) ((center[1] + 0.5f) * view.getHeight() / app.frameHeight);
+                }
             }
         });
         long now = SystemClock.uptimeMillis();
@@ -62,6 +78,27 @@ public class QuickInstrumentation extends Instrumentation {
             down.recycle();
             up.recycle();
         }
+    }
+
+    private void waitForSection(QuickActivity app, int section, int previousFrames) {
+        long deadline = SystemClock.uptimeMillis() + 8000;
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (app.frames > previousFrames && app.visibleSection == section)
+                return;
+            SystemClock.sleep(50);
+        }
+        throw new IllegalStateException("Expected gallery state " + section + ", actual " + app.visibleSection);
+    }
+
+    private int waitForCheckbox(QuickActivity app, int previousFrames) {
+        long deadline = SystemClock.uptimeMillis() + 8000;
+        while (SystemClock.uptimeMillis() < deadline) {
+            int state = app.visibleSection;
+            if (app.frames > previousFrames && (state == 1 || state == 2))
+                return state;
+            SystemClock.sleep(50);
+        }
+        throw new IllegalStateException("Widget checkbox did not respond to Android input");
     }
 
     private void passed(String check) {
@@ -112,6 +149,22 @@ public class QuickInstrumentation extends Instrumentation {
             tap(app);
             waitForFrame(app, OFF, beforeTap);
             passed("Android pause and resume preserve input and rendering");
+            QuickActivity gallery = (QuickActivity) startActivitySync(activity(GalleryActivity.class));
+            waitForSection(gallery, 0, 0);
+            int galleryFrames = gallery.frames;
+            tapAt(gallery, 0, 0, 1);
+            waitForSection(gallery, 1, galleryFrames);
+            passed("shared Qt Quick Gallery renders and navigates");
+            QuickActivity widgets = (QuickActivity) startActivitySync(activity(WidgetsActivity.class));
+            waitForSection(widgets, 0, 0);
+            int widgetFrames = widgets.frames;
+            tapAt(widgets, 0, 0, 0);
+            int checkState = waitForCheckbox(widgets, widgetFrames);
+            widgetFrames = widgets.frames;
+            tapAt(widgets, 0, 0, 1);
+            // Each tab has four positions in the renderer's state value.
+            waitForSection(widgets, 4 + checkState, widgetFrames);
+            passed("shared Widgets Gallery toggles a checkbox and changes tabs");
             saveReport();
             Log.i(TAG, "Quick smoke passed");
             result.putString("result", "Quick smoke passed");

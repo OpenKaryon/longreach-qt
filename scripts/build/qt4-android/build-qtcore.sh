@@ -8,15 +8,15 @@ case "$profile" in
     core)
         tree=/work/qt4-donut
         prefix=/work/qtcore-donut-sdk
-        features=(-no-gui -no-opengl -no-script -no-declarative)
+        features=(-no-gui -no-opengl -no-script -no-declarative -no-svg)
         modules=(sub-corelib)
         ;;
     quick)
         tree=/work/qt4-donut-quick
         prefix=/work/qtquick-donut-sdk
-        features=(-qpa minimal -no-opengl -script -declarative -no-javascript-jit
+        features=(-qpa minimal -no-opengl -script -declarative -no-javascript-jit -svg -qt-sql-sqlite
                   -qt-freetype -no-fontconfig -no-gtkstyle -no-accessibility)
-        modules=(sub-sql sub-declarative)
+        modules=(sub-sql sub-xml sub-svg sub-declarative)
         ;;
     *) echo "Unknown Qt build profile $profile" >&2; exit 2 ;;
 esac
@@ -42,6 +42,10 @@ sed -e '/^#include <sys\/shm.h>/d' \
 cmp -s /work/donut-bin/qplatformdefs.h "$target_platformdefs" ||
     cp /work/donut-bin/qplatformdefs.h "$target_platformdefs"
 python3 /repo/scripts/build/qt4-android/patch-qtcore.py "$profile"
+if [[ "$profile" == quick && ! -f .donut-static-gui-animation ]]; then
+    patch -p1 --fuzz=0 < /repo/patches/qt4/all/03-static-gui-animation-registration.patch
+    touch .donut-static-gui-animation
+fi
 if [[ "$profile" == quick && ! -f .donut-script-frames ]]; then
     patch -p1 --fuzz=0 < /repo/patches/qt4/all/04-script-tagged-frame-pointers.patch
     touch .donut-script-frames
@@ -97,7 +101,7 @@ if [[ ! -f .donut-configured ]]; then
         -platform linux-donut-host -xplatform linux-donut-llvm -arch arm -host-arch x86_64 \
         "${features[@]}" -no-qt3support -no-phonon -no-phonon-backend \
         -no-webkit -no-scripttools -no-xmlpatterns \
-        -no-multimedia -no-svg -no-dbus -no-glib -no-icu -no-iconv \
+        -no-multimedia -no-dbus -no-glib -no-icu -no-iconv \
         -no-openssl -no-nis -no-cups -no-pch -no-largefile \
         -no-stl -exceptions -qt-zlib \
         -nomake demos -nomake examples -nomake docs -nomake translations -nomake tests
@@ -122,7 +126,7 @@ if [[ "$profile" == core ]]; then
     test -s lib/libQtCore.a
     test -s bin/qmake
 else
-    for module in QtGui QtScript QtDeclarative QtSql; do
+    for module in QtGui QtScript QtDeclarative QtSql QtXml QtSvg; do
         test -s "lib/lib$module.a"
     done
     make -C src/plugins/platforms/minimal -j2

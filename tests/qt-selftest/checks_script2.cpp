@@ -38,7 +38,7 @@
 #ifdef SMOKE_HAVE_SCRIPT
 #include <QScriptEngineAgent>
 #endif
-#ifdef SMOKE_HAVE_SCRIPT
+#if defined(SMOKE_HAVE_SCRIPT) && !defined(LONGREACH_DONUT_JNI)
 #include <QScriptEngineDebugger>
 #endif
 #ifdef SMOKE_HAVE_SCRIPT
@@ -127,11 +127,16 @@ void checkScriptExtras(SmokeReporter &r)
         return engine.agent() == agent && agent->scriptLoads >= 0;
     });
     r.check("script/engine-debugger", [&](QString &d) {
+#ifdef LONGREACH_DONUT_JNI
+        r.skip(d, "this SDK was built without QtScriptTools");
+        return false;
+#else
         QScriptEngine engine;
         QScriptEngineDebugger debugger;
         debugger.attachTo(&engine);
         return debugger.state() == QScriptEngineDebugger::RunningState
             || debugger.state() == QScriptEngineDebugger::SuspendedState;
+#endif
     });
     r.check("script/extension-plugin-interface", [&](QString &d) {
         // QScriptExtensionPlugin is the documented extension point of a QtScript

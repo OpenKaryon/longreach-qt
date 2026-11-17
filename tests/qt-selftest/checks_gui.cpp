@@ -69,7 +69,7 @@ void checkGuiValue(SmokeReporter &r)
 #else
         r0.adjust(-1, -1, 1, 1);
 #endif
-        return qFuzzyCompare(l.length(), 5.0) && r0.width()==12;
+        return qFuzzyCompare(l.length(), qreal(5)) && r0.width()==12;
     });
     r.check("geom/polygon+region", [&r](QString &d) {
         QPolygon poly; poly << QPoint(0,0) << QPoint(20,0) << QPoint(20,20) << QPoint(0,20);
@@ -88,7 +88,7 @@ void checkGuiValue(SmokeReporter &r)
         QTransform t; t.rotate(90);
         QPointF p = t.map(QPointF(1,0));
         QTransform inv = t.inverted();
-        return qAbs(p.x())<1e-9 && qFuzzyCompare(p.y(),1.0) && !inv.isIdentity();
+        return qAbs(p.x())<1e-9 && qFuzzyCompare(p.y(), qreal(1)) && !inv.isIdentity();
     });
     r.check("math/vectors", [&r](QString &d) {
         QVector3D a(1,0,0), b(0,1,0);

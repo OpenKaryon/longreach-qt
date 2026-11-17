@@ -332,7 +332,7 @@ static int runSelfTest()
         "exn5AWy7TvJB1Zu0MaN6LvGxelY9138cIL4ZZOzJVdQNoItO2ArgBaM79C6c/y49\n"
         "-----END CERTIFICATE-----\n";
 
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL) && (SMOKE_QT5 || !defined(QT_NO_OPENSSL))
     r.check("ssl/supported", [&](QString &d) {
         if (!QSslSocket::supportsSsl()) {
             r.skip(d, "this SDK was built without SSL");

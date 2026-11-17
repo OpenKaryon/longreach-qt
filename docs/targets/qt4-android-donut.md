@@ -1,6 +1,6 @@
 # Experimental Qt 4.8.7 for Android 1.6
 
-The Android profile builds four diagnostic APKs for Android 1.6 (API 4,
+The Android profile builds diagnostic and example APKs for Android 1.6 (API 4,
 `armeabi`). The native build runs in a Linux amd64 Docker container with
 Clang and LLD 21.1.8. It builds static libc++, libc++abi, libunwind and
 compiler-rt against the old Bionic sysroot. Qt uses separate QtCore and
@@ -55,9 +55,17 @@ local signing key and v1 APK signing for API 4.
 | `bootstrap.apk` | JNI library loads and returns 42 |
 | `strict.apk` | The classic C locale and all 25 shared C++23 checks pass |
 | `core.apk` | QtCore 4.8.7 UTF-8 strings and file I/O, application event loop and timer |
-| `quick.apk` | First frame from the bundled QML, an Android tap changes the switch, and pause/resume preserves its state and input |
+| `selftest.apk` | Shared Qt application checks, including files, threads, raster/fonts, XML, TCP/UDP loopback, SQLite and QtScript |
+| `quick.apk` | Switch and lifecycle smoke checks, plus Qt Quick Gallery navigation and Widgets Gallery checkbox and tab input |
+| `graphics.apk` | Graphics Gallery `--selftest`, including raster effects, widgets and animation |
+| `network.apk` | Network GUI `--selftest`, including TCP listen and UDP bind |
+| `painting.apk` | Painting Lab `--selftest`, including raster, fonts, SVG and print preview |
 
 The runner boots one emulator per APK, verifies the guest's release, API
 and ABI, and saves the guest reports and logcat under `run/<profile>/`.
-Use `-Profiles quick` to rerun only the visual test. Native libraries,
-QtCore's static archive and ELF reports are under `native/`.
+Use `-Profiles quick` to rerun both gallery checks. Native libraries,
+QtCore's static archive and ELF reports are under `native/`. Qt Quick
+Gallery and Widgets Gallery each appear in the Android launcher after
+installing `quick.apk`.
+See the [example validation report](../results/qt4-android-donut-examples-20261117.md)
+for platform limits and guest results.

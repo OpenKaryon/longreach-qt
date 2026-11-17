@@ -64,18 +64,20 @@ its original flags and SKIP behaviour. No Qt/LLVM rebuild is needed.
 ## Mobile smoke tests
 
 On Android, separate APKs exercise QtCore, the strict C++23 suite and
-the visual test. Follow the [build and run guide](targets/qt4-android-donut.md)
-to run them in the Android 1.6 emulator. The
-[Android 1.6 report](results/qt4-android-donut-armeabi-llvm21-20261116.md)
-records the results.
+shared application tests. The JNI adapter calls the same `qt-selftest`,
+Graphics Gallery, Network GUI and Painting Lab entry points used by the
+desktop suite. The host runs each APK sequentially and retrieves the
+report from app-private storage. Follow the
+[build and run guide](targets/qt4-android-donut.md) and see the
+[Android 1.6 example results](results/qt4-android-donut-examples-20261117.md).
 
 The mobile graphics smoke test uses a small scene from the gallery. On
 Qt 4, [MobileSmoke.qml](../tests/quick-qml-gallery/qml_qt4/MobileSmoke.qml)
 loads from the gallery's resources and uses the same switch component as
 its Controls page. The test checks the first rendered frame, a tap
 delivered through the native app, and a redraw with preserved state
-after the app resumes. The app writes the report to its private files
-directory.
+after the app resumes. The runner also opens the full shared gallery
+in a launcher Activity and taps through to the second Controls page.
 
 Use the same visual and lifecycle checks when an iOS target is available.
 Packaging, launching the app and retrieving its report belong to each

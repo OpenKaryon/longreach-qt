@@ -159,6 +159,86 @@ class GuestRunnerTests(unittest.TestCase):
             vbox.assert_not_called()
 
 
+class RunResultTests(unittest.TestCase):
+    APPS = ('qt-selftest', 'widgets-gallery', 'graphics-gallery', 'quick-qml-gallery',
+            'gl-heavy-gallery', 'painting-lab', 'multimedia-lab', 'network-gui')
+
+    def run_result(self, rows, totals, runner_args=''):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'smoke-report.txt').write_text('\n'.join(rows) + '\n\n' + totals + '\n')
+            return runner.result(out, Path('tests-qt5-linux-amd64'), '', 'target', 'guest', 'method',
+                                 runner_args)
+
+    @staticmethod
+    def row(app, tag='PASS'):
+        return f'{tag}  {app:<20}  ---- {app}: 3 passed, 0 failed, 1 skipped ----'
+
+    def test_full_report_passes(self):
+        doc = self.run_result([self.row(app) for app in self.APPS],
+                              '8 passed, 0 failed, 0 not built for this platform')
+        self.assertEqual(doc['status'], 'PASS')
+        self.assertEqual(doc['missing_applications'], [])
+
+    def test_missing_or_unbuilt_application_fails(self):
+        rows = [self.row(app) for app in self.APPS[:-1]]
+        rows.append('SKIP  network-gui           not built for this platform')
+        doc = self.run_result(rows, '7 passed, 0 failed, 1 not built for this platform')
+        self.assertEqual(doc['status'], 'FAIL')
+        self.assertEqual(doc['summary']['apps_not_built'], 1)
+        self.assertEqual(doc['missing_applications'], ['network-gui'])
+
+    def test_only_run_expects_one_application(self):
+        doc = self.run_result([self.row('qt-selftest')], '1 passed, 0 failed, 0 not built for this platform',
+                              '--timeout=900 --only=qt-selftest')
+        self.assertEqual(doc['status'], 'PASS')
+
+    def test_duplicate_zero_check_or_inconsistent_reports_fail(self):
+        rows = [self.row(app) for app in self.APPS]
+        for changed in (rows + [rows[0]], [row.replace('3 passed', '0 passed') for row in rows]):
+            with self.subTest(rows=changed):
+                self.assertEqual(self.run_result(changed, '8 passed, 0 failed, 0 not built')['status'], 'FAIL')
+        self.assertEqual(self.run_result(rows, '1 passed, 0 failed, 0 not built')['status'], 'FAIL')
+
+    def test_quoted_only_selection(self):
+        doc = self.run_result([self.row('qt-selftest')], '1 passed, 0 failed, 0 not built',
+                              '--only="qt-selftest"')
+        self.assertEqual(doc['status'], 'PASS')
+
+    def test_checksum_failure_stops_vmware_and_virtualbox_runs(self):
+        source = (ROOT / 'scripts/run/run.py').read_text(encoding='utf-8')
+        self.assertNotIn('SHA256SUMS > checksums.log 2>&1;', source)
+
+
+class GuestChecksumTests(unittest.TestCase):
+    def check_vmware(self, verdict):
+        launched = []
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            def fake_vmrun(host, command, *args, **kwargs):
+                if command == 'copyFileFromGuestToHost':
+                    if args[-2].endswith('/checksums-result.txt'):
+                        Path(args[-1]).write_text(verdict)
+                    elif args[-2].endswith('/files.lst'):
+                        Path(args[-1]).write_text('')
+                if command == 'runScriptInGuest' and './smoke-runner' in args[-1]:
+                    launched.append(args[-1])
+                return subprocess.CompletedProcess([], 0, '', '')
+            with patch.object(runner, 'password', return_value='fixture'), patch.object(runner, 'pack', return_value=(b'fixture', '')), patch.object(runner, 'vmrun', side_effect=fake_vmrun):
+                if verdict == 'SHA256_OK':
+                    runner.run_vmware({'vmx': 'fixture.vmx'}, out, out, '')
+                else:
+                    with self.assertRaisesRegex(SystemExit, 'SHA256 verification'):
+                        runner.run_vmware({'vmx': 'fixture.vmx'}, out, out, '')
+        return launched
+
+    def test_failed_guest_checksums_stop_even_if_tools_return_zero(self):
+        self.assertEqual(self.check_vmware('failed'), [])
+
+    def test_confirmed_guest_checksums_allow_launch(self):
+        self.assertEqual(len(self.check_vmware('SHA256_OK')), 1)
+
+
 class ForwardMatrixTests(unittest.TestCase):
     def test_every_supported_pair_has_packages(self):
         count = 0

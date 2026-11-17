@@ -127,21 +127,28 @@ QString resolve(const QDir &dir, const QString &name)
 QString extractSummary(const QString &output)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    static const QRegularExpression re(QStringLiteral("^-+ .*passed.*-+$"),
+    static const QRegularExpression re(QStringLiteral("^---- [^\\r\\n:]+: [0-9]+ passed, [0-9]+ failed, [0-9]+ skipped ----$"),
                                        QRegularExpression::MultilineOption);
-    const QRegularExpressionMatch m = re.match(output);
-    return m.hasMatch() ? m.captured(0).trimmed() : QString();
+    QRegularExpressionMatchIterator matches = re.globalMatch(output);
+    if (!matches.hasNext())
+        return QString();
+    const QString summary = matches.next().captured(0).trimmed();
+    return matches.hasNext() ? QString() : summary;
 #else
     // QRegExp has no multiline mode, so the search is per line instead of
     // one pass with ^ and $ anchored inside the string.
-    QRegExp re(QString::fromLatin1("^-+ .*passed.*-+$"));
+    QRegExp re(QString::fromLatin1("^---- [^\\r\\n:]+: [0-9]+ passed, [0-9]+ failed, [0-9]+ skipped ----$"));
     const QStringList lines = output.split(QLatin1Char('\n'));
+    QString summary;
     for (int i = 0; i < lines.size(); ++i) {
         const QString line = lines.at(i).trimmed();
-        if (re.exactMatch(line))
-            return line;
+        if (re.exactMatch(line)) {
+            if (!summary.isEmpty())
+                return QString();
+            summary = line;
+        }
     }
-    return QString();
+    return summary;
 #endif
 }
 
@@ -260,6 +267,17 @@ Result runOne(const QDir &dir, const QString &name, int timeoutMs, QString *full
     } else if (r.exitCode != 0) {
         r.outcome = Failed;
         r.note = QStringLiteral("exit code %1").arg(r.exitCode);
+    } else if (r.summary.isEmpty()) {
+        // Every suite application ends its --selftest with SmokeReporter's
+        // "---- name: N passed, M failed, K skipped ----" line. Exit code 0
+        // without it means the checks never ran (or never finished).
+        r.outcome = Failed;
+        r.note = QStringLiteral("exit code 0 without a summary line");
+    } else if (!r.summary.contains(QLatin1String(", 0 failed, "))
+               || r.summary.section(QLatin1Char(':'), -1).trimmed()
+                       .section(QLatin1Char(' '), 0, 0).toInt() < 1) {
+        r.outcome = Failed;
+        r.note = QStringLiteral("exit code 0, but no successful checks in the summary");
     } else {
         r.outcome = Passed;
     }

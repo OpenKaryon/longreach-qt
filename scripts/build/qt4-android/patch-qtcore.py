@@ -69,6 +69,35 @@ edit("src/corelib/codecs/qtextcodec.cpp", (
 ))
 
 if sys.argv[1:] == ["quick"]:
+    edit("src/gui/kernel/qwidget.cpp", (
+        ("void QWidgetPrivate::setStyle_helper(QStyle *newStyle, bool propagate, bool",
+         "#ifndef QT_NO_STYLE_STYLESHEET\n"
+         "// Keep the weak-pointer null check across synchronous style events with Clang.\n"
+         "__attribute__((noinline)) static QStyle *donutStylePointer(const QWeakPointer<QStyle> &style)\n"
+         "{\n    return style.data();\n}\n"
+         "#endif\n\n"
+         "void QWidgetPrivate::setStyle_helper(QStyle *newStyle, bool propagate, bool"),
+        ("if (QStyleSheetStyle *proxy = qobject_cast<QStyleSheetStyle *>(origStyle.data()))\n"
+         "        proxy->deref();",
+         "if (QStyleSheetStyle *proxy = qobject_cast<QStyleSheetStyle *>(donutStylePointer(origStyle)))\n"
+         "        proxy->deref();"),
+    ))
+    edit("src/plugins/platforms/minimal/minimal.pro", (
+        ("INSTALLS += target",
+         "INSTALLS += target\n\ninclude(../fontdatabases/basicunix/basicunix.pri)"),
+    ))
+    edit("src/plugins/platforms/minimal/qminimalintegration.h", (
+        ("#include <QtGui/QPlatformScreen>",
+         "#include <QtGui/QPlatformScreen>\n#include \"qbasicunixfontdatabase.h\""),
+        ("private:\n    QList<QPlatformScreen *> mScreens;",
+         "    QPlatformFontDatabase *fontDatabase() const { return &mFontDatabase; }\n\n"
+         "private:\n    mutable QBasicUnixFontDatabase mFontDatabase;\n"
+         "    QList<QPlatformScreen *> mScreens;"),
+    ))
+    edit("src/3rdparty/sqlite/sqlite3.c", (
+        ("#if !defined(fdatasync) && !defined(__linux__)",
+         "#if !defined(fdatasync) && (!defined(__linux__) || defined(__ANDROID__))"),
+    ))
     edit("src/network/kernel/qhostinfo_unix.cpp", (
         ("QString QHostInfo::localDomainName()\n{\n#if !defined(Q_OS_VXWORKS)",
          "QString QHostInfo::localDomainName()\n{\n#if !defined(Q_OS_VXWORKS) && !defined(__ANDROID__)"),

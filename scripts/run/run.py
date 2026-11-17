@@ -353,8 +353,16 @@ def run_vmware(host, suite, out, runner_args):
         vmrun(host, 'runScriptInGuest', vmx, '/bin/sh', f'rm -rf {directory} && mkdir -p {directory}')
         vmrun(host, 'copyFileFromHostToGuest', vmx, str(archive), f'{directory}/suite.tar.gz')
     vmrun(host, 'runScriptInGuest', vmx, '/bin/sh',
-          f'cd {directory} && tar -xzf suite.tar.gz && rm suite.tar.gz && sha256sum -c SHA256SUMS > checksums.log 2>&1; chmod -R u+x .')
-    vmrun(host, 'runScriptInGuest', vmx, '/bin/sh', f'cd {directory} && ' + LINUX_RUN.replace('{args}', runner_args), check=False)
+          f'cd {directory} && tar -xzf suite.tar.gz && rm suite.tar.gz && sha256sum -c SHA256SUMS > checksums.log 2>&1 && chmod -R u+x . && printf SHA256_OK > checksums-result.txt')
+    # Require a copied positive result before launching any application,
+    # independently of how VMware Tools propagates the guest exit status.
+    verified = out / 'checksums-result.txt'
+    vmrun(host, 'copyFileFromGuestToHost', vmx, f'{directory}/checksums-result.txt', str(verified))
+    if verified.read_text().strip() != 'SHA256_OK':
+        raise SystemExit('Guest SHA256 verification did not succeed; suite was not run')
+    vmrun(host, 'runScriptInGuest', vmx, '/bin/sh',
+          f'cd {directory} && test "$(cat checksums-result.txt)" = SHA256_OK && '
+          + LINUX_RUN.replace('{args}', runner_args), check=False)
     vmrun(host, 'runScriptInGuest', vmx, '/bin/sh', f'cd {directory} && ls *.log *.txt > files.lst')
     vmrun(host, 'copyFileFromGuestToHost', vmx, f'{directory}/files.lst', str(out / 'files.lst'))
     for name in (out / 'files.lst').read_text().split():
@@ -384,7 +392,7 @@ def run_virtualbox(host, suite, out, runner_args):
         vbox(host, 'run', '--exe', '/bin/sh', '--', '/bin/sh', '-c', f'rm -rf {directory} && mkdir -p {directory}')
         vbox(host, 'copyto', str(archive), f'{directory}/suite.tar.gz')
     vbox(host, 'run', '--exe', '/bin/sh', '--', '/bin/sh', '-c',
-         f'cd {directory} && tar -xzf suite.tar.gz && sha256sum -c SHA256SUMS > checksums.log 2>&1; chmod -R u+x . && '
+         f'cd {directory} && tar -xzf suite.tar.gz && sha256sum -c SHA256SUMS > checksums.log 2>&1 && chmod -R u+x . && '
          + LINUX_RUN.replace('{args}', runner_args), check=False)
     for name in ('smoke-report.txt', 'runner.log', 'system.txt', 'checksums.log'):
         vbox(host, 'copyfrom', f'{directory}/{name}', str(out / name), check=False)
@@ -416,25 +424,43 @@ BACKENDS = {'docker': run_docker, 'qemu': run_qemu, 'ssh': run_ssh, 'vmware': ru
             'local': run_local}
 
 
-def result(out, suite, sums, target, guest, method):
+def expected_apps(runner_args=''):
+    """The applications a full run must report: tests/expected-apps.txt, or the --only one."""
+    only = [arg[7:] for arg in shlex.split(runner_args) if arg.startswith('--only=')]
+    if only:
+        return {only[-1]}
+    names = (ROOT / 'tests' / 'expected-apps.txt').read_text(encoding='utf-8').splitlines()
+    return {name.strip() for name in names if name.strip() and not name.startswith('#')} - {'smoke-runner'}
+
+
+def result(out, suite, sums, target, guest, method, runner_args=''):
     report = out / 'smoke-report.txt'
     text = report.read_text(errors='replace') if report.is_file() else ''
     apps = [{'application': m.group(2), 'passed': int(m.group(3)), 'failed': int(m.group(4)),
-             'skipped': int(m.group(5) or 0)}
+             'skipped': int(m.group(5) or 0), 'status': m.group(1)}
             for m in re.finditer(r'^(PASS|FAIL)\s+(\S+)\s+---- [^\n]+?: (\d+) passed, (\d+) failed(?:, (\d+) skipped)? ----',
                                  text, re.M)]
     total = re.search(r'^(\d+) passed, (\d+) failed, (\d+) not built', text, re.M)
     summary = {'apps_passed': int(total.group(1)) if total else 0,
                'apps_failed': int(total.group(2)) if total else 0,
+               'apps_not_built': int(total.group(3)) if total else 0,
                'checks_passed': sum(a['passed'] for a in apps),
                'checks_failed': sum(a['failed'] for a in apps),
                'checks_skipped': sum(a['skipped'] for a in apps)}
     system = (out / 'system.txt').read_text(errors='replace').strip() if (out / 'system.txt').is_file() else ''
-    ok = total is not None and summary['apps_failed'] == 0 and summary['checks_failed'] == 0 and summary['apps_passed'] > 0
+    # Every expected application must have run and printed its own summary:
+    # an app that was not built, or that exited 0 without a summary, is not a pass.
+    missing = sorted(expected_apps(runner_args) - {a['application'] for a in apps})
+    ok = (total is not None and summary['apps_failed'] == 0 and summary['apps_not_built'] == 0
+          and summary['checks_failed'] == 0 and summary['apps_passed'] > 0 and not missing
+          and len(apps) == len(expected_apps(runner_args))
+          and len({a['application'] for a in apps}) == len(apps)
+          and summary['apps_passed'] == len(apps)
+          and all(a['status'] == 'PASS' and a['passed'] > 0 for a in apps))
     return {'schema_version': 1, 'date': datetime.date.today().isoformat(), 'target': target,
             'status': 'PASS' if ok else 'FAIL', 'image': suite.name.removeprefix('tests-'),
             'guest': {'os': system.splitlines()[0] if system else '', 'system': system, 'vm': guest, 'method': method},
-            'summary': summary, 'applications': apps,
+            'summary': summary, 'applications': apps, 'missing_applications': missing,
             'executables_sha256': dict(sorted((name, digest) for digest, name in
                                               (line.split() for line in sums.splitlines())))}
 
@@ -473,7 +499,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     _, sums = pack(suite)
     guest, method = BACKENDS[host['backend']](host, suite, out, args.runner_args)
-    doc = result(out, suite, sums, args.target or suite.name, guest, method)
+    doc = result(out, suite, sums, args.target or suite.name, guest, method, args.runner_args)
     text = json.dumps(doc, indent=2) + '\n'
     (out / 'result.json').write_text(text, encoding='utf-8', newline='\n')
     if args.json:
@@ -481,6 +507,8 @@ def main():
     s = doc['summary']
     print(f"{doc['status']}  {suite.name} on {args.host}: apps {s['apps_passed']}/{s['apps_failed']}, "
           f"checks {s['checks_passed']}/{s['checks_failed']}/{s['checks_skipped']}  ({out})")
+    if doc['missing_applications']:
+        print('missing from the report: ' + ', '.join(doc['missing_applications']))
     sys.exit(0 if doc['status'] == 'PASS' else 1)
 
 

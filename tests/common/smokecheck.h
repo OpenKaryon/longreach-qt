@@ -17,10 +17,21 @@
 #include <cstdio>
 #include <functional>
 #include <QFile>
+#include <QCoreApplication>
+#include <QDir>
 
 // Every app includes this header, so the cross-version spellings ride along
 // with it and no check has to remember to ask for them.
 #include "qtcompat.h"
+
+inline QDir smokeArtifactDirectory()
+{
+#ifdef LONGREACH_DONUT_JNI
+    return QDir::current(); // The Activity runner selects app-private storage.
+#else
+    return QDir(QCoreApplication::applicationDirPath());
+#endif
+}
 
 class SmokeReporter
 {

@@ -5,6 +5,20 @@
     <application android:label="Longreach Quick Smoke" android:debuggable="true">
         <activity android:name=".QuickActivity" android:exported="true" />
         <activity android:name=".QuickCoverActivity" android:exported="false" />
+        <activity android:name=".GalleryActivity" android:label="Qt Quick Gallery"
+            android:screenOrientation="landscape" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".WidgetsActivity" android:label="Widgets Gallery"
+            android:screenOrientation="landscape" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
     <instrumentation android:name=".QuickInstrumentation"
         android:targetPackage="org.longreachqt.donut.quick" />

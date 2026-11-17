@@ -9,7 +9,6 @@ import QtQuick 1.1
 import Qt.labs.folderlistmodel 1.0
 import Qt.labs.gestures 1.0
 import Qt.labs.particles 1.0
-import Qt.labs.shaders 1.0
 
 Rectangle {
     id: root
@@ -303,16 +302,13 @@ Rectangle {
                     Text { anchors.centerIn: parent; text: "SOURCE"; color: "white"; font.pixelSize: 24 }
                     Text { anchors.top: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; text: "source item"; color: "#b8c0cc" }
                 }
-                Loader { width: shaderSource.width; height: 220
-                    sourceComponent: root.shaderEffectsAvailable ? shaderComponent : undefined
-                    Component { id: shaderComponent
-                        ShaderEffectItem { objectName: "shaderEffectProbe"; width: shaderSource.width; height: 220
-                            property variant source: ShaderEffectSource { sourceItem: shaderSource; hideSource: false }
-                            property real pulse: 0.5 + 0.5 * Math.sin(effectClock.angle * Math.PI / 180)
-                            fragmentShader: "varying highp vec2 qt_TexCoord0; uniform sampler2D source; uniform highp float pulse; void main() { lowp vec4 c = texture2D(source, qt_TexCoord0); lowp float g = dot(c.rgb, vec3(0.299, 0.587, 0.114)); gl_FragColor = vec4(mix(vec3(g), c.rgb, pulse), c.a); }"
-                            Text { anchors.top: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; text: "shader output"; color: "#b8c0cc" }
-                        }
-                    }
+                Loader {
+                    id: shaderLoader
+                    width: shaderSource.width
+                    height: 220
+                    source: root.shaderEffectsAvailable ? "ShaderExample.qml" : ""
+                    Binding { target: shaderLoader.item; property: "sampleSource"; value: shaderSource; when: shaderLoader.status === Loader.Ready }
+                    Binding { target: shaderLoader.item; property: "pulse"; value: 0.5 + 0.5 * Math.sin(effectClock.angle * Math.PI / 180); when: shaderLoader.status === Loader.Ready }
                 }
             }
             QtObject { id: effectClock; property real angle: 0 }

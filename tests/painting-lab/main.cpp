@@ -371,7 +371,7 @@ static int nativeDialogAcceptAndFile(QString &d)
             return 1;
         }
     }
-    const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("painting-dialog-native.prn");
+    const QString path = smokeArtifactDirectory().filePath("painting-dialog-native.prn");
     if (QFile::exists(path) && !QFile::remove(path)) {
         d = QStringLiteral("could not remove previous native output");
         return 1;
@@ -598,7 +598,7 @@ static int runSelfTest()
 {
     SmokeReporter r("painting-lab");
     r.setTrace(true);
-    if (!r.setLogFile(QDir(QCoreApplication::applicationDirPath()).filePath("painting-selftest.log")))
+    if (!r.setLogFile(smokeArtifactDirectory().filePath("painting-selftest.log")))
         return 2;
     r.check("painting/image-alpha-text", [](QString &) {
         QImage image(220, 140, QImage::Format_ARGB32_Premultiplied);
@@ -691,7 +691,7 @@ static int runSelfTest()
         const QByteArray data = output.readAll();
         d = QStringLiteral("rendered %1 bytes").arg(data.size());
         if (!data.startsWith("%PDF-") || !data.contains("%%EOF")) return false;
-        QFile artifact(QDir(QCoreApplication::applicationDirPath()).filePath("painting-sample.pdf"));
+        QFile artifact(smokeArtifactDirectory().filePath("painting-sample.pdf"));
         if (!artifact.open(QIODevice::WriteOnly)) return false;
         return artifact.write(data) == data.size() && data.size() > 100;
 #else
@@ -706,7 +706,7 @@ static int runSelfTest()
             r.skip(d, QStringLiteral("no configured native printer"));
             return false;
         }
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("painting-native.prn");
+        const QString path = smokeArtifactDirectory().filePath("painting-native.prn");
         if (QFile::exists(path) && !QFile::remove(path)) {
             d = QStringLiteral("could not remove previous native output");
             return false;
@@ -766,7 +766,7 @@ static int runSelfTest()
         QPainter painter(&image);
         dialog.render(&painter);
         painter.end();
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("painting-preview-dialog.png");
+        d = smokeArtifactDirectory().filePath("painting-preview-dialog.png");
         const bool saved = image.save(d, "PNG");
         dialog.reject();
         return saved && dialog.result() == QDialog::Rejected;
@@ -843,7 +843,7 @@ static int runSelfTest()
             tabs->render(&painter);
             painter.end();
             if (index == 3) {
-                d = QDir(QCoreApplication::applicationDirPath()).filePath("painting-preview.png");
+                d = smokeArtifactDirectory().filePath("painting-preview.png");
                 if (!page.save(d, "PNG")) return false;
             }
             int varied = 0;
@@ -859,7 +859,7 @@ static int runSelfTest()
         });
     }
     r.check("painting/page-contact-sheet", [&sheet](QString &d) {
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("painting-lab-pages.png");
+        d = smokeArtifactDirectory().filePath("painting-lab-pages.png");
         return sheet.save(d, "PNG");
     });
     delete tabs;

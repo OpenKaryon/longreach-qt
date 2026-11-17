@@ -41,27 +41,6 @@
 
 Q_IMPORT_PLUGIN(qsvg)
 
-extern QObject *qt_plugin_instance_qmlfolderlistmodelplugin();
-extern QObject *qt_plugin_instance_qmlgesturesplugin();
-extern QObject *qt_plugin_instance_qmlparticlesplugin();
-extern QObject *qt_plugin_instance_qmlshadersplugin();
-
-static void registerQt4QmlPlugins()
-{
-    struct PluginRegistration { QObject *instance; const char *uri; };
-    const PluginRegistration plugins[] = {
-        { qt_plugin_instance_qmlfolderlistmodelplugin(), "Qt.labs.folderlistmodel" },
-        { qt_plugin_instance_qmlgesturesplugin(), "Qt.labs.gestures" },
-        { qt_plugin_instance_qmlparticlesplugin(), "Qt.labs.particles" },
-        { qt_plugin_instance_qmlshadersplugin(), "Qt.labs.shaders" }
-    };
-    for (unsigned i = 0; i < sizeof(plugins) / sizeof(plugins[0]); ++i) {
-        QDeclarativeExtensionPlugin *plugin =
-            qobject_cast<QDeclarativeExtensionPlugin *>(plugins[i].instance);
-        if (plugin)
-            plugin->registerTypes(plugins[i].uri);
-    }
-}
 #endif
 
 int runSelfTest();

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [Parameter(Mandatory)] [ValidateSet('bootstrap', 'strict', 'core', 'quick')] [string] $Profile,
+    [Parameter(Mandatory)] [ValidateSet('bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting')] [string] $Profile,
     [Parameter(Mandatory)] [string] $NativeDirectory,
     [Parameter(Mandatory)] [string] $OutputDirectory,
     [Parameter(Mandatory)] [string] $AndroidSdk,
@@ -20,9 +20,13 @@ $work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("packag
 
 $manifest = 'AndroidManifest.xml'
 $sources = @("$fixtures/ProbeActivity.java")
+if ($Profile -in 'selftest', 'network') {
+    $manifest = 'selftest-AndroidManifest.xml'
+}
 if ($Profile -eq 'quick') {
     $manifest = 'quick-AndroidManifest.xml'
-    $sources = @("$fixtures/QuickActivity.java", "$fixtures/QuickCoverActivity.java", "$fixtures/QuickInstrumentation.java")
+    $sources = @("$fixtures/QuickActivity.java", "$fixtures/QuickCoverActivity.java", "$fixtures/GalleryActivity.java",
+        "$fixtures/WidgetsActivity.java", "$fixtures/QuickInstrumentation.java")
 }
 
 try {

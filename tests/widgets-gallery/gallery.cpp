@@ -290,7 +290,7 @@ protected:
             setMask(QRegion(rect(), QRegion::Ellipse));
         });
         smokeConnect(menu.addAction("Toggle opacity"), SIGNAL(triggered()), this, [this] {
-            setWindowOpacity(qFuzzyCompare(windowOpacity(), 1.0) ? 0.78 : 1.0);
+            setWindowOpacity(qFuzzyCompare(windowOpacity(), qreal(1)) ? 0.78 : 1.0);
         });
         menu.addSeparator();
         QObject::connect(menu.addAction("Close"), SIGNAL(triggered()), this, SLOT(close()));

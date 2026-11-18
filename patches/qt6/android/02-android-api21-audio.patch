@@ -1,0 +1,93 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Use OpenSLES default routes before Android API23 device enumeration
+
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
+@@ -24,7 +24,7 @@
+ {
+     private static final String TAG = "QtAudioDeviceManager";
+     static private AudioManager m_audioManager = null;
+-    static private final AudioDevicesReceiver m_audioDevicesReceiver = new AudioDevicesReceiver();
++    static private Context m_context = null;
+     static private Handler handler = new Handler(Looper.getMainLooper());
+     static private AudioRecord m_recorder = null;
+     static private AudioTrack m_streamPlayer = null;
+@@ -60,19 +60,35 @@
+     }
+ 
+ 
++    // Keep the API23 callback class out of API21 class initialization.
++    private static class Api23 {
++        static final AudioDevicesReceiver receiver = new AudioDevicesReceiver();
++
++        static void register() {
++            m_audioManager.registerAudioDeviceCallback(receiver, handler);
++        }
++
++        static void unregister() {
++            m_audioManager.unregisterAudioDeviceCallback(receiver);
++        }
++    }
++
+     static void registerAudioHeadsetStateReceiver()
+     {
+-        m_audioManager.registerAudioDeviceCallback(m_audioDevicesReceiver, handler);
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
++            Api23.register();
+     }
+ 
+     static void unregisterAudioHeadsetStateReceiver()
+     {
+-        m_audioManager.unregisterAudioDeviceCallback(m_audioDevicesReceiver);
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
++            Api23.unregister();
+     }
+ 
+     static void setContext(Context context)
+     {
+-        m_audioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
++        m_context = context.getApplicationContext();
++        m_audioManager = (AudioManager)m_context.getSystemService(Context.AUDIO_SERVICE);
+     }
+ 
+     private static String[] getAudioOutputDevices()
+@@ -98,6 +114,9 @@
+ 
+     private static boolean setAudioInput(MediaRecorder recorder, int id)
+     {
++        // Before device enumeration, id0 denotes the platform's default route.
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
++            return id == 0;
+         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P)
+             return false;
+ 
+@@ -250,6 +269,16 @@
+             }
+         }
+ 
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
++            // OpenSLES still provides its real default endpoints; API21 cannot
++            // enumerate physical device IDs. Android retains routing policy.
++            if (type == AudioManager.GET_DEVICES_OUTPUTS)
++                devices.add("0:Default audio output");
++            else if (m_context != null && m_context.getPackageManager().hasSystemFeature(
++                    android.content.pm.PackageManager.FEATURE_MICROPHONE))
++                devices.add("0:Default audio input");
++        }
++
+         String[] ret = new String[devices.size()];
+         ret = devices.toArray(ret);
+         return ret;
+@@ -294,6 +323,12 @@
+ 
+     private static boolean setAudioOutput(int id)
+     {
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
++            if (id != 0)
++                return false;
++            m_currentOutputId = id;
++            return true;
++        }
+         final AudioDeviceInfo[] audioDevices =
+                                         m_audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+         for (AudioDeviceInfo deviceInfo : audioDevices) {

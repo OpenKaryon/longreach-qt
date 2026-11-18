@@ -1,0 +1,33 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Keep inherited Activity and View APIs compatible with Android21
+
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtActivityBase.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtActivityBase.java
+@@ -45,7 +45,14 @@
+             return;
+ 
+         if (extras == null) {
+-            Uri referrer = getReferrer();
++            Uri referrer;
++            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
++                referrer = getReferrer();
++            } else {
++                String callingPackage = getCallingPackage();
++                referrer = callingPackage != null
++                        ? Uri.parse("android-app://" + callingPackage) : null;
++            }
+             if (referrer != null) {
+                 String cleanReferrer = referrer.toString().replaceFirst("android-app://", "");
+                 intent.putExtra(EXTRA_SOURCE_INFO, cleanReferrer);
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtWindow.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtWindow.java
+@@ -33,7 +33,8 @@
+         m_inputConnectionListener = listener;
+         setParent(parentWindow);
+         setFocusableInTouchMode(true);
+-        setDefaultFocusHighlightEnabled(false);
++        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
++            setDefaultFocusHighlightEnabled(false);
+         setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+ 
+         // Views are by default visible, but QWindows are not.

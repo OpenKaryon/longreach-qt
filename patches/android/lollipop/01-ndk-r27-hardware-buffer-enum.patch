@@ -1,0 +1,17 @@
+SPDX-License-Identifier: Apache-2.0
+Subject: Keep the front-buffer usage bit well-defined on 32-bit targets
+
+NDK r28 uses the same ULL literal. The r27 UL literal shifts a 32-bit
+unsigned long by 32 and is rejected by upstream Clang 21.
+
+--- a/usr/include/android/hardware_buffer.h
++++ b/usr/include/android/hardware_buffer.h
+@@ -319,7 +319,7 @@
+      * COMPOSER_OVERLAY, the system will try to prioritize the buffer receiving
+      * an overlay plane & avoid caching it in intermediate composition buffers.
+      */
+-    AHARDWAREBUFFER_USAGE_FRONT_BUFFER = 1UL << 32,
++    AHARDWAREBUFFER_USAGE_FRONT_BUFFER = 1ULL << 32,
+ 
+     AHARDWAREBUFFER_USAGE_VENDOR_0  = 1ULL << 28,
+     AHARDWAREBUFFER_USAGE_VENDOR_1  = 1ULL << 29,

@@ -1,0 +1,52 @@
+{
+  "purpose": "Qt6 Android API21 ARMv7 SDK, APK packaging and Android5.0.2 emulator inputs.",
+  "sources": [
+    {
+      "file": "tools_r24.4.1-windows.zip",
+      "url": "https://dl.google.com/android/repository/tools_r24.4.1-windows.zip",
+      "sha256": "74fe511d80d28678f2250f89b63d0d8e5ba80428cb2345279fa019183fa0476f",
+      "encoding": "binary"
+    },
+    {
+      "file": "android-35.jar",
+      "installed_sdk_path": "platforms/android-35/android.jar",
+      "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
+      "encoding": "installed"
+    },
+    {
+      "file": "armeabi-v7a-21_r04.zip",
+      "url": "https://dl.google.com/android/repository/sys-img/android/armeabi-v7a-21_r04.zip",
+      "sha256": "4f20bb4abff1fcda7fdde510993d2004b0ca330ae6e7a798ffecc3fbf6d48520",
+      "encoding": "binary"
+    },
+    {
+      "file": "build-tools_r36_linux.zip",
+      "url": "https://dl.google.com/android/repository/build-tools_r36_linux.zip",
+      "sha256": "5d9ac77fb6ff43d9da518a337b4fcf8f9097113df531d99ccefe80ef7ce8250b",
+      "encoding": "binary"
+    },
+    {
+      "file": "android-ndk-r27-linux.zip",
+      "url": "https://dl.google.com/android/repository/android-ndk-r27-linux.zip",
+      "sha256": "2f17eb8bcbfdc40201c0b36e9a70826fcd2524ab7a2a235e2c71186c302da1dc",
+      "encoding": "binary"
+    }
+  ],
+  "shared_sources": [
+    {
+      "file": "llvm-project-21.1.8.src.tar.xz",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
+      "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+    },
+    {
+      "file": "openssl-3.5.7.tar.gz",
+      "url": "https://www.openssl.org/source/openssl-3.5.7.tar.gz",
+      "sha256": "a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8"
+    },
+    {
+      "file": "qt-everywhere-src-6.8.5.tar.xz",
+      "url": "https://download.qt.io/archive/qt/6.8/6.8.5/single/qt-everywhere-opensource-src-6.8.5.tar.xz",
+      "sha256": "c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Respect existing highp macros in GLES shader precision fallbacks
+
+--- a/qtbase/src/opengl/qopenglshaderprogram.cpp
++++ b/qtbase/src/opengl/qopenglshaderprogram.cpp
+@@ -462,7 +462,7 @@
+ // on all ES platforms.  When it doesn't exist, use "mediump".
+ #define QOpenGL_REDEFINE_HIGHP 1
+ static const char redefineHighp[] =
+-    "#ifndef GL_FRAGMENT_PRECISION_HIGH\n"
++    "#if !defined(GL_FRAGMENT_PRECISION_HIGH) && !defined(highp)\n"
+     "#define highp mediump\n"
+     "#endif\n";
+ #endif

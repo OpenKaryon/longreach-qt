@@ -1,0 +1,96 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Avoid post-API21 media helpers and guard notification channels
+
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAndroidMediaPlayer.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAndroidMediaPlayer.java
+@@ -506,7 +506,9 @@
+ 
+         MediaFormat mediaFormat = trackInfo.getFormat();
+         if (mediaFormat != null) {
+-            mimeType = mediaFormat.getString(MediaFormat.KEY_MIME, defaultMimeType);
++            String value = mediaFormat.getString(MediaFormat.KEY_MIME);
++            if (value != null)
++                mimeType = value;
+         }
+ 
+         return mimeType;
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtVideoDeviceManager.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtVideoDeviceManager.java
+@@ -242,9 +242,11 @@
+     boolean isAfModeAvailable(String cameraId, int afMode) {
+         if (cameraId == null || cameraId.isEmpty())
+             return false;
+-        return Arrays
+-            .stream(getAllAvailableAfModes(cameraId))
+-            .anyMatch(value -> value == afMode);
++        for (int value : getAllAvailableAfModes(cameraId)) {
++            if (value == afMode)
++                return true;
++        }
++        return false;
+     }
+ 
+     // Returns supported QCamera::FocusModes as strings. I.e FocusModeAuto becomes "FocusModeAuto".
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
+@@ -220,7 +220,8 @@
+             }
+ 
+             private int getPriority(AudioDeviceInfo device) {
+-                return priorityMap.getOrDefault(device.getType(), DEFAULT_PRIORITY);
++                Integer priority = priorityMap.get(device.getType());
++                return priority != null ? priority : DEFAULT_PRIORITY;
+             }
+         };
+ 
+@@ -295,10 +296,15 @@
+ 
+     private static boolean containsAnyOfType(AudioDeviceInfo[] devices, int[]... types) {
+ 
+-    return Arrays.stream(devices)
+-                 .anyMatch(device -> Arrays.stream(types)
+-                                           .flatMapToInt(Arrays::stream)
+-                                           .anyMatch(type -> device.getType() == type));
++        for (AudioDeviceInfo device : devices) {
++            for (int[] group : types) {
++                for (int type : group) {
++                    if (device.getType() == type)
++                        return true;
++                }
++            }
++        }
++        return false;
+     }
+ 
+     private static int getCorrectModeIfContainsAnyOfType(AudioDeviceInfo[] devices, int[]... types) {
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtScreenCaptureService.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtScreenCaptureService.java
+@@ -51,15 +51,19 @@
+     public void onCreate() {
+         super.onCreate();
+ 
+-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Screen Capture",
+-                                                            NotificationManager.IMPORTANCE_LOW);
+-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+-        if (manager != null)
+-            manager.createNotificationChannel(channel);
+-
+-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+-                .setSmallIcon(android.R.drawable.ic_notification_overlay)
+-                .build();
++        Notification.Builder builder;
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
++            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Screen Capture",
++                                                                  NotificationManager.IMPORTANCE_LOW);
++            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
++            if (manager != null)
++                manager.createNotificationChannel(channel);
++            builder = new Notification.Builder(this, CHANNEL_ID);
++        } else {
++            builder = new Notification.Builder(this);
++        }
++        Notification notification = builder.setSmallIcon(android.R.drawable.ic_notification_overlay)
++                                           .build();
+ 
+         // Start the service in the foreground with the created notification
+         startForeground(1, notification);

@@ -15,6 +15,7 @@
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
+#include "../common/openglcompat.h"
 #include <QOpenGLWindow>
 #include <QPointer>
 #include <QImage>
@@ -65,13 +66,13 @@
 #ifdef Q_OS_WIN
 # include <windows.h>
 #endif
-#ifndef QT_OPENGL_ES_2
+#if !SMOKE_OPENGL_ES
 #ifdef Q_OS_MACOS
 # include <OpenGL/gl.h>
 #else
 # include <GL/gl.h>
 #endif
-#endif // QT_OPENGL_ES_2
+#endif // !SMOKE_OPENGL_ES
 #include <math.h>
 
 namespace {
@@ -103,7 +104,7 @@ static void makeVisibleWithoutLights(Qt3DExtras::QPhongMaterial *m, const QColor
     m->setAmbient(c.darker(150));
 }
 
-#ifndef QT_OPENGL_ES_2
+#if !SMOKE_OPENGL_ES
 class Compat3DWindow : public QOpenGLWindow
 {
 public:
@@ -563,7 +564,7 @@ static QWidget *buildCompatQt3DTab()
         QStringLiteral("The fixed-function fallback uses desktop OpenGL. "
                        "The Qt3D node and material APIs remain covered by --selftest."));
 }
-#endif // QT_OPENGL_ES_2
+#endif // !SMOKE_OPENGL_ES
 
 } // namespace
 

@@ -163,3 +163,8 @@ the coverage gate, the licence matrix, and `scripts/audit/repo_scan.py
 --spdx` (an SPDX line in every source file; no host paths, e-mail addresses,
 private keys, passwords or torrent links). Building the SDKs takes hours per
 target and is not part of CI.
+
+The [Qt 6 API21 Android suite](targets/qt6-android-lollipop.md) runs strict
+C++23 (25/25, no SKIP), all eight ordinary APKs, Widgets and QML rendering
+sequentially on Android 5.0.2/ARMv7. Its eleven-case collector binds reports
+to the current APK hashes and rejects fatal errors during native cleanup.

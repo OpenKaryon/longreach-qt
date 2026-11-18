@@ -1,0 +1,143 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Handle API21 legacy TTS engines without native Voice enumeration
+
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
+@@ -42,6 +42,43 @@
+     private float mPitch = 1.0f;
+     private float mRate = 1.0f;
+     private float mVolume = 1.0f;
++    private ArrayList<Object> mLegacyVoices;
++
++    // Old engines such as API21 Pico support language selection but cannot
++    // enumerate Voice objects. Expose one logical default voice per supported
++    // locale, using the same getName/getLocale adapter consumed by C++.
++    private static class LegacyVoice {
++        private final Locale mLocale;
++        LegacyVoice(Locale locale) { mLocale = locale; }
++        public String getName() { return "default:" + mLocale.toString(); }
++        public Locale getLocale() { return mLocale; }
++    }
++
++    private List<Object> legacyVoices()
++    {
++        if (mLegacyVoices == null) {
++            mLegacyVoices = new ArrayList<Object>();
++            for (Locale locale : Locale.getAvailableLocales()) {
++                if (!locale.getVariant().isEmpty())
++                    continue;
++                int support = mTts.isLanguageAvailable(locale);
++                int required = locale.getCountry().isEmpty()
++                        ? TextToSpeech.LANG_AVAILABLE : TextToSpeech.LANG_COUNTRY_AVAILABLE;
++                if (support >= required)
++                    mLegacyVoices.add(new LegacyVoice(locale));
++            }
++        }
++        return new ArrayList<Object>(mLegacyVoices);
++    }
++
++    private List<Locale> legacyLocales()
++    {
++        ArrayList<Locale> locales = new ArrayList<Locale>();
++        for (Object voice : legacyVoices())
++            locales.add(((LegacyVoice) voice).getLocale());
++        return locales;
++    }
++
+ 
+     private static final String TAG = "QtTextToSpeech";
+     // OnInitListener
+@@ -265,8 +302,16 @@
+     List<Object> getAvailableVoices()
+     {
+         if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+-            //Log.d(TAG, "Voices: " + mTts.getVoices());
+-            return new ArrayList<Object>(mTts.getVoices());
++            if (mLegacyVoices != null)
++                return legacyVoices();
++            try {
++                Set<android.speech.tts.Voice> voices = mTts.getVoices();
++                if (voices != null && !voices.isEmpty())
++                    return new ArrayList<Object>(voices);
++            } catch (RuntimeException error) {
++                Log.w(TAG, "Voice enumeration unavailable; using legacy language selection", error);
++            }
++            return legacyVoices();
+         }
+         return new ArrayList<Object>();
+     }
+@@ -275,7 +320,17 @@
+     {
+         if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+             //Log.d(TAG, "Locales: " + mTts.getAvailableLanguages());
+-            final Set<Locale> languages = mTts.getAvailableLanguages();
++            if (mLegacyVoices != null)
++                return legacyLocales();
++            final Set<Locale> languages;
++            try {
++                languages = mTts.getAvailableLanguages();
++            } catch (RuntimeException error) {
++                Log.w(TAG, "Language enumeration unavailable; using legacy language selection", error);
++                return legacyLocales();
++            }
++            if (languages == null)
++                return legacyLocales();
+             ArrayList<Locale> locales = new ArrayList<Locale>();
+ 
+             for (Locale language : languages) {
+@@ -315,6 +370,11 @@
+     Object getVoice()
+     {
+         if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
++            getAvailableVoices();
++            if (mLegacyVoices != null) {
++                Locale locale = getLocale();
++                return locale != null ? new LegacyVoice(locale) : null;
++            }
+             return mTts.getVoice();
+         }
+         return null;
+@@ -325,7 +385,14 @@
+         if (!mInitialized)
+             return false;
+         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+-             for (android.speech.tts.Voice voice : mTts.getVoices()) {
++             for (Object candidate : getAvailableVoices()) {
++                 if (candidate instanceof LegacyVoice) {
++                     LegacyVoice voice = (LegacyVoice) candidate;
++                     if (voice.getName().equals(voiceName))
++                         return setLocale(voice.getLocale());
++                     continue;
++                 }
++                 android.speech.tts.Voice voice = (android.speech.tts.Voice) candidate;
+                  if (voice.getName().equals(voiceName)) {
+                      int result = mTts.setVoice(voice);
+                      if (result == TextToSpeech.SUCCESS) {
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -398,6 +398,8 @@
+ QList<QLocale> QTextToSpeechEngineAndroid::availableLocales() const
+ {
+     auto locales = m_speech.callObjectMethod("getAvailableLocales", "()Ljava/util/List;");
++    if (!locales.isValid())
++        return {};
+     int count = locales.callMethod<jint>("size");
+     QList<QLocale> result;
+     result.reserve(count);
+@@ -475,12 +477,16 @@
+ QList<QVoice> QTextToSpeechEngineAndroid::availableVoices() const
+ {
+     auto voices = m_speech.callObjectMethod("getAvailableVoices", "()Ljava/util/List;");
++    if (!voices.isValid())
++        return {};
+     int count = voices.callMethod<jint>("size");
+     const QLocale ttsLocale = locale();
+     QList<QVoice> result;
+     result.reserve(count);
+     for (int i = 0; i < count; ++i) {
+         auto jvoice = voices.callMethod<jobject>("get", i);
++        if (!jvoice.isValid())
++            continue;
+         const QVoice voice = javaVoiceObjectToQVoice(jvoice);
+         if (voice.locale() == ttsLocale)
+             result << voice;

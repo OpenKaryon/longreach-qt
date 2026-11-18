@@ -182,15 +182,20 @@ int runQuick3DExtensionProbe()
     extensionHelpersReached = 0;
     extensionModel.clear();
 
+    std::atomic_bool unavailable { false };
     QQuickView view;
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     // As in the native texture probe: a graphics API that cannot be
     // initialized is a skip, not Qt Quick's qFatal.
     QObject::connect(&view, &QQuickWindow::sceneGraphError, &view,
-                     [](QQuickWindow::SceneGraphError, const QString &message) {
+                     [&](QQuickWindow::SceneGraphError, const QString &message) {
         std::fprintf(stderr, "%s\n", qPrintable(message));
         std::fflush(stderr);
+#if defined(LONGREACH_ANDROID_APK)
+        unavailable = true;
+#else
         std::_Exit(77);
+#endif
     }, Qt::DirectConnection);
     view.resize(96, 96);
     QQmlComponent component(view.engine());
@@ -225,7 +230,13 @@ int runQuick3DExtensionProbe()
     // Until a grab returns a frame as well: on a fast GPU the extension can
     // render inside the first grabWindow(), before the window is exposed and
     // while that grab still comes back null.
-    while (timer.elapsed() < 5000 && (extensionRender.load() == 0 || frame.isNull())) {
+#if defined(LONGREACH_ANDROID_APK)
+    const int frameTimeout = 20000;
+#else
+    const int frameTimeout = 5000;
+#endif
+    while (!unavailable && timer.elapsed() < frameTimeout
+           && (extensionRender.load() == 0 || frame.isNull())) {
         frame = view.grabWindow();
         QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
         QThread::msleep(10);
@@ -241,7 +252,7 @@ int runQuick3DExtensionProbe()
         std::fflush(stderr);
     }
     extensionModel.clear();
-    return ok ? 0 : 4;
+    return unavailable ? 77 : (ok ? 0 : 4);
 #else
     return 77;
 #endif
@@ -345,6 +356,14 @@ void checkQuick3D(SmokeReporter &r)
 
     r.check("quick3d/runtime-render-extension-frame", [&](QString &d) {
 #ifdef SMOKE_HAVE_QUICK3D_EXTENSIONS
+#if defined(LONGREACH_ANDROID_APK)
+        const int result = runQuick3DExtensionProbe();
+        if (result == 77) {
+            r.skip(d, QStringLiteral("graphics API is unavailable at runtime"));
+            return false;
+        }
+        return result == 0;
+#else
         QProcess child;
         QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
 #if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN) && !defined(Q_OS_ANDROID)
@@ -369,6 +388,7 @@ void checkQuick3D(SmokeReporter &r)
             return false;
         }
         return child.exitStatus() == QProcess::NormalExit && child.exitCode() == 0;
+#endif
 #else
         r.skip(d, QStringLiteral("Qt Quick 3D runtime render extensions need Qt 6.7+"));
         return false;

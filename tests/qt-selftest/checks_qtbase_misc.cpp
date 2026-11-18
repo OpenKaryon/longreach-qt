@@ -58,7 +58,8 @@
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLFunctions>
-#if !defined(QT_OPENGL_ES_2)
+#include "../common/openglcompat.h"
+#if !SMOKE_OPENGL_ES
 #include <QOpenGLFunctions_1_0>
 #include <QOpenGLFunctions_1_1>
 #include <QOpenGLFunctions_1_2>
@@ -95,7 +96,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QOpenGLTextureBlitter>
-#if !defined(QT_OPENGL_ES_2)
+#if !SMOKE_OPENGL_ES
 #include <QOpenGLTimeMonitor>
 #include <QOpenGLTimerQuery>
 #endif
@@ -253,6 +254,7 @@ void checkMiscUtility(SmokeReporter &r)
         return !lib.load() && !loader.load() && !resource.isValid() && !libInfoPath.isEmpty();
     });
     r.check("qtbase/ipc-primitives-construct", [&](QString &d) {
+#if QT_CONFIG(sharedmemory) && QT_CONFIG(systemsemaphore)
         QSharedMemory sharedMem(QStringLiteral("qt-smoke-shm-test"));
         QSystemSemaphore semaphore(QStringLiteral("qt-smoke-sem-test"), 1);
         QBasicTimer timer;
@@ -262,6 +264,10 @@ void checkMiscUtility(SmokeReporter &r)
         cleanup.add(obj);
         return sharedMem.key() == QStringLiteral("qt-smoke-shm-test") && !timer.isActive()
             && cleanup.isEmpty() == false;
+#else
+        r.skip(d, QStringLiteral("shared memory or system semaphores are not compiled in this Qt SDK"));
+        return false;
+#endif
     });
     r.check("qtbase/filesystemwatcher-iconprovider-desktopservices", [&](QString &d) {
         QTemporaryFile tempFile;
@@ -557,7 +563,7 @@ void checkNetworkExtras(SmokeReporter &r)
             && paintDeviceWindow->surfaceType() == QSurface::RasterSurface
             && orientationEvent.orientation() == Qt::PortraitOrientation;
     });
-#if QT_CONFIG(opengl) && defined(QT_OPENGL_ES_2)
+#if QT_CONFIG(opengl) && SMOKE_OPENGL_ES
     r.check("qtbase/opengl-api-shells", [&](QString &) {
         // Desktop versioned functions and timer queries are absent from ES SDKs.
         // Exercise the portable value types without requiring a GPU context.

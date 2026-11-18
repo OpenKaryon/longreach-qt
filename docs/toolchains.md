@@ -24,3 +24,8 @@ standard LLVM recipe and the sequential coordinator. The shared
 compiler is bootstrapped from the locked CentOS 7 inputs. Cross
 targets can use separately built host tools and the target system's
 headers and CRT.
+
+The experimental Qt 4/5/6 Android SDK recipes also use upstream LLVM 21.1.8.
+Their shared libc++ carries one exception/TLS state across all Qt/plugin
+libraries. NDK platform inputs do not select the compiler or C++ runtime;
+see the [Qt6 API21 guide](targets/qt6-android-lollipop.md).

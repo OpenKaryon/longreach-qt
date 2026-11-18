@@ -127,7 +127,7 @@ add_subdirectory(graphics-gallery)
 # cannot start another APK as an executable. All eight example apps remain
 # mandatory below.
 set(SMOKE_OMITTED_APPS "")
-if(ANDROID AND QT_VERSION_MAJOR EQUAL 5)
+if(ANDROID)
     list(APPEND SMOKE_OMITTED_APPS smoke-runner)
 else()
     add_subdirectory(smoke-runner)

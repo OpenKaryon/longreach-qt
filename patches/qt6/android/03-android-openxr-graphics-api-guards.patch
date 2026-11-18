@@ -1,0 +1,25 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Only request OpenXR graphics extensions compiled into this backend
+
+--- a/qtquick3d/src/xr/quick3dxr/openxr/qquick3dxrmanager_openxr.cpp
++++ b/qtquick3d/src/xr/quick3dxr/openxr/qquick3dxrmanager_openxr.cpp
+@@ -2046,13 +2046,18 @@
+         enabledExtensions.append(XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME);
+ 
+     auto graphicsAPI = QQuickWindow::graphicsApi();
++#ifdef XR_USE_GRAPHICS_API_VULKAN
+     if (graphicsAPI == QSGRendererInterface::Vulkan) {
+         if (isExtensionSupported(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME, extensionProperties))
+             enabledExtensions.append(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
+-    } else if (graphicsAPI == QSGRendererInterface::OpenGL) {
++    }
++#endif
++#ifdef XR_USE_GRAPHICS_API_OPENGL_ES
++    if (graphicsAPI == QSGRendererInterface::OpenGL) {
+         if (isExtensionSupported(XR_FB_SWAPCHAIN_UPDATE_STATE_OPENGL_ES_EXTENSION_NAME, extensionProperties))
+             enabledExtensions.append(XR_FB_SWAPCHAIN_UPDATE_STATE_OPENGL_ES_EXTENSION_NAME);
+     }
++#endif
+ #endif
+ 
+     qCDebug(lcQuick3DXr) << "Requesting to enable XR extensions:" << enabledExtensions;

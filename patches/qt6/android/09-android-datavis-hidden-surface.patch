@@ -1,0 +1,77 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Initialize hidden Android DataVisualization graphs on an offscreen surface
+
+--- a/qtdatavis3d/src/datavisualization/engine/qabstract3dgraph.cpp
++++ b/qtdatavis3d/src/datavisualization/engine/qabstract3dgraph.cpp
+@@ -173,7 +173,17 @@
+ 
+     d_ptr->m_context->setFormat(requestedFormat());
+     d_ptr->m_context->create();
++#if defined(Q_OS_ANDROID)
++    // Android creates a window's EGL surface only after it becomes visible.
++    // Q3D graphs initialize before show(), so use a persistent pbuffer for
++    // constructor/cleanup work instead of waiting for a hidden window surface.
++    d_ptr->m_offscreenSurface = new QOffscreenSurface(screen());
++    d_ptr->m_offscreenSurface->setFormat(d_ptr->m_context->format());
++    d_ptr->m_offscreenSurface->create();
++    bool makeSuccess = d_ptr->m_context->makeCurrent(d_ptr->m_offscreenSurface);
++#else
+     bool makeSuccess = d_ptr->m_context->makeCurrent(this);
++#endif
+ 
+     // If we fail to get context, just abort
+     if (!makeSuccess || !QOpenGLContext::currentContext())
+@@ -1036,6 +1046,19 @@
+ 
+ QAbstract3DGraphPrivate::~QAbstract3DGraphPrivate()
+ {
++#if defined(Q_OS_ANDROID)
++    if (m_context) {
++        if (!m_offscreenSurface || !m_context->makeCurrent(m_offscreenSurface))
++            m_context->doneCurrent();
++    }
++    delete m_visualController;
++    if (m_context)
++        m_context->doneCurrent();
++    if (m_offscreenSurface) {
++        m_offscreenSurface->destroy();
++        delete m_offscreenSurface;
++    }
++#else
+     if (m_offscreenSurface) {
+         m_offscreenSurface->destroy();
+         delete m_offscreenSurface;
+@@ -1046,6 +1069,7 @@
+     }
+ 
+     delete m_visualController;
++#endif
+ }
+ 
+ void QAbstract3DGraphPrivate::setVisualController(Abstract3DController *controller)
+@@ -1130,6 +1154,10 @@
+ 
+ void QAbstract3DGraphPrivate::renderNow()
+ {
++#if defined(Q_OS_ANDROID)
++    if (!q_ptr->isVisible())
++        return;
++#endif
+     if (!q_ptr->isExposed())
+         return;
+ 
+@@ -1176,7 +1204,14 @@
+         m_visualController->m_scene->d_ptr->setViewport(originalViewport);
+     }
+     delete fbo;
++#if defined(Q_OS_ANDROID)
++    if (q_ptr->isVisible() && q_ptr->isExposed())
++        m_context->makeCurrent(q_ptr);
++    else
++        m_context->makeCurrent(m_offscreenSurface);
++#else
+     m_context->makeCurrent(q_ptr);
++#endif
+ 
+     return image;
+ }

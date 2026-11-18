@@ -2,15 +2,17 @@
 // Copyright (C) 2026 OpenKaryon
 //
 // Platform texture interfaces need an initialized scene graph and a real
-// backend. Each probe therefore runs in a fresh child process, selects its API
-// before QApplication exists, renders an image-backed texture, and reads the
-// native handle on the render thread after Qt committed the upload.
+// backend. Desktop probes run in a fresh child process and select the API
+// before QApplication exists. Android reuses the initialized APK and its API.
+// Both render an image-backed texture and inspect its native handle on the
+// render thread after Qt committed the upload.
 
 #include "../common/smokecheck.h"
 
 #if QT_VERSION_MAJOR >= 6
 
 #include <QCoreApplication>
+#include <QEventLoop>
 #include <QImage>
 #include <QProcess>
 #include <QProcessEnvironment>
@@ -25,6 +27,8 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+
+int runNativeTextureProbe(const QByteArray &backend);
 
 namespace {
 
@@ -137,6 +141,16 @@ static void addBackendCheck(SmokeReporter &r, const QByteArray &backend,
             r.skip(d, QStringLiteral("backend not compiled for this target"));
             return false;
         }
+#if defined(LONGREACH_ANDROID_APK)
+        // An APK's native library is not a desktop executable. Exercise the
+        // same renderer probe in this initialized Android application.
+        const int result = runNativeTextureProbe(backend);
+        if (result == 77) {
+            r.skip(d, QStringLiteral("selected graphics API is unavailable at runtime"));
+            return false;
+        }
+        return result == 0;
+#else
         QProcess child;
         QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
 #if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN) && !defined(Q_OS_ANDROID)
@@ -162,6 +176,7 @@ static void addBackendCheck(SmokeReporter &r, const QByteArray &backend,
         }
         d = QString::fromLocal8Bit(child.readAllStandardError()).trimmed();
         return child.exitStatus() == QProcess::NormalExit && child.exitCode() == 0;
+#endif
     });
 }
 
@@ -178,16 +193,26 @@ bool configureNativeTextureProbe(const QByteArray &backend)
 
 int runNativeTextureProbe(const QByteArray &backend)
 {
+#if defined(LONGREACH_ANDROID_APK)
+    QEventLoop eventLoop;
+#endif
+    std::atomic_bool unavailable { false };
     QQuickWindow window;
     window.resize(48, 48);
     // Without a handler Qt Quick stops on qFatal when the graphics API cannot
     // be initialized (no D3D12 on Windows 7, no D3D11 device in a VM without
     // 3D). That is an unavailable API, reported as a skip.
     QObject::connect(&window, &QQuickWindow::sceneGraphError, &window,
-                     [](QQuickWindow::SceneGraphError, const QString &message) {
+                     [&](QQuickWindow::SceneGraphError, const QString &message) {
         std::fprintf(stderr, "%s\n", qPrintable(message));
         std::fflush(stderr);
+#if defined(LONGREACH_ANDROID_APK)
+        unavailable = true;
+        QMetaObject::invokeMethod(&eventLoop, [&eventLoop] { eventLoop.exit(77); },
+                                  Qt::QueuedConnection);
+#else
         std::_Exit(77);
+#endif
     }, Qt::DirectConnection);
     SmokeNativeTextureItem item(backend);
     item.setParentItem(window.contentItem());
@@ -195,14 +220,27 @@ int runNativeTextureProbe(const QByteArray &backend)
     QTimer updates;
     QObject::connect(&updates, &QTimer::timeout, [&]() {
         item.update();
-        if (item.complete())
+        if (item.complete()) {
+#if defined(LONGREACH_ANDROID_APK)
+            eventLoop.quit();
+#else
             QCoreApplication::quit();
+#endif
+        }
     });
     updates.start(25);
+#if defined(LONGREACH_ANDROID_APK)
+    QTimer::singleShot(7000, &eventLoop, &QEventLoop::quit);
+#else
     QTimer::singleShot(7000, qApp, &QCoreApplication::quit);
+#endif
     window.show();
+#if defined(LONGREACH_ANDROID_APK)
+    const int eventResult = eventLoop.exec();
+#else
     const int eventResult = qApp->exec();
-    if (eventResult != 0 || !item.complete())
+#endif
+    if (unavailable || eventResult != 0 || !item.complete())
         return 77;
     if (!item.supported())
         return 77;

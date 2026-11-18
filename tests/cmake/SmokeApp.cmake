@@ -74,8 +74,25 @@ function(smoke_add_app target)
     cmake_parse_arguments(ARG "IMPORT_QML_PLUGINS" ""
                           "SOURCES;MODULES;OPTIONAL_MODULES;DEFINES;LIBRARIES;QML_SCAN_PATHS" ${ARGN})
 
-    if(ANDROID AND QT_VERSION_MAJOR EQUAL 5)
-        add_library(${target} SHARED ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/android/main.cpp)
+    if(ANDROID)
+        if(QT_VERSION_MAJOR EQUAL 6)
+            if(CMAKE_VERSION VERSION_LESS 3.19)
+                message(FATAL_ERROR "Qt 6 Android examples require CMake 3.19 or newer")
+            endif()
+            # Qt defers finalization until the caller has added optional modules.
+            qt_add_executable(${target}
+                ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/android/main.cpp)
+            if(DEFINED ANDROID_MIN_SDK_VERSION)
+                set_property(TARGET ${target} PROPERTY
+                    QT_ANDROID_MIN_SDK_VERSION "${ANDROID_MIN_SDK_VERSION}")
+            endif()
+            if(DEFINED ANDROID_TARGET_SDK_VERSION)
+                set_property(TARGET ${target} PROPERTY
+                    QT_ANDROID_TARGET_SDK_VERSION "${ANDROID_TARGET_SDK_VERSION}")
+            endif()
+        else()
+            add_library(${target} SHARED ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/android/main.cpp)
+        endif()
         target_compile_definitions(${target} PRIVATE
             main=longreachExampleMain LONGREACH_ANDROID_APK)
         # APKs expose only their native entry point. Collect unreachable code

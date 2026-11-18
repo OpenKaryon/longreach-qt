@@ -1,0 +1,207 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Keep Qt Android Java integration usable on API21
+
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/EditContextView.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/EditContextView.java
+@@ -42,8 +42,9 @@
+             setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                     ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+             setGravity(Gravity.CENTER);
+-            setTextColor(getResources().getColor(
+-                    android.R.color.widget_edittext_dark, context.getTheme()));
++            setTextColor(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M
++                    ? getResources().getColor(android.R.color.widget_edittext_dark, context.getTheme())
++                    : getResources().getColor(android.R.color.widget_edittext_dark));
+             EditContextView.this.setBackground(getResources().getDrawable(
+                     android.R.drawable.editbox_background_normal, context.getTheme()));
+             float scale = getResources().getDisplayMetrics().density;
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/ExtractStyle.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/ExtractStyle.java
+@@ -936,10 +936,19 @@
+         return json;
+     }
+ 
++    private Context themedContext()
++    {
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
++            return new ContextThemeWrapper(m_context, m_theme);
++        ContextThemeWrapper context = new ContextThemeWrapper(m_context, 0);
++        context.getTheme().setTo(m_theme);
++        return context;
++    }
++
+     private TypedArray obtainStyledAttributes(int styleName, int[] attributes)
+     {
+         TypedValue typedValue = new TypedValue();
+-        Context ctx = new ContextThemeWrapper(m_context, m_theme);
++        Context ctx = themedContext();
+         ctx.getTheme().resolveAttribute(styleName, typedValue, true);
+         return ctx.obtainStyledAttributes(typedValue.data, attributes);
+     }
+@@ -958,7 +967,7 @@
+     void extractViewInformation(int styleName, JSONObject json, String qtClassName, AttributeSet attributeSet) {
+         try {
+             TypedValue typedValue = new TypedValue();
+-            Context ctx = new ContextThemeWrapper(m_context, m_theme);
++            Context ctx = themedContext();
+             ctx.getTheme().resolveAttribute(styleName, typedValue, true);
+ 
+             int[] attributes = new int[]{
+@@ -1148,7 +1157,7 @@
+ 
+         try {
+             TypedValue typedValue = new TypedValue();
+-            Context ctx = new ContextThemeWrapper(m_context, m_theme);
++            Context ctx = themedContext();
+             ctx.getTheme().resolveAttribute(styleName, typedValue, true);
+ 
+             // Get textAppearance values
+@@ -1419,7 +1428,7 @@
+         JSONObject json = extractTextAppearanceInformation(styleName, qtClass);
+ 
+         TypedValue typedValue = new TypedValue();
+-        Context ctx = new ContextThemeWrapper(m_context, m_theme);
++        Context ctx = themedContext();
+         ctx.getTheme().resolveAttribute(styleName, typedValue, true);
+         final int[] attributes = new int[]{android.R.attr.button};
+         TypedArray array = ctx.obtainStyledAttributes(typedValue.data, attributes);
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtAccessibilityDelegate.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtAccessibilityDelegate.java
+@@ -70,7 +70,7 @@
+ 
+         m_layout = layout;
+ 
+-        m_manager = m_layout.getContext().getSystemService(AccessibilityManager.class);
++        m_manager = (AccessibilityManager) m_layout.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
+         if (m_manager != null) {
+             AccessibilityManagerListener accServiceListener = new AccessibilityManagerListener();
+             if (!m_manager.addAccessibilityStateChangeListener(accServiceListener))
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtDisplayManager.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtDisplayManager.java
+@@ -280,7 +280,12 @@
+         if (activity == null)
+             return;
+ 
+-        final WindowInsets rootInsets = activity.getWindow().getDecorView().getRootWindowInsets();
++        final View decorView = activity.getWindow().getDecorView();
++        final WindowInsets rootInsets = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
++                ? decorView.getRootWindowInsets() : null;
++        final Rect visibleFrame = new Rect();
++        if (rootInsets == null)
++            decorView.getWindowVisibleDisplayFrame(visibleFrame);
+         final WindowManager windowManager = activity.getWindowManager();
+         Display display;
+ 
+@@ -298,8 +303,8 @@
+             maxWidth = maxMetrics.widthPixels;
+             maxHeight = maxMetrics.heightPixels;
+ 
+-            insetLeft = rootInsets.getStableInsetLeft();
+-            insetTop = rootInsets.getStableInsetTop();
++            insetLeft = rootInsets != null ? rootInsets.getStableInsetLeft() : Math.max(0, visibleFrame.left);
++            insetTop = rootInsets != null ? rootInsets.getStableInsetTop() : Math.max(0, visibleFrame.top);
+         } else {
+             display = activity.getDisplay();
+ 
+@@ -307,8 +312,12 @@
+             maxWidth = maxMetrics.getBounds().width();
+             maxHeight = maxMetrics.getBounds().height();
+ 
+-            insetLeft = rootInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()).left;
+-            insetTop = rootInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()).top;
++            insetLeft = rootInsets != null
++                    ? rootInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()).left
++                    : Math.max(0, visibleFrame.left);
++            insetTop = rootInsets != null
++                    ? rootInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()).top
++                    : Math.max(0, visibleFrame.top);
+         }
+ 
+         final DisplayMetrics displayMetrics = activity.getResources().getDisplayMetrics();
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtLoader.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtLoader.java
+@@ -143,6 +143,22 @@
+         return abiLibs;
+     }
+ 
++    private static boolean is64BitProcess()
++    {
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
++            return Process.is64Bit();
++
++        // API21 already has the VMRuntime implementation used by the later public API.
++        // Device ABIs alone cannot identify a 32-bit process on a 64-bit device.
++        try {
++            Class<?> runtimeClass = Class.forName("dalvik.system.VMRuntime");
++            Object runtime = runtimeClass.getDeclaredMethod("getRuntime").invoke(null);
++            return (Boolean) runtimeClass.getDeclaredMethod("is64Bit").invoke(runtime);
++        } catch (ReflectiveOperationException error) {
++            throw new IllegalStateException("Could not determine Android process ABI", error);
++        }
++    }
++
+     @SuppressLint("DiscouragedApi")
+     private String resolvePreferredAbi()
+     {
+@@ -159,7 +175,7 @@
+             uniqueAbis.add(splits[0]);
+         }
+ 
+-        boolean is64Bit = Process.is64Bit();
++        boolean is64Bit = is64BitProcess();
+         for (String abi : Build.SUPPORTED_ABIS) {
+             if (uniqueAbis.contains(abi) && abi.contains("64") == is64Bit)
+                 return abi;
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtMessageDialogHelper.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtMessageDialogHelper.java
+@@ -171,7 +171,7 @@
+                 view.setLongClickable(true);
+ 
+                 view.setText(m_text);
+-                view.setTextAppearance(android.R.style.TextAppearance_Medium);
++                view.setTextAppearance(view.getContext(), android.R.style.TextAppearance_Medium);
+ 
+                 RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(
+                         RelativeLayout.LayoutParams.MATCH_PARENT,
+@@ -190,7 +190,7 @@
+                 view.setLongClickable(true);
+ 
+                 view.setText(m_informativeText);
+-                view.setTextAppearance(android.R.style.TextAppearance_Medium);
++                view.setTextAppearance(view.getContext(), android.R.style.TextAppearance_Medium);
+ 
+                 RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(
+                         RelativeLayout.LayoutParams.MATCH_PARENT,
+@@ -212,7 +212,7 @@
+                 view.setLongClickable(true);
+ 
+                 view.setText(m_detailedText);
+-                view.setTextAppearance(android.R.style.TextAppearance_Small);
++                view.setTextAppearance(view.getContext(), android.R.style.TextAppearance_Small);
+ 
+                 RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(
+                         RelativeLayout.LayoutParams.MATCH_PARENT,
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtServiceEmbeddedDelegate.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtServiceEmbeddedDelegate.java
+@@ -48,7 +48,7 @@
+                     final int insetLeft = 0;
+                     final int insetTop = 0;
+ 
+-                    final DisplayManager dm = m_service.getSystemService(DisplayManager.class);
++                    final DisplayManager dm = (DisplayManager) m_service.getSystemService(Context.DISPLAY_SERVICE);
+                     QtDisplayManager.setDisplayMetrics(
+                             maxWidth, maxHeight, insetLeft, insetTop, width, height,
+                             QtDisplayManager.getXDpi(metrics), QtDisplayManager.getYDpi(metrics),
+--- a/qtbase/src/android/jar/src/org/qtproject/qt/android/QtTextureView.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt/android/QtTextureView.java
+@@ -24,7 +24,9 @@
+         m_surfaceCallback = surfaceCallback;
+         setSurfaceTextureListener(this);
+         setOpaque(isOpaque);
+-        setSurfaceTexture(new SurfaceTexture(false));
++        // Earlier TextureView implementations create their SurfaceTexture on attachment.
++        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
++            setSurfaceTexture(new SurfaceTexture(false));
+     }
+ 
+     @Override

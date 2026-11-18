@@ -1,0 +1,48 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Keep Bluetooth GATT and default audio routes available on API21
+
+--- a/qtconnectivity/src/android/bluetooth/src/org/qtproject/qt/android/bluetooth/QtBluetoothLE.java
++++ b/qtconnectivity/src/android/bluetooth/src/org/qtproject/qt/android/bluetooth/QtBluetoothLE.java
+@@ -875,9 +875,13 @@
+                 */
+             }
+             try {
+-                mBluetoothGatt =
+-                    mRemoteGattDevice.connectGatt(qtContext, false,
+-                                                  gattCallback, 2 /* TRANSPORT_LE */);
++                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
++                    mBluetoothGatt = mRemoteGattDevice.connectGatt(qtContext, false,
++                                                                  gattCallback, 2 /* TRANSPORT_LE */);
++                } else {
++                    // API21/22 have only the three-argument overload.
++                    mBluetoothGatt = mRemoteGattDevice.connectGatt(qtContext, false, gattCallback);
++                }
+             } catch (IllegalArgumentException ex) {
+                 Log.w(TAG, "Gatt connection failed");
+                 ex.printStackTrace();
+--- a/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
++++ b/qtmultimedia/src/android/jar/src/org/qtproject/qt/android/multimedia/QtAudioDeviceManager.java
+@@ -409,13 +409,17 @@
+         m_streamPlayer = new AudioTrack(AudioManager.STREAM_MUSIC, m_sampleRate, m_channels,
+                                            m_audioFormat, m_bufferSize, AudioTrack.MODE_STREAM);
+ 
+-        final AudioDeviceInfo[] devices = m_audioManager.getDevices(AudioManager.GET_DEVICES_ALL);
+-        for (AudioDeviceInfo deviceInfo : devices) {
+-            if (deviceInfo.getId() == outputId) {
+-                m_streamPlayer.setPreferredDevice(deviceInfo);
+-            } else if (deviceInfo.getId() == inputId) {
+-                m_recorder.setPreferredDevice(deviceInfo);
++        // API21/22 expose only the default logical route (id0). Keep the
++        // platform-selected devices without calling API23 enumeration/routing.
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
++            final AudioDeviceInfo[] devices = m_audioManager.getDevices(AudioManager.GET_DEVICES_ALL);
++            for (AudioDeviceInfo deviceInfo : devices) {
++                if (deviceInfo.getId() == outputId) {
++                    m_streamPlayer.setPreferredDevice(deviceInfo);
++                } else if (deviceInfo.getId() == inputId) {
++                    m_recorder.setPreferredDevice(deviceInfo);
++                }
+             }
+         }
+ 
+         m_recorder.startRecording();

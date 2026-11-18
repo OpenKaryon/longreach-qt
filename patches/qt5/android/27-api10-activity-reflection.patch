@@ -1,0 +1,94 @@
+# SPDX-License-Identifier: BSD-2-Clause AND (LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only)
+# Copyright (C) 2026 OpenKaryon
+#
+# Preserve API11 callbacks without breaking API10 Dalvik reflection. The class
+# loads, but getMethod resolves unavailable types in other method signatures.
+# Reflect legacy super calls through an API1-only interface; filter delegate
+# callbacks against the actual framework on API10. API11+ retains upstream
+# reflection and all callbacks. Check: QtActivity APKs, C++23 and galleries
+# on API10/API21; native Qt libraries do not change.
+
+--- a/qtbase/src/android/jar/jar.pro
++++ b/qtbase/src/android/jar/jar.pro
+@@ -11,6 +11,7 @@
+     $$PATHPREFIX/accessibility/QtAccessibilityDelegate.java \
+     $$PATHPREFIX/accessibility/QtNativeAccessibility.java \
+     $$PATHPREFIX/QtActivityDelegate.java \
++    $$PATHPREFIX/QtActivityLegacy.java \
+     $$PATHPREFIX/QtEditText.java \
+     $$PATHPREFIX/QtInputConnection.java \
+     $$PATHPREFIX/QtLayout.java \
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
+@@ -656,6 +656,8 @@
+        setActionBarVisibility(false);
+ 
+        Class<?> activityClass = m_activity.getClass();
++       if (Build.VERSION.SDK_INT < 11 && m_activity instanceof QtActivityLegacy)
++           activityClass = QtActivityLegacy.class;
+        m_super_dispatchKeyEvent =
+                activityClass.getMethod("super_dispatchKeyEvent", KeyEvent.class);
+        m_super_onRestoreInstanceState =
+--- /dev/null
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityLegacy.java
+@@ -0,0 +1,23 @@
++// SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Copyright (C) 2026 OpenKaryon
++package org.qtproject.qt5.android;
++
++import android.content.Intent;
++import android.content.res.Configuration;
++import android.os.Bundle;
++import android.view.KeyEvent;
++import android.view.MotionEvent;
++
++// Reflect API1 types instead of enumerating QtActivity's newer signature types.
++public interface QtActivityLegacy {
++    boolean super_dispatchKeyEvent(KeyEvent event);
++    void super_onRestoreInstanceState(Bundle state);
++    Object super_onRetainNonConfigurationInstance();
++    void super_onSaveInstanceState(Bundle state);
++    boolean super_onKeyDown(int keyCode, KeyEvent event);
++    boolean super_onKeyUp(int keyCode, KeyEvent event);
++    void super_onConfigurationChanged(Configuration configuration);
++    void super_onActivityResult(int requestCode, int resultCode, Intent data);
++    void super_onWindowFocusChanged(boolean hasFocus);
++    boolean super_dispatchGenericMotionEvent(MotionEvent event);
++}
+--- a/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java
++++ b/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java
+@@ -62,7 +62,7 @@
+ 
+ import org.qtproject.qt5.android.QtNative;
+ 
+-public class QtActivity extends Activity
++public class QtActivity extends Activity implements org.qtproject.qt5.android.QtActivityLegacy
+ {
+     public String APPLICATION_PARAMETERS = null; // use this variable to pass any parameters to your application,
+                                                                // the parameters must not contain any white spaces
+--- a/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtApplication.java
++++ b/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtApplication.java
+@@ -70,6 +70,14 @@
+     {
+         m_delegateObject = listener;
+         activityClassName = clazz.getCanonicalName();
++        Class<?> callbackClass = clazz;
++        if (android.os.Build.VERSION.SDK_INT < 11) {
++            // Reflect only signatures supplied by the running old framework.
++            if (android.app.Activity.class.isAssignableFrom(clazz))
++                callbackClass = android.app.Activity.class;
++            else if (android.app.Service.class.isAssignableFrom(clazz))
++                callbackClass = android.app.Service.class;
++        }
+ 
+         ArrayList<Method> delegateMethods = new ArrayList<Method>();
+         for (Method m : listener.getClass().getMethods()) {
+@@ -85,7 +93,7 @@
+ 
+         for (Method delegateMethod : delegateMethods) {
+             try {
+-                clazz.getDeclaredMethod(delegateMethod.getName(), delegateMethod.getParameterTypes());
++                callbackClass.getDeclaredMethod(delegateMethod.getName(), delegateMethod.getParameterTypes());
+                 if (QtApplication.m_delegateMethods.containsKey(delegateMethod.getName())) {
+                     QtApplication.m_delegateMethods.get(delegateMethod.getName()).add(delegateMethod);
+                 } else {

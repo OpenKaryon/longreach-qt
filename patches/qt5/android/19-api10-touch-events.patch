@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Touch classification predates getToolType on Gingerbread.
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
+@@ -552,7 +552,9 @@
+         if (m_tabletEventSupported == null)
+             m_tabletEventSupported = isTabletEventSupported();
+ 
+-        switch (event.getToolType(0)) {
++        final int toolType = Build.VERSION.SDK_INT >= 14
++                ? event.getToolType(0) : MotionEvent.TOOL_TYPE_FINGER;
++        switch (toolType) {
+         case MotionEvent.TOOL_TYPE_STYLUS:
+             pointerType = 1; // QTabletEvent::Pen
+             break;
+@@ -561,7 +563,7 @@
+             break;
+         }
+ 
+-        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) {
++        if (toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+             sendMouseEvent(event, id);
+         } else if (m_tabletEventSupported && pointerType != 0) {
+             tabletEvent(id, event.getDeviceId(), event.getEventTime(), event.getAction(), pointerType,
+@@ -629,7 +631,7 @@
+                 break;
+             case MotionEvent.ACTION_HOVER_MOVE:
+             case MotionEvent.ACTION_MOVE:
+-                if (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) {
++                if (Build.VERSION.SDK_INT >= 14 && event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) {
+                     mouseMove(id, (int) event.getX(), (int) event.getY());
+                 } else {
+                     int dx = (int) (event.getX() - m_oldx);
+@@ -642,6 +644,8 @@
+                 }
+                 break;
+             case MotionEvent.ACTION_SCROLL:
++                if (Build.VERSION.SDK_INT < 12)
++                    return false;
+                 mouseWheel(id, (int) event.getX(), (int) event.getY(),
+                         event.getAxisValue(MotionEvent.AXIS_HSCROLL), event.getAxisValue(MotionEvent.AXIS_VSCROLL));
+                 break;

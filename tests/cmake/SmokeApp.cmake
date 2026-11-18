@@ -74,7 +74,19 @@ function(smoke_add_app target)
     cmake_parse_arguments(ARG "IMPORT_QML_PLUGINS" ""
                           "SOURCES;MODULES;OPTIONAL_MODULES;DEFINES;LIBRARIES;QML_SCAN_PATHS" ${ARGN})
 
-    add_executable(${target} ${ARG_SOURCES})
+    if(ANDROID AND QT_VERSION_MAJOR EQUAL 5)
+        add_library(${target} SHARED ${ARG_SOURCES} ${PROJECT_SOURCE_DIR}/android/main.cpp)
+        target_compile_definitions(${target} PRIVATE
+            main=longreachExampleMain LONGREACH_ANDROID_APK)
+        # APKs expose only their native entry point. Collect unreachable code
+        # and avoid consuming old Bionic's fixed DSO pool for unused modules.
+        set_target_properties(${target} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+        target_compile_options(${target} PRIVATE -ffunction-sections -fdata-sections)
+        set_property(TARGET ${target} APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--gc-sections,--as-needed")
+    else()
+        add_executable(${target} ${ARG_SOURCES})
+    endif()
 
     # A caller can select a newer language mode with -DCMAKE_CXX_STANDARD.
     # The default stays compatible with the Qt 4/5 suite's C++14 sources.

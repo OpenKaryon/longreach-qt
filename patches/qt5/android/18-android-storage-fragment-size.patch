@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Query the Android mount table and support old statfs fragment-size fields.
+--- a/qtbase/src/corelib/io/qstorageinfo_unix.cpp
++++ b/qtbase/src/corelib/io/qstorageinfo_unix.cpp
+@@ -327,7 +327,8 @@
+ 
+ inline QStorageIterator::QStorageIterator()
+ {
+-    file.setFileName(_PATH_MOUNTED);
++    // Older NDK paths.h points to BSD's absent /etc/mtab.
++    file.setFileName(QStringLiteral("/proc/mounts"));
+     file.open(QIODevice::ReadOnly | QIODevice::Text);
+ }
+ 
+@@ -841,6 +842,12 @@
+         bytesTotal = statfs_buf.f_blocks * statfs_buf.f_bsize;
+         bytesFree = statfs_buf.f_bfree * statfs_buf.f_bsize;
+         bytesAvailable = statfs_buf.f_bavail * statfs_buf.f_bsize;
++#elif defined(Q_OS_ANDROID)
++        // Old Android kernels may leave f_frsize zero (for example YAFFS2).
++        const quint64 fragmentSize = statfs_buf.f_frsize ? statfs_buf.f_frsize : statfs_buf.f_bsize;
++        bytesTotal = statfs_buf.f_blocks * fragmentSize;
++        bytesFree = statfs_buf.f_bfree * fragmentSize;
++        bytesAvailable = statfs_buf.f_bavail * fragmentSize;
+ #else
+         bytesTotal = statfs_buf.f_blocks * statfs_buf.f_frsize;
+         bytesFree = statfs_buf.f_bfree * statfs_buf.f_frsize;

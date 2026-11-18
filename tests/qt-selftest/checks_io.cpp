@@ -148,8 +148,13 @@ void checkIo(SmokeReporter &r)
     });
     r.check("io/storageinfo", [&r](QString &d) {
 #if SMOKE_QT5
-        QStorageInfo si = QStorageInfo::root();
-        if (!si.isValid()) { r.skip(d,"no root volume info"); return false; }
+        // Android's root is a zero-sized ramdisk; inspect the writable temp
+        // volume used by the file checks on every platform instead.
+        QStorageInfo si(QDir::tempPath());
+        if (!si.isValid()) { r.skip(d,"no temporary volume info"); return false; }
+        d = QStringLiteral("root=%1 type=%2 total=%3 block-size=%4")
+                .arg(si.rootPath(), QString::fromLatin1(si.fileSystemType()))
+                .arg(si.bytesTotal()).arg(si.blockSize());
         return si.bytesTotal() > 0;
 #else
         r.skip(d, QStringLiteral("QStorageInfo arrived in Qt 5"));

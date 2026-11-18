@@ -58,6 +58,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLFunctions>
+#if !defined(QT_OPENGL_ES_2)
 #include <QOpenGLFunctions_1_0>
 #include <QOpenGLFunctions_1_1>
 #include <QOpenGLFunctions_1_2>
@@ -84,6 +85,7 @@
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLFunctions_4_5_Compatibility>
 #include <QOpenGLFunctions_4_5_Core>
+#endif
 #if QT_VERSION_MAJOR < 6
 #include <QOpenGLFunctions_ES2>
 #endif
@@ -93,8 +95,10 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QOpenGLTextureBlitter>
+#if !defined(QT_OPENGL_ES_2)
 #include <QOpenGLTimeMonitor>
 #include <QOpenGLTimerQuery>
+#endif
 #include <QOpenGLVersionProfile>
 #include <QOpenGLVertexArrayObject>
 #include <QOffscreenSurface>
@@ -553,7 +557,23 @@ void checkNetworkExtras(SmokeReporter &r)
             && paintDeviceWindow->surfaceType() == QSurface::RasterSurface
             && orientationEvent.orientation() == Qt::PortraitOrientation;
     });
-#if QT_CONFIG(opengl)
+#if QT_CONFIG(opengl) && defined(QT_OPENGL_ES_2)
+    r.check("qtbase/opengl-api-shells", [&](QString &) {
+        // Desktop versioned functions and timer queries are absent from ES SDKs.
+        // Exercise the portable value types without requiring a GPU context.
+        QOpenGLBuffer buffer(QOpenGLBuffer::VertexBuffer);
+        QOpenGLContext context;
+        QOpenGLFramebufferObjectFormat format;
+        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        QOpenGLPixelTransferOptions pixels;
+        pixels.setAlignment(4);
+        QOpenGLVersionProfile version;
+        version.setVersion(2, 0);
+        return !buffer.isCreated() && !context.isValid()
+            && format.attachment() == QOpenGLFramebufferObject::CombinedDepthStencil
+            && pixels.alignment() == 4 && version.version() == qMakePair(2, 0);
+    });
+#elif QT_CONFIG(opengl)
     r.check("qtbase/opengl-api-shells", [&](QString &d) {
 #if defined(Q_OS_LINUX) && defined(Q_PROCESSOR_X86_32)
         r.skip(d, QStringLiteral("OpenGL shell destructors are not crash-safe on 32-bit Linux/X11 in this static build"));

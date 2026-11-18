@@ -1,0 +1,317 @@
+# SPDX-License-Identifier: BSD-2-Clause AND (LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only)
+# Copyright (C) 2026 OpenKaryon
+#
+# QtActivity, screen metrics, clipboard and ABI selection on Android API 10.
+# Preserve newer Android paths behind SDK-level checks.
+# QtActivity keeps its API 11 overrides (ActionMode, Fragment) and super_*
+# helpers for newer systems. They are compiled against android-35; loading
+# and delegate reflection on API10 must also be verified on Dalvik.
+
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
+@@ -96,7 +96,6 @@
+ import java.lang.reflect.Method;
+ import java.util.ArrayList;
+ import java.util.HashMap;
+-import java.util.Objects;
+ 
+ import org.qtproject.qt5.android.accessibility.QtAccessibilityDelegate;
+ 
+@@ -172,14 +171,16 @@
+                 flags |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+                 flags |= View.SYSTEM_UI_FLAG_FULLSCREEN;
+                 flags |= View.class.getDeclaredField("SYSTEM_UI_FLAG_IMMERSIVE_STICKY").getInt(null);
+-                m_activity.getWindow().getDecorView().setSystemUiVisibility(flags | View.INVISIBLE);
++                if (Build.VERSION.SDK_INT >= 11)
++                    m_activity.getWindow().getDecorView().setSystemUiVisibility(flags | View.INVISIBLE);
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+         } else {
+             m_activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+             m_activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+-            m_activity.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
++            if (Build.VERSION.SDK_INT >= 11)
++                m_activity.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+         }
+         m_layout.requestLayout();
+     }
+@@ -513,6 +514,8 @@
+     */
+     public void updateHandles(int mode, int editX, int editY, int editButtons, int x1, int y1, int x2, int y2, boolean rtl)
+     {
++        if (Build.VERSION.SDK_INT < 11)
++            return;
+         switch (mode & 0xff)
+         {
+             case CursorHandleNotShown:
+@@ -579,41 +582,48 @@
+         }
+     }
+ 
+-    private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener()
+-    {
+-       @Override
+-       public void onDisplayAdded(int displayId) { }
+-
+-       private boolean isSimilarRotation(int r1, int r2)
+-       {
+-        return (r1 == r2)
+-               || (r1 == Surface.ROTATION_0 && r2 == Surface.ROTATION_180)
+-               || (r1 == Surface.ROTATION_180 && r2 == Surface.ROTATION_0)
+-               || (r1 == Surface.ROTATION_90 && r2 == Surface.ROTATION_270)
+-               || (r1 == Surface.ROTATION_270 && r2 == Surface.ROTATION_90);
+-       }
+-
+-       @Override
+-       public void onDisplayChanged(int displayId)
+-       {
+-           Display display = (Build.VERSION.SDK_INT < Build.VERSION_CODES.R)
+-                ? m_activity.getWindowManager().getDefaultDisplay()
+-                : m_activity.getDisplay();
+-           m_currentRotation = display.getRotation();
+-           m_layout.setActivityDisplayRotation(m_currentRotation);
+-           // Process orientation change only if it comes after the size
+-           // change, or if the screen is rotated by 180 degrees.
+-           // Otherwise it will be processed in QtLayout.
+-           if (isSimilarRotation(m_currentRotation, m_layout.displayRotation()))
+-               QtNative.handleOrientationChanged(m_currentRotation, m_nativeOrientation);
+-
+-           float refreshRate = display.getRefreshRate();
+-           QtNative.handleRefreshRateChanged(refreshRate);
+-       }
+-
+-       @Override
+-       public void onDisplayRemoved(int displayId) { }
+-   };
++    private void registerDisplayListener()
++    {
++        if (Build.VERSION.SDK_INT < 17)
++            return;
++        final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener()
++        {
++           @Override
++           public void onDisplayAdded(int displayId) { }
++
++           private boolean isSimilarRotation(int r1, int r2)
++           {
++            return (r1 == r2)
++                   || (r1 == Surface.ROTATION_0 && r2 == Surface.ROTATION_180)
++                   || (r1 == Surface.ROTATION_180 && r2 == Surface.ROTATION_0)
++                   || (r1 == Surface.ROTATION_90 && r2 == Surface.ROTATION_270)
++                   || (r1 == Surface.ROTATION_270 && r2 == Surface.ROTATION_90);
++           }
++
++           @Override
++           public void onDisplayChanged(int displayId)
++           {
++               Display display = (Build.VERSION.SDK_INT < Build.VERSION_CODES.R)
++                    ? m_activity.getWindowManager().getDefaultDisplay()
++                    : m_activity.getDisplay();
++               m_currentRotation = display.getRotation();
++               m_layout.setActivityDisplayRotation(m_currentRotation);
++               // Process orientation change only if it comes after the size
++               // change, or if the screen is rotated by 180 degrees.
++               // Otherwise it will be processed in QtLayout.
++               if (isSimilarRotation(m_currentRotation, m_layout.displayRotation()))
++                   QtNative.handleOrientationChanged(m_currentRotation, m_nativeOrientation);
++
++               float refreshRate = display.getRefreshRate();
++               QtNative.handleRefreshRateChanged(refreshRate);
++           }
++
++           @Override
++           public void onDisplayRemoved(int displayId) { }
++       };
++        DisplayManager displayManager = (DisplayManager)m_activity.getSystemService(Context.DISPLAY_SERVICE);
++        displayManager.registerDisplayListener(displayListener, null);
++    }
+ 
+    public boolean updateActivity(Activity activity)
+    {
+@@ -688,7 +698,7 @@
+         }
+         
+         if (loaderParams.containsKey(STATIC_INIT_CLASSES_KEY)) {
+-            for (String className: Objects.requireNonNull(loaderParams.getStringArray(STATIC_INIT_CLASSES_KEY))) {
++            for (String className: loaderParams.getStringArray(STATIC_INIT_CLASSES_KEY)) {
+                 if (className.length() == 0)
+                     continue;
+ 
+@@ -830,8 +840,7 @@
+         }
+         m_layout = new QtLayout(m_activity, startApplication);
+ 
+-        DisplayManager displayManager = (DisplayManager)m_activity.getSystemService(Context.DISPLAY_SERVICE);
+-        displayManager.registerDisplayListener(displayListener, null);
++        registerDisplayListener();
+ 
+         int orientation = m_activity.getResources().getConfiguration().orientation;
+ 
+@@ -904,7 +913,8 @@
+                 return true;
+             }
+         });
+-        m_editPopupMenu = new EditPopupMenu(m_activity, m_layout);
++        if (Build.VERSION.SDK_INT >= 11)
++            m_editPopupMenu = new EditPopupMenu(m_activity, m_layout);
+     }
+ 
+     public void hideSplashScreen()
+@@ -983,7 +993,8 @@
+ 
+     public void initializeAccessibility()
+     {
+-        m_accessibilityDelegate = new QtAccessibilityDelegate(m_activity, m_layout, this);
++        if (Build.VERSION.SDK_INT >= 18)
++            m_accessibilityDelegate = new QtAccessibilityDelegate(m_activity, m_layout, this);
+     }
+ 
+     public void onWindowFocusChanged(boolean hasFocus) {
+@@ -1257,9 +1268,12 @@
+ 
+     private void setActionBarVisibility(boolean visible)
+     {
++        if (Build.VERSION.SDK_INT < 11)
++            return;
+         if (m_activity.getActionBar() == null)
+             return;
+-        if (ViewConfiguration.get(m_activity).hasPermanentMenuKey() || !visible)
++        if ((Build.VERSION.SDK_INT >= 14
++                && ViewConfiguration.get(m_activity).hasPermanentMenuKey()) || !visible)
+             m_activity.getActionBar().hide();
+         else
+             m_activity.getActionBar().show();
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtLayout.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtLayout.java
+@@ -114,7 +114,10 @@
+             display = windowManager.getDefaultDisplay();
+ 
+             final DisplayMetrics maxMetrics = new DisplayMetrics();
+-            display.getRealMetrics(maxMetrics);
++            if (Build.VERSION.SDK_INT >= 17)
++                display.getRealMetrics(maxMetrics);
++            else
++                display.getMetrics(maxMetrics);
+             maxWidth = maxMetrics.widthPixels;
+             maxHeight = maxMetrics.heightPixels;
+         } else {
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
+@@ -109,6 +109,7 @@
+     private static int m_oldx, m_oldy;
+     private static final int m_moveThreshold = 0;
+     private static ClipboardManager m_clipboardManager = null;
++    private static android.text.ClipboardManager m_legacyClipboardManager = null;
+     private static Method m_checkSelfPermissionMethod = null;
+     private static Boolean m_tabletEventSupported = null;
+     private static boolean m_usePrimaryClip = false;
+@@ -846,8 +847,12 @@
+             runAction(new Runnable() {
+                 @Override
+                 public void run() {
+-                    if (m_activity != null)
+-                        m_clipboardManager = (android.content.ClipboardManager) m_activity.getSystemService(Context.CLIPBOARD_SERVICE);
++                    if (m_activity != null) {
++                        if (Build.VERSION.SDK_INT < 11)
++                            m_legacyClipboardManager = (android.text.ClipboardManager) m_activity.getSystemService(Context.CLIPBOARD_SERVICE);
++                        else
++                            m_clipboardManager = (android.content.ClipboardManager) m_activity.getSystemService(Context.CLIPBOARD_SERVICE);
++                    }
+                     if (m_clipboardManager != null) {
+                         m_clipboardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
+                             public void onPrimaryClipChanged() {
+@@ -874,6 +879,11 @@
+     }
+     private static void setClipboardText(String text)
+     {
++        if (m_legacyClipboardManager != null) {
++            m_legacyClipboardManager.setText(text);
++            onClipboardDataChanged();
++            return;
++        }
+         if (m_clipboardManager != null) {
+             ClipData clipData = ClipData.newPlainText("text/plain", text);
+             updatePrimaryClip(clipData);
+@@ -882,6 +892,8 @@
+ 
+     public static boolean hasClipboardText()
+     {
++        if (m_legacyClipboardManager != null)
++            return m_legacyClipboardManager.hasText();
+         try {
+             if (m_clipboardManager != null && m_clipboardManager.hasPrimaryClip()) {
+                 ClipDescription primaryClipDescription = m_clipboardManager.getPrimaryClipDescription();
+@@ -895,6 +907,10 @@
+ 
+     private static String getClipboardText()
+     {
++        if (m_legacyClipboardManager != null) {
++            CharSequence text = m_legacyClipboardManager.getText();
++            return text == null ? "" : text.toString();
++        }
+         try {
+             if (m_clipboardManager != null && m_clipboardManager.hasPrimaryClip()) {
+                 ClipData primaryClip = m_clipboardManager.getPrimaryClip();
+@@ -930,6 +946,10 @@
+ 
+     private static void setClipboardHtml(String text, String html)
+     {
++        if (Build.VERSION.SDK_INT < 16) {
++            setClipboardText(text);
++            return;
++        }
+         if (m_clipboardManager != null) {
+             ClipData clipData = ClipData.newHtmlText("text/html", text, html);
+             updatePrimaryClip(clipData);
+--- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtSurface.java
++++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtSurface.java
+@@ -104,7 +104,8 @@
+         // QTBUG-65927
+         // Fix event positions depending on Surface position.
+         // In case when Surface is moved, we should also add this move to event position
+-        event.setLocation(event.getX() + getX(), event.getY() + getY());
++        event.setLocation(event.getX() + (android.os.Build.VERSION.SDK_INT >= 11 ? getX() : getLeft()),
++                          event.getY() + (android.os.Build.VERSION.SDK_INT >= 11 ? getY() : getTop()));
+ 
+         QtNative.sendTouchEvent(event, getId());
+         m_gestureDetector.onTouchEvent(event);
+--- a/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java
++++ b/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java
+@@ -94,7 +94,10 @@
+     public QtActivity()
+     {
+         m_loader = new QtActivityLoader(this);
+-        if (Build.VERSION.SDK_INT >= 21) {
++        if (Build.VERSION.SDK_INT < 11) {
++            QT_ANDROID_THEMES = new String[] {"Theme_Light"};
++            QT_ANDROID_DEFAULT_THEME = "Theme_Light";
++        } else if (Build.VERSION.SDK_INT < 14 || Build.VERSION.SDK_INT >= 21) {
+             QT_ANDROID_THEMES = new String[] {"Theme_Holo_Light"};
+             QT_ANDROID_DEFAULT_THEME = "Theme_Holo_Light";
+         } else {
+--- a/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivityLoader.java
++++ b/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivityLoader.java
+@@ -139,7 +139,9 @@
+             e.printStackTrace();
+         }
+ 
+-        m_activity.requestWindowFeature(Window.FEATURE_ACTION_BAR);
++        // Feature 8 meant FEATURE_OPENGL before Android 3.0.
++        if (android.os.Build.VERSION.SDK_INT >= 11)
++            m_activity.requestWindowFeature(Window.FEATURE_ACTION_BAR);
+ 
+         if (QtNative.isStarted()) {
+             boolean updated = QtNative.activityDelegate().updateActivity(m_activity);
+--- a/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtLoader.java
++++ b/qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtLoader.java
+@@ -182,7 +182,8 @@
+     }
+     // Implement in subclass
+ 
+-    private final List<String> supportedAbis = Arrays.asList(Build.SUPPORTED_ABIS);
++    private final List<String> supportedAbis = Build.VERSION.SDK_INT >= 21 ? Arrays.asList(Build.SUPPORTED_ABIS)
++            : Arrays.asList(Build.CPU_ABI, Build.CPU_ABI2);
+     private String preferredAbi = null;
+ 
+     private ArrayList<String> prefferedAbiLibs(String []libs)

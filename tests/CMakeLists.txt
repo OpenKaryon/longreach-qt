@@ -122,11 +122,19 @@ endif()
 # One directory per application, named after it: tests/expected-apps.txt.
 # graphics-gallery and smoke-runner need nothing either Qt version lacks.
 add_subdirectory(graphics-gallery)
-add_subdirectory(smoke-runner)
+
+# Android launches each APK from the host; the desktop process supervisor
+# cannot start another APK as an executable. All eight example apps remain
+# mandatory below.
+set(SMOKE_OMITTED_APPS "")
+if(ANDROID AND QT_VERSION_MAJOR EQUAL 5)
+    list(APPEND SMOKE_OMITTED_APPS smoke-runner)
+else()
+    add_subdirectory(smoke-runner)
+endif()
 
 # Each other app is added when the SDK has every module it needs; an app left
 # out for a reason not recorded in SMOKE_OMITTED_APPS fails the configure step.
-set(SMOKE_OMITTED_APPS "")
 
 smoke_require_modules(SMOKE_HAVE_WIDGETS Widgets Test)
 if(SMOKE_HAVE_WIDGETS)

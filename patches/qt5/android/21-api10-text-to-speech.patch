@@ -1,0 +1,218 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
+# Use old TTS completion callbacks and real language-based voices before API 21.
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
+@@ -39,7 +39,6 @@
+ import android.content.ContentResolver;
+ import android.content.Context;
+ import android.provider.Settings;
+-import android.provider.Settings.SettingNotFoundException;
+ import android.speech.tts.TextToSpeech;
+ import android.speech.tts.TextToSpeech.Engine;
+ import android.speech.tts.TextToSpeech.OnInitListener;
+@@ -83,32 +82,35 @@
+         }
+     };
+ 
+-    // UtteranceProgressListener
+-    private final UtteranceProgressListener mTtsUtteranceProgressListener = new UtteranceProgressListener() {
+-        @Override
+-        public void onDone(String utteranceId) {
+-            Log.w("UtteranceProgressListener", "onDone");
+-            if (utteranceId.equals("UtteranceId")) {
+-                notifyReady(mId);
+-            }
+-        }
+-
+-        @Override
+-        public void onError(String utteranceId) {
+-            Log.w("UtteranceProgressListener", "onError");
+-            if (utteranceId.equals("UtteranceId")) {
+-                notifyReady(mId);
+-            }
+-        }
+-
+-        @Override
+-        public void onStart(String utteranceId) {
+-            Log.w("UtteranceProgressListener", "onStart");
+-            if (utteranceId.equals("UtteranceId")) {
+-                notifySpeaking(mId);
+-            }
+-         }
+-     };
++    // Keep the API 15 listener out of instance initialization on old Dalvik.
++    private void installProgressListener()
++    {
++        mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
++            @Override
++            public void onDone(String utteranceId) {
++                Log.w("UtteranceProgressListener", "onDone");
++                if (utteranceId.equals("UtteranceId")) {
++                    notifyReady(mId);
++                }
++            }
++
++            @Override
++            public void onError(String utteranceId) {
++                Log.w("UtteranceProgressListener", "onError");
++                if (utteranceId.equals("UtteranceId")) {
++                    notifyReady(mId);
++                }
++            }
++
++            @Override
++            public void onStart(String utteranceId) {
++                Log.w("UtteranceProgressListener", "onStart");
++                if (utteranceId.equals("UtteranceId")) {
++                    notifySpeaking(mId);
++                }
++             }
++     });
++    }
+ 
+     public static QtTextToSpeech open(final Context context, final long id)
+     {
+@@ -118,24 +120,34 @@
+     QtTextToSpeech(final Context context, final long id) {
+         mId = id;
+         mTts = new TextToSpeech(context, mTtsChangeListener);
+-        mTts.setOnUtteranceProgressListener(mTtsUtteranceProgressListener);
+-
+-        // Read pitch from settings
++        if (Build.VERSION.SDK_INT >= 15) {
++            installProgressListener();
++        } else {
++            mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
++                @Override
++                public void onUtteranceCompleted(String utteranceId) {
++                    if ("UtteranceId".equals(utteranceId))
++                        notifyReady(mId);
++                }
++            });
++        }
++
+         ContentResolver resolver = context.getContentResolver();
+-        try {
+-            float pitch = Settings.Secure.getFloat(resolver, android.provider.Settings.Secure.TTS_DEFAULT_PITCH);
+-            mPitch = pitch / 100.0f;
+-        } catch (SettingNotFoundException e) {
+-            mPitch = 1.0f;
+-        }
+-
+-        // Read rate from settings
+-        try {
+-            float rate = Settings.Secure.getFloat(resolver, android.provider.Settings.Secure.TTS_DEFAULT_RATE);
+-            mRate = rate / 100.0f;
+-        } catch (SettingNotFoundException e) {
+-            mRate = 1.0f;
+-        }
++        mPitch = readPercentage(resolver, Settings.Secure.TTS_DEFAULT_PITCH);
++        mRate = readPercentage(resolver, Settings.Secure.TTS_DEFAULT_RATE);
++    }
++
++    private static float readPercentage(ContentResolver resolver, String name)
++    {
++        // Old Settings.getFloat throws NPE for an absent setting.
++        final String value = Settings.Secure.getString(resolver, name);
++        if (value != null) {
++            try {
++                return Float.parseFloat(value) / 100.0f;
++            } catch (NumberFormatException ignored) {
++            }
++        }
++        return 1.0f;
+     }
+ 
+     public void say(String text)
+@@ -149,6 +161,12 @@
+         map.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, Float.toString(mVolume));
+         result = mTts.speak(text, TextToSpeech.QUEUE_FLUSH, map);
+ 
++        if (Build.VERSION.SDK_INT < 15) {
++            if (result == TextToSpeech.SUCCESS)
++                notifySpeaking(mId);
++            else
++                notifyError(mId);
++        }
+         Log.w("QtTextToSpeech", "RESULT: " + Integer.toString(result));
+     }
+ 
+@@ -228,6 +246,17 @@
+ 
+     public List<Locale> getAvailableLocales()
+     {
++        if (mInitialized && Build.VERSION.SDK_INT < 21) {
++            ArrayList<Locale> locales = new ArrayList<Locale>();
++            for (Locale locale : Locale.getAvailableLocales()) {
++                final int required = !locale.getVariant().isEmpty() ? TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
++                        : !locale.getCountry().isEmpty() ? TextToSpeech.LANG_COUNTRY_AVAILABLE
++                        : TextToSpeech.LANG_AVAILABLE;
++                if (mTts.isLanguageAvailable(locale) >= required)
++                    locales.add(locale);
++            }
++            return locales;
++        }
+         if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+             //Log.d("QtTextToSpeech", "Locales: " + mTts.getAvailableLanguages());
+             final Set<Locale> languages = mTts.getAvailableLanguages();
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -130,12 +130,13 @@
+     Q_ASSERT(g_qtSpeechClass);
+ 
+     const jlong id = reinterpret_cast<jlong>(this);
++    // A fast initialization callback may arrive before Java open() returns.
++    (*textToSpeechMap)[id] = this;
+     m_speech = QJNIObjectPrivate::callStaticObjectMethod(g_qtSpeechClass,
+                                                          "open",
+                                                          "(Landroid/content/Context;J)Lorg/qtproject/qt5/android/speech/QtTextToSpeech;",
+                                                          QtAndroidPrivate::context(),
+                                                          id);
+-    (*textToSpeechMap)[id] = this;
+ }
+ 
+ QTextToSpeechEngineAndroid::~QTextToSpeechEngineAndroid()
+@@ -313,6 +314,19 @@
+ 
+ QVector<QVoice> QTextToSpeechEngineAndroid::availableVoices() const
+ {
++    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++        QVector<QVoice> result;
++        QStringList names;
++        for (const QLocale &locale : availableLocales()) {
++            const QString name = locale.name();
++            if (!names.contains(name)) {
++                names << name;
++                // Legacy engines expose one default voice per language/region.
++                result << createVoice(name, QVoice::Unknown, QVoice::Other, name);
++            }
++        }
++        return result;
++    }
+     auto voices = m_speech.callObjectMethod("getAvailableVoices", "()Ljava/util/List;");
+     int count = voices.callMethod<jint>("size");
+     QVector<QVoice> result;
+@@ -326,12 +340,23 @@
+ 
+ bool QTextToSpeechEngineAndroid::setVoice(const QVoice &voice)
+ {
++    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++        const QString name = voiceData(voice).toString();
++        const QLocale locale(name);
++        return !name.isEmpty() && locale.name() == name && setLocale(locale);
++    }
+     return m_speech.callMethod<jboolean>("setVoice", "(Ljava/lang/String;)Z",
+                                          QJNIObjectPrivate::fromString(voiceData(voice).toString()).object());
+ }
+ 
+ QVoice QTextToSpeechEngineAndroid::voice() const
+ {
++    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++        if (m_state == QTextToSpeech::BackendError)
++            return QVoice();
++        const QString name = locale().name();
++        return createVoice(name, QVoice::Unknown, QVoice::Other, name);
++    }
+     auto voice = m_speech.callObjectMethod("getVoice", "()Ljava/lang/Object;");
+     if (voice.isValid()) {
+         return javaVoiceObjectToQVoice(voice);

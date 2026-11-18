@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+
+--- a/qtbase/src/plugins/platforms/android/androidjnimain.cpp
++++ b/qtbase/src/plugins/platforms/android/androidjnimain.cpp
+@@ -61,6 +61,7 @@
+ #include <android/api-level.h>
+ 
+ #include <QtCore/private/qjnihelpers_p.h>
++#include <QtCore/qatomic.h>
+ #include <QtCore/private/qjni_p.h>
+ #include <QtCore/qbasicatomic.h>
+ #include <QtCore/qresource.h>
+@@ -357,6 +358,16 @@
+ 
+     jint generateViewId()
+     {
++        if (QtAndroidPrivate::androidSdkVersion() < 17) {
++            // Same non-resource ID range as View.generateViewId().
++            static QAtomicInt nextId(1);
++            for (;;) {
++                const int id = nextId.loadRelaxed();
++                const int next = id == 0x00ffffff ? 1 : id + 1;
++                if (nextId.testAndSetRelaxed(id, next))
++                    return id;
++            }
++        }
+         return QJNIObjectPrivate::callStaticMethod<jint>("android/view/View","generateViewId",
+                                                          "()I");
+     }
+--- a/qtbase/src/plugins/platforms/android/qandroidplatformscreen.cpp
++++ b/qtbase/src/plugins/platforms/android/qandroidplatformscreen.cpp
+@@ -118,7 +118,10 @@
+     }
+     if (!display.isValid())
+         return;
+-    m_name = display.callObjectMethod("getName", "()Ljava/lang/String;").toString();
++    if (QtAndroidPrivate::androidSdkVersion() >= 17)
++        m_name = display.callObjectMethod("getName", "()Ljava/lang/String;").toString();
++    else
++        m_name = QStringLiteral("Android display %1").arg(display.callMethod<jint>("getDisplayId"));
+     m_refreshRate = display.callMethod<jfloat>("getRefreshRate");
+     if (QtAndroidPrivate::androidSdkVersion() < 23) {
+         m_modes << Mode { .size = m_physicalSize.toSize(), .refreshRate = m_refreshRate };

@@ -12,6 +12,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFunctions>
 #include <QScopedPointer>
+#include <QQuickWindow>
 #include <QSGAbstractRenderer>
 #include <QSGEngine>
 #include <QSGMaterialRhiShader>
@@ -55,6 +56,13 @@ public:
 void checkQt5SceneGraphEngine(SmokeReporter &r)
 {
     r.check("scenegraph/qt5-engine-renderer", [&](QString &d) {
+        // QSGEngine owns the scene-graph context it creates. The software
+        // adaptation returns a shared context, so it cannot be used here.
+        const QString backend = QQuickWindow::sceneGraphBackend();
+        if (backend == QLatin1String("software") || backend == QLatin1String("softwarecontext")) {
+            r.skip(d, QStringLiteral("QSGEngine requires the OpenGL scene-graph backend"));
+            return false;
+        }
         QOpenGLContext context;
         if (!context.create()) {
             r.skip(d, QStringLiteral("no OpenGL context"));

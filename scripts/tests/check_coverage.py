@@ -38,6 +38,7 @@ PLATFORM_MODULES = {
     "windows": {"qtwinextras"},
     "linux":   {"qtx11extras", "qtwayland"},
     "macos":   {"qtmacextras"},
+    "android": {"qtandroidextras"},
 }
 NEVER_BUILT = set()
 
@@ -175,12 +176,6 @@ UNREACHABLE = {
         ),
     },
     5: {
-        "no Android target": (
-            "QAndroidActivityResultReceiver", "QAndroidBinder", "QAndroidIntent",
-            "QAndroidJniEnvironment", "QAndroidJniExceptionCleaner",
-            "QAndroidJniObject", "QAndroidParcel", "QAndroidService",
-            "QAndroidServiceConnection",
-        ),
         "QPA and platform-plugin internals, which applications do not call": (
             "QCocoaSystemTrayIcon", "QEglFSKmsDevice", "QEglFSKmsEventReader",
             "QEglFSKmsIntegration", "QEglFSKmsScreen", "QPlatformDrag",

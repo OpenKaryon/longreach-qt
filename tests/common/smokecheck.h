@@ -26,7 +26,7 @@
 
 inline QDir smokeArtifactDirectory()
 {
-#ifdef LONGREACH_DONUT_JNI
+#if defined(LONGREACH_DONUT_JNI) || defined(LONGREACH_ANDROID_APK)
     return QDir::current(); // The Activity runner selects app-private storage.
 #else
     return QDir(QCoreApplication::applicationDirPath());

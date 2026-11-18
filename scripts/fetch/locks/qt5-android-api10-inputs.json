@@ -1,0 +1,41 @@
+{
+  "purpose": "Pinned inputs for the Qt 5 Android 2.3.3/API 10 armeabi-v7a SDK and emulator.",
+  "sources": [
+    {
+      "file": "aosp-ndk-r7-api9-arm.tar.gz",
+      "url": "https://android.googlesource.com/platform/prebuilt/+archive/968372cd8fffab51ff89c6b3cb40bc74ede24cb9/ndk/android-ndk-r7/platforms/android-9/arch-arm.tar.gz",
+      "sha256": "6f7ec1a9b177ccd1da48c2045d14c5f62fc7db32581919535269cc2738a35f8d",
+      "encoding": "binary"
+    },
+    {
+      "file": "aosp-cpufeatures-android-4.0.3-r1.tar.gz",
+      "url": "https://android.googlesource.com/platform/ndk/+archive/2d77f5a05f60029c981f299b222cfe28db18ccf7/sources/android/cpufeatures.tar.gz",
+      "sha256": "cc8fffee51a932dd6329a57dceedc448d46173c2135da98f52010e82ba296a0e",
+      "encoding": "binary"
+    },
+    {
+      "file": "android-2.3.3_r02-linux.zip",
+      "url": "https://dl.google.com/android/repository/android-2.3.3_r02-linux.zip",
+      "sha256": "54bdb0f1ca06ba5747061ddeea20f431af72c448334fd4d3d7f84ea2ccd29fea",
+      "encoding": "binary"
+    },
+    {
+      "file": "kernel-qemu-armv7",
+      "url": "https://android.googlesource.com/platform/prebuilt/+/android-2.3.3_r1/android-arm/kernel/kernel-qemu-armv7?format=TEXT",
+      "sha256": "6dcf3553f233825cdb83ae8c62b7af23f72ddf753d828e2343c0a482bb23b5ce",
+      "encoding": "base64"
+    },
+    {
+      "file": "tools_r24.4.1-windows.zip",
+      "url": "https://dl.google.com/android/repository/tools_r24.4.1-windows.zip",
+      "sha256": "74fe511d80d28678f2250f89b63d0d8e5ba80428cb2345279fa019183fa0476f",
+      "encoding": "binary"
+    },
+    {
+      "file": "android-35.jar",
+      "installed_sdk_path": "platforms/android-35/android.jar",
+      "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
+      "encoding": "installed"
+    }
+  ]
+}

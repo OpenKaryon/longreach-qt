@@ -61,7 +61,7 @@ QT_END_NAMESPACE
 
 namespace {
 
-// The graphs need a live OpenGL context of at least 2.1: without one
+// The graphs need desktop OpenGL 2.1 or OpenGL ES 2.0: without one
 // addSeries() crashes on a null renderer, and with a format reporting less
 // than 2.1 DataVisualization calls qFatal() (Qt 5's offscreen plugin on GLX
 // reports 2.0 whatever the driver gives). Returns the reason they cannot run,
@@ -81,6 +81,9 @@ QString glContextProblem()
     context.doneCurrent();
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     // Checked against Qt 5.15's abstract3drenderer.cpp and texturehelper.cpp.
+    if (es && qMakePair(format.majorVersion(), format.minorVersion()) < qMakePair(2, 0))
+        return QStringLiteral("QtDataVisualization needs OpenGL ES 2.0; this context reports %1.%2")
+                .arg(format.majorVersion()).arg(format.minorVersion());
     if (!es && qMakePair(format.majorVersion(), format.minorVersion()) < qMakePair(2, 1))
         return QStringLiteral("QtDataVisualization needs OpenGL 2.1 and aborts below it; "
                               "this context reports %1.%2")

@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# GLES2 exposes the fragment uniform limit in vectors, not components.
+
+--- a/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
++++ b/qtdatavis3d/src/datavisualization/engine/abstract3drenderer.cpp
+@@ -337,7 +337,12 @@
+     }
+ 
+     GLint maxFragmentUniformComponents = 0;
++#ifdef QT_OPENGL_ES_2
++    glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &maxFragmentUniformComponents);
++    maxFragmentUniformComponents *= 4;
++#else
+     glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &maxFragmentUniformComponents);
++#endif
+     if (maxFragmentUniformComponents > 0
+             && maxFragmentUniformComponents < minVolumeFragmentUniformComponents) {
+         // The texture shaders need colorIndex[256] plus the other uniforms.

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026 OpenKaryon
+#
+# The JIT uses RegisterID(-1) for NoRegister. A fixed signed underlying
+# type makes that sentinel a valid constant expression in Clang 21.
+
+--- a/qtdeclarative/src/3rdparty/masm/assembler/ARMv7Assembler.h
++++ b/qtdeclarative/src/3rdparty/masm/assembler/ARMv7Assembler.h
+@@ -47,7 +47,7 @@
+ namespace JSC {
+ 
+ namespace ARMRegisters {
+-    typedef enum {
++    typedef enum : int {
+         r0,
+         r1,
+         r2,

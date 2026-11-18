@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: LGPL-3.0-only
+# Keep the optional Google Billing backend from preventing SDK startup.
+--- a/qtpurchasing/src/purchasing/inapppurchase/android/qandroidjni.cpp
++++ b/qtpurchasing/src/purchasing/inapppurchase/android/qandroidjni.cpp
+@@ -130,6 +130,16 @@
+     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK)
+         return JNI_ERR;
+ 
++    // Billing is optional (and not provided by the Gingerbread guest).
++    // Do not resolve QtInAppPurchase's unavailable Java interfaces at load time.
++    jclass billing = env->FindClass("com/android/billingclient/api/BillingClient");
++    if (!billing) {
++        env->ExceptionClear();
++        qWarning("QtPurchasing: Google Billing unavailable; using generic backend");
++        return JNI_VERSION_1_6;
++    }
++    env->DeleteLocalRef(billing);
++
+     jclass clazz = env->FindClass("org/qtproject/qt5/android/purchasing/QtInAppPurchase");
+     if (!clazz)
+         return JNI_ERR;
+--- a/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp
++++ b/qtpurchasing/src/purchasing/inapppurchase/qinapppurchasebackendfactory.cpp
+@@ -30,6 +30,7 @@
+ 
+ #if defined(Q_OS_ANDROID)
+ #  include "qandroidinapppurchasebackend_p.h"
++#  include <QtAndroidExtras/qandroidjniobject.h>
+ #elif defined(Q_OS_DARWIN) && !defined(Q_OS_WATCHOS)
+ #  include "qmacinapppurchasebackend_p.h"
+ #elif defined(Q_OS_WINRT)
+@@ -43,6 +44,8 @@
+ QInAppPurchaseBackend *QInAppPurchaseBackendFactory::create()
+ {
+ #if defined(Q_OS_ANDROID)
++    if (!QAndroidJniObject::isClassAvailable("com/android/billingclient/api/BillingClient"))
++        return new QInAppPurchaseBackend;
+     return new QAndroidInAppPurchaseBackend;
+ #elif defined(Q_OS_DARWIN) && !defined(Q_OS_WATCHOS)
+     return new QMacInAppPurchaseBackend;

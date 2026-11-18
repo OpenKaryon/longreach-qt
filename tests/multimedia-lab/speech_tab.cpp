@@ -6,6 +6,10 @@
 #include "../common/smokecheck.h"
 
 #include <QComboBox>
+#include <QEventLoop>
+#include <QSignalBlocker>
+#include <QTimer>
+#include <QVariant>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -16,6 +20,10 @@
 #include <QTextToSpeech>
 #include <QVBoxLayout>
 #include <QVoice>
+
+#if QT_VERSION_MAJOR < 6
+Q_DECLARE_METATYPE(QVoice)
+#endif
 
 namespace {
 
@@ -61,21 +69,6 @@ QWidget *makeSpeechTab()
     layout->addWidget(backend);
 
     QComboBox *voices = new QComboBox;
-    const auto availableVoices = speech->availableVoices();
-    for (const QVoice &voice : availableVoices) {
-#if QT_VERSION_MAJOR < 6
-        const QString label = QStringLiteral("%1 — %2, %3")
-                .arg(voice.name(), QVoice::genderName(voice.gender()),
-                     QVoice::ageName(voice.age()));
-#else
-        const QString label = QStringLiteral("%1 — %2")
-                .arg(voice.name(), voice.locale().nativeLanguageName());
-#endif
-        voices->addItem(label);
-    }
-    if (availableVoices.isEmpty())
-        voices->addItem(QStringLiteral("No voices reported"));
-
     QTextEdit *text = new QTextEdit;
     text->setPlainText(QStringLiteral(
         "Qt can read this text using the operating system's installed voice."));
@@ -108,13 +101,34 @@ QWidget *makeSpeechTab()
     buttons->addWidget(status, 1);
     layout->addLayout(buttons);
 
-    speak->setEnabled(!availableVoices.isEmpty() && !backendFailed(*speech));
-    stop->setEnabled(speak->isEnabled());
-
+    const auto refreshVoices = [speech, voices, speak, stop] {
+        const QSignalBlocker blocker(voices);
+        voices->clear();
+        const auto available = speech->availableVoices();
+        const QString current = speech->voice().name();
+        for (const QVoice &voice : available) {
+#if QT_VERSION_MAJOR < 6
+            const QString label = QStringLiteral("%1 — %2, %3")
+                    .arg(voice.name(), QVoice::genderName(voice.gender()), QVoice::ageName(voice.age()));
+#else
+            const QString label = QStringLiteral("%1 — %2")
+                    .arg(voice.name(), voice.locale().nativeLanguageName());
+#endif
+            voices->addItem(label, QVariant::fromValue(voice));
+            if (voice.name() == current)
+                voices->setCurrentIndex(voices->count() - 1);
+        }
+        if (available.isEmpty())
+            voices->addItem(QStringLiteral("No voices reported"));
+        speak->setEnabled(!available.isEmpty() && !backendFailed(*speech));
+        stop->setEnabled(speak->isEnabled());
+    };
+    refreshVoices();
     QObject::connect(voices, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     page, [speech, availableVoices](int index) {
-        if (index >= 0 && index < availableVoices.size())
-            speech->setVoice(availableVoices.at(index));
+                     page, [speech, voices](int index) {
+        const QVariant voice = voices->itemData(index);
+        if (voice.canConvert<QVoice>())
+            speech->setVoice(voice.value<QVoice>());
     });
     QObject::connect(rate, &QSlider::valueChanged, page,
                      [speech](int value) { speech->setRate(value / 100.0); });
@@ -127,7 +141,11 @@ QWidget *makeSpeechTab()
     QObject::connect(stop, &QPushButton::clicked, page,
                      [speech] { speech->stop(); });
     QObject::connect(speech, &QTextToSpeech::stateChanged, page,
-                     [status](QTextToSpeech::State state) { status->setText(stateName(state)); });
+                     [status, speech, refreshVoices](QTextToSpeech::State state) {
+        status->setText(stateName(state));
+        if (state == QTextToSpeech::Ready || backendFailed(*speech))
+            refreshVoices();
+    });
 
     return page;
 }
@@ -137,6 +155,14 @@ void addSpeechChecks(SmokeReporter &r)
     r.check("speech/platform-backend-and-voices", [&r](QString &detail) {
         const QStringList engines = QTextToSpeech::availableEngines();
         QTextToSpeech speech;
+        if (!engines.isEmpty() && backendFailed(speech)) {
+            // Android binds its speech service asynchronously. Give it a
+            // bounded opportunity to report readiness before inspecting voices.
+            QEventLoop loop;
+            QObject::connect(&speech, &QTextToSpeech::stateChanged, &loop, &QEventLoop::quit);
+            QTimer::singleShot(3000, &loop, &QEventLoop::quit);
+            loop.exec();
+        }
         const auto voices = speech.availableVoices();
         detail = QStringLiteral("engines=%1 voices=%2 state=%3")
                 .arg(engines.join(QStringLiteral(",")))

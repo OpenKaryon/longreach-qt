@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# The voice-communication source is unavailable before Android API 11.
+
+--- a/qtmultimedia/src/plugins/opensles/qopenslesaudioinput.cpp
++++ b/qtmultimedia/src/plugins/opensles/qopenslesaudioinput.cpp
+@@ -46,6 +46,9 @@
+ 
+ #ifdef ANDROID
+ #include <SLES/OpenSLES_AndroidConfiguration.h>
++#ifndef SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION
++#define SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION ((SLuint32) 0x00000004)
++#endif
+ #include <QtCore/private/qjnihelpers_p.h>
+ #include <QtCore/private/qjni_p.h>
+ #endif
+@@ -117,7 +120,8 @@
+         m_recorderPreset = SL_ANDROID_RECORDING_PRESET_CAMCORDER;
+     else if (qstrcmp(device, QT_ANDROID_PRESET_VOICE_RECOGNITION) == 0)
+         m_recorderPreset = SL_ANDROID_RECORDING_PRESET_VOICE_RECOGNITION;
+-    else if (qstrcmp(device, QT_ANDROID_PRESET_VOICE_COMMUNICATION) == 0)
++    else if (qstrcmp(device, QT_ANDROID_PRESET_VOICE_COMMUNICATION) == 0
++             && QtAndroidPrivate::androidSdkVersion() >= 11)
+         m_recorderPreset = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
+     else
+         m_recorderPreset = SL_ANDROID_RECORDING_PRESET_GENERIC;
+--- a/qtmultimedia/src/plugins/opensles/qopenslesengine.cpp
++++ b/qtmultimedia/src/plugins/opensles/qopenslesengine.cpp
+@@ -114,8 +114,9 @@
+ #ifdef ANDROID
+         devices << QT_ANDROID_PRESET_MIC
+                 << QT_ANDROID_PRESET_CAMCORDER
+-                << QT_ANDROID_PRESET_VOICE_RECOGNITION
+-                << QT_ANDROID_PRESET_VOICE_COMMUNICATION;
++                << QT_ANDROID_PRESET_VOICE_RECOGNITION;
++        if (QtAndroidPrivate::androidSdkVersion() >= 11)
++            devices << QT_ANDROID_PRESET_VOICE_COMMUNICATION;
+ #else
+         devices << "default";
+ #endif

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Preserve QtScript ARM-mode JIT ABI under the custom Android Clang mkspec.
+--- a/qtscript/src/script/script.pro
++++ b/qtscript/src/script/script.pro
+@@ -64,7 +64,7 @@
+ # auto_ptr is no longer part of the c++1z standard.
+ CONFIG -= c++1z
+ 
+-android-clang:equals(ANDROID_TARGET_ARCH, armeabi-v7a) {
++android:equals(ANDROID_TARGET_ARCH, armeabi-v7a) {
+     QMAKE_CFLAGS_RELEASE -= -mthumb
+     QMAKE_CFLAGS_RELEASE *= -marm
+     QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO -= -mthumb

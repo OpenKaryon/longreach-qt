@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: BSL-1.0 AND MIT
+# Copyright (C) 2026 OpenKaryon
+#
+# Respect libc++ wide-character configuration, preserve valid enum sentinel
+# values with Clang 21, and keep immutable RapidJSON string refs nonassignable.
+
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/int_float_mixture_enum.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/int_float_mixture_enum.hpp
+@@ -12,7 +12,7 @@
+ 
+ namespace boost { namespace numeric
+ {
+-  enum int_float_mixture_enum
++  enum int_float_mixture_enum : int
+   {
+      integral_to_integral
+     ,integral_to_float
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp
+@@ -12,7 +12,7 @@
+ 
+ namespace boost { namespace numeric
+ {
+-  enum udt_builtin_mixture_enum
++  enum udt_builtin_mixture_enum : int
+   {
+      builtin_to_builtin
+     ,builtin_to_udt
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/config/stdlib/libcpp.hpp
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/boost/1.65.1/include/boost/config/stdlib/libcpp.hpp
+@@ -76,6 +76,11 @@
+ #endif
+ 
+ 
++#if defined(_LIBCPP_HAS_WIDE_CHARACTERS) && !_LIBCPP_HAS_WIDE_CHARACTERS
++# define BOOST_NO_STD_WSTRING
++# define BOOST_NO_STD_WSTREAMBUF
++#endif
++
+ #if _LIBCPP_VERSION < 3700
+ // libc++ uses a non-standard messages_base
+ #define BOOST_NO_STD_MESSAGES
+--- a/qtlocation/src/3rdparty/mapbox-gl-native/deps/rapidjson/1.1.0/include/rapidjson/document.h
++++ b/qtlocation/src/3rdparty/mapbox-gl-native/deps/rapidjson/1.1.0/include/rapidjson/document.h
+@@ -316,7 +316,7 @@
+ 
+     GenericStringRef(const GenericStringRef& rhs) : s(rhs.s), length(rhs.length) {}
+ 
+-    GenericStringRef& operator=(const GenericStringRef& rhs) { s = rhs.s; length = rhs.length; }
++    GenericStringRef& operator=(const GenericStringRef& rhs) = delete;
+ 
+     //! implicit conversion to plain CharType pointer
+     operator const Ch *() const { return s; }

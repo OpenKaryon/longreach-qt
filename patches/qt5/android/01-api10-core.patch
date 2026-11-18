@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# QtCore bootstrap compatibility with old Bionic and the minimal libc++ runtime.
+# Preserve newer Android paths behind SDK-level checks.
+
+--- a/qtbase/src/corelib/text/qstring.h
++++ b/qtbase/src/corelib/text/qstring.h
+@@ -928,8 +928,10 @@
+ 
+     static inline QString fromStdString(const std::string &s);
+     inline std::string toStdString() const;
++#if !defined(_LIBCPP_HAS_WIDE_CHARACTERS) || _LIBCPP_HAS_WIDE_CHARACTERS
+     static inline QString fromStdWString(const std::wstring &s);
+     inline std::wstring toStdWString() const;
++#endif
+ 
+ #if defined(Q_STDLIB_UNICODE_STRINGS) || defined(Q_QDOC)
+     static inline QString fromStdU16String(const std::u16string &s);
+@@ -1552,6 +1554,7 @@
+ inline QString QString::fromStdString(const std::string &s)
+ { return fromUtf8(s.data(), int(s.size())); }
+ 
++#if !defined(_LIBCPP_HAS_WIDE_CHARACTERS) || _LIBCPP_HAS_WIDE_CHARACTERS
+ inline std::wstring QString::toStdWString() const
+ {
+     std::wstring str;
+@@ -1567,6 +1570,7 @@
+ 
+ inline QString QString::fromStdWString(const std::wstring &s)
+ { return fromWCharArray(s.data(), int(s.size())); }
++#endif
+ 
+ #if defined(Q_STDLIB_UNICODE_STRINGS)
+ inline QString QString::fromStdU16String(const std::u16string &s)
+--- a/qtbase/src/corelib/time/qtimezoneprivate_tz.cpp
++++ b/qtbase/src/corelib/time/qtimezoneprivate_tz.cpp
+@@ -1272,12 +1272,14 @@
+         // If defined, at runtime it can only be greater than this, so this is a safe bet:
+         return SYMLOOP_MAX;
+ #else
++#ifdef _SC_SYMLOOP_MAX
+         errno = 0;
+         long result = sysconf(_SC_SYMLOOP_MAX);
+         if (result >= 0)
+             return result;
+         // result is -1, meaning either error or no limit
+         Q_ASSERT(!errno); // ... but it can't be an error, POSIX mandates _SC_SYMLOOP_MAX
++#endif
+ 
+         // therefore we can make up our own limit
+ #  ifdef MAXSYMLINKS

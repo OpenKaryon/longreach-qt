@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Let the existing inotify_init fallback handle sysroots without inotify_init1.
+
+--- a/qtbase/src/corelib/io/qfilesystemwatcher_inotify.cpp
++++ b/qtbase/src/corelib/io/qfilesystemwatcher_inotify.cpp
+@@ -225,6 +225,12 @@
+ # if defined(Q_OS_ANDROID) && (__ANDROID_API__ < 21)
+ static inline int inotify_init1(int flags)
+ {
++#  ifdef __NR_inotify_init1
+     return syscall(__NR_inotify_init1, flags);
++#  else
++    Q_UNUSED(flags);
++    errno = ENOSYS;
++    return -1;
++#  endif
+ }
+ # endif

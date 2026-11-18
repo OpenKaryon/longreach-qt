@@ -36,6 +36,8 @@ smoke_add_app(gl-heavy-gallery
 # for it itself.
 if(WIN32)
     target_link_libraries(gl-heavy-gallery PRIVATE opengl32)
+elseif(ANDROID)
+    target_link_libraries(gl-heavy-gallery PRIVATE GLESv2)
 else()
     find_package(OpenGL)
     if(TARGET OpenGL::GL)

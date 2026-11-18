@@ -6,6 +6,7 @@
 #include "checks.h"
 
 #include <QThread>
+#include <QScopedPointer>
 #include <QThreadPool>
 #include <QRunnable>
 #include <QMutex>
@@ -50,6 +51,28 @@ void checkConcurrency(SmokeReporter &r)
         t.start(); t.wait(2000);
         if (!ran) { d="did not run"; return false; }
         return true;
+    });
+    r.check("thread/qthread-explicit-stack", [&](QString &detail) {
+        class Worker : public QThread {
+        public:
+            bool ran = false;
+            void run() override { ran = true; }
+        };
+        QScopedPointer<Worker> thread(new Worker);
+        QObject::connect(thread.data(), SIGNAL(finished()), thread.data(), SLOT(deleteLater()));
+        thread->setStackSize(256 * 1024);
+        thread->start();
+        if (!thread->wait(10000)) {
+            detail = QStringLiteral("worker did not finish within 10 seconds");
+            // A timed-out worker only references itself. Keep it alive until
+            // finished()->deleteLater(), without reading its unsynchronized flag.
+            if (thread->isRunning())
+                thread.take();
+            return false;
+        }
+        detail = QStringLiteral("finished=1 ran=%1 stack=%2")
+                .arg(thread->ran).arg(thread->stackSize());
+        return thread->ran && thread->isFinished();
     });
     r.check("thread/threadpool+runnable", [&r](QString &d) {
         QAtomicInt counter(0);
@@ -163,8 +186,18 @@ void checkConcurrency(SmokeReporter &r)
         marker.close();
 
         QProcess p;
+#ifdef LONGREACH_ANDROID_APK
+        // An APK's applicationFilePath is not a standalone native executable.
+        // Exercise the real process/pipe backend with the system shell; pass
+        // the private marker path as an argument rather than shell source.
+        p.start(QStringLiteral("/system/bin/sh"),
+                {QStringLiteral("-c"), QStringLiteral("echo smoke > \"$1\""),
+                 QStringLiteral("longreach-selftest"), markerPath});
+        if (!p.waitForStarted(10000)) { d = p.errorString(); return false; }
+#else
         p.start(QCoreApplication::applicationFilePath(), {"--selftest-child", markerPath});
         if (!p.waitForStarted(10000)) { r.skip(d,"process not startable"); return false; }
+#endif
         // A static build of this binary can take seconds to start on a busy
         // host; wait as long as the Qt 4 branch does.
         p.waitForFinished(10000);

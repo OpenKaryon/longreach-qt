@@ -63,7 +63,7 @@ its original flags and SKIP behaviour. No Qt/LLVM rebuild is needed.
 
 ## Mobile smoke tests
 
-On Android, separate APKs exercise QtCore, the strict C++23 suite and
+On Qt 4 Android 1.6, separate APKs exercise QtCore, the strict C++23 suite and
 shared application tests. The JNI adapter calls the same `qt-selftest`,
 Graphics Gallery, Network GUI and Painting Lab entry points used by the
 desktop suite. The host runs each APK sequentially and retrieves the
@@ -78,6 +78,16 @@ its Controls page. The test checks the first rendered frame, a tap
 delivered through the native app, and a redraw with preserved state
 after the app resumes. The runner also opens the full shared gallery
 in a launcher Activity and taps through to the second Controls page.
+
+Qt 5 Android 2.3.3 uses the actual QtActivity and shared Qt SDK. Its
+[build and run guide](targets/qt5-android-gingerbread.md) covers all eight
+common applications, strict C++23 checks in both selftest profiles and
+Widgets/QML gallery rendering. The core and extended selftest APKs partition
+the existing Qt check groups to fit Gingerbread's 96-DSO process limit;
+the desktop/full profile still runs their union. All 25 C++23 checks are
+mandatory with zero skips in both Android profiles. These runs use the
+headless emulator serially and save reports and PNGs in app-private storage.
+See the [SDK results](results/qt5-android-gingerbread-sdk-llvm21-20261117.md).
 
 Use the same visual and lifecycle checks when an iOS target is available.
 Packaging, launching the app and retrieving its report belong to each

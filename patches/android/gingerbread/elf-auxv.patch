@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# The old Bionic elf.h lacks the standard 32-bit auxiliary-vector entry type.
+--- a/usr/include/elf.h
++++ b/usr/include/elf.h
+@@ -53,4 +53,11 @@
+ 
+ #include <sys/exec_elf.h>
+ 
++typedef struct {
++    Elf32_Word a_type;
++    union {
++        Elf32_Word a_val;
++    } a_un;
++} Elf32_auxv_t;
++
+ #endif /* _ELF_H */

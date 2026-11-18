@@ -1367,7 +1367,7 @@ void checkGalleryRendering(SmokeReporter &r)
         });
     }
     r.check("gallery/save-contact-sheet", [&](QString &d) {
-        d = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("widgets-gallery-pages.png"));
+        d = smokeArtifactDirectory().filePath(QStringLiteral("widgets-gallery-pages.png"));
         return sheet.save(d);
     });
 }

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Use the C++ float overload available through libc++ and <cmath>.
+
+--- a/qtquick3d/src/runtimerender/resourcemanager/qssgrenderprefiltertexture.cpp
++++ b/qtquick3d/src/runtimerender/resourcemanager/qssgrenderprefiltertexture.cpp
+@@ -112,7 +112,7 @@
+     M8E8() : m(0), e(0){
+     }
+     M8E8(const float val) {
+-        float l2 = 1.f + std::floor(log2f(val));
++        float l2 = 1.f + std::floor(std::log2(val));
+         float mm = val / powf(2.f, l2);
+         m = quint8(mm * 255.f);
+         e = quint8(l2 + 128);

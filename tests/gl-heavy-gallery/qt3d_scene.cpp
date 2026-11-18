@@ -65,11 +65,13 @@
 #ifdef Q_OS_WIN
 # include <windows.h>
 #endif
+#ifndef QT_OPENGL_ES_2
 #ifdef Q_OS_MACOS
 # include <OpenGL/gl.h>
 #else
 # include <GL/gl.h>
 #endif
+#endif // QT_OPENGL_ES_2
 #include <math.h>
 
 namespace {
@@ -101,6 +103,7 @@ static void makeVisibleWithoutLights(Qt3DExtras::QPhongMaterial *m, const QColor
     m->setAmbient(c.darker(150));
 }
 
+#ifndef QT_OPENGL_ES_2
 class Compat3DWindow : public QOpenGLWindow
 {
 public:
@@ -551,6 +554,16 @@ static QWidget *buildCompatQt3DTab()
     lay->addWidget(warning);
     return page;
 }
+
+#else
+static QWidget *buildCompatQt3DTab()
+{
+    return makeUnsupportedPlaceholder(
+        QStringLiteral("Desktop OpenGL fallback unavailable"),
+        QStringLiteral("The fixed-function fallback uses desktop OpenGL. "
+                       "The Qt3D node and material APIs remain covered by --selftest."));
+}
+#endif // QT_OPENGL_ES_2
 
 } // namespace
 

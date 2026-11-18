@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Allow API 10 manifests in this backported Android SDK.
+
+--- a/qtbase/src/tools/androiddeployqt/main.cpp
++++ b/qtbase/src/tools/androiddeployqt/main.cpp
+@@ -173,7 +173,7 @@
+     // Versioning
+     QString versionName;
+     QString versionCode;
+-    QByteArray minSdkVersion{"21"};
++    QByteArray minSdkVersion{"10"};
+     QByteArray targetSdkVersion{"31"};
+ 
+     // lib c++ path
+@@ -1448,8 +1448,8 @@
+                     options.packageName = reader.attributes().value(QLatin1String("package")).toString();
+                 } else if (reader.name() == QLatin1String("uses-sdk")) {
+                     if (reader.attributes().hasAttribute(QLatin1String("android:minSdkVersion")))
+-                        if (reader.attributes().value(QLatin1String("android:minSdkVersion")).toInt() < 21) {
+-                            fprintf(stderr, "Invalid minSdkVersion version, minSdkVersion must be >= 21\n");
++                        if (reader.attributes().value(QLatin1String("android:minSdkVersion")).toInt() < 10) {
++                            fprintf(stderr, "Invalid minSdkVersion version, minSdkVersion must be >= 10\n");
+                             return false;
+                         }
+                 } else if ((reader.name() == QLatin1String("application") ||

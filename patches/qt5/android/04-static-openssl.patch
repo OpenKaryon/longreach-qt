@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+#
+# Honor the configured OpenSSL headers and static libraries on Android.
+
+--- a/qtbase/src/network/ssl/ssl.pri
++++ b/qtbase/src/network/ssl/ssl.pri
+@@ -116,9 +116,7 @@
+         #   - configure: -openssl -openssl-linked -I <OPENSSL_DIR>\include -L <OPENSSL_DIR>\lib\VC\static OPENSSL_LIBS="-lUser32 -lAdvapi32 -lGdi32" OPENSSL_LIBS_DEBUG="-lssleay32MDd -llibeay32MDd" OPENSSL_LIBS_RELEASE="-lssleay32MD -llibeay32MD"
+ 
+         qtConfig(openssl-linked): {
+-            android {
+-                build_pass|single_android_abi: LIBS_PRIVATE += -lssl_$${QT_ARCH} -lcrypto_$${QT_ARCH}
+-            } else: QMAKE_USE_FOR_PRIVATE += openssl
++            QMAKE_USE_FOR_PRIVATE += openssl
+         } else: \
+             QMAKE_USE_FOR_PRIVATE += openssl/nolink
+         win32 {

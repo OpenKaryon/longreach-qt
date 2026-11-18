@@ -8,6 +8,7 @@
 //   quick-qml-gallery --selftest   run headless QQmlEngine/QJSEngine checks,
 //                                 print PASS/FAIL, exit non-zero on failure
 //                                 (no window shown)
+//   quick-qml-gallery --gallery-selftest  verify the real Qt 5/6 QML window
 #include "../common/smokecheck.h"
 #include "../common/crashinfo.h"
 
@@ -18,12 +19,15 @@
 #endif
 
 #if QT_VERSION_MAJOR >= 6
-#include <QQuickWindow>
 #include <QQuickStyle>
 #include <cstring>
 #endif
 
 #if SMOKE_QT5
+#include <QElapsedTimer>
+#include <QImage>
+#include <QQuickWindow>
+#include <QTimer>
 #include <QOperatingSystemVersion>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -51,6 +55,57 @@ int runQuick3DExtensionProbe();
 #endif
 
 #if SMOKE_QT5
+static int runGallerySelftest(QApplication &app, QQmlApplicationEngine &engine)
+{
+    SmokeReporter reporter("quick-qml-gallery-render");
+    auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    if (!window) {
+        reporter.check("qml/gallery-window", [](QString &detail) {
+            detail = QStringLiteral("QML root is not a window");
+            return false;
+        });
+        return reporter.summary();
+    }
+
+    int frames = 0;
+    QElapsedTimer elapsed;
+    elapsed.start();
+    QTimer timer;
+    QObject::connect(window, &QQuickWindow::frameSwapped, &timer, [&] { ++frames; });
+    QObject::connect(&timer, &QTimer::timeout, &timer, [&] {
+        if (frames == 0 && elapsed.elapsed() < 20000)
+            return;
+        timer.stop();
+        reporter.check("qml/gallery-first-frame", [&](QString &detail) {
+            detail = QStringLiteral("frames=%1 visible=%2 size=%3x%4")
+                    .arg(frames).arg(window->isVisible()).arg(window->width()).arg(window->height());
+            return frames > 0 && window->isVisible() && window->width() > 0 && window->height() > 0;
+        });
+        const QImage image = frames > 0 ? window->grabWindow() : QImage();
+        reporter.check("qml/gallery-pixels", [&](QString &detail) {
+            if (image.isNull()) {
+                detail = QStringLiteral("window capture is empty");
+                return false;
+            }
+            const QRgb first = image.pixel(0, 0);
+            for (int y = 0; y < image.height(); y += qMax(1, image.height() / 16))
+                for (int x = 0; x < image.width(); x += qMax(1, image.width() / 16))
+                    if (image.pixel(x, y) != first)
+                        return true;
+            detail = QStringLiteral("window capture is a uniform fill");
+            return false;
+        });
+        reporter.check("qml/gallery-artifact", [&](QString &) {
+            return !image.isNull()
+                && image.save(smokeArtifactDirectory().filePath(QStringLiteral("quick-gallery.png")));
+        });
+        app.exit(reporter.summary());
+    });
+    timer.start(100);
+    window->update();
+    return app.exec();
+}
+
 static bool isWindowsXpFamily()
 {
 #ifdef Q_OS_WIN
@@ -148,6 +203,8 @@ int main(int argc, char *argv[])
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     if (engine.rootObjects().isEmpty())
         return 1;
+    if (app.arguments().contains(QStringLiteral("--gallery-selftest")))
+        return runGallerySelftest(app, engine);
 #else
     // QDeclarativeView is a QGraphicsView that owns the engine, so there is no
     // separate root-object check: a QML error leaves the view without a root

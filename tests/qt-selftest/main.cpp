@@ -32,6 +32,96 @@
 Q_IMPORT_PLUGIN(qsqlite)
 #endif
 
+// Old Bionic has a fixed DSO pool. Android may run these disjoint groups
+// in separate APK builds; the default profile still executes every check.
+namespace {
+#if !defined(SMOKE_ANDROID_SELFTEST_EXTENDED)
+void runCoreChecks(SmokeReporter &r)
+{
+    checkCore(r);
+    checkTime(r);
+    checkIo(r);
+    checkSerialization(r);
+    checkImages(r);
+    checkGuiValue(r);
+    checkItemModels(r);
+    checkText(r);
+    checkConcurrency(r);
+    checkNetwork(r);
+    checkMiscUtility(r);
+    checkDomExtras(r);
+    checkNetworkExtras(r);
+    checkStateMachineTail(r);
+    checkSql(r);
+    checkScript(r);
+    checkXmlPatterns(r);
+    checkSvg(r);
+    checkWebSockets(r);
+    checkWebChannel(r);
+    checkNetworkAuth(r);
+    checkSerialPort(r);
+    checkCanBus(r);
+    checkModbus(r);
+    checkScxml(r);
+    checkRemoteObjects(r);
+    checkShaderTools(r);
+    checkScriptExtras(r);
+    checkXmlPatternsExtras(r);
+    checkTextDocumentStructure(r);
+    checkValidatorsAndRegexMatch(r);
+    checkOpcUaValueTypes(r);
+    checkGrpc(r);
+    checkWaylandCompositor(r);
+    checkWaylandShells(r);
+    checkWaylandLive(r);
+    checkMqtt(r);
+    checkCoap(r);
+    checkHttpServer(r);
+    checkQt6PropertySystem(r);
+    checkQt6Network(r);
+    checkCore5Compat(r);
+    checkDBusValueTypes(r);
+    checkPlatformOnlyExtras(r);
+    checkRhi(r);
+    checkQt6ProtocolTypes(r);
+    checkQt6QtBaseAdditions(r);
+    checkQt6QtBaseAdditions2(r);
+}
+#endif
+
+#if !defined(SMOKE_ANDROID_SELFTEST_CORE)
+void runExtendedChecks(SmokeReporter &r)
+{
+    checkLocation(r);
+    checkAudioValueTypes(r);
+    checkSoundEffects(r);
+    checkMediaPlayerPlaylist(r);
+    checkCameraValueTypes(r);
+    checkRadio(r);
+    checkVideoSurfaceAndFilter(r);
+    checkSensors(r);
+    checkBluetoothClassic(r);
+    checkLowEnergy(r);
+    checkNfc(r);
+    checkGamepad(r);
+    checkTextToSpeech(r);
+    checkPurchasing(r);
+    checkAnimationDriverAndNdef(r);
+    checkQt6Multimedia(r);
+    checkLocationServiceChain(r);
+    checkDeclarativeCore(r);
+    checkMultimediaValueTypes2(r);
+    checkAbstractAudioBackendClasses(r);
+    checkAudioSelectorRoleControls(r);
+    checkCameraControlSuite(r);
+    checkMediaPlaybackRecordingControls(r);
+    checkRadioControlSuite(r);
+    checkVideoControlSuite(r);
+    checkMediaServiceProviderInterfaces(r);
+}
+#endif
+} // namespace
+
 int main(int argc, char *argv[])
 {
 #ifdef Q_OS_WIN
@@ -76,80 +166,12 @@ int main(int argc, char *argv[])
         checkModernCpp(r);
     if (modernOnly)
         return r.summary();
-    checkCore(r);
-    checkTime(r);
-    checkIo(r);
-    checkSerialization(r);
-    checkImages(r);
-    checkGuiValue(r);
-    checkItemModels(r);
-    checkText(r);
-    checkConcurrency(r);
-    checkNetwork(r);
-    checkMiscUtility(r);
-    checkDomExtras(r);
-    checkNetworkExtras(r);
-    checkStateMachineTail(r);
-    checkSql(r);
-    checkLocation(r);
-    checkScript(r);
-    checkXmlPatterns(r);
-    checkSvg(r);
-    checkWebSockets(r);
-    checkWebChannel(r);
-    checkNetworkAuth(r);
-    checkSerialPort(r);
-    checkAudioValueTypes(r);
-    checkSoundEffects(r);
-    checkMediaPlayerPlaylist(r);
-    checkCameraValueTypes(r);
-    checkRadio(r);
-    checkVideoSurfaceAndFilter(r);
-    checkSensors(r);
-    checkBluetoothClassic(r);
-    checkLowEnergy(r);
-    checkNfc(r);
-    checkCanBus(r);
-    checkModbus(r);
-    checkScxml(r);
-    checkRemoteObjects(r);
-    checkShaderTools(r);
-    checkScriptExtras(r);
-    checkXmlPatternsExtras(r);
-    checkGamepad(r);
-    checkTextToSpeech(r);
-    checkTextDocumentStructure(r);
-    checkValidatorsAndRegexMatch(r);
-    checkPurchasing(r);
-    checkOpcUaValueTypes(r);
-    checkGrpc(r);
-    checkWaylandCompositor(r);
-    checkWaylandShells(r);
-    checkWaylandLive(r);
-    checkMqtt(r);
-    checkCoap(r);
-    checkHttpServer(r);
-    checkQt6PropertySystem(r);
-    checkQt6Network(r);
-    checkCore5Compat(r);
-    checkDBusValueTypes(r);
-    checkAnimationDriverAndNdef(r);
-    checkPlatformOnlyExtras(r);
-    checkRhi(r);
-    checkQt6Multimedia(r);
-    checkQt6ProtocolTypes(r);
-    checkQt6QtBaseAdditions(r);
-    checkQt6QtBaseAdditions2(r);
-    checkLocationServiceChain(r);
-    checkDeclarativeCore(r);
-    checkMultimediaValueTypes2(r);
-    checkAbstractAudioBackendClasses(r);
-    checkAudioSelectorRoleControls(r);
-    checkCameraControlSuite(r);
-    checkMediaPlaybackRecordingControls(r);
-    checkRadioControlSuite(r);
-    checkVideoControlSuite(r);
-    checkMediaServiceProviderInterfaces(r);
+#if !defined(SMOKE_ANDROID_SELFTEST_EXTENDED)
+    runCoreChecks(r);
+#endif
+#if !defined(SMOKE_ANDROID_SELFTEST_CORE)
+    runExtendedChecks(r);
+#endif
 
     return r.summary();
 }

@@ -3,6 +3,7 @@
 
 #include "../common/smokecheck.h"
 #include "gl-heavy.h"
+#include "glcaps.h"
 
 #include <Qt3DCore/QAbstractAspect>
 #include <Qt3DCore/QArmature>
@@ -1106,6 +1107,13 @@ void checkQt3DInputAndAnimationExtra(SmokeReporter &r)
 void checkQt3DQuickBridgeExtra(SmokeReporter &r)
 {
     r.check("qt3d/quick-aspect-scene2d", [&](QString &d) {
+        // QScene2D creates a Qt Quick OpenGL render thread even for property
+        // checks; a software-only platform cannot initialize that renderer.
+        const GlCaps &caps = glCaps();
+        if (!caps.contextCreated || caps.versionValue() < 20) {
+            r.skip(d, QStringLiteral("Scene2D needs a compatible OpenGL/ES 2 context: ") + caps.describe());
+            return false;
+        }
         Qt3DCore::Quick::QQmlAspectEngine aspectEngine;
         Qt3DRender::Quick::QScene2D scene2d;
         scene2d.setRenderPolicy(Qt3DRender::Quick::QScene2D::SingleShot);

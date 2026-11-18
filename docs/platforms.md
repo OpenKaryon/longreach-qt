@@ -12,7 +12,7 @@ For macOS a floor counts as reached when every Mac supported there can be
 upgraded to it: Qt 5's x86_64 build stops at 10.6 because 64-bit Cocoa starts
 at 10.5 and every Mac that runs 10.5 runs 10.6.
 
-## Experimental Android target
+## Experimental Android targets
 
 For Qt 4.8.7 the target floor is Android 1.6 (API 4) on 32-bit ARM
 (`armeabi`). Qt 3.3 had no Android target, so the floor comes from
@@ -25,6 +25,20 @@ and the QtCore 4.8.7 JNI smoke test passed on the same guest.
 A separate Qt Quick 1 APK passed the first-frame, tap and pause/resume
 checks on that guest. The [Android build guide](targets/qt4-android-donut.md)
 covers the diagnostic APKs and emulator runner.
+
+For Qt 5.15.19 the selected Android floor is Android 2.3.3 (API 10),
+`armeabi-v7a`. This is an explicit Android exception to the preceding
+cross-generation floor rule. The
+[LLVM 21.1.8 probe](results/qt5-android-gingerbread-api10-llvm21-20261117.md)
+passed all 25 required C++23 checks without skips and ran a C++23 consumer
+of the statically built QtCore 5.15.19. The QtCore probe uses the minimal
+Android embedded profile. The subsequent
+[full shared SDK](results/qt5-android-gingerbread-sdk-llvm21-20261117.md)
+runs the actual QtActivity, all eight common examples, core and extended
+selftest APKs, and strict C++23 25/25 without skips on the same guest.
+Widgets and QML gallery rendering passed. The clean Docker recipe, isolated
+SDK consumer builds and all 13 runtime profiles passed using the maintained
+scripts; details and platform limits are in the linked report.
 
 ## Results
 

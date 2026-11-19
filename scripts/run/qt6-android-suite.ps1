@@ -14,10 +14,6 @@ if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
 if (Get-Process -Name emulator-arm,emulator,qemu-system-armel -ErrorAction SilentlyContinue) {
     throw 'Stop the existing Android emulator before preparing a fresh suite.'
 }
-& "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk
-& python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root
-if ($LASTEXITCODE) { throw 'Could not prepare API21 emulator inputs' }
-$emulator="$root/media/tools/emulator-arm.exe"
 $serial = 'emulator-5582'
 function Invoke-Adb([string[]]$Parameters) {
     $output = & $adb -s $serial @Parameters
@@ -29,6 +25,10 @@ if ($apps.Count -ne 8) { throw 'Expected exactly eight shared applications' }
 foreach ($app in $apps) {
     if (!(Test-Path -LiteralPath "$root/apk/$app.apk")) { throw "Missing APK: $app" }
 }
+& "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope test
+& python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root
+if ($LASTEXITCODE) { throw 'Could not prepare API21 emulator inputs' }
+$emulator="$root/media/tools/emulator-arm.exe"
 & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator $emulator -RunName $RunName -Gpu $Gpu
 $run = "$root/$RunName"
 $outcomes = [Collections.Generic.List[object]]::new()

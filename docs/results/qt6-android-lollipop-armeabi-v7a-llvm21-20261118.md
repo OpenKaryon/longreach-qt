@@ -209,11 +209,13 @@ workspace or a prepared experimental container. The Docker directory contains
 only Dockerfile. See the [target guide](../targets/qt6-android-lollipop.md).
 
 ```powershell
-./scripts/build/qt6-android.ps1 -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt6-android.ps1 -Mode sdk -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt6-android.ps1 -Mode examples
+./scripts/build/qt6-android.ps1 -Mode package -AndroidSdk $env:ANDROID_HOME
 ./scripts/run/qt6-android-suite.ps1 -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
 ```
 
-The first command completed a clean SDK build from the pinned Linux NDK,
+The original combined producer completed a clean SDK build from the pinned Linux NDK,
 LLVM, OpenSSL and Qt inputs, followed by compilation, Qt dependency/QML
 deployment, signing and verification of all eight APKs. Native compilation
 used two jobs, with a single Qt link pool. Runtime/OpenSSL/Qt stages ran
@@ -271,3 +273,19 @@ review change produced a byte-identical native QML library, preserving the
 existing APK evidence. The desktop native-texture probe also compiled and
 passed with the Linux Qt6 LLVM SDK in C++17 under Xvfb/OpenGL. These checks ran
 sequentially, without restarting the emulator or executing security tests.
+
+
+## Independent command modes — 2026-11-19
+
+The Windows entry point now separates `sdk`, `examples`, `package` and `test`;
+its default is `examples` with an existing SDK. The Dockerfile, pinned inputs,
+compiler/runtime scripts and C++23 requirements are unchanged. Missing SDK
+images fail instead of starting an implicit build. Packaging consumes saved
+deployments; tests prepare only guest media, without fetching SDK sources.
+
+The focused `test-qt6-android-modes.ps1` checks passed with recording stubs:
+four-phase isolation, existing-image reuse, absent/wrong image rejection,
+legacy `-SdkOnly`, SDK/test fetch scopes, eight-app packaging preflight and
+runner option forwarding. Changed PowerShell files parsed successfully;
+the existing SDK image metadata was inspected read-only. No native build,
+APK-tool execution or emulator run was performed for this mode separation.

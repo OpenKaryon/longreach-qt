@@ -11,20 +11,71 @@ Runtime verification uses the archived Android 5.0.2/LSY66K API21 image.
 On Windows, install Docker Desktop, Python 3.11+, PowerShell, JDK17 or JDK21 with
 `javac`/`keytool`, and Android SDK platform 35, Build Tools 36.0.0 and Platform
 Tools. Select the Android SDK through `ANDROID_HOME` or `-AndroidSdk`.
-First build the native host-tools SDK with `make qt6-linux-amd64`; it is a
-separate sequential prerequisite, not an Android runtime dependency.
+The entry point has four independent modes. Its default is `examples`, which
+uses a ready SDK image and never builds Qt. Select `sdk` explicitly to build
+the SDK; missing images produce an error instead of an automatic rebuild.
 
 ```powershell
-./scripts/build/qt6-android.ps1 -AndroidSdk $env:ANDROID_HOME
-./scripts/run/qt6-android-suite.ps1 -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
+# Build Qt only when necessary (native host tools: make qt6-linux-amd64 first).
+./scripts/build/qt6-android.ps1 -Mode sdk -AndroidSdk $env:ANDROID_HOME
+
+# Compile and deploy the eight shared examples with the existing SDK image.
+./scripts/build/qt6-android.ps1 -Mode examples
+
+# Package the saved deployments; Docker and a compiler are not needed.
+./scripts/build/qt6-android.ps1 -Mode package -AndroidSdk $env:ANDROID_HOME
+
+# Test the saved APKs; no compilation or packaging is performed.
+./scripts/build/qt6-android.ps1 -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
 ```
 
-The build wrapper fetches and verifies the inputs in
-`scripts/fetch/locks/qt6-android-api21-inputs.json`, builds
-`docker/qt6/android/Dockerfile`, then compiles/deploys the same eight `tests/`
-applications and packages APKs. No application source fork is required.
-`-SdkOnly` stops after the SDK image. `-HostImage` selects another already
-built Qt6.8.5 host image. The default is `qt6-linux-amd64-llvm21:latest`.
+| Mode | Inputs/actions | Output |
+| --- | --- | --- |
+| `sdk` | Fetch SDK inputs; build the Docker SDK image | SDK image and `sdk-image-id.txt` |
+| `examples` (default) | Inspect an existing SDK; compile/deploy shared C++23 sources | `deployment/`, Java/runtime packaging inputs, `examples-sdk-image-id.txt` |
+| `package` | Read existing deployments and Java/runtime files; run host APK tools | `apk/` and APK hashes |
+| `test` | Read existing APKs; prepare emulator media; run the serial suite | Fresh run directory and reports |
+
+`-SdkImage` selects the output image tag for `sdk`; `examples` accepts an
+existing tag or immutable image ID.
+The example mode validates the platform/version/compiler labels and runs the
+inspected immutable image ID. It needs Docker, but no host Android SDK,
+JDK, source archives or host Qt image. It never downloads inputs, builds an
+image, packages APKs or starts an emulator.
+
+The package/test modes need the existing output directory and appropriate
+host Android tools. Packaging needs platform35, Build Tools36.0.0 and JDK17/21;
+testing needs adb and the pinned emulator media. Test preparation fetches only
+the emulator/system-image archives, without reading or downloading LLVM, Qt,
+OpenSSL, NDK or Java compile inputs. The standalone runner remains available
+as `scripts/run/qt6-android-suite.ps1`.
+
+For `sdk`, `-HostImage` selects an already built Qt6.8.5 host image; its default
+is `qt6-linux-amd64-llvm21:latest`. The legacy `-SdkOnly` switch remains an
+alias for `-Mode sdk` and cannot be combined with another explicit mode.
+The old implicit SDK → examples → APK chain is replaced by the explicit
+commands above. The build-input hashes are unchanged in
+`scripts/fetch/locks/qt6-android-api21-inputs.json`.
+
+Choose the smallest phase needed by an edit:
+
+- Qt/runtime/toolchain changes: `sdk`, then `examples`, `package`, `test`.
+- Shared C++ example changes: `examples`, then `package`, `test`.
+- APK packaging or the thin Java Activity: `package`, then `test`.
+- Runner changes: `test`; documentation changes need no native build.
+
+The example mode deliberately uses the selected ready image; it does not
+check Qt patch freshness or rebuild the image to match the working tree.
+Its recorded image ID identifies the SDK used for those example binaries.
+
+For lightweight orchestration regression checks:
+
+```powershell
+./scripts/tests/test-qt6-android-modes.ps1
+```
+
+These checks use disposable fixtures and recording stubs for Docker,
+downloads, APK tools and the emulator. They do not compile or start a guest.
 
 The image is `longreach-qt6-android-lollipop:llvm21`; its SDK prefix is
 `/opt/qt6-android-armeabi-v7a-llvm`, and its external CMake toolchain is

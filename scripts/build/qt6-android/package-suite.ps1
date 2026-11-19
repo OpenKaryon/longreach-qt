@@ -6,6 +6,20 @@ $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $apps=@(Get-Content "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 if ($apps.Count -ne 8) { throw 'Expected eight applications' }
+# Validate every input before signing or replacing any APK. No SDK image is needed.
+foreach ($relative in @('libc++_shared.so','sdk-packaging/jar/Qt6Android.jar',
+        'sdk-packaging/src/android/java/src','sdk-packaging/src/android/java/res')) {
+    if (!(Test-Path -LiteralPath "$root/$relative")) {
+        throw "Missing packaging input: $relative. Run qt6-android.ps1 -Mode examples first."
+    }
+}
+foreach ($app in $apps) {
+    foreach ($relative in @("libs/armeabi-v7a/lib${app}_armeabi-v7a.so", 'res/values/libs.xml')) {
+        if (!(Test-Path -LiteralPath "$root/deployment/$app/$relative")) {
+            throw "Missing deployment for $app ($relative). Run qt6-android.ps1 -Mode examples first."
+        }
+    }
+}
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-examples --root $root --qt-major 6 --abi armeabi-v7a
 if ($LASTEXITCODE) { throw 'Packaging requires a complete, unchanged example generation' }
 # A failed replacement must not leave an earlier package generation marked ready.

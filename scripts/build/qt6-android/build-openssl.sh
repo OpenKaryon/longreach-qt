@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
+source /repo/scripts/build/qt6-android/target-config.sh
 source=/work/api21/openssl-3.5.7
 prefix=/opt/openssl-api21
 archive=/repo/downloads/openssl-3.5.7.tar.gz
@@ -15,7 +16,7 @@ export RANLIB=/usr/bin/llvm-ranlib-21
 export ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
 export PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
 cd "$source"
-./Configure android-arm no-async no-shared no-tests no-module no-apps \
+./Configure "$openssl_target" no-async no-shared no-tests no-module no-apps \
     -D__ANDROID_API__=21 -fPIC --prefix="$prefix" --libdir=lib
 make -j"${PARALLEL_JOBS:-2}"
 make install_sw

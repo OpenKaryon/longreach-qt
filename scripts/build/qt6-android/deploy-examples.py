@@ -9,11 +9,13 @@ import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--app', required=True)
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a'), default='armeabi-v7a')
 parser.add_argument('--build', type=Path, default=Path('/work/api21/tests-qt6-android'))
 parser.add_argument('--output', type=Path, default=Path('/out/deployment'))
 args = parser.parse_args()
 repo = Path('/repo')
-sdk = Path('/opt/qt6-android-armeabi-v7a-llvm')
+sdk = Path(f'/opt/qt6-android-{args.abi}-llvm')
+triple = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android'}[args.abi]
 expected = [line.strip() for line in (repo / 'tests/expected-apps.txt').read_text().splitlines()
             if line.strip() and not line.startswith('#') and line.strip() != 'smoke-runner']
 if args.app not in expected:
@@ -26,10 +28,10 @@ if settings.get('android-min-sdk-version') != '21':
     raise ValueError('Application does not target minimum API21')
 if settings.get('ndk-host') != 'linux-x86_64':
     raise ValueError('External toolchain NDK host metadata is incomplete')
-runtime = Path(settings['stdcpp-path']) / 'arm-linux-androideabi/libc++_shared.so'
+runtime = Path(settings['stdcpp-path']) / f'{triple}/libc++_shared.so'
 if not runtime.is_file():
     raise ValueError(f'The generated configuration cannot find the LLVM21 runtime: {runtime}')
-native_name = f'lib{args.app}_armeabi-v7a.so'
+native_name = f'lib{args.app}_{args.abi}.so'
 native = list((args.build / args.app).rglob(native_name))
 if len(native) != 1:
     raise ValueError(f'Expected one native example: {native}')
@@ -42,7 +44,7 @@ if destination.exists():
     shutil.rmtree(destination)
 shutil.copytree(sdk / 'src/android/templates', destination)
 marker.write_text(args.app + '\n')
-libraries = destination / 'libs/armeabi-v7a'
+libraries = destination / f'libs/{args.abi}'
 libraries.mkdir(parents=True, exist_ok=True)
 shutil.copy2(native[0], libraries / native_name)
 # Limit scanning to the resource set of this Qt generation. Qt4 and Qt5

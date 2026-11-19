@@ -5,6 +5,7 @@ param([string]$RepoRoot = (Resolve-Path "$PSScriptRoot/../..").Path)
 $ErrorActionPreference = 'Stop'
 $temporaryRoot = [IO.Path]::GetTempPath().TrimEnd('\','/')
 $fixture = Join-Path $temporaryRoot ('longreach-qt6-modes-' + [guid]::NewGuid())
+$global:Qt6ModeTestAbi = 'armeabi-v7a'
 $global:Qt6ModeTestMissingImage = $false
 $global:Qt6ModeTestWrongImage = $false
 $global:Qt6ModeTestImageId = 'sha256:' + ('a' * 64)
@@ -22,7 +23,7 @@ function docker {
         if ($Arguments[-1] -eq 'missing-host-fixture') { $global:LASTEXITCODE=1; return }
         if ($global:Qt6ModeTestMissingImage) { $global:LASTEXITCODE = 1; return }
         if ($Arguments -contains '{{json .}}') {
-            $platform = if ($global:Qt6ModeTestWrongImage) { 'linux-amd64' } else { 'android-lollipop-armeabi-v7a' }
+            $platform = if ($global:Qt6ModeTestWrongImage) { 'linux-amd64' } else { "android-lollipop-$global:Qt6ModeTestAbi" }
             return (@{Id=$global:Qt6ModeTestImageId; Os='linux'; Architecture='amd64'; Config=@{Labels=@{
                 'org.openkaryon.longreach-qt.platform'=$platform
                 'org.openkaryon.longreach-qt.android-api'='21'
@@ -64,12 +65,13 @@ try {
     New-Item -ItemType Directory -Path "$fixture/scripts/run", "$fixture/scripts/fetch/locks",
         "$fixture/android-sdk", "$fixture/downloads/android-lollipop" -Force | Out-Null
     @'
-param($AndroidSdk,$OutputDirectory,$RunName,$Gpu,$CaseNames,$QtQuickBackend)
-Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "test|$RunName|$Gpu|$($CaseNames -join ',')|$QtQuickBackend"
+param($AndroidSdk,$OutputDirectory,$RunName,$Gpu,$CaseNames,$QtQuickBackend,$Abi,[switch]$DebugQtPlugins)
+Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "test|$RunName|$Gpu|$($CaseNames -join ',')|$QtQuickBackend|$Abi"
+if ($DebugQtPlugins) { Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "debug-qt-plugins" }
 '@ | Set-Content "$fixture/scripts/run/qt6-android-suite.ps1"
     @'
-param($QtSdk,$NativeLibrary,$RuntimeLibrary,$OutputDirectory,$AndroidSdk,$Package,$DeploymentDirectory)
-$app = ([IO.Path]::GetFileName($NativeLibrary) -replace '^lib','' -replace '_armeabi-v7a\.so$','')
+param($QtSdk,$NativeLibrary,$RuntimeLibrary,$OutputDirectory,$AndroidSdk,$Package,$DeploymentDirectory,$Abi)
+$app = ([IO.Path]::GetFileName($NativeLibrary) -replace '^lib','' -replace ('_' + [regex]::Escape($Abi) + '\.so$'),'')
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 [IO.File]::WriteAllText((Join-Path $OutputDirectory "$app.apk"), $app)
 Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
@@ -160,7 +162,33 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Reset-ModeCalls
     Invoke-Mode @{Mode='test';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='routing-check';Gpu='mesa';CaseNames=@('strict-cxx23');QtQuickBackend='software'}
     $calls = @(Get-ModeCalls)
-    Assert-Mode ($calls.Count -eq 1 -and $calls[0] -eq 'test|routing-check|mesa|strict-cxx23|software') 'Test mode entered another phase or dropped runner arguments'
+    Assert-Mode ($calls.Count -eq 1 -and $calls[0] -eq 'test|routing-check|mesa|strict-cxx23|software|armeabi-v7a') 'Test mode entered another phase or dropped runner arguments'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='test';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='plugin-debug';CaseNames=@('quick-qml-gallery');DebugQtPlugins=$true}
+    Assert-Mode (@(Get-ModeCalls).Count -eq 2 -and @(Get-ModeCalls)[1] -eq 'debug-qt-plugins') 'Plugin diagnostics were not forwarded to the test runner'
+    # ABI isolation: an ARM64 client cannot silently consume an ARMv7 SDK.
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='examples';Abi='arm64-v8a';OutputDirectory=$output} 'not the Qt6'
+    Assert-Mode ((Get-ModeCalls).Count -eq 1) 'Wrong ABI launched a compiler'
+    $global:Qt6ModeTestAbi = 'arm64-v8a'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='examples';Abi='arm64-v8a';OutputDirectory=$output}
+    Assert-Mode (@(Get-ModeCalls)[0] -like '*longreach-qt6-android-lollipop-arm64-v8a:llvm21') 'ARM64 default selected the ARMv7 tag'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='test';Abi='arm64-v8a';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='arm64-check'}
+    Assert-Mode (@(Get-ModeCalls)[0] -like 'test|arm64-check|*|arm64-v8a') 'Test mode dropped the selected ABI'
+    # ARM64 packaging must select its own deployments and pass ABI to every APK.
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='package';Abi='arm64-v8a';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"} 'Missing deployment'
+    Assert-Mode ((Get-ModeCalls).Count -eq 0) 'ARM64 packaging consumed ARMv7 libraries'
+    foreach ($app in $apps) {
+        New-Item -ItemType Directory -Path "$output/deployment/$app/libs/arm64-v8a" -Force | Out-Null
+        [IO.File]::WriteAllText("$output/deployment/$app/libs/arm64-v8a/lib${app}_arm64-v8a.so", 'arm64-fixture')
+    }
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='package';Abi='arm64-v8a';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"}
+    Assert-Mode (@(Get-ModeCalls).Count -eq 8) 'ARM64 did not package eight applications'
+    Assert-Mode (@(Get-Content "$output/apk/packages.json" -Raw | ConvertFrom-Json).Count -eq 8) 'Incomplete ARM64 package manifest'
     Write-Output 'PASS: four independent modes, ready-image reuse, no implicit builds, legacy alias, fetch scopes and packaging preflight'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG = $previousLog
@@ -172,5 +200,5 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
         }
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
-    Remove-Variable Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId,Qt6ModeTestAbi -Scope Global -ErrorAction SilentlyContinue
 }

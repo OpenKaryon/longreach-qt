@@ -1,6 +1,10 @@
 # Qt 6.8.5 for Android API 21
 
-This experimental SDK targets ARMv7 `armeabi-v7a` from Android 5/API21.
+This experimental recipe selects ARMv7 `armeabi-v7a` or ARM64 `arm64-v8a`
+from Android 5/API21. ARMv7 remains the default. Both profiles have SDK and
+example runtime evidence, including strict C++23 25/25 without SKIP. The
+[ARM64 report](../results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md)
+records all eleven installed-SDK cases.
 Qt and applications use upstream LLVM 21.1.8 and one shared libc++ built
 from the matching LLVM sources. NDK r27 supplies platform headers, CRT,
 link stubs and Android helper sources; its compiler and libc++ are not used.
@@ -16,17 +20,19 @@ uses a ready SDK image and never builds Qt. Select `sdk` explicitly to build
 the SDK; missing images produce an error instead of an automatic rebuild.
 
 ```powershell
+$abi = 'armeabi-v7a' # Select arm64-v8a for the ARM64 target.
+
 # Build Qt only when necessary (native host tools: make qt6-linux-amd64 first).
-./scripts/build/qt6-android.ps1 -Mode sdk -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt6-android.ps1 -Abi $abi -Mode sdk -AndroidSdk $env:ANDROID_HOME
 
 # Compile and deploy the eight shared examples with the existing SDK image.
-./scripts/build/qt6-android.ps1 -Mode examples
+./scripts/build/qt6-android.ps1 -Abi $abi -Mode examples
 
 # Package the saved deployments; Docker and a compiler are not needed.
-./scripts/build/qt6-android.ps1 -Mode package -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt6-android.ps1 -Abi $abi -Mode package -AndroidSdk $env:ANDROID_HOME
 
 # Test the saved APKs; no compilation or packaging is performed.
-./scripts/build/qt6-android.ps1 -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
+./scripts/build/qt6-android.ps1 -Abi $abi -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
 ```
 
 | Mode | Inputs/actions | Output |
@@ -50,7 +56,7 @@ the emulator/system-image archives, without reading or downloading LLVM, Qt,
 OpenSSL, NDK or Java compile inputs. The standalone runner remains available
 as `scripts/run/qt6-android-suite.ps1`.
 
-For `sdk`, `-HostImage` selects an already built Qt6.8.5 host image; its default
+For `sdk`, `-HostImage` selects an already built Qt 6.8.5 host image; its default
 is `qt6-linux-amd64-llvm21:latest`. The legacy `-SdkOnly` switch remains an
 alias for `-Mode sdk` and cannot be combined with another explicit mode.
 The old implicit SDK → examples → APK chain is replaced by the explicit
@@ -77,15 +83,18 @@ For lightweight orchestration regression checks:
 These checks use disposable fixtures and recording stubs for Docker,
 downloads, APK tools and the emulator. They do not compile or start a guest.
 
-The image is `longreach-qt6-android-lollipop:llvm21`; its SDK prefix is
-`/opt/qt6-android-armeabi-v7a-llvm`, and its external CMake toolchain is
+The ARMv7 image is `longreach-qt6-android-lollipop:llvm21`, with prefix
+`/opt/qt6-android-armeabi-v7a-llvm`. ARM64 selects
+`longreach-qt6-android-lollipop-arm64-v8a:llvm21`, with prefix
+`/opt/qt6-android-arm64-v8a-llvm`. Both use the external CMake toolchain at
 `/opt/longreach-android-api21/toolchain.cmake`. The final image includes the
 compiler, runtime, host tools, target SDK, OpenSSL and Android build inputs.
 The runtime, OpenSSL and Qt compilation stages run without network access.
 Only provisioning the shared tools stage and fetching pinned inputs need it.
 Only Dockerfile lives in `docker/qt6/android/`; helpers are under `scripts/`.
 
-Outputs default to `artifacts/qt6-android-lollipop/`; pass `-OutputDirectory`
+ARMv7 outputs default to `artifacts/qt6-android-lollipop/`; ARM64 defaults to
+`artifacts/qt6-android-lollipop-arm64-v8a/`. Pass `-OutputDirectory`
 to both wrappers to select another location. `deployment/` holds Qt-generated
 dependency/QML staging; `sdk-packaging/` holds Java packaging files; `apk/`
 contains locally signed v1 APKs and their SHA256 manifest. Packaging compiles
@@ -105,7 +114,9 @@ Builds use two compiler jobs and one link job; example compilation is capped
 at 2 CPUs / 3 GiB. Stop any existing Android emulator before compiling. Run only one
 SDK build or emulator at a time. Run directories must have unique names;
 the runner refuses to overwrite prior evidence. No keyboard/mouse capture is
-used. Default rendering is real GLES, with no forced Qt Quick software backend.
+used. ARMv7 uses pinned Windows SDK Tools 24; ARM64 uses Tools 25.2.5 with
+the image's ARM64 `kernel-qemu` 3.10 and a run-owned QEMU2 AVD. The fetcher
+selects only the requested ABI's system image and emulator archive for tests. Default rendering is real GLES, with no forced Qt Quick software backend.
 
 ## Boundaries
 
@@ -118,8 +129,10 @@ C++23 plus `-fexperimental-library`, including jthread/stop_token behavior.
 This is behavior coverage, not full standard-library conformance.
 
 The pre-API24 stdio profile uses 32-bit file offsets. Large files above 2 GiB,
-physical device cameras/audio/Bluetooth/NFC/XR and other Android ABIs were not
-validated. This target uses QtActivity and shared Qt libraries; applications
+physical device cameras/audio/Bluetooth/NFC/XR and x86/x86_64 were not
+validated. API21/22 long bundled-library paths use a basename retry after
+the original load fails, preserving the application native-library search path.
+This target uses QtActivity and shared Qt libraries; applications
 must preserve applicable Qt/libc++/platform licences when distributed.
 
 See the [build and emulator evidence](../results/qt6-android-lollipop-armeabi-v7a-llvm21-20261118.md).

@@ -7,7 +7,7 @@ runtime=/work/api21/runtime
 builtins=/work/api21/builtins
 sysroot=/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
 prefix=/opt/longreach-android-api21
-target=armv7a-linux-androideabi21
+source /repo/scripts/build/qt6-android/target-config.sh
 mkdir -p /out /work/api21 "$prefix"/{lib,include/c++/v1}
 echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  /repo/downloads/llvm-project-21.1.8.src.tar.xz' | sha256sum -c -
 clang++-21 --version | head -1
@@ -15,9 +15,9 @@ if [[ ! -f "$llvm/runtimes/CMakeLists.txt" ]]; then
     tar -xJf /repo/downloads/llvm-project-21.1.8.src.tar.xz -C /work/api21 \
         llvm-project-21.1.8.src/{cmake,compiler-rt,libc,libcxx,libcxxabi,libunwind,llvm,runtimes,third-party}
 fi
-flags='-march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -fPIC -femulated-tls -ffunction-sections -fdata-sections'
+flags="${arch_flags[*]} -fPIC -femulated-tls -ffunction-sections -fdata-sections"
 options=(
-    -G Ninja -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_BUILD_TYPE=Release
+    -G Ninja -DCMAKE_SYSTEM_NAME=Linux "-DCMAKE_SYSTEM_PROCESSOR=$processor" -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_ASM_COMPILER=clang-21
     "-DCMAKE_SYSROOT=$sysroot" "-DCMAKE_C_COMPILER_TARGET=$target"
     "-DCMAKE_CXX_COMPILER_TARGET=$target" "-DCMAKE_ASM_COMPILER_TARGET=$target"
@@ -47,15 +47,16 @@ cmake -S "$llvm/runtimes" -B "$builtins" "${options[@]}" "-DCMAKE_C_FLAGS=$flags
 cmake --build "$builtins" --parallel "${PARALLEL_JOBS:-2}"
 cp -a "$runtime/include/c++/v1/." "$prefix/include/c++/v1/"
 cp "$runtime/lib/"*.a "$prefix/lib/"
-builtins_archive="$builtins/compiler-rt/lib/linux/libclang_rt.builtins-arm-android.a"
+builtins_archive="$builtins/compiler-rt/lib/linux/libclang_rt.builtins-${builtins_arch}-android.a"
 cp "$builtins_archive" "$prefix/lib/"
-platform="$sysroot/usr/lib/arm-linux-androideabi/21"
-arch=(--target="$target" --sysroot="$sysroot" -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -fPIC -femulated-tls)
+platform="$sysroot/usr/lib/$ndk_triple/21"
+arch=(--target="$target" --sysroot="$sysroot" "${arch_flags[@]}" -fPIC -femulated-tls)
 clang++-21 "${arch[@]}" -shared -nostdlib -fuse-ld=lld \
     -Wl,--hash-style=sysv,--no-undefined,--no-dependent-libraries,-soname,libc++_shared.so \
     "$platform/crtbegin_so.o" -Wl,--whole-archive \
     "$runtime/lib/libc++.a" "$runtime/lib/libc++experimental.a" "$runtime/lib/libc++abi.a" \
-    "$runtime/lib/libunwind.a" "$builtins_archive" -Wl,--no-whole-archive \
+    "$runtime/lib/libunwind.a" -Wl,--no-whole-archive \
+    -Wl,-u,__emutls_get_address,-u,__emutls_register_common "$builtins_archive" \
     -L"$platform" -llog -ldl -lm -lc "$platform/crtend_so.o" -o "$prefix/lib/libc++_shared.so"
 llvm-readobj-21 --file-header --dynamic-table "$prefix/lib/libc++_shared.so" > /out/runtime-elf.txt
 cp "$prefix/lib/libc++_shared.so" /out/

@@ -3,8 +3,14 @@
 """Record exact platform input files and final target runtime, without changing inputs."""
 import hashlib
 import json
+import os
 from pathlib import Path
 
+abi = os.environ.get('ANDROID_ABI', 'armeabi-v7a')
+triple, target = {
+    'armeabi-v7a': ('arm-linux-androideabi', 'armv7a-linux-androideabi21'),
+    'arm64-v8a': ('aarch64-linux-android', 'aarch64-linux-android21'),
+}[abi]
 prefix = Path('/opt/longreach-android-api21')
 ndk = Path('/ndk')
 original = ndk / 'toolchains/llvm/prebuilt/linux-x86_64/sysroot'
@@ -19,7 +25,7 @@ def sha256(path):
 
 
 inputs = {}
-for root in (original / 'usr/lib/arm-linux-androideabi/21', ndk / 'sources/android/cpufeatures'):
+for root in (original / f'usr/lib/{triple}/21', ndk / 'sources/android/cpufeatures'):
     for path in sorted(root.rglob('*')):
         if path.is_file():
             inputs[str(path.relative_to(ndk))] = sha256(path)
@@ -34,7 +40,7 @@ manifest = {
     'consumer_cxx_header_root': str(prefix / 'include/c++/v1'),
     'consumer_cxx_header_sha256': cxx_headers,
     'llvm_version': '21.1.8',
-    'target': 'armv7a-linux-androideabi21',
+    'target': target, 'abi': abi,
     'libcxx_shared_sha256': sha256(prefix / 'lib/libc++_shared.so'),
     'sysroot_fixes': ['AHARDWAREBUFFER_USAGE_FRONT_BUFFER uses 1ULL << 32 (same as NDK r28)'],
 }

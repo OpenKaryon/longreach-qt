@@ -2,16 +2,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
+source /repo/scripts/build/qt6-android/target-config.sh
 build=/work/api21/qt-sdk-build
-prefix=/opt/qt6-android-armeabi-v7a-llvm
+prefix=$sdk_prefix
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 mkdir -p /out
 cp "$build/config.summary" /out/qt-sdk-config.summary
+cp /work/api21/qt-src/.longreach-patches.json /out/qt-patch-state.json
 find "$prefix/lib" -maxdepth 1 -type f -name 'libQt6*.so' -printf '%f\n' | sort > /out/sdk-modules.txt
-python3 /repo/scripts/build/qt6-android/validate-api21-elf.py "$prefix" --report /out/sdk-api21-elf.json
-python3 /repo/scripts/build/qt6-android/input-provenance.py
+python3 /repo/scripts/build/qt6-android/validate-api21-elf.py "$prefix" --abi "$abi" --report /out/sdk-api21-elf.json
+ANDROID_ABI="$abi" python3 /repo/scripts/build/qt6-android/input-provenance.py
 "$prefix/bin/qmake" -query > /out/sdk-qmake-query.txt
 test "$("$prefix/bin/qmake" -query QT_VERSION)" = 6.8.5
 test "$("$prefix/bin/qmake" -query QT_INSTALL_PREFIX)" = "$prefix"

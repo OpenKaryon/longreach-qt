@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Check ARMv7 ELF compatibility with the Android API21 loader (not a security scan)."""
+"""Check target ELF compatibility with the Android API21 loader (not a security scan)."""
 import argparse
 import json
 from pathlib import Path
@@ -8,20 +8,33 @@ import struct
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('prefix', type=Path)
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a'), default='armeabi-v7a')
 parser.add_argument('--report', type=Path, required=True)
 args = parser.parse_args()
 
 
 def inspect(path):
     data = path.read_bytes()
-    if data[:6] != b'\x7fELF\x01\x01':
-        raise RuntimeError(f'Expected little-endian ELF32: {path}')
-    if struct.unpack_from('<H', data, 18)[0] != 40:
-        raise RuntimeError(f'Expected ARM target: {path}')
-    phoff = struct.unpack_from('<I', data, 28)[0]
-    phsize, phcount = struct.unpack_from('<HH', data, 42)
-    segments = [struct.unpack_from('<IIIIIIII', data, phoff + index * phsize)
-                for index in range(phcount)]
+    bits, machine, machine_name = {'armeabi-v7a': (32, 40, 'ARM'),
+                                    'arm64-v8a': (64, 183, 'AArch64')}[args.abi]
+    elf_class = 1 if bits == 32 else 2
+    if data[:6] != b'\x7fELF' + bytes((elf_class, 1)):
+        raise RuntimeError(f'Expected little-endian ELF{bits}: {path}')
+    if struct.unpack_from('<H', data, 18)[0] != machine:
+        raise RuntimeError(f'Expected {machine_name} target: {path}')
+    if bits == 32:
+        phoff = struct.unpack_from('<I', data, 28)[0]
+        phsize, phcount = struct.unpack_from('<HH', data, 42)
+        segments = [struct.unpack_from('<IIIIIIII', data, phoff + index * phsize)
+                    for index in range(phcount)]
+    else:
+        phoff = struct.unpack_from('<Q', data, 32)[0]
+        phsize, phcount = struct.unpack_from('<HH', data, 54)
+        segments = []
+        for index in range(phcount):
+            kind, flags, start, virtual, physical, size, memsize, align = struct.unpack_from(
+                '<IIQQQQQQ', data, phoff + index * phsize)
+            segments.append((kind, start, virtual, physical, size, memsize, flags, align))
     if any(entry[0] == 7 for entry in segments):
         raise RuntimeError(f'Native ELF TLS requires a newer Android loader: {path}')
 
@@ -34,8 +47,8 @@ def inspect(path):
     dynamic = {}
     for kind, start, _, _, size, _, _, _ in segments:
         if kind == 2:
-            for pos in range(start, start + size, 8):
-                tag, value = struct.unpack_from('<II', data, pos)
+            for pos in range(start, start + size, bits // 4):
+                tag, value = struct.unpack_from('<II' if bits == 32 else '<QQ', data, pos)
                 if not tag:
                     break
                 dynamic.setdefault(tag, []).append(value)
@@ -54,12 +67,12 @@ def inspect(path):
         raise RuntimeError(f'Unexpected GNU/host runtime dependency: {path}: {needed}')
     count = struct.unpack_from('<I', data, offset(dynamic[4][0]) + 4)[0]
     symbols = offset(dynamic[6][0])
-    symbol_size = dynamic.get(11, [16])[0]
+    symbol_size = dynamic.get(11, [16 if bits == 32 else 24])[0]
     for index in range(count):
         name = string(struct.unpack_from('<I', data, symbols + index * symbol_size)[0])
         if '__ndk1' in name:
             raise RuntimeError(f'Stock NDK libc++ ABI leaked into the LLVM21 SDK: {path}: {name}')
-    return {'path': str(path), 'machine': 'ARM', 'elf_bits': 32,
+    return {'path': str(path), 'machine': machine_name, 'elf_bits': bits,
             'sysv_hash': True, 'native_tls': False, 'packed_relocations': False,
             'needed': needed}
 
@@ -72,5 +85,5 @@ paths.add(runtime)
 results = [inspect(path) for path in sorted(paths)]
 if len(results) < 2:
     raise RuntimeError('No Qt target libraries found')
-args.report.write_text(json.dumps({'platform': 'Android API21 armeabi-v7a', 'libraries': results}, indent=2) + '\n')
-print(f'API21 ELF loader compatibility: {len(results)} ARM32 libraries, SysV hash, no native TLS or newer relocations')
+args.report.write_text(json.dumps({'platform': f'Android API21 {args.abi}', 'libraries': results}, indent=2) + '\n')
+print(f'API21 ELF loader compatibility: {len(results)} {args.abi} libraries, SysV hash, no native TLS or newer relocations')

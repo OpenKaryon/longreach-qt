@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a'), default='armeabi-v7a')
 parser.add_argument('--run', default='sdk-suite')
 parser.add_argument('--root', type=Path, required=True)
 args = parser.parse_args()
@@ -19,7 +20,7 @@ apps = [line.strip() for line in (Path(__file__).resolve().parents[3] / 'tests/e
         if line.strip() and not line.startswith('#') and line.strip() != 'smoke-runner']
 expected = set(apps + ['strict-cxx23', 'widgets-gui', 'qml-gui'])
 subprocess.run([sys.executable, str(Path(__file__).parent.parent / 'android-api21/artifact-manifest.py'),
-                'check-apks', '--root', str(root), '--qt-major', str(6), '--abi', 'armeabi-v7a'], check=True)
+                'check-apks', '--root', str(root), '--qt-major', str(6), '--abi', args.abi], check=True)
 records = json.loads((run / 'results.json').read_text(encoding='utf-8-sig'))
 if not isinstance(records, list):
     records = [records]
@@ -27,7 +28,7 @@ if len(records) != 11 or {record['name'] for record in records} != expected:
     raise RuntimeError('The final run must contain exactly all eleven required cases')
 properties = (run / 'guest-properties.txt').read_text(encoding='utf-8-sig')
 for name, value in [('ro.build.version.release', '5.0.2'), ('ro.build.version.sdk', '21'),
-                    ('ro.product.cpu.abi', 'armeabi-v7a')]:
+                    ('ro.product.cpu.abi', args.abi)]:
     if f'[{name}]: [{value}]' not in properties:
         raise RuntimeError(f'Wrong guest: {name}')
 
@@ -56,7 +57,7 @@ for record in records:
 
 report = {
     'qt': '6.8.5', 'llvm': '21.1.8', 'android_release': '5.0.2', 'api': 21,
-    'abi': 'armeabi-v7a', 'run': args.run, 'required_cases': 11,
+    'abi': args.abi, 'run': args.run, 'required_cases': 11,
     'all_eleven_passed': True,
     'sdk_module_libraries': len((root / 'sdk-modules.txt').read_text().splitlines()),
     'sdk_elf_libraries': len(json.loads((root / 'sdk-api21-elf.json').read_text())['libraries']),

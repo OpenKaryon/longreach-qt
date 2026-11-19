@@ -1,0 +1,21 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Load long bundled QML plugin names on Android API21/22
+
+--- a/qtbase/src/corelib/plugin/qlibrary_unix.cpp
++++ b/qtbase/src/corelib/plugin/qlibrary_unix.cpp
+@@ -208,6 +208,15 @@
+ 
+             hnd = dlopen(QFile::encodeName(attempt), dlFlags);
+ #ifdef Q_OS_ANDROID
++            // API21/22's linker rejects names of 128 bytes, including the full
++            // install path. Long QML plugin names still fit when resolved in
++            // the application's native-library search path by basename.
++            if (!hnd && QtAndroidPrivate::androidSdkVersion() <= 22
++                    && attempt.startsWith(u'/') && QFile::encodeName(attempt).size() >= 128
++                    && QFile::exists(attempt)) {
++                const auto bundledName = attempt.sliced(attempt.lastIndexOf(u'/') + 1);
++                hnd = dlopen(QFile::encodeName(bundledName), dlFlags);
++            }
+             if (!hnd) {
+                 auto attemptFromBundle = attempt;
+                 hnd = dlopen(QFile::encodeName(attemptFromBundle.replace(u'/', u'_')), dlFlags);

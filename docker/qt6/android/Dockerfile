@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Qt 6.8.5 / Android API21 ARMv7; upstream LLVM 21.1.8, never the NDK compiler.
+# Qt 6.8.5 / Android API21 ARMv7 or ARM64; upstream LLVM 21.1.8, never the NDK compiler.
 ARG LLVM_TOOLS_IMAGE=longreach-qt4-android-donut:llvm21
 ARG QT_HOST_IMAGE=qt6-linux-amd64-llvm21:latest
 FROM ${QT_HOST_IMAGE} AS qt-host
@@ -21,6 +21,8 @@ ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 WORKDIR /work
 
 FROM tools AS platform
+ARG ANDROID_ABI=armeabi-v7a
+ENV ANDROID_ABI=${ANDROID_ABI}
 COPY scripts/build/qt6-android/prepare-inputs.py /repo/scripts/build/qt6-android/
 COPY scripts/fetch/locks/qt6-android-api21-inputs.json /repo/scripts/fetch/locks/
 RUN --network=none \
@@ -30,14 +32,17 @@ RUN --network=none \
 FROM platform AS runtime
 COPY patches/android/lollipop /repo/patches/android/lollipop
 COPY scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
-COPY scripts/build/qt6-android/build-runtime.sh \
+COPY scripts/build/qt6-android/target-config.sh \
+     scripts/build/qt6-android/build-runtime.sh \
      scripts/build/qt6-android/install-toolchain.sh \
      scripts/build/qt6-android/clang-wrapper.sh \
      scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
+COPY scripts/tests/android-api21-driver.sh /repo/scripts/tests/
 RUN --network=none \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
     bash /repo/scripts/build/qt6-android/build-runtime.sh \
-    && bash /repo/scripts/build/qt6-android/install-toolchain.sh
+    && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
+    && bash /repo/scripts/tests/android-api21-driver.sh
 
 FROM runtime AS openssl
 COPY scripts/build/qt6-android/build-openssl.sh /repo/scripts/build/qt6-android/
@@ -59,14 +64,16 @@ RUN --network=none \
     && bash /repo/scripts/build/qt6-android/finish-sdk.sh
 
 FROM tools AS sdk
+ARG ANDROID_ABI=armeabi-v7a
+ENV ANDROID_ABI=${ANDROID_ABI}
 COPY --from=qt-build /opt/longreach-android-api21 /opt/longreach-android-api21
 COPY --from=qt-build /opt/openssl-api21 /opt/openssl-api21
-COPY --from=qt-build /opt/qt6-android-armeabi-v7a-llvm /opt/qt6-android-armeabi-v7a-llvm
+COPY --from=qt-build /opt/qt6-android-${ANDROID_ABI}-llvm /opt/qt6-android-${ANDROID_ABI}-llvm
 COPY --from=qt-build /work/android-sdk /work/android-sdk
 COPY --from=qt-build /out /opt/longreach-reports
-ENV PATH=/opt/qt6-android-armeabi-v7a-llvm/bin:${PATH} \
+ENV PATH=/opt/qt6-android-${ANDROID_ABI}-llvm/bin:${PATH} \
     ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
-LABEL org.openkaryon.longreach-qt.platform="android-lollipop-armeabi-v7a" \
+LABEL org.openkaryon.longreach-qt.platform="android-lollipop-${ANDROID_ABI}" \
       org.openkaryon.longreach-qt.android-api="21" \
       org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
       org.openkaryon.longreach-qt.version="6.8.5"

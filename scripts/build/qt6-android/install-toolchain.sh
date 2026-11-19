@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
+source /repo/scripts/build/qt6-android/target-config.sh
 prefix=/opt/longreach-android-api21
 ndk="$prefix/ndk"
 original=/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
@@ -20,13 +21,13 @@ for patch in /repo/patches/android/lollipop/*.patch; do
     fi
     patch -p1 --forward -d "$prefix/sysroot" < "$patch"
 done
-if [[ ! -d "$prefix/sysroot/usr/lib/arm-linux-androideabi/21" ]]; then
-    cp -a "$original/usr/lib/arm-linux-androideabi" "$prefix/sysroot/usr/lib/"
+if [[ ! -d "$prefix/sysroot/usr/lib/$ndk_triple/21" ]]; then
+    cp -a "$original/usr/lib/$ndk_triple" "$prefix/sysroot/usr/lib/"
 fi
-copy_if_changed "$prefix/lib/libc++_shared.so" "$prefix/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so"
-copy_if_changed "$prefix/lib/libc++.a" "$prefix/sysroot/usr/lib/arm-linux-androideabi/libc++_static.a"
+copy_if_changed "$prefix/lib/libc++_shared.so" "$prefix/sysroot/usr/lib/$ndk_triple/libc++_shared.so"
+copy_if_changed "$prefix/lib/libc++.a" "$prefix/sysroot/usr/lib/$ndk_triple/libc++_static.a"
 for library in libc++abi.a libc++experimental.a libunwind.a; do
-    copy_if_changed "$prefix/lib/$library" "$prefix/sysroot/usr/lib/arm-linux-androideabi/$library"
+    copy_if_changed "$prefix/lib/$library" "$prefix/sysroot/usr/lib/$ndk_triple/$library"
 done
 if [[ -d "$prefix/sysroot/usr/include/c++/v1" && ! -L "$prefix/sysroot/usr/include/c++/v1" ]]; then
     test ! -e /work/api21/unused-ndk-cxx-headers
@@ -34,10 +35,18 @@ if [[ -d "$prefix/sysroot/usr/include/c++/v1" && ! -L "$prefix/sysroot/usr/inclu
 fi
 ln -sfn "$prefix/include/c++/v1" "$prefix/sysroot/usr/include/c++/v1"
 if [[ ! -f "$prefix/lib/tmpfile-android.o" || /repo/scripts/build/qt4-android/tmpfile-donut.c -nt "$prefix/lib/tmpfile-android.o" ]]; then
-    clang-21 --target=armv7a-linux-androideabi21 --sysroot="$prefix/sysroot" \
-        -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -fPIC \
+    clang-21 --target="$target" --sysroot="$prefix/sysroot" \
+        "${arch_flags[@]}" -fPIC \
         -c /repo/scripts/build/qt4-android/tmpfile-donut.c -o "$prefix/lib/tmpfile-android.o"
 fi
+# Capture the selected target so consumers cannot accidentally switch an SDK ABI.
+{ declare -p abi target ndk_triple processor builtins_arch openssl_target arch_flags sdk_prefix; } > "$prefix/target.sh"
+cat > "$prefix/target.cmake" <<EOF
+set(LONGREACH_ANDROID_ABI "$abi")
+set(LONGREACH_ANDROID_PROCESSOR "$processor")
+set(LONGREACH_ANDROID_NDK_TRIPLE "$ndk_triple")
+set(LONGREACH_QT_PREFIX "$sdk_prefix")
+EOF
 copy_if_changed /repo/scripts/build/qt6-android/clang-wrapper.sh "$prefix/bin/cxx"
 chmod +x "$prefix/bin/cxx"
 ln -sfn cxx "$prefix/bin/cc"
@@ -51,7 +60,7 @@ if [[ ! -f "$ndk/sources/android/cpufeatures/cpu-features.c" ]]; then
 fi
 ln -sfn "$prefix/sysroot" "$toolchain/sysroot"
 ln -sfn "$prefix/bin/cc" "$toolchain/bin/clang"
-ln -sfn "$prefix/bin/cc" "$toolchain/bin/armv7a-linux-androideabi21-clang"
+ln -sfn "$prefix/bin/cc" "$toolchain/bin/${target}-clang"
 ln -sfn "$prefix/bin/cxx" "$toolchain/bin/clang++"
 for tool in ar ranlib strip objcopy nm readobj readelf objdump; do
     ln -sfn "/usr/bin/llvm-$tool-21" "$toolchain/bin/llvm-$tool"

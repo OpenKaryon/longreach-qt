@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
+    [ValidateSet('armeabi-v7a','arm64-v8a')][string] $Abi = 'armeabi-v7a',
     [Parameter(Mandatory)] [string] $QtSdk,
     [Parameter(Mandatory)] [string] $NativeLibrary,
     [Parameter(Mandatory)] [string] $RuntimeLibrary,
@@ -8,12 +9,13 @@ param(
     [Parameter(Mandatory)] [string] $AndroidSdk,
     [string] $CompileApi = '35',
     [string[]] $Modules = @('Core', 'Gui', 'Widgets'),
-    [string[]] $Plugins = @('platforms/libplugins_platforms_qtforandroid_armeabi-v7a.so'),
+    [string[]] $Plugins,
     [string] $Package = 'org.longreachqt.examples.probe',
     [string] $DeploymentDirectory
 )
 
 $ErrorActionPreference = 'Stop'
+if (!$PSBoundParameters.ContainsKey('Plugins')) { $Plugins = @("platforms/libplugins_platforms_qtforandroid_$Abi.so") }
 function Invoke-AndroidTool([string] $Program, [string[]] $Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program exited with code $LASTEXITCODE." }
@@ -28,10 +30,10 @@ $java = Split-Path (Get-Command javac.exe).Source
 $work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("package-" + [guid]::NewGuid()))).FullName
 $keyStore = Join-Path $OutputDirectory 'local-examples.jks'
 $appName = [IO.Path]::GetFileNameWithoutExtension($NativeLibrary)
-if (!$appName.StartsWith('lib') -or !$appName.EndsWith('_armeabi-v7a')) {
-    throw 'Expected lib<application>_armeabi-v7a.so.'
+if (!$appName.StartsWith('lib') -or !$appName.EndsWith("_$Abi")) {
+    throw "Expected lib<application>_$Abi.so."
 }
-$appName = $appName.Substring(3, $appName.Length - 3 - '_armeabi-v7a'.Length)
+$appName = $appName.Substring(3, $appName.Length - 3 - ("_$Abi").Length)
 $apk = Join-Path $OutputDirectory "$appName.apk"
 if (Test-Path -LiteralPath $apk) {
     if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($apk)) -ne $OutputDirectory) {
@@ -42,12 +44,12 @@ if (Test-Path -LiteralPath $apk) {
 }
 
 try {
-    New-Item -ItemType Directory -Force -Path "$work/lib/armeabi-v7a", "$work/classes", "$work/generated", "$work/res/values" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$work/lib/$Abi", "$work/classes", "$work/generated", "$work/res/values" | Out-Null
     Get-ChildItem -LiteralPath "$QtSdk/src/android/java/res" | Copy-Item -Destination "$work/res" -Recurse -Force
     if ($DeploymentDirectory) {
         $DeploymentDirectory = (Resolve-Path -LiteralPath $DeploymentDirectory).Path
-        Get-ChildItem -LiteralPath "$DeploymentDirectory/libs/armeabi-v7a" -Filter '*.so' -File |
-            Copy-Item -Destination "$work/lib/armeabi-v7a" -Force
+        Get-ChildItem -LiteralPath "$DeploymentDirectory/libs/$Abi" -Filter '*.so' -File |
+            Copy-Item -Destination "$work/lib/$Abi" -Force
         Get-ChildItem -LiteralPath "$DeploymentDirectory/res" |
             Copy-Item -Destination "$work/res" -Recurse -Force
         if (Test-Path -LiteralPath "$DeploymentDirectory/assets") {
@@ -56,16 +58,16 @@ try {
                 Copy-Item -Destination "$work/assets" -Recurse -Force
         }
     } else {
-        $qtEntries = @('<item>armeabi-v7a;c++_shared</item>')
+        $qtEntries = @("<item>$Abi;c++_shared</item>")
         foreach ($module in $Modules) {
-            Copy-Item -LiteralPath "$QtSdk/lib/libQt6${module}_armeabi-v7a.so" -Destination "$work/lib/armeabi-v7a"
-            $qtEntries += "<item>armeabi-v7a;Qt6${module}_armeabi-v7a</item>"
+            Copy-Item -LiteralPath "$QtSdk/lib/libQt6${module}_$Abi.so" -Destination "$work/lib/$Abi"
+            $qtEntries += "<item>$Abi;Qt6${module}_$Abi</item>"
         }
         $localEntries = @()
         foreach ($plugin in $Plugins) {
             $pluginName = Split-Path $plugin -Leaf
-            Copy-Item -LiteralPath "$QtSdk/plugins/$plugin" -Destination "$work/lib/armeabi-v7a"
-            $localEntries += "<item>armeabi-v7a;$pluginName</item>"
+            Copy-Item -LiteralPath "$QtSdk/plugins/$plugin" -Destination "$work/lib/$Abi"
+            $localEntries += "<item>$Abi;$pluginName</item>"
         }
         $libs = @"
     <resources>
@@ -81,7 +83,7 @@ try {
         [IO.File]::WriteAllText("$work/res/values/libs.xml", $libs)
     }
     # Explicit native/runtime inputs take precedence over deployment copies.
-    Copy-Item -LiteralPath $NativeLibrary, $RuntimeLibrary -Destination "$work/lib/armeabi-v7a" -Force
+    Copy-Item -LiteralPath $NativeLibrary, $RuntimeLibrary -Destination "$work/lib/$Abi" -Force
     [xml] $libraryResources = Get-Content -LiteralPath "$work/res/values/libs.xml" -Raw
     foreach ($name in @('static_init_classes','use_local_qt_libs','bundle_local_qt_libs','system_libs_prefix')) {
         $entries = @($libraryResources.resources.ChildNodes | Where-Object {
@@ -156,7 +158,7 @@ try {
     Invoke-AndroidTool "$tools/aapt.exe" $aaptArguments
     Push-Location -LiteralPath $work
     try {
-        $nativeFiles = @(Get-ChildItem 'lib/armeabi-v7a' -File | ForEach-Object { "lib/armeabi-v7a/$($_.Name)" })
+        $nativeFiles = @(Get-ChildItem "lib/$Abi" -File | ForEach-Object { "lib/$Abi/$($_.Name)" })
         Invoke-AndroidTool "$tools/aapt.exe" (@('add', 'unsigned.apk', 'classes.dex') + $nativeFiles)
         if (!(Test-Path -LiteralPath $keyStore)) {
             Invoke-AndroidTool "$java/keytool.exe" @('-genkeypair', '-keystore', $keyStore,

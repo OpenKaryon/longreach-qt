@@ -3,10 +3,14 @@
 """Verify and extract only the NDK platform inputs and Android build tools."""
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import shutil
 import zipfile
 
+abi = os.environ.get('ANDROID_ABI', 'armeabi-v7a')
+triples = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android'}
+triple = triples[abi]
 lock = json.loads(Path('/repo/scripts/fetch/locks/qt6-android-api21-inputs.json').read_text())
 for record in lock['sources']:
     name = record['file']
@@ -37,7 +41,7 @@ for record in lock['sources']:
                 if not (relative == 'source.properties' or relative.startswith(('meta/',
                         'sources/android/cpufeatures/', 'sources/android/native_app_glue/',
                         'toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/',
-                        'toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/'))):
+                        f'toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{triple}/'))):
                     continue
                 destination = Path('/ndk') / relative
             else:

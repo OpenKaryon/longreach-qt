@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
+source /repo/scripts/build/qt6-android/target-config.sh
 repo=/repo
 build=/work/api21/tests-qt6-android
-prefix=/opt/qt6-android-armeabi-v7a-llvm
+prefix=$sdk_prefix
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 export LANG=C.UTF-8
@@ -20,7 +21,7 @@ while IFS= read -r app || [[ -n "$app" ]]; do
         ""|"#"*|smoke-runner) continue ;;
     esac
     cmake --build "$build" --target "$app" --parallel "${PARALLEL_JOBS:-2}"
-    python3 /repo/scripts/build/qt6-android/deploy-examples.py --app "$app" --build "$build" --output /out/deployment
+    python3 /repo/scripts/build/qt6-android/deploy-examples.py --app "$app" --build "$build" --output /out/deployment --abi "$abi"
 done < "$repo/tests/expected-apps.txt"
 # Java packaging inputs must come entirely from this SDK, including on rebuilds.
 packaging=/out/sdk-packaging

@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
-      [string[]]$CaseNames, [ValidateSet('default','software')][string]$QtQuickBackend='default',
+param([ValidateSet('armeabi-v7a','arm64-v8a')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
+      [string[]]$CaseNames, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
       [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
-if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt6-android-lollipop" }
+$suffix = if ($Abi -eq 'armeabi-v7a') { '' } else { "-$Abi" }
+if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt6-android-lollipop$suffix" }
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $adb="$AndroidSdk/platform-tools/adb.exe"
-& python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $root --qt-major 6 --abi armeabi-v7a
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $root --qt-major 6 --abi $Abi
 if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
-if (Get-Process -Name emulator-arm,emulator,qemu-system-armel -ErrorAction SilentlyContinue) {
+if (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64 -ErrorAction SilentlyContinue) {
     throw 'Stop the existing Android emulator before preparing a fresh suite.'
 }
 $serial = 'emulator-5582'
@@ -25,11 +26,12 @@ if ($apps.Count -ne 8) { throw 'Expected exactly eight shared applications' }
 foreach ($app in $apps) {
     if (!(Test-Path -LiteralPath "$root/apk/$app.apk")) { throw "Missing APK: $app" }
 }
-& "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope test
-& python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root
+& "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope test -Abi $Abi
+& python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
 if ($LASTEXITCODE) { throw 'Could not prepare API21 emulator inputs' }
-$emulator="$root/media/tools/emulator-arm.exe"
-& "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator $emulator -RunName $RunName -Gpu $Gpu
+$emulatorName = if ($Abi -eq 'arm64-v8a') { 'emulator-25.2.5/tools/emulator.exe' } else { 'tools/emulator-arm.exe' }
+$emulator="$root/media/$emulatorName"
+& "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator $emulator -RunName $RunName -Gpu $Gpu -Abi $Abi
 $run = "$root/$RunName"
 $outcomes = [Collections.Generic.List[object]]::new()
 try {
@@ -44,7 +46,7 @@ try {
         Start-Sleep -Seconds 2
     }
     if (!$ready) { throw 'API21 emulator did not finish booting' }
-    $expected = @{ 'ro.build.version.release'='5.0.2'; 'ro.build.version.sdk'='21'; 'ro.product.cpu.abi'='armeabi-v7a' }
+    $expected = @{ 'ro.build.version.release'='5.0.2'; 'ro.build.version.sdk'='21'; 'ro.product.cpu.abi'=$Abi }
     foreach ($property in $expected.Keys) {
         $value = ((Invoke-Adb @('shell','getprop',$property)) -join '').Trim()
         if ($value -ne $expected[$property]) { throw "Unexpected $property=$value" }
@@ -75,6 +77,7 @@ try {
         if (!($clear -match '^\s*Success\s*$')) { throw "Could not reset previous app reports: $package" }
         Invoke-Adb @('logcat','-c') | Out-Null
         $launchArguments = @('shell','am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments)
+        if ($DebugQtPlugins) { $launchArguments += @('--ez','debugQtPlugins','true') }
         if ($QtQuickBackend -ne 'default') {
             $launchArguments += @('--es','qtQuickBackend',$QtQuickBackend)
         }
@@ -129,6 +132,6 @@ try {
 }
 
 if (!$CaseNames) {
-    & python "$repo/scripts/build/qt6-android/collect-results.py" --root $root --run $RunName
+    & python "$repo/scripts/build/qt6-android/collect-results.py" --root $root --run $RunName --abi $Abi
     if ($LASTEXITCODE) { throw 'Incomplete API21 suite evidence' }
 }

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
+    [ValidateSet('armeabi-v7a','arm64-v8a')][string] $Abi = 'armeabi-v7a',
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME,
     [ValidateSet('all','sdk','test')] [string] $Scope = 'all'
@@ -11,8 +12,12 @@ $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'downloads/android-lollipop' }
 $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
 $lock = Get-Content -LiteralPath "$PSScriptRoot/locks/qt6-android-api21-inputs.json" -Raw | ConvertFrom-Json
-$testInputs = @('armeabi-v7a-21_r04.zip', 'tools_r24.4.1-windows.zip')
+$systemImages = @('armeabi-v7a-21_r04.zip', 'arm64-v8a-21_r04.zip')
+$emulatorArchive = if ($Abi -eq 'arm64-v8a') { 'tools_r25.2.5-windows.zip' } else { 'tools_r24.4.1-windows.zip' }
+$testInputs = @("${Abi}-21_r04.zip", $emulatorArchive)
+$allTestInputs = $systemImages + @('tools_r24.4.1-windows.zip','tools_r25.2.5-windows.zip')
 foreach ($source in $lock.sources) {
+    if ($source.file -in $allTestInputs -and $source.file -notin $testInputs) { continue }
     $forTest = $source.file -in $testInputs
     if (($Scope -eq 'sdk' -and $forTest) -or ($Scope -eq 'test' -and !$forTest)) { continue }
     $destination = Join-Path $output $source.file

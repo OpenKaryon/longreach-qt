@@ -17,6 +17,11 @@ public class SmokeActivity extends QtActivity {
         try {
             Os.setenv("LONGREACH_APP_FILES", files.getAbsolutePath(), true);
             Os.setenv("TMPDIR", files.getAbsolutePath(), true);
+            if (getIntent().getBooleanExtra("debugQtPlugins", false)) {
+                Os.setenv("QT_DEBUG_PLUGINS", "1", true);
+                Os.setenv("QT_LOGGING_RULES",
+                        "qt.core.library.debug=true;qt.core.plugin.loader.debug=true;qt.qml.import.debug=true", true);
+            }
             String backend = getIntent().getStringExtra("qtQuickBackend");
             if (backend != null)
                 Os.setenv("QT_QUICK_BACKEND", backend, true);

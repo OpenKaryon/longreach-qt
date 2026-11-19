@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -euo pipefail
+source /repo/scripts/build/qt6-android/target-config.sh
 source=/work/api21/qt-src
 build=/work/api21/qt-sdk-build
-prefix=/opt/qt6-android-armeabi-v7a-llvm
+prefix=$sdk_prefix
 phase=${1:-all}
 archive=/repo/downloads/qt-everywhere-src-6.8.5.tar.xz
 echo 'c0537548bb3871cbb3cac85fb55813430d45ac4d5d4daa64bdf41f3c2ae65ff9  '"$archive" | sha256sum -c -
@@ -20,6 +21,8 @@ export LC_ALL=C.UTF-8
 unset PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_PATH
 export PKG_CONFIG_LIBDIR=/opt/openssl-api21/lib/pkgconfig
 if [[ "$phase" != build ]]; then
+# Preserve actionable compiler/link diagnostics in Docker's log on failure.
+trap 'result=$?; if [[ -f "$build/CMakeFiles/CMakeError.log" ]]; then cat "$build/CMakeFiles/CMakeError.log"; fi; exit "$result"' ERR
 cmake -S "$source" -B "$build" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/opt/longreach-android-api21/toolchain.cmake \
     -DQT_HOST_PATH=/opt/qt6-host-llvm21 -DCMAKE_INSTALL_PREFIX="$prefix" \
@@ -36,6 +39,7 @@ cmake -S "$source" -B "$build" -G Ninja \
     -DCMAKE_DISABLE_FIND_PACKAGE_Clang=ON \
     -DCMAKE_JOB_POOLS=link_pool=1 -DCMAKE_JOB_POOL_LINK=link_pool \
     -DQT_QMAKE_TARGET_MKSPEC=android-clang -DQT_QMAKE_DEVICE_OPTIONS=ANDROID_PLATFORM=android-21
+trap - ERR
 fi
 if [[ "$phase" == configure ]]; then
     exit 0

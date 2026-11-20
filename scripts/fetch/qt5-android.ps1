@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi-v7a','arm64-v8a')][string] $Abi = 'armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string] $Abi = 'armeabi-v7a',
     [ValidateSet('all','sdk','test')][string] $Scope = 'all',
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME
@@ -12,13 +12,13 @@ $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'downloads/android-gingerbread' }
 $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
 $lock = Get-Content -LiteralPath "$PSScriptRoot/locks/qt5-android-api10-inputs.json" -Raw | ConvertFrom-Json
-if ($Abi -eq 'arm64-v8a') {
+if ($Abi -ne 'armeabi-v7a') {
     & "$PSScriptRoot/qt6-android.ps1" -Abi $Abi -Scope $Scope -PlatformOnly -AndroidSdk $AndroidSdk
     if ($Scope -eq 'test') { return }
 }
 $testInputs = @('android-2.3.3_r02-linux.zip','kernel-qemu-armv7','tools_r24.4.1-windows.zip')
 foreach ($source in $lock.sources) {
-    if ($Abi -eq 'arm64-v8a' -and $source.file -ne 'android-35.jar') { continue }
+    if ($Abi -ne 'armeabi-v7a' -and $source.file -ne 'android-35.jar') { continue }
     $forTest = $source.file -in $testInputs
     if (($Scope -eq 'sdk' -and $forTest) -or ($Scope -eq 'test' -and !$forTest)) { continue }
     $destination = Join-Path $output $source.file

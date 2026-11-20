@@ -12,7 +12,7 @@ import subprocess
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--abi", choices=("armeabi-v7a", "arm64-v8a"), default="armeabi-v7a")
+    parser.add_argument("--abi", choices=("armeabi-v7a", "arm64-v8a", "x86_64"), default="armeabi-v7a")
     parser.add_argument("--repo", type=Path, default=Path("/repo"))
     parser.add_argument("--sdk", type=Path, default=None)
     parser.add_argument("--android-sdk", type=Path, default=Path("/work/android-sdk"))
@@ -22,7 +22,8 @@ def main():
     args = parser.parse_args()
     args.sdk = args.sdk or Path(f"/opt/qt5-android-{args.abi}-llvm")
     minimum, triple = {"armeabi-v7a": ("10", "arm-linux-androideabi"),
-                       "arm64-v8a": ("21", "aarch64-linux-android")}[args.abi]
+                       "arm64-v8a": ("21", "aarch64-linux-android"),
+                       "x86_64": ("21", "x86_64-linux-android")}[args.abi]
     expected = [line.strip() for line in (args.repo / "tests/expected-apps.txt").read_text().splitlines()
                 if line.strip() and not line.lstrip().startswith("#")]
     expected.remove("smoke-runner")

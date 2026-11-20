@@ -16,6 +16,13 @@ case "$abi" in
         ndk_triple=aarch64-linux-android
         openssl_target=linux-aarch64
         ;;
+    x86_64)
+        api=21
+        profile=lollipop
+        processor=x86_64
+        ndk_triple=x86_64-linux-android
+        openssl_target=linux-x86_64
+        ;;
     *) echo "Unsupported Qt5 Android ABI: $abi" >&2; exit 1 ;;
 esac
 sdk_prefix=/opt/qt5-android-${abi}-llvm

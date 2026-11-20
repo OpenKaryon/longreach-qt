@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Qt 5.15.19, upstream LLVM21.1.8: ARMv7/API10 or ARM64/API21.
+# Qt 5.15.19, upstream LLVM21.1.8: ARMv7/API10 or ARM64/x86_64 API21.
 # The Qt 4 Android image is a shared host-tools image, not its target SDK.
 
 ARG ANDROID_ABI=armeabi-v7a
@@ -58,6 +58,7 @@ RUN --network=none \
     && ln -s /opt/longreach-android-api21 /opt/longreach-android
 
 FROM api21-runtime AS arm64-v8a-runtime
+FROM api21-runtime AS x86_64-runtime
 
 FROM ${ANDROID_ABI}-runtime AS runtime
 ARG ANDROID_ABI
@@ -78,6 +79,7 @@ COPY patches/qt5/all /repo/patches/qt5/all
 COPY patches/qt5/android /repo/patches/qt5/android
 COPY patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch /repo/patches/qt5/windows-xp-llvm/
 COPY patches/qt5/linux-arm64-llvm/01-qml-arm64-register-enum.patch /repo/patches/qt5/linux-arm64-llvm/
+COPY patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch /repo/patches/qt5/linux-lucid-llvm/
 COPY scripts/build/qt5-android/build-qt.sh scripts/build/qt5-android/apply-qt-patches.py /repo/scripts/build/qt5-android/
 COPY scripts/build/qt5-android/mkspec /repo/scripts/build/qt5-android/mkspec
 RUN --network=none \
@@ -116,11 +118,14 @@ COPY --from=validated /opt/openssl-api10 /opt/openssl-api10
 LABEL org.openkaryon.longreach-qt.platform="android-gingerbread-armeabi-v7a" \
       org.openkaryon.longreach-qt.android-api="10"
 
-FROM sdk-base AS arm64-v8a-sdk
+FROM sdk-base AS api21-sdk
 COPY --from=validated /opt/openssl-api21 /opt/openssl-api21
 COPY --from=validated /opt/longreach-android-api21 /opt/longreach-android-api21
 RUN ln -s /opt/longreach-android-api21 /opt/longreach-android
-LABEL org.openkaryon.longreach-qt.platform="android-lollipop-arm64-v8a" \
+LABEL org.openkaryon.longreach-qt.platform="android-lollipop-${ANDROID_ABI}" \
       org.openkaryon.longreach-qt.android-api="21"
+
+FROM api21-sdk AS arm64-v8a-sdk
+FROM api21-sdk AS x86_64-sdk
 
 FROM ${ANDROID_ABI}-sdk AS sdk

@@ -50,6 +50,17 @@ for record in records:
     if (case / 'files/selftest-result.txt').read_text().strip() != '0':
         raise RuntimeError(f'Native result is not zero: {name}')
     log = (case / 'logcat.log').read_text(encoding='utf-8-sig')
+    if 'log_marker' in record or (case / 'log-marker.txt').exists():
+        marker = record.get('log_marker', '')
+        if not re.fullmatch(r'BEGIN-[0-9a-f]{32}', marker):
+            raise RuntimeError(f'Invalid case log marker: {name}')
+        if (case / 'log-marker.txt').read_text(encoding='utf-8-sig').strip() != marker:
+            raise RuntimeError(f'Case log marker differs from recorded run: {name}')
+        raw = (case / 'logcat-raw.log').read_text(encoding='utf-8-sig').splitlines()
+        pattern = r'^[VDIWEF]/LongreachCase\s*\(\s*\d+\):\s*' + re.escape(marker) + r'\s*$'
+        indices = [i for i, line in enumerate(raw) if re.fullmatch(pattern, line)]
+        if len(indices) != 1 or raw[indices[0] + 1:] != log.splitlines():
+            raise RuntimeError(f'Case log does not match its raw launch boundary: {name}')
     if re.search(r'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting', log):
         raise RuntimeError(f'Fatal cleanup error: {name}')
     stdout_path = case / 'files/selftest.stdout'

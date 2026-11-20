@@ -2,7 +2,7 @@
 #Requires -Version 7.0
 param(
     [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
-    [ValidateSet('armeabi-v7a','arm64-v8a')][string]$Abi='armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi='armeabi-v7a',
     [string]$AndroidSdk=$env:ANDROID_HOME,
     [string]$OutputDirectory,
     [string]$SdkImage,
@@ -29,7 +29,7 @@ $profile=if ($api -eq '10') { 'gingerbread' } else { "lollipop-$Abi" }
 if (!$SdkImage) { $SdkImage="longreach-qt5-android-${profile}:llvm21" }
 if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt5-android-$profile" }
 if ($Mode -in @('sdk','examples') -and
-        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
+        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless -ErrorAction SilentlyContinue)) {
     throw 'Stop the Android emulator before compiling.'
 }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }

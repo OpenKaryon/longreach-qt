@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi-v7a','arm64-v8a')][string]$Abi = 'armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi = 'armeabi-v7a',
     [string]$RunName = 'run',
     [ValidateSet('on','mesa')][string]$Gpu = 'on',
     [string[]]$CaseNames,
@@ -12,7 +12,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-if ($Abi -eq 'arm64-v8a') {
+if ($Abi -ne 'armeabi-v7a') {
     $options=@{} + $PSBoundParameters
     $options.RunName=$RunName
     & "$PSScriptRoot/android-api21-suite.ps1" -QtMajor 5 @options

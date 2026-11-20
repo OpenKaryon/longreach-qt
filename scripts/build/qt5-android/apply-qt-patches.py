@@ -48,6 +48,9 @@ def main():
     if os.environ.get("ANDROID_ABI", "armeabi-v7a") == "arm64-v8a":
         # The Clang21 register sentinel fix is already shared with Linux ARM64.
         patches.append(repo / "patches/qt5/linux-arm64-llvm/01-qml-arm64-register-enum.patch")
+    if os.environ.get("ANDROID_ABI", "armeabi-v7a") in ("x86", "x86_64"):
+        # The same Clang21 sentinel fix is shared with Linux/Windows/macOS x86.
+        patches.append(repo / "patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch")
     records = [(str(path.relative_to(repo)), hashlib.sha256(path.read_bytes()).hexdigest())
                for path in patches]
     fingerprint = hashlib.sha256(json.dumps(

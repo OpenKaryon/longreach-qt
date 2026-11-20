@@ -1,10 +1,13 @@
-# Experimental Qt 5.15.19 for Android API 21 ARM64
+# Experimental Qt 5.15.19 for Android API 21
 
-This profile selects `arm64-v8a` on Android 5/API 21 with upstream LLVM 21.1.8.
+These profiles select `arm64-v8a` or `x86_64` on Android 5/API 21 with upstream
+LLVM 21.1.8.
 The original ARMv7 [API 10 profile](qt5-android-gingerbread.md) remains the default.
-The standalone probe and both installed-SDK C++23 profiles passed 25/25 with
-no SKIP; the full SDK, eight applications and all thirteen emulator cases
-passed. See the [recorded evidence](../results/qt5-android-lollipop-arm64-v8a-llvm21-20261119.md).
+For both ABIs, the standalone probe and both installed-SDK C++23 profiles
+passed 25/25 with no SKIP. The full SDK, eight applications and all thirteen
+emulator cases passed. See the recorded evidence for
+[ARM64](../results/qt5-android-lollipop-arm64-v8a-llvm21-20261119.md) and
+[x86_64](../results/qt5-android-lollipop-x86_64-llvm21-20261120.md).
 
 ## Build and run
 
@@ -13,10 +16,11 @@ Android SDK platform 35, Build Tools 36.0.0 and Platform Tools. Set `ANDROID_HOM
 or pass `-AndroidSdk` to each mode.
 
 ```powershell
-./scripts/build/qt5-android.ps1 -Abi arm64-v8a -Mode sdk -AndroidSdk $env:ANDROID_HOME
-./scripts/build/qt5-android.ps1 -Abi arm64-v8a -Mode examples -AndroidSdk $env:ANDROID_HOME
-./scripts/build/qt5-android.ps1 -Abi arm64-v8a -Mode package -AndroidSdk $env:ANDROID_HOME
-./scripts/build/qt5-android.ps1 -Abi arm64-v8a -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-3
+$abi = 'arm64-v8a' # Or x86_64.
+./scripts/build/qt5-android.ps1 -Abi $abi -Mode sdk -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Abi $abi -Mode examples -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Abi $abi -Mode package -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Abi $abi -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-3
 ```
 
 The default `examples` mode inspects an existing image, validates its Qt/LLVM,
@@ -36,6 +40,10 @@ The SDK image is `longreach-qt5-android-lollipop-arm64-v8a:llvm21`, with prefix
 `artifacts/qt5-android-lollipop-arm64-v8a/`. Native SDK consumers can use qmake
 or the prefix's `toolchain.cmake` inside the image. Android applications are
 shared libraries loaded through the installed SDK's actual QtActivity.
+For x86_64, the corresponding image is
+`longreach-qt5-android-lollipop-x86_64:llvm21`, prefix
+`/opt/qt5-android-x86_64-llvm`, and output directory
+`artifacts/qt5-android-lollipop-x86_64/`.
 
 ## Inputs and shared components
 
@@ -62,8 +70,10 @@ example image identities. Qt 6 continues to require its original eleven cases.
 
 ## Boundaries
 
-The emulator uses the pinned Android 5.0.2/LSY66K image, Tools 25.2.5 and its ARM64
-kernel 3.10 with real GLES by default; no host input capture is used. The old
+ARM64 uses the pinned Android 5.0.2/LSY66K r04 image, Tools 25.2.5 and its
+ARM64 kernel 3.10. x86_64 uses the r05 image, Emulator 32.1.11/9536276 and
+`kernel-ranchu` 3.10 with Nehalem two-core software CPU emulation and SwiftShader
+GLES. Both use the normal Qt Quick GLES backend; no host input capture is used. The old
 API 10 suite still uses its original Gingerbread kernel and software QtQuick.
 API 21/22's LP64 loader limit on long names is handled by a basename retry for an
 existing absolute plugin path of at least 128 encoded bytes. Other loader errors

@@ -45,8 +45,9 @@ Docker, while `test` uses saved APKs without compilation or packaging.
 The examples invocation records and runs the inspected immutable image ID.
 `-SdkImage` selects another ready image or the output tag for SDK mode.
 
-The [ARM64/API21 profile](qt5-android-lollipop.md) uses the same Dockerfile and
-phase entry point with `-Abi arm64-v8a`; it does not replace this API10 floor.
+The [ARM64/x86_64 API21 profiles](qt5-android-lollipop.md) use the same Dockerfile
+and phase entry point with `-Abi arm64-v8a` or `-Abi x86_64`. The original API10
+floor remains the default for ARMv7.
 The Docker recipe contains host tools, runtime, OpenSSL, QtBase, complete Qt
 and installed SDK stages. Native source builds run offline against verified
 archives with two jobs. Example builds run one application at a time in a

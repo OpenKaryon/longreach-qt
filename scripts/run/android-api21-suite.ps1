@@ -3,6 +3,7 @@ param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a
       [string[]]$CaseNames, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
       [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
+. "$PSScriptRoot/android-api21-log.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
@@ -88,6 +89,9 @@ try {
         if (!($clear -match '^\s*Success\s*$')) { throw "Could not reset previous app reports: $package" }
         # API21's default clear leaves system-buffer deaths from the prior APK.
         Invoke-Adb @('logcat','-b','all','-c') | Out-Null
+        $logMarker = 'BEGIN-' + [guid]::NewGuid().ToString('N')
+        $logMarker | Set-Content "$destination/log-marker.txt"
+        Invoke-Adb @('shell','log','-p','i','-t','LongreachCase',$logMarker) | Out-Null
         $launchArguments = @('shell','am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments)
         if ($DebugQtPlugins) { $launchArguments += @('--ez','debugQtPlugins','true') }
         if ($QtQuickBackend -ne 'default') {
@@ -102,7 +106,8 @@ try {
             $nativeResult = @(& $adb -s $serial shell cat "/data/data/$package/files/selftest-result.txt" 2>$null)
             if ($nativeResult -match '^\s*[0-9]+\s*$') { $complete = $true; break }
             if ($attempt % 5 -eq 0) {
-                $pendingLog = @(& $adb -s $serial logcat -d -v brief)
+                $pendingRaw = @(& $adb -s $serial logcat -d -v brief)
+                $pendingLog = @(Get-AndroidApi21CaseLog -RawLog $pendingRaw -Marker $logMarker)
                 if (!$applicationPid) {
                     # Some API21 logd buffers retain the prior invocation's death.
                     # Bind this early-exit check to the currently running app PID.
@@ -120,7 +125,9 @@ try {
         }
         # A success marker must not conceal a native crash during Qt cleanup.
         Start-Sleep -Seconds 2
-        $log = @(Invoke-Adb @('logcat','-d','-v','brief'))
+        $rawLog = @(Invoke-Adb @('logcat','-d','-v','brief'))
+        $rawLog | Set-Content -LiteralPath "$destination/logcat-raw.log"
+        $log = @(Get-AndroidApi21CaseLog -RawLog $rawLog -Marker $logMarker)
         $log | Set-Content -LiteralPath "$destination/logcat.log"
         & $adb -s $serial pull "/data/data/$package/files" "$destination/files" 2>&1 | Set-Content -LiteralPath "$destination/pull.log"
         if (!$complete -or !($nativeResult -match '^\s*0\s*$')) { throw "$($case.Name) did not complete with zero: $nativeResult" }
@@ -135,7 +142,7 @@ try {
             throw "$($case.Name) has no successful ordinary summary"
         }
         $summary = @($report | Where-Object { $_ -match 'passed,.*failed,.*skipped' })
-        $outcomes.Add([pscustomobject]@{ name=$case.Name; app=$app; arguments=$case.Arguments; apk_relative=$apkRelative; result=0; summary=$summary; apk_sha256=(Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant(); finished_utc=[DateTime]::UtcNow.ToString('o') })
+        $outcomes.Add([pscustomobject]@{ name=$case.Name; log_marker=$logMarker; app=$app; arguments=$case.Arguments; apk_relative=$apkRelative; result=0; summary=$summary; apk_sha256=(Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant(); finished_utc=[DateTime]::UtcNow.ToString('o') })
         $outcomes | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$run/results.json"
         Write-Output "$($case.Name): $($summary -join ' ')"
         Invoke-Adb @('shell','am','force-stop',$package) | Out-Null

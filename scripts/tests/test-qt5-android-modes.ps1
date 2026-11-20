@@ -96,6 +96,17 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Invoke-Mode ($entry+@{Mode='examples';Abi='arm64-v8a'})
     Assert-Mode (@(Calls)[0] -like '*longreach-qt5-android-lollipop-arm64-v8a:llvm21') 'Wrong ARM64 default tag'
     Reset-Calls
+    Expect-Failure ($entry+@{Mode='examples';Abi='x86_64'}) 'not the Qt5'
+    Assert-Mode (@(Calls).Count -eq 1) 'x86_64 consumed an ARM64 SDK'
+    $global:Qt5ModeAbi='x86_64'
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='examples';Abi='x86_64'})
+    Assert-Mode (@(Calls)[0] -like '*longreach-qt5-android-lollipop-x86_64:llvm21') 'Wrong x86_64 default tag'
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='sdk';Abi='x86_64'})
+    Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'x86_64 SDK mode did not build once'
+    Assert-Mode (@((Calls) | Where-Object { $_ -eq 'fetch|x86_64|sdk' }).Count -eq 1) 'Wrong x86_64 SDK fetch scope'
+    Reset-Calls
     Invoke-Mode ($entry+@{Mode='sdk';Abi='arm64-v8a'})
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'SDK mode did not build once'
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|run|*' -or $_ -like 'docker|create|*' -or $_ -like 'package|*' }).Count -eq 0) 'SDK mode entered examples'
@@ -107,7 +118,7 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Expect-Failure ($entry+@{Mode='package';SdkOnly=$true}) 'cannot be combined'
     Assert-Mode (@(Calls).Count -eq 0) 'Conflicting modes started work'
     $apps=@(Get-Content "$fixture/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
-    foreach ($abi in @('armeabi-v7a','arm64-v8a')) {
+    foreach ($abi in @('armeabi-v7a','arm64-v8a','x86_64')) {
         foreach ($directory in (@($apps | ForEach-Object { "deployment/$_" })+'deployment-extended/qt-selftest')) {
             $app=Split-Path $directory -Leaf
             New-Item -ItemType Directory -Force "$output/$directory/libs/$abi","$output/$directory/res/values" | Out-Null
@@ -126,6 +137,9 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='test';Abi='arm64-v8a';RunName='routing-check';CaseNames=@('strict-cxx23-extended');DebugQtPlugins=$true})
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|arm64-v8a|routing-check|strict-cxx23-extended|True') 'Test mode dropped options or entered another phase'
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='test';Abi='x86_64';RunName='x86-64-routing';CaseNames=@('strict-cxx23-extended')})
+    Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86_64|x86-64-routing|strict-cxx23-extended|False') 'x86_64 test mode lost ABI or extended-case routing'
     Write-Output 'PASS: Qt5 ready-image reuse, independent modes, ABI checks, nine-deployment packaging and test routing'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG=$previousLog

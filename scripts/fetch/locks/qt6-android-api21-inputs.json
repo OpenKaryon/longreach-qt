@@ -1,5 +1,5 @@
 {
-  "purpose": "Qt6 Android API21 ARMv7/ARM64 SDK, APK packaging and Android5.0.2 emulator inputs.",
+  "purpose": "Qt6 Android API21 ARMv7/ARM64/x86_64 SDK, APK packaging and Android5.0.2 emulator inputs.",
   "sources": [
     {
       "file": "tools_r24.4.1-windows.zip",
@@ -11,6 +11,15 @@
       "file": "tools_r25.2.5-windows.zip",
       "url": "https://dl.google.com/android/repository/tools_r25.2.5-windows.zip",
       "sha256": "da1a0bd9bb358cb52a8fc0a553a060428efe11151e69b9ea7a5cbacb27cf1c7c",
+      "encoding": "binary"
+    },
+    {
+      "file": "emulator-windows_x64-9536276.zip",
+      "url": "https://dl.google.com/android/repository/emulator-windows_x64-9536276.zip",
+      "sha256": "7720a38136399a93af4a3da57715d69f26d7b86c74d60ea016162e11f1fae439",
+      "size": 333000964,
+      "version": "32.1.11",
+      "metadata_url": "https://developer.android.com/studio/emulator_archive",
       "encoding": "binary"
     },
     {
@@ -29,6 +38,15 @@
       "file": "arm64-v8a-21_r04.zip",
       "url": "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-21_r04.zip",
       "sha256": "6f9f8ab64641ccbea92a02cc85c130a60c3464b87aa9d49952a8d8292f84d073",
+      "encoding": "binary"
+    },
+    {
+      "file": "x86_64-21_r05.zip",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-21_r05.zip",
+      "sha256": "b652297c0733cced8e9507e5018d78f56b87141c47e4d7ada60f495469f76d49",
+      "sha1": "9078a095825a69e5e215713f0866c83cef65a342",
+      "size": 292623982,
+      "metadata_url": "https://dl.google.com/android/repository/sys-img/android/sys-img2-1.xml",
       "encoding": "binary"
     },
     {

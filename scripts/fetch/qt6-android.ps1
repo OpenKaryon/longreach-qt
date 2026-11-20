@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi-v7a','arm64-v8a')][string] $Abi = 'armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string] $Abi = 'armeabi-v7a',
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME,
     [ValidateSet('all','sdk','test')] [string] $Scope = 'all',
@@ -13,10 +13,16 @@ $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'downloads/android-lollipop' }
 $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
 $lock = Get-Content -LiteralPath "$PSScriptRoot/locks/qt6-android-api21-inputs.json" -Raw | ConvertFrom-Json
-$systemImages = @('armeabi-v7a-21_r04.zip', 'arm64-v8a-21_r04.zip')
-$emulatorArchive = if ($Abi -eq 'arm64-v8a') { 'tools_r25.2.5-windows.zip' } else { 'tools_r24.4.1-windows.zip' }
-$testInputs = @("${Abi}-21_r04.zip", $emulatorArchive)
-$allTestInputs = $systemImages + @('tools_r24.4.1-windows.zip','tools_r25.2.5-windows.zip')
+$systemImages = @($lock.sources | Where-Object { $_.file -match '^(armeabi-v7a|arm64-v8a|x86_64)-21_r[0-9]+\.zip$' } | ForEach-Object { $_.file })
+$imageArchive = @($systemImages | Where-Object { $_.StartsWith("$Abi-21_") })
+if ($imageArchive.Count -ne 1) { throw "Expected one pinned API21 system image for $Abi" }
+$emulatorArchive = switch ($Abi) {
+    'x86_64' { 'emulator-windows_x64-9536276.zip' }
+    'arm64-v8a' { 'tools_r25.2.5-windows.zip' }
+    default { 'tools_r24.4.1-windows.zip' }
+}
+$testInputs = @($imageArchive[0], $emulatorArchive)
+$allTestInputs = $systemImages + @('tools_r24.4.1-windows.zip','tools_r25.2.5-windows.zip','emulator-windows_x64-9536276.zip')
 foreach ($source in $lock.sources) {
     if ($source.file -in $allTestInputs -and $source.file -notin $testInputs) { continue }
     $forTest = $source.file -in $testInputs

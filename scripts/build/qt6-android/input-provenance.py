@@ -10,6 +10,7 @@ abi = os.environ.get('ANDROID_ABI', 'armeabi-v7a')
 triple, target = {
     'armeabi-v7a': ('arm-linux-androideabi', 'armv7a-linux-androideabi21'),
     'arm64-v8a': ('aarch64-linux-android', 'aarch64-linux-android21'),
+    'x86_64': ('x86_64-linux-android', 'x86_64-linux-android21'),
 }[abi]
 prefix = Path('/opt/longreach-android-api21')
 ndk = Path('/ndk')

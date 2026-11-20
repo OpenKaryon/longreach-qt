@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
+param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
       [string[]]$CaseNames, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
       [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
@@ -12,7 +12,7 @@ $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $adb="$AndroidSdk/platform-tools/adb.exe"
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $root --qt-major $QtMajor --abi $Abi
 if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
-if (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64 -ErrorAction SilentlyContinue) {
+if (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless -ErrorAction SilentlyContinue) {
     throw 'Stop the existing Android emulator before preparing a fresh suite.'
 }
 $serial = 'emulator-5582'
@@ -23,6 +23,21 @@ function Invoke-Adb([string[]]$Parameters) {
 }
 $apps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 if ($apps.Count -ne 8) { throw 'Expected exactly eight shared applications' }
+# Reject an invalid selection before fetching media or starting a guest.
+$cases = @(@{ App='qt-selftest'; Name='strict-cxx23'; Arguments='--modern-cpp'; Strict=$true })
+$cases += @($apps | ForEach-Object { @{ App=$_; Name=$_; Arguments='--selftest'; Strict=$false } })
+if ($QtMajor -eq 5) {
+    $cases += @{ App='qt-selftest'; Name='strict-cxx23-extended'; Arguments='--modern-cpp'; Strict=$true; Extended=$true }
+    $cases += @{ App='qt-selftest'; Name='qt-selftest-extended'; Arguments='--selftest'; Strict=$false; Extended=$true }
+}
+$cases += @{ App='widgets-gallery'; Name='widgets-gui'; Arguments='--gallery-selftest'; Strict=$false }
+$cases += @{ App='quick-qml-gallery'; Name='qml-gui'; Arguments='--gallery-selftest'; Strict=$false }
+if ($CaseNames) {
+    foreach ($name in $CaseNames) {
+        if ($name -notin $cases.Name) { throw "Unknown suite case: $name" }
+    }
+    $cases = @($cases | Where-Object { $_.Name -in $CaseNames })
+}
 foreach ($app in $apps) {
     if (!(Test-Path -LiteralPath "$root/apk/$app.apk")) { throw "Missing APK: $app" }
 }
@@ -30,7 +45,11 @@ if ($QtMajor -eq 5 -and !(Test-Path -LiteralPath "$root/apk/extended/qt-selftest
 & "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope test -Abi $Abi
 & python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
 if ($LASTEXITCODE) { throw 'Could not prepare API21 emulator inputs' }
-$emulatorName = if ($Abi -eq 'arm64-v8a') { 'emulator-25.2.5/tools/emulator.exe' } else { 'tools/emulator-arm.exe' }
+$emulatorName = switch ($Abi) {
+    'x86_64' { 'emulator-32.1.11/emulator/emulator.exe' }
+    'arm64-v8a' { 'emulator-25.2.5/tools/emulator.exe' }
+    default { 'tools/emulator-arm.exe' }
+}
 $emulator="$root/media/$emulatorName"
 & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator $emulator -RunName $RunName -Gpu $Gpu -Abi $Abi
 $run = "$root/$RunName"
@@ -54,20 +73,6 @@ try {
     }
     Invoke-Adb @('shell','getprop') | Set-Content -LiteralPath "$run/guest-properties.txt"
     Invoke-Adb @('shell','input','keyevent','82') | Out-Null
-    $cases = @(@{ App='qt-selftest'; Name='strict-cxx23'; Arguments='--modern-cpp'; Strict=$true })
-    $cases += @($apps | ForEach-Object { @{ App=$_; Name=$_; Arguments='--selftest'; Strict=$false } })
-    if ($QtMajor -eq 5) {
-        $cases += @{ App='qt-selftest'; Name='strict-cxx23-extended'; Arguments='--modern-cpp'; Strict=$true; Extended=$true }
-        $cases += @{ App='qt-selftest'; Name='qt-selftest-extended'; Arguments='--selftest'; Strict=$false; Extended=$true }
-    }
-    $cases += @{ App='widgets-gallery'; Name='widgets-gui'; Arguments='--gallery-selftest'; Strict=$false }
-    $cases += @{ App='quick-qml-gallery'; Name='qml-gui'; Arguments='--gallery-selftest'; Strict=$false }
-    if ($CaseNames) {
-        foreach ($name in $CaseNames) {
-            if ($name -notin $cases.Name) { throw "Unknown suite case: $name" }
-        }
-        $cases = @($cases | Where-Object { $_.Name -in $CaseNames })
-    }
     foreach ($case in $cases) {
         $app = $case.App
         $package = if ($QtMajor -eq 6) { 'org.longreachqt.examples.qt6.' + $app.Replace('-','_') } else { 'org.longreachqt.examples.' + $app.Replace('-','') }
@@ -81,7 +86,8 @@ try {
         Invoke-Adb @('shell','am','force-stop',$package) | Out-Null
         $clear = Invoke-Adb @('shell','pm','clear',$package)
         if (!($clear -match '^\s*Success\s*$')) { throw "Could not reset previous app reports: $package" }
-        Invoke-Adb @('logcat','-c') | Out-Null
+        # API21's default clear leaves system-buffer deaths from the prior APK.
+        Invoke-Adb @('logcat','-b','all','-c') | Out-Null
         $launchArguments = @('shell','am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments)
         if ($DebugQtPlugins) { $launchArguments += @('--ez','debugQtPlugins','true') }
         if ($QtQuickBackend -ne 'default') {
@@ -89,6 +95,7 @@ try {
         }
         Invoke-Adb $launchArguments | Set-Content -LiteralPath "$destination/launch.txt"
         $complete = $false
+        $applicationPid = $null
         $nativeResult = @()
         for ($attempt = 0; $attempt -lt 300; $attempt++) {
             Start-Sleep -Seconds 2
@@ -96,8 +103,19 @@ try {
             if ($nativeResult -match '^\s*[0-9]+\s*$') { $complete = $true; break }
             if ($attempt % 5 -eq 0) {
                 $pendingLog = @(& $adb -s $serial logcat -d -v brief)
-                $died = 'Process ' + [regex]::Escape($package) + ' \(pid \d+\) has died'
-                if ($pendingLog -match 'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting' -or $pendingLog -match $died) { break }
+                if (!$applicationPid) {
+                    # Some API21 logd buffers retain the prior invocation's death.
+                    # Bind this early-exit check to the currently running app PID.
+                    foreach ($line in @(Invoke-Adb @('shell','ps'))) {
+                        if ($line.Trim() -match ('^\S+\s+(\d+)\s+.*\s' + [regex]::Escape($package) + '$')) {
+                            $applicationPid = [int]$Matches[1]
+                            $applicationPid | Set-Content "$destination/process-id.txt"
+                        }
+                    }
+                }
+                $died = 'Process ' + [regex]::Escape($package) + ' \(pid ' + $applicationPid + '\) has died'
+                if ($pendingLog -match 'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting' -or
+                        ($applicationPid -and $pendingLog -match $died)) { break }
             }
         }
         # A success marker must not conceal a native crash during Qt cleanup.
@@ -127,14 +145,8 @@ try {
         if (!($removed -match '^\s*Success\s*$')) { throw "Could not release tested APK: $package" }
     }
 } finally {
-    & $adb -s $serial logcat -d -v brief 2>$null | Set-Content -LiteralPath "$run/final-logcat.log"
-    & $adb -s $serial emu kill 2>$null | Out-Null
     $ownedId = [int](Get-Content -LiteralPath "$run/emulator.pid")
-    $process = Get-Process -Id $ownedId -ErrorAction SilentlyContinue
-    if ($process -and !$process.WaitForExit(7000)) {
-        Stop-Process -Id $ownedId
-        $process.WaitForExit()
-    }
+    & "$PSScriptRoot/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $ownedId
 }
 
 if (!$CaseNames) {

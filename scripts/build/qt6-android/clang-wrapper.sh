@@ -24,7 +24,7 @@ platform="$prefix/sysroot/usr/lib/$ndk_triple/21"
 # CMake uses PIE executables for feature checks. Linking their -fPIE objects
 # as a shared library is invalid on AArch64; preserve the requested link kind.
 linker=/system/bin/linker
-if [[ "$abi" == arm64-v8a ]]; then linker=/system/bin/linker64; fi
+if [[ "$abi" == arm64-v8a || "$abi" == x86_64 ]]; then linker=/system/bin/linker64; fi
 link=(-pie -Wl,-dynamic-linker,"$linker")
 start=crtbegin_dynamic.o
 end=crtend_android.o

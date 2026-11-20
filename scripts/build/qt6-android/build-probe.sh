@@ -6,7 +6,7 @@ prefix=/opt/longreach-android-api21
 source "$prefix/target.sh"
 platform="$prefix/sysroot/usr/lib/$ndk_triple/21"
 linker=/system/bin/linker
-if [[ "$abi" == arm64-v8a ]]; then linker=/system/bin/linker64; fi
+if [[ "$abi" == arm64-v8a || "$abi" == x86_64 ]]; then linker=/system/bin/linker64; fi
 mkdir -p /out
 clang++-21 --target="$target" --sysroot="$prefix/sysroot" "${arch_flags[@]}" \
     -std=c++23 -fexperimental-library -femulated-tls -fPIE -pie -O2 \

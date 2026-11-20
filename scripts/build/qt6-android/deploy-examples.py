@@ -9,13 +9,13 @@ import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--app', required=True)
-parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a'), default='armeabi-v7a')
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86_64'), default='armeabi-v7a')
 parser.add_argument('--build', type=Path, default=Path('/work/api21/tests-qt6-android'))
 parser.add_argument('--output', type=Path, default=Path('/out/deployment'))
 args = parser.parse_args()
 repo = Path('/repo')
 sdk = Path(f'/opt/qt6-android-{args.abi}-llvm')
-triple = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android'}[args.abi]
+triple = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android', 'x86_64': 'x86_64-linux-android'}[args.abi]
 expected = [line.strip() for line in (repo / 'tests/expected-apps.txt').read_text().splitlines()
             if line.strip() and not line.startswith('#') and line.strip() != 'smoke-runner']
 if args.app not in expected:

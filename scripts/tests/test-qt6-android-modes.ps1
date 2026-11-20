@@ -108,11 +108,12 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     # Real fetcher with tiny cached fixtures: sdk must ignore missing VM media.
     $sdkInputs = @('android-35.jar','build-tools_r36_linux.zip','android-ndk-r27-linux.zip')
     $testInputs = @('armeabi-v7a-21_r04.zip','tools_r24.4.1-windows.zip')
-    $sources = foreach ($name in ($sdkInputs + $testInputs)) {
+    $otherTestInputs = @('arm64-v8a-21_r04.zip','tools_r25.2.5-windows.zip','x86_64-21_r05.zip','emulator-windows_x64-9536276.zip')
+    $sources = foreach ($name in ($sdkInputs + $testInputs + $otherTestInputs)) {
         $file = "$fixture/downloads/android-lollipop/$name"
         [IO.File]::WriteAllText($file, $name)
         $sha = (Get-FileHash $file).Hash.ToLowerInvariant()
-        if ($name -in $testInputs) { Remove-Item -LiteralPath $file }
+        if ($name -in ($testInputs + $otherTestInputs)) { Remove-Item -LiteralPath $file }
         @{file=$name;sha256=$sha;encoding='binary';url='https://example.invalid/not-requested'}
     }
     @{sources=@($sources);shared_sources=@(@{file='llvm-fixture.tar.xz';url='https://example.invalid/not-requested';sha256='fixture'})} |
@@ -123,6 +124,9 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'SDK mode must refresh tools and build its SDK'
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|run|*' -or $_ -like 'package|*' -or $_ -like 'test|*' }).Count -eq 0) 'SDK mode entered another phase'
     Assert-Mode (@($calls | Where-Object { $_ -like 'python|*llvm-fixture*' }).Count -eq 1) 'SDK source fetch was omitted'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='sdk';Abi='x86_64';OutputDirectory=$output;AndroidSdk=''}
+    Assert-Mode (@((Get-ModeCalls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'x86_64 SDK mode must refresh tools and SDK without VM media'
     Reset-ModeCalls
     Invoke-Mode @{SdkOnly=$true;OutputDirectory=$output;AndroidSdk=''}
     Assert-Mode (@((Get-ModeCalls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'Legacy SdkOnly alias stopped working'
@@ -136,6 +140,15 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Reset-ModeCalls
     & "$fixture/scripts/fetch/qt6-android.ps1" -Scope test | Out-Null
     Assert-Mode ((Get-ModeCalls).Count -eq 0) 'Test-only fetch entered shared SDK sources'
+    # x86_64 must select its r05 image and the independently pinned Emulator32,
+    # while SDK files and every other ABI's media are absent.
+    foreach ($name in $testInputs) { Remove-Item -LiteralPath "$fixture/downloads/android-lollipop/$name" }
+    foreach ($name in @('x86_64-21_r05.zip','emulator-windows_x64-9536276.zip')) {
+        [IO.File]::WriteAllText("$fixture/downloads/android-lollipop/$name", $name)
+    }
+    Reset-ModeCalls
+    & "$fixture/scripts/fetch/qt6-android.ps1" -Scope test -Abi x86_64 | Out-Null
+    Assert-Mode ((Get-ModeCalls).Count -eq 0) 'x86_64 test fetch entered SDK sources or another ABI'
 
     # Packaging uses saved deployments without inspecting or launching Docker.
     $apps = @(Get-Content "$fixture/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
@@ -189,6 +202,26 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Invoke-Mode @{Mode='package';Abi='arm64-v8a';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"}
     Assert-Mode (@(Get-ModeCalls).Count -eq 8) 'ARM64 did not package eight applications'
     Assert-Mode (@(Get-Content "$output/apk/packages.json" -Raw | ConvertFrom-Json).Count -eq 8) 'Incomplete ARM64 package manifest'
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='examples';Abi='x86_64';OutputDirectory=$output} 'not the Qt6'
+    Assert-Mode ((Get-ModeCalls).Count -eq 1) 'x86_64 consumed an ARM64 SDK'
+    $global:Qt6ModeTestAbi = 'x86_64'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='examples';Abi='x86_64';OutputDirectory=$output}
+    Assert-Mode (@(Get-ModeCalls)[0] -like '*longreach-qt6-android-lollipop-x86_64:llvm21') 'Wrong x86_64 SDK tag'
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='package';Abi='x86_64';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"} 'Missing deployment'
+    Assert-Mode ((Get-ModeCalls).Count -eq 0) 'x86_64 packaging consumed ARM libraries'
+    foreach ($app in $apps) {
+        New-Item -ItemType Directory -Path "$output/deployment/$app/libs/x86_64" -Force | Out-Null
+        [IO.File]::WriteAllText("$output/deployment/$app/libs/x86_64/lib${app}_x86_64.so", 'x86_64-fixture')
+    }
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='package';Abi='x86_64';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"}
+    Assert-Mode (@(Get-ModeCalls).Count -eq 8) 'x86_64 did not package eight applications'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='test';Abi='x86_64';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='x86-64-check'}
+    Assert-Mode (@(Get-ModeCalls)[0] -like 'test|x86-64-check|*|x86_64') 'Test mode dropped x86_64 ABI'
     Write-Output 'PASS: four independent modes, ready-image reuse, no implicit builds, legacy alias, fetch scopes and packaging preflight'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG = $previousLog

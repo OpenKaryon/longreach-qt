@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('armeabi-v7a','arm64-v8a')][string]$Abi='armeabi-v7a',
+param([ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi='armeabi-v7a',
       [string]$AndroidSdk=$env:ANDROID_HOME, [Parameter(Mandatory)][string]$OutputDirectory,
       [string]$RunName='cxx23-probe')
 $ErrorActionPreference='Stop'
@@ -13,7 +13,11 @@ foreach ($name in @('cxx23-probe','libc++_shared.so')) {
 & "$repo/scripts/fetch/qt6-android.ps1" -Scope test -Abi $Abi -AndroidSdk $AndroidSdk
 & python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
 if ($LASTEXITCODE) { throw 'Could not prepare emulator media' }
-$relativeEmulator=if ($Abi -eq 'arm64-v8a') { 'emulator-25.2.5/tools/emulator.exe' } else { 'tools/emulator-arm.exe' }
+$relativeEmulator=switch ($Abi) {
+    'x86_64' { 'emulator-32.1.11/emulator/emulator.exe' }
+    'arm64-v8a' { 'emulator-25.2.5/tools/emulator.exe' }
+    default { 'tools/emulator-arm.exe' }
+}
 & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator "$root/media/$relativeEmulator" -RunName $RunName -Abi $Abi
 $run="$root/$RunName"
 $serial='emulator-5582'

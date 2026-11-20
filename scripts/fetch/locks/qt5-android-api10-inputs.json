@@ -37,5 +37,22 @@
       "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
       "encoding": "installed"
     }
+  ],
+  "shared_sources": [
+    {
+      "file": "llvm-project-21.1.8.src.tar.xz",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
+      "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+    },
+    {
+      "file": "openssl-3.5.7.tar.gz",
+      "url": "https://www.openssl.org/source/openssl-3.5.7.tar.gz",
+      "sha256": "a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8"
+    },
+    {
+      "file": "qt-everywhere-opensource-src-5.15.19.tar.xz",
+      "url": "https://download.qt.io/archive/qt/5.15/5.15.19/single/qt-everywhere-opensource-src-5.15.19.tar.xz",
+      "sha256": "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae"
+    }
   ]
 }

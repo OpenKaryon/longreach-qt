@@ -12,8 +12,8 @@ Use Docker Desktop with Linux containers, PowerShell 7, Python 3, a JDK with
 `javac` and `keytool`, and an Android SDK containing platform 35, Build Tools
 36.0.0 and Platform Tools. Set `ANDROID_HOME` or pass `-AndroidSdk`.
 
-Stage the existing Qt 5.15.19, LLVM 21.1.8 and OpenSSL 3.5.7 source archives
-in `downloads/`. The additional Android inputs and their SHA256 hashes are
+The fetcher stages the pinned Qt 5.15.19, LLVM 21.1.8 and OpenSSL 3.5.7
+source archives in `downloads/`. Android inputs and their SHA256 hashes are
 listed in `scripts/fetch/locks/qt5-android-api10-inputs.json`:
 
 ```powershell
@@ -30,12 +30,23 @@ properties and leaves the system image unchanged.
 ## Build and run in order
 
 ```powershell
-./scripts/build/qt5-android.ps1 -AndroidSdk $env:ANDROID_HOME
-./scripts/run/qt5-android-suite.ps1 -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Mode sdk -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Mode examples -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Mode package -AndroidSdk $env:ANDROID_HOME
+./scripts/build/qt5-android.ps1 -Mode test -AndroidSdk $env:ANDROID_HOME -RunName sdk-suite-1
 ```
 
-Both commands accept `-OutputDirectory`, defaulting to
-`artifacts/qt5-android-gingerbread/`. The build supports `-SdkOnly`.
+All modes accept `-OutputDirectory`, defaulting to
+`artifacts/qt5-android-gingerbread/`. The default mode is `examples`: it requires
+a ready matching SDK image and never rebuilds Qt implicitly. `sdk` is the only
+mode that builds an SDK image. `-SdkOnly` aliases `-Mode sdk`; local SDK files
+are exported during `examples`. `package` uses the saved deployments without
+Docker, while `test` uses saved APKs without compilation or packaging.
+The examples invocation records and runs the inspected immutable image ID.
+`-SdkImage` selects another ready image or the output tag for SDK mode.
+
+The [ARM64/API21 profile](qt5-android-lollipop.md) uses the same Dockerfile and
+phase entry point with `-Abi arm64-v8a`; it does not replace this API10 floor.
 The Docker recipe contains host tools, runtime, OpenSSL, QtBase, complete Qt
 and installed SDK stages. Native source builds run offline against verified
 archives with two jobs. Example builds run one application at a time in a
@@ -53,7 +64,7 @@ collection of unused code/dependencies; only the native entry point is exported.
 Installed SDK contents are exported to `sdk/`, shared libc++ to `native/`,
 Android dependency deployments to `deployment/`, and signed APKs to `apk/`.
 Guest release/API/ABI, stdout, stderr, exit status and logcat are saved under
-`run/<profile>/`. Repeating a run archives the preceding app reports under
+`<RunName>/<profile>/` (`run/` for the standalone legacy runner default). Repeating a run archives the preceding app reports under
 `previous-<id>/files/` before starting the new guest. A disposable local signing key is generated for example
 APKs; API 10 uses v1 signing.
 
@@ -85,3 +96,10 @@ Android application targets are shared libraries, loaded by QtActivity.
 
 Build evidence, runtime results and platform limits are recorded in the
 [SDK result report](../results/qt5-android-gingerbread-sdk-llvm21-20261117.md).
+
+## Lightweight mode checks
+
+`./scripts/tests/test-qt5-android-modes.ps1` verifies ready-image reuse, ABI
+rejection, phase isolation, SDK-only compatibility, all nine deployment inputs
+(core plus extended selftest) and test argument forwarding. It uses recording
+stubs and temporary fixtures, without building Qt or starting a guest.

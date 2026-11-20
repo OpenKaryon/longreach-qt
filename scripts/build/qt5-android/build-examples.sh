@@ -3,13 +3,16 @@
 
 set -euo pipefail
 repo=${REPO_ROOT:-/repo}
+source "$repo/scripts/build/qt5-android/target-config.sh"
+modern_flags=()
+if [[ "$api" == 21 ]]; then modern_flags=(-DCMAKE_CXX_FLAGS=-fexperimental-library); fi
 build=${EXAMPLES_BUILD_DIR:-/work/tests-qt5-android}
 output=${DEPLOYMENT_OUTPUT_DIR:-/out/deployment}
 export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-/work/android-sdk}
 cmake -S "$repo/tests" -B "$build" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$repo/scripts/build/qt5-android/toolchain.cmake" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 -DSMOKE_REQUIRE_CXX23=ON \
-    -DSMOKE_ANDROID_SELFTEST_PROFILE=core
+    -DSMOKE_ANDROID_SELFTEST_PROFILE=core "${modern_flags[@]}"
 while IFS= read -r app || [[ -n "$app" ]]; do
     app=${app%$'\r'}
     case "$app" in
@@ -18,7 +21,7 @@ while IFS= read -r app || [[ -n "$app" ]]; do
     cmake --build "$build" --target "$app" --parallel "${PARALLEL_JOBS:-2}"
     python3 "$repo/scripts/build/qt5-android/deploy-examples.py" \
         --repo "$repo" --build "$build" --android-sdk "$ANDROID_SDK_ROOT" --output "$output" \
-        --apps "$app"
+        --abi "$abi" --sdk "$sdk_prefix" --apps "$app"
 done < "$repo/tests/expected-apps.txt"
 
 # Keep all remaining selftest groups below Gingerbread's 96-DSO limit.
@@ -27,8 +30,8 @@ extended="$build-extended"
 cmake -S "$repo/tests" -B "$extended" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$repo/scripts/build/qt5-android/toolchain.cmake" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 -DSMOKE_REQUIRE_CXX23=ON \
-    -DSMOKE_ANDROID_SELFTEST_PROFILE=extended
+    -DSMOKE_ANDROID_SELFTEST_PROFILE=extended "${modern_flags[@]}"
 cmake --build "$extended" --target qt-selftest --parallel "${PARALLEL_JOBS:-2}"
 python3 "$repo/scripts/build/qt5-android/deploy-examples.py" \
     --repo "$repo" --build "$extended" --android-sdk "$ANDROID_SDK_ROOT" \
-    --output "$output-extended" --apps qt-selftest
+    --output "$output-extended" --abi "$abi" --sdk "$sdk_prefix" --apps qt-selftest

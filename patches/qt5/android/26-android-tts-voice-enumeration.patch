@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Retain language-based voices for early Lollipop engines without the voice API.
+
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
+@@ -238,45 +238,57 @@
+     public List<Object> getAvailableVoices()
+     {
+         if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+-            //Log.d("QtTextToSpeech", "Voices: " + mTts.getVoices());
+-            return new ArrayList<Object>(mTts.getVoices());
++            try {
++                final Set<android.speech.tts.Voice> voices = mTts.getVoices();
++                if (voices != null)
++                    return new ArrayList<Object>(voices);
++            } catch (RuntimeException exception) {
++                // Early Lollipop engines can throw instead of returning no voices.
++                Log.w("QtTextToSpeech", "Cannot enumerate engine voices", exception);
++            }
+         }
+         return new ArrayList<Object>();
+     }
+ 
++    public boolean usesLegacyVoices()
++    {
++        return getAvailableVoices().isEmpty();
++    }
++
+     public List<Locale> getAvailableLocales()
+     {
+-        if (mInitialized && Build.VERSION.SDK_INT < 21) {
+-            ArrayList<Locale> locales = new ArrayList<Locale>();
+-            for (Locale locale : Locale.getAvailableLocales()) {
+-                final int required = !locale.getVariant().isEmpty() ? TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
+-                        : !locale.getCountry().isEmpty() ? TextToSpeech.LANG_COUNTRY_AVAILABLE
+-                        : TextToSpeech.LANG_AVAILABLE;
+-                if (mTts.isLanguageAvailable(locale) >= required)
+-                    locales.add(locale);
+-            }
+-            return locales;
+-        }
+-        if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+-            //Log.d("QtTextToSpeech", "Locales: " + mTts.getAvailableLanguages());
+-            final Set<Locale> languages = mTts.getAvailableLanguages();
+-            ArrayList<Locale> locales = new ArrayList<Locale>();
+-
+-            for (Locale language : languages) {
+-                String languageCode = language.getLanguage();
+-                String countryCode = language.getCountry();
+-
+-                if (languageCode.equals(language.getISO3Language()))
+-                    languageCode = convertLanguageCodeThreeDigitToTwoDigit(languageCode);
+-                if (countryCode.equals(language.getISO3Country()))
+-                    countryCode = convertCountryCodeThreeDigitToTwoDigit(countryCode);
+-
+-                locales.add(new Locale(languageCode, countryCode));
+-            }
+-
+-            return locales;
+-        }
+-        return new ArrayList<Locale>();
++        if (!mInitialized)
++            return new ArrayList<Locale>();
++        if (Build.VERSION.SDK_INT >= 21) {
++            try {
++                final Set<Locale> languages = mTts.getAvailableLanguages();
++                if (languages != null && !languages.isEmpty()) {
++                    ArrayList<Locale> locales = new ArrayList<Locale>();
++                    for (Locale language : languages) {
++                        String languageCode = language.getLanguage();
++                        String countryCode = language.getCountry();
++                        if (languageCode.equals(language.getISO3Language()))
++                            languageCode = convertLanguageCodeThreeDigitToTwoDigit(languageCode);
++                        if (countryCode.equals(language.getISO3Country()))
++                            countryCode = convertCountryCodeThreeDigitToTwoDigit(countryCode);
++                        locales.add(new Locale(languageCode, countryCode));
++                    }
++                    return locales;
++                }
++            } catch (RuntimeException exception) {
++                Log.w("QtTextToSpeech", "Cannot enumerate engine languages", exception);
++            }
++        }
++        // Engines predating the voice API still expose language support.
++        ArrayList<Locale> locales = new ArrayList<Locale>();
++        for (Locale locale : Locale.getAvailableLocales()) {
++            final int required = !locale.getVariant().isEmpty() ? TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
++                    : !locale.getCountry().isEmpty() ? TextToSpeech.LANG_COUNTRY_AVAILABLE
++                    : TextToSpeech.LANG_AVAILABLE;
++            if (mTts.isLanguageAvailable(locale) >= required)
++                locales.add(locale);
++        }
++        return locales;
+     }
+ 
+     public Locale getLocale()
+@@ -309,7 +321,8 @@
+         if (!mInitialized)
+             return false;
+         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+-             for (android.speech.tts.Voice voice : mTts.getVoices()) {
++             for (Object item : getAvailableVoices()) {
++                 android.speech.tts.Voice voice = (android.speech.tts.Voice) item;
+                  if (voice.getName().equals(voiceName)) {
+                      int result = mTts.setVoice(voice);
+                      if (result == TextToSpeech.SUCCESS) {
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -312,9 +312,15 @@
+     return createVoice(voiceName, gender, QVoice::Other, voiceName);
+ }
+ 
++static bool usesLegacyVoices(const QJNIObjectPrivate &speech)
++{
++    return QtAndroidPrivate::androidSdkVersion() < 21
++            || speech.callMethod<jboolean>("usesLegacyVoices");
++}
++
+ QVector<QVoice> QTextToSpeechEngineAndroid::availableVoices() const
+ {
+-    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++    if (usesLegacyVoices(m_speech)) {
+         QVector<QVoice> result;
+         QStringList names;
+         for (const QLocale &locale : availableLocales()) {
+@@ -340,7 +346,7 @@
+ 
+ bool QTextToSpeechEngineAndroid::setVoice(const QVoice &voice)
+ {
+-    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++    if (usesLegacyVoices(m_speech)) {
+         const QString name = voiceData(voice).toString();
+         const QLocale locale(name);
+         return !name.isEmpty() && locale.name() == name && setLocale(locale);
+@@ -351,7 +357,7 @@
+ 
+ QVoice QTextToSpeechEngineAndroid::voice() const
+ {
+-    if (QtAndroidPrivate::androidSdkVersion() < 21) {
++    if (usesLegacyVoices(m_speech)) {
+         if (m_state == QTextToSpeech::BackendError)
+             return QVoice();
+         const QString name = locale().name();

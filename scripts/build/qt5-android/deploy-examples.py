@@ -12,13 +12,17 @@ import subprocess
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--abi", choices=("armeabi-v7a", "arm64-v8a"), default="armeabi-v7a")
     parser.add_argument("--repo", type=Path, default=Path("/repo"))
-    parser.add_argument("--sdk", type=Path, default=Path("/opt/qt5-android-armeabi-v7a-llvm"))
+    parser.add_argument("--sdk", type=Path, default=None)
     parser.add_argument("--android-sdk", type=Path, default=Path("/work/android-sdk"))
     parser.add_argument("--build", type=Path, default=Path("/work/tests-qt5-android"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--apps", nargs="+")
     args = parser.parse_args()
+    args.sdk = args.sdk or Path(f"/opt/qt5-android-{args.abi}-llvm")
+    minimum, triple = {"armeabi-v7a": ("10", "arm-linux-androideabi"),
+                       "arm64-v8a": ("21", "aarch64-linux-android")}[args.abi]
     expected = [line.strip() for line in (args.repo / "tests/expected-apps.txt").read_text().splitlines()
                 if line.strip() and not line.lstrip().startswith("#")]
     expected.remove("smoke-runner")
@@ -37,8 +41,8 @@ def main():
             shutil.rmtree(destination)
         shutil.copytree(args.sdk / "src/android/templates", destination)
         marker.write_text(app + "\n")
-        native = args.build / "android-build/libs/armeabi-v7a" / f"lib{app}_armeabi-v7a.so"
-        libraries = destination / "libs/armeabi-v7a"
+        native = args.build / f"android-build/libs/{args.abi}" / f"lib{app}_{args.abi}.so"
+        libraries = destination / f"libs/{args.abi}"
         libraries.mkdir(parents=True)
         shutil.copy2(native, libraries / native.name)
         # Scan only resources used by this Qt 5 build. The shared source
@@ -57,9 +61,9 @@ def main():
         settings = {
             "_description": "Longreach shared example; native code and dependencies remain unchanged.",
             "application-binary": app,
-            "architectures": {"armeabi-v7a": "arm-linux-androideabi"},
-            "android-min-sdk-version": "10",
-            "android-target-sdk-version": "10",
+            "architectures": {args.abi: triple},
+            "android-min-sdk-version": minimum,
+            "android-target-sdk-version": minimum,
             "ndk": str(ndk),
             "ndk-host": "linux-x86_64",
             "qml-root-path": str(scan_root),

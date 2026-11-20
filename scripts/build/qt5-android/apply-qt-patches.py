@@ -5,6 +5,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -42,6 +43,11 @@ def main():
 
     patches = sorted((repo / "patches/qt5/all").glob("*.patch"))
     patches += sorted((repo / "patches/qt5/android").glob("*.patch"))
+    # Shared LLVM fix: inspect host-call tags before treating frames as objects.
+    patches.append(repo / "patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch")
+    if os.environ.get("ANDROID_ABI", "armeabi-v7a") == "arm64-v8a":
+        # The Clang21 register sentinel fix is already shared with Linux ARM64.
+        patches.append(repo / "patches/qt5/linux-arm64-llvm/01-qml-arm64-register-enum.patch")
     records = [(str(path.relative_to(repo)), hashlib.sha256(path.read_bytes()).hexdigest())
                for path in patches]
     fingerprint = hashlib.sha256(json.dumps(

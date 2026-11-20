@@ -1,14 +1,23 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# New SDKs capture their ABI/API; retain compatibility with existing API10 images.
+if(EXISTS /opt/longreach-android/qt5-target.cmake)
+    include(/opt/longreach-android/qt5-target.cmake)
+else()
+    set(LONGREACH_ANDROID_ABI armeabi-v7a)
+    set(LONGREACH_ANDROID_API 10)
+    set(LONGREACH_ANDROID_PROCESSOR armv7-a)
+    set(LONGREACH_QT_PREFIX /opt/qt5-android-armeabi-v7a-llvm)
+endif()
 set(CMAKE_SYSTEM_NAME Android)
 # CMake reserves 1 for externally managed Android toolchains. The compiler
-# wrapper selects API 10; this disables Google's NDK-specific autodetection.
+# wrapper selects the captured API; this disables Google's NDK-specific autodetection.
 set(CMAKE_SYSTEM_VERSION 1)
-set(CMAKE_SYSTEM_PROCESSOR armv7-a)
-set(CMAKE_ANDROID_ARCH_ABI armeabi-v7a)
-set(CMAKE_ANDROID_API 10)
-set(ANDROID_PLATFORM android-10)
-set(ANDROID_ABI armeabi-v7a)
+set(CMAKE_SYSTEM_PROCESSOR "${LONGREACH_ANDROID_PROCESSOR}")
+set(CMAKE_ANDROID_ARCH_ABI "${LONGREACH_ANDROID_ABI}")
+set(CMAKE_ANDROID_API "${LONGREACH_ANDROID_API}")
+set(ANDROID_PLATFORM "android-${LONGREACH_ANDROID_API}")
+set(ANDROID_ABI "${LONGREACH_ANDROID_ABI}")
 set(ANDROID_NDK /opt/longreach-android/ndk)
 set(ANDROID_HOST_TAG linux-x86_64)
 set(ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_HOST_TAG}")
@@ -18,8 +27,8 @@ else()
     set(ANDROID_SDK /work/android-sdk CACHE PATH "Android SDK root")
 endif()
 
-set(ANDROID_MIN_SDK_VERSION "10" CACHE STRING "Android minimum SDK version")
-set(ANDROID_TARGET_SDK_VERSION "10" CACHE STRING "Android target SDK version")
+set(ANDROID_MIN_SDK_VERSION "${LONGREACH_ANDROID_API}" CACHE STRING "Android minimum SDK version")
+set(ANDROID_TARGET_SDK_VERSION "${LONGREACH_ANDROID_API}" CACHE STRING "Android target SDK version")
 set(ANDROID_SDK_BUILD_TOOLS_REVISION "36.0.0" CACHE STRING "Android Build Tools version")
 
 set(CMAKE_C_COMPILER /opt/longreach-android/bin/cc)
@@ -33,9 +42,9 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 set(CMAKE_FIND_ROOT_PATH /opt/longreach-android/sysroot
-    /opt/qt5-android-armeabi-v7a-llvm)
+    "${LONGREACH_QT_PREFIX}")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-list(APPEND CMAKE_PREFIX_PATH /opt/qt5-android-armeabi-v7a-llvm)
+list(APPEND CMAKE_PREFIX_PATH "${LONGREACH_QT_PREFIX}")

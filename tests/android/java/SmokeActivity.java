@@ -44,6 +44,9 @@ public class SmokeActivity extends QtActivity {
         new File(files, "selftest-result.txt").delete();
         ENVIRONMENT_VARIABLES += "\tLONGREACH_APP_FILES=" + files.getAbsolutePath()
                 + "\tTMPDIR=" + files.getAbsolutePath();
+        if (getIntent().getBooleanExtra("debugQtPlugins", false))
+            ENVIRONMENT_VARIABLES += "\tQT_DEBUG_PLUGINS=1"
+                    + "\tQT_LOGGING_RULES=qt.core.library.debug=true;qt.core.plugin.loader.debug=true;qt.qml.import.debug=true";
         String backend = getIntent().getStringExtra("qtQuickBackend");
         if (backend != null)
             ENVIRONMENT_VARIABLES += "\tQT_QUICK_BACKEND=" + backend;

@@ -4,7 +4,8 @@ param(
     [ValidateSet('armeabi-v7a','arm64-v8a')][string] $Abi = 'armeabi-v7a',
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME,
-    [ValidateSet('all','sdk','test')] [string] $Scope = 'all'
+    [ValidateSet('all','sdk','test')] [string] $Scope = 'all',
+    [switch] $PlatformOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,7 +48,7 @@ foreach ($source in $lock.sources) {
     Write-Output "$($source.file): verified"
 }
 
-if ($Scope -eq 'test') { return }
+if ($Scope -eq 'test' -or $PlatformOnly) { return }
 # The source archives use the shared verified fetcher and download lock.
 foreach ($source in $lock.shared_sources) {
     & python "$PSScriptRoot/fetch.py" $source.url "$repo/downloads/$($source.file)" $source.sha256

@@ -3,9 +3,10 @@
 
 set -euo pipefail
 repo=${REPO_ROOT:-/repo}
+source "$repo/scripts/build/qt5-android/target-config.sh"
 source=/work/qt5-sdk-src
 build=/work/qt5-android-build
-prefix=/opt/qt5-android-armeabi-v7a-llvm
+prefix=$sdk_prefix
 phase=${1:-all}
 
 echo '173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae  '"$repo/downloads/qt-everywhere-opensource-src-5.15.19.tar.xz" | sha256sum -c -
@@ -34,19 +35,19 @@ export ANDROID_NDK_ROOT=/opt/longreach-android/ndk
 export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-/work/android-sdk}
 # Target dependencies use their own /opt prefixes, outside the Bionic sysroot.
 unset PKG_CONFIG_SYSROOT_DIR
-export PKG_CONFIG_LIBDIR=/opt/openssl-api10/lib/pkgconfig
+export PKG_CONFIG_LIBDIR="$openssl_prefix/lib/pkgconfig"
 cd "$build"
 if [[ ! -f .longreach-configured ]]; then
     "$source/configure" -opensource -confirm-license -release -shared -optimize-size \
         -prefix "$prefix" -platform linux-clang -xplatform android-longreach-clang \
-        -android-abis armeabi-v7a -android-ndk "$ANDROID_NDK_ROOT" \
-        -android-ndk-host linux-x86_64 -android-ndk-platform android-10 \
+        -android-abis "$abi" -android-ndk "$ANDROID_NDK_ROOT" \
+        -android-ndk-host linux-x86_64 -android-ndk-platform "android-$api" \
         -android-sdk "$ANDROID_SDK_ROOT" -android-javac-source 8 -android-javac-target 8 \
         -c++std c++17 -opengl es2 -no-pch -no-dbus -no-glib -no-icu -no-iconv \
         -qt-freetype -qt-harfbuzz -qt-libpng -qt-libjpeg -qt-pcre -qt-zlib \
         -sql-sqlite -qt-sqlite -openssl-linked \
-        OPENSSL_PATH=/opt/openssl-api10 \
-        OPENSSL_LIBS="-L/opt/openssl-api10/lib -lssl -lcrypto -ldl" \
+        OPENSSL_PATH="$openssl_prefix" \
+        OPENSSL_LIBS="-L$openssl_prefix/lib -lssl -lcrypto -ldl" \
         -nomake tests -nomake examples -skip qtwebengine
     touch .longreach-configured
 fi

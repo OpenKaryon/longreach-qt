@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# A small pre-SDK check using exactly the shared 25 behavior probes.
+# Shared 25 behavior probes and the x86 generic-atomic runtime regression.
 set -euo pipefail
 prefix=/opt/longreach-android-api21
 source "$prefix/target.sh"
@@ -18,3 +18,9 @@ clang++-21 --target="$target" --sysroot="$prefix/sysroot" "${arch_flags[@]}" \
     -L"$platform" -llog -ldl -lm -lc "$platform/crtend_android.o" -o /out/cxx23-probe
 cp "$prefix/lib/libc++_shared.so" /out/libc++_shared.so
 llvm-readobj-21 --file-header --dynamic-table /out/cxx23-probe > /out/cxx23-probe-elf.txt
+
+if [[ "$abi" == x86 ]]; then
+    "$prefix/bin/cxx" -O2 -std=c++23 -fexperimental-library \
+        /repo/scripts/tests/qt6-llvm-probes/android-atomic.cpp -o /out/atomic-probe
+    llvm-readobj-21 --file-header --dynamic-table /out/atomic-probe > /out/atomic-probe-elf.txt
+fi

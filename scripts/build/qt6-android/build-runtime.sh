@@ -51,13 +51,27 @@ builtins_archive="$builtins/compiler-rt/lib/linux/libclang_rt.builtins-${builtin
 cp "$builtins_archive" "$prefix/lib/"
 platform="$sysroot/usr/lib/$ndk_triple/21"
 arch=(--target="$target" --sysroot="$sysroot" "${arch_flags[@]}" -fPIC -femulated-tls)
+atomic_objects=()
+if [[ "$abi" == x86 ]]; then
+    # Generic atomics need one shared lock table across SDK libraries. Keep
+    # LLVM's implementation in the shared runtime, not in each static client.
+    clang-21 "${arch[@]}" -O2 -D_LIBATOMIC_USE_PTHREAD -fvisibility=default \
+        -c "$llvm/compiler-rt/lib/builtins/atomic.c" -o "$prefix/lib/atomic-android.o"
+    atomic_objects=("$prefix/lib/atomic-android.o")
+fi
 clang++-21 "${arch[@]}" -shared -nostdlib -fuse-ld=lld \
     -Wl,--hash-style=sysv,--no-undefined,--no-dependent-libraries,-soname,libc++_shared.so \
-    "$platform/crtbegin_so.o" -Wl,--whole-archive \
+    "$platform/crtbegin_so.o" "${atomic_objects[@]}" -Wl,--whole-archive \
     "$runtime/lib/libc++.a" "$runtime/lib/libc++experimental.a" "$runtime/lib/libc++abi.a" \
     "$runtime/lib/libunwind.a" -Wl,--no-whole-archive \
     -Wl,-u,__emutls_get_address,-u,__emutls_register_common "$builtins_archive" \
     -L"$platform" -llog -ldl -lm -lc "$platform/crtend_so.o" -o "$prefix/lib/libc++_shared.so"
+if [[ "$abi" == x86 ]]; then
+    llvm-nm-21 -D --defined-only "$prefix/lib/libc++_shared.so" > /out/runtime-atomic-exports.txt
+    for symbol in __atomic_load __atomic_store __atomic_exchange __atomic_compare_exchange __atomic_is_lock_free; do
+        awk '$2 ~ /^[TW]$/ { print $3 }' /out/runtime-atomic-exports.txt | grep -Fx "$symbol"
+    done
+fi
 llvm-readobj-21 --file-header --dynamic-table "$prefix/lib/libc++_shared.so" > /out/runtime-elf.txt
 cp "$prefix/lib/libc++_shared.so" /out/
 echo 'Upstream LLVM 21.1.8 API21 shared runtime built'

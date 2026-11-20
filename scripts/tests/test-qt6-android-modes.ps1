@@ -222,6 +222,26 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Reset-ModeCalls
     Invoke-Mode @{Mode='test';Abi='x86_64';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='x86-64-check'}
     Assert-Mode (@(Get-ModeCalls)[0] -like 'test|x86-64-check|*|x86_64') 'Test mode dropped x86_64 ABI'
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='examples';Abi='x86';OutputDirectory=$output} 'not the Qt6'
+    Assert-Mode ((Get-ModeCalls).Count -eq 1) '32-bit x86 consumed an x86_64 SDK'
+    $global:Qt6ModeTestAbi = 'x86'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='examples';Abi='x86';OutputDirectory=$output}
+    Assert-Mode (@(Get-ModeCalls)[0] -like '*longreach-qt6-android-lollipop-x86:llvm21') 'Wrong 32-bit x86 SDK tag'
+    Reset-ModeCalls
+    Expect-ModeFailure @{Mode='package';Abi='x86';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"} 'Missing deployment'
+    Assert-Mode ((Get-ModeCalls).Count -eq 0) '32-bit x86 packaging consumed 64-bit libraries'
+    foreach ($app in $apps) {
+        New-Item -ItemType Directory -Path "$output/deployment/$app/libs/x86" -Force | Out-Null
+        [IO.File]::WriteAllText("$output/deployment/$app/libs/x86/lib${app}_x86.so", 'x86-fixture')
+    }
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='package';Abi='x86';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"}
+    Assert-Mode (@(Get-ModeCalls).Count -eq 8) '32-bit x86 did not package eight applications'
+    Reset-ModeCalls
+    Invoke-Mode @{Mode='test';Abi='x86';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='x86-check'}
+    Assert-Mode (@(Get-ModeCalls)[0] -like 'test|x86-check|*|x86') 'Test mode dropped 32-bit x86 ABI'
     Write-Output 'PASS: four independent modes, ready-image reuse, no implicit builds, legacy alias, fetch scopes and packaging preflight'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG = $previousLog

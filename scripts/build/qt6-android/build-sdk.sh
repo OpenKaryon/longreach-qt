@@ -20,6 +20,16 @@ export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 unset PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_PATH
 export PKG_CONFIG_LIBDIR=/opt/openssl-api21/lib/pkgconfig
+link_options=()
+if [[ "$abi" == x86 ]]; then
+    # The i386 assembler uses local PC-relative references to OpenSSL's CPU
+    # capabilities. Keep the statically linked archives private in each DSO,
+    # including MODULE plugins, so LLD can bind those references locally.
+    link_options=(
+        -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--exclude-libs,libssl.a:libcrypto.a
+        -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--exclude-libs,libssl.a:libcrypto.a
+    )
+fi
 if [[ "$phase" != build ]]; then
 # Preserve actionable compiler/link diagnostics in Docker's log on failure.
 trap 'result=$?; if [[ -f "$build/CMakeFiles/CMakeError.log" ]]; then cat "$build/CMakeFiles/CMakeError.log"; fi; exit "$result"' ERR
@@ -38,7 +48,8 @@ cmake -S "$source" -B "$build" -G Ninja \
     -DCMAKE_PREFIX_PATH=/opt/openssl-api21 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
     -DCMAKE_DISABLE_FIND_PACKAGE_Clang=ON \
     -DCMAKE_JOB_POOLS=link_pool=1 -DCMAKE_JOB_POOL_LINK=link_pool \
-    -DQT_QMAKE_TARGET_MKSPEC=android-clang -DQT_QMAKE_DEVICE_OPTIONS=ANDROID_PLATFORM=android-21
+    -DQT_QMAKE_TARGET_MKSPEC=android-clang -DQT_QMAKE_DEVICE_OPTIONS=ANDROID_PLATFORM=android-21 \
+    "${link_options[@]}"
 trap - ERR
 fi
 if [[ "$phase" == configure ]]; then

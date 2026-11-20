@@ -19,6 +19,15 @@ case "$abi" in
         openssl_target=android-arm64
         arch_flags=()
         ;;
+    x86)
+        target=i686-linux-android21
+        ndk_triple=i686-linux-android
+        processor=i686
+        builtins_arch=i686
+        openssl_target=android-x86
+        # Android x86 requires SSSE3, but no SSE4 or AVX instructions.
+        arch_flags=(-march=i686 -mssse3 -mstackrealign -mfpmath=sse)
+        ;;
     x86_64)
         target=x86_64-linux-android21
         ndk_triple=x86_64-linux-android

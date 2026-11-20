@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Qt 6.8.5 / Android API21 ARMv7, ARM64 or x86_64; upstream LLVM 21.1.8, never the NDK compiler.
+# Qt 6.8.5 / Android API21 ARMv7, ARM64, x86 or x86_64; upstream LLVM 21.1.8, never the NDK compiler.
 ARG LLVM_TOOLS_IMAGE=longreach-qt4-android-donut:llvm21
 ARG QT_HOST_IMAGE=qt6-linux-amd64-llvm21:latest
 FROM ${QT_HOST_IMAGE} AS qt-host

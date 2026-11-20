@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
+param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
       [string[]]$CaseNames, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
       [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot/android-api21-log.ps1"
+. "$PSScriptRoot/android-wait-boot.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
@@ -13,7 +14,7 @@ $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $adb="$AndroidSdk/platform-tools/adb.exe"
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $root --qt-major $QtMajor --abi $Abi
 if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
-if (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless -ErrorAction SilentlyContinue) {
+if (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-i386,qemu-system-i386-headless -ErrorAction SilentlyContinue) {
     throw 'Stop the existing Android emulator before preparing a fresh suite.'
 }
 $serial = 'emulator-5582'
@@ -47,6 +48,7 @@ if ($QtMajor -eq 5 -and !(Test-Path -LiteralPath "$root/apk/extended/qt-selftest
 & python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
 if ($LASTEXITCODE) { throw 'Could not prepare API21 emulator inputs' }
 $emulatorName = switch ($Abi) {
+    'x86' { 'emulator-32.1.11/emulator/emulator.exe' }
     'x86_64' { 'emulator-32.1.11/emulator/emulator.exe' }
     'arm64-v8a' { 'emulator-25.2.5/tools/emulator.exe' }
     default { 'tools/emulator-arm.exe' }
@@ -58,21 +60,15 @@ $outcomes = [Collections.Generic.List[object]]::new()
 try {
     & $adb start-server | Out-Null
     & $adb reconnect offline | Out-Null
-    $ready = $false
-    for ($attempt = 0; $attempt -lt 120; $attempt++) {
-        $ownedId = [int](Get-Content -LiteralPath "$run/emulator.pid")
-        if (!(Get-Process -Id $ownedId -ErrorAction SilentlyContinue)) { throw 'Emulator exited during startup; see emulator.stdout' }
-        if ($attempt -gt 0 -and $attempt % 10 -eq 0) { & $adb reconnect offline | Out-Null }
-        if ((& $adb -s $serial shell getprop sys.boot_completed 2>$null) -match '^\s*1\s*$') { $ready = $true; break }
-        Start-Sleep -Seconds 2
-    }
-    if (!$ready) { throw 'API21 emulator did not finish booting' }
+    $ownedId = [int](Get-Content -LiteralPath "$run/emulator.pid")
+    Wait-AndroidBoot -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $ownedId
     $expected = @{ 'ro.build.version.release'='5.0.2'; 'ro.build.version.sdk'='21'; 'ro.product.cpu.abi'=$Abi }
     foreach ($property in $expected.Keys) {
         $value = ((Invoke-Adb @('shell','getprop',$property)) -join '').Trim()
         if ($value -ne $expected[$property]) { throw "Unexpected $property=$value" }
     }
     Invoke-Adb @('shell','getprop') | Set-Content -LiteralPath "$run/guest-properties.txt"
+    Invoke-Adb @('shell','cat','/proc/cpuinfo') | Set-Content -LiteralPath "$run/guest-cpuinfo.txt"
     Invoke-Adb @('shell','input','keyevent','82') | Out-Null
     foreach ($case in $cases) {
         $app = $case.App

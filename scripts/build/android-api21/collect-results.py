@@ -11,7 +11,7 @@ import sys
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--qt-major', choices=(5, 6), type=int, default=6)
-parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86_64'), default='armeabi-v7a')
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'), default='armeabi-v7a')
 parser.add_argument('--run', default='sdk-suite')
 parser.add_argument('--root', type=Path, required=True)
 args = parser.parse_args()

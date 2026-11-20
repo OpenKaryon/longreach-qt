@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string] $Abi = 'armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string] $Abi = 'armeabi-v7a',
     [Parameter(Mandatory)] [string] $QtSdk,
     [Parameter(Mandatory)] [string] $NativeLibrary,
     [Parameter(Mandatory)] [string] $RuntimeLibrary,

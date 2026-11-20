@@ -9,16 +9,17 @@ import shutil
 import zipfile
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86_64'), default='armeabi-v7a')
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'), default='armeabi-v7a')
 parser.add_argument('--repo', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
 lock = json.loads((args.repo / 'scripts/fetch/locks/qt6-android-api21-inputs.json').read_text())
 root = args.output / 'media'
 root.mkdir(parents=True, exist_ok=True)
-kernel = 'kernel-ranchu' if args.abi == 'x86_64' else 'kernel-qemu'
-emulator = 'emulator.exe' if args.abi in ('arm64-v8a', 'x86_64') else 'emulator-arm.exe'
-tools = {'x86_64': 'emulator-windows_x64-9536276.zip',
+kernel = 'kernel-ranchu' if args.abi in ('x86', 'x86_64') else 'kernel-qemu'
+emulator = 'emulator.exe' if args.abi in ('arm64-v8a', 'x86', 'x86_64') else 'emulator-arm.exe'
+tools = {'x86': 'emulator-windows_x64-9536276.zip',
+         'x86_64': 'emulator-windows_x64-9536276.zip',
          'arm64-v8a': 'tools_r25.2.5-windows.zip',
          'armeabi-v7a': 'tools_r24.4.1-windows.zip'}[args.abi]
 images = [item['file'] for item in lock['sources'] if item['file'].startswith(f'{args.abi}-21_r')]
@@ -39,7 +40,7 @@ for name in (images[0], tools):
                 if name.startswith(args.abi) else [f'tools/{emulator}', 'tools/lib'])
     if name == 'emulator-windows_x64-9536276.zip':
         required = ['emulator/emulator.exe', 'emulator/lib64',
-                    'emulator/qemu/windows-x86_64/qemu-system-x86_64-headless.exe']
+                    'emulator/qemu/windows-x86_64/qemu-system-' + ('i386' if args.abi == 'x86' else 'x86_64') + '-headless.exe']
     if (marker.is_file() and marker.read_text().strip() == digest
             and all((extract / relative).exists() for relative in required)):
         continue

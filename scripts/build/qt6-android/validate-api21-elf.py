@@ -8,7 +8,7 @@ import struct
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('prefix', type=Path)
-parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86_64'), default='armeabi-v7a')
+parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'), default='armeabi-v7a')
 parser.add_argument('--report', type=Path, required=True)
 args = parser.parse_args()
 
@@ -17,6 +17,7 @@ def inspect(path):
     data = path.read_bytes()
     bits, machine, machine_name = {'armeabi-v7a': (32, 40, 'ARM'),
                                     'arm64-v8a': (64, 183, 'AArch64'),
+                                    'x86': (32, 3, 'Intel 80386'),
                                     'x86_64': (64, 62, 'x86-64')}[args.abi]
     elf_class = 1 if bits == 32 else 2
     if data[:6] != b'\x7fELF' + bytes((elf_class, 1)):

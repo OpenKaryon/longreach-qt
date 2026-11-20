@@ -9,7 +9,7 @@ import shutil
 import zipfile
 
 abi = os.environ.get('ANDROID_ABI', 'armeabi-v7a')
-triples = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android', 'x86_64': 'x86_64-linux-android'}
+triples = {'armeabi-v7a': 'arm-linux-androideabi', 'arm64-v8a': 'aarch64-linux-android', 'x86': 'i686-linux-android', 'x86_64': 'x86_64-linux-android'}
 triple = triples[abi]
 lock = json.loads(Path('/repo/scripts/fetch/locks/qt6-android-api21-inputs.json').read_text())
 for record in lock['sources']:

@@ -1,12 +1,13 @@
 # Qt 6.8.5 for Android API 21
 
 This experimental recipe selects ARMv7 `armeabi-v7a`, ARM64 `arm64-v8a`
-or `x86_64` from Android 5/API21. ARMv7 remains the default. All three profiles have
+or `x86`/`x86_64` from Android 5/API21. ARMv7 remains the default. All four profiles have
 SDK and example runtime evidence, including strict C++23 25/25 without SKIP.
 The [ARM64 report](../results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md)
 records all eleven installed-SDK cases. The [x86_64 report](../results/qt6-android-lollipop-x86_64-llvm21-20261120.md)
 records all eleven installed-SDK cases, both gallery GUI captures and strict
-C++23 25/25 without SKIP.
+C++23 25/25 without SKIP. The [x86 report](../results/qt6-android-lollipop-x86-llvm21-20261120.md)
+records all eleven cases, CPU evidence without SSE4/AVX and the single-core guest workaround.
 Qt and applications use upstream LLVM 21.1.8 and one shared libc++ built
 from the matching LLVM sources. NDK r27 supplies platform headers, CRT,
 link stubs and Android helper sources; its compiler and libc++ are not used.
@@ -22,7 +23,7 @@ uses a ready SDK image and never builds Qt. Select `sdk` explicitly to build
 the SDK; missing images produce an error instead of an automatic rebuild.
 
 ```powershell
-$abi = 'armeabi-v7a' # Or arm64-v8a / x86_64.
+$abi = 'armeabi-v7a' # Or arm64-v8a / x86 / x86_64.
 
 # Build Qt only when necessary (native host tools: make qt6-linux-amd64 first).
 ./scripts/build/qt6-android.ps1 -Abi $abi -Mode sdk -AndroidSdk $env:ANDROID_HOME
@@ -88,7 +89,9 @@ downloads, APK tools and the emulator. They do not compile or start a guest.
 The ARMv7 image is `longreach-qt6-android-lollipop:llvm21`, with prefix
 `/opt/qt6-android-armeabi-v7a-llvm`. ARM64 selects
 `longreach-qt6-android-lollipop-arm64-v8a:llvm21`, with prefix
-`/opt/qt6-android-arm64-v8a-llvm`. The x86_64 tag is
+`/opt/qt6-android-arm64-v8a-llvm`. The x86 tag is
+`longreach-qt6-android-lollipop-x86:llvm21`, with prefix
+`/opt/qt6-android-x86-llvm`. The x86_64 tag is
 `longreach-qt6-android-lollipop-x86_64:llvm21`, with prefix
 `/opt/qt6-android-x86_64-llvm`. All use the external CMake toolchain at
 `/opt/longreach-android-api21/toolchain.cmake`. The final image includes the
@@ -98,7 +101,8 @@ Only provisioning the shared tools stage and fetching pinned inputs need it.
 Only Dockerfile lives in `docker/qt6/android/`; helpers are under `scripts/`.
 
 ARMv7 outputs default to `artifacts/qt6-android-lollipop/`; ARM64 defaults to
-`artifacts/qt6-android-lollipop-arm64-v8a/`; x86_64 defaults to
+`artifacts/qt6-android-lollipop-arm64-v8a/`; x86 defaults to
+`artifacts/qt6-android-lollipop-x86/`; x86_64 defaults to
 `artifacts/qt6-android-lollipop-x86_64/`. Pass `-OutputDirectory`
 to both wrappers to select another location. `deployment/` holds Qt-generated
 dependency/QML staging; `sdk-packaging/` holds Java packaging files; `apk/`
@@ -126,8 +130,13 @@ CPU model and software CPU emulation with two guest cores. Both legacy GPU
 options (`on`/`mesa`) select SwiftShader GLES for this headless x86_64 profile;
 Qt Quick still uses its normal GLES backend. Vulkan and file-backed quickboot
 are disabled. The selected emulator archive has an official SHA256 pin.
-No HAX installation is required. The compiler baseline is Android's x86-64-v2 instruction set; AVX is not required.
-The fetcher selects the requested ABI's pinned revision (ARM r04, x86_64 r05)
+The x86 profile uses the same pinned emulator and software GLES with a Conroe
+CPU model and one guest core. Its SSSE3 baseline needs no SSE4 or AVX. The
+archived 32-bit kernel panicked during a normal two-core TCG boot; the tested
+profile uses one core without disabling native threads. Boot queries have
+individual/overall deadlines and detect recorded kernel panics.
+No HAX installation is required. The x86_64 compiler baseline is Android's x86-64-v2 instruction set; AVX is not required.
+The fetcher selects the requested ABI's pinned revision (ARM r04, Intel r05)
 and emulator archive for tests. Default rendering is GLES, with no forced
 Qt Quick software backend.
 
@@ -142,7 +151,8 @@ C++23 plus `-fexperimental-library`, including jthread/stop_token behavior.
 This is behavior coverage, not full standard-library conformance.
 
 Large files above 2 GiB with this pre-API24 stdio profile, physical device
-cameras/audio/Bluetooth/NFC/XR and the x86 ABI were not validated. x86_64 validation is tracked separately in its result report.
+cameras/audio/Bluetooth/NFC/XR were not validated. Intel validation is tracked
+separately in the x86 and x86_64 result reports.
 API21/22 long bundled-library paths use a basename retry after
 the original load fails, preserving the application native-library search path.
 This target uses QtActivity and shared Qt libraries; applications

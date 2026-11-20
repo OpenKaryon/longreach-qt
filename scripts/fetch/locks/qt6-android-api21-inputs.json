@@ -1,5 +1,5 @@
 {
-  "purpose": "Qt6 Android API21 ARMv7/ARM64/x86_64 SDK, APK packaging and Android5.0.2 emulator inputs.",
+  "purpose": "Qt6 Android API21 ARMv7/ARM64/x86/x86_64 SDK, APK packaging and Android5.0.2 emulator inputs.",
   "sources": [
     {
       "file": "tools_r24.4.1-windows.zip",
@@ -38,6 +38,15 @@
       "file": "arm64-v8a-21_r04.zip",
       "url": "https://dl.google.com/android/repository/sys-img/android/arm64-v8a-21_r04.zip",
       "sha256": "6f9f8ab64641ccbea92a02cc85c130a60c3464b87aa9d49952a8d8292f84d073",
+      "encoding": "binary"
+    },
+    {
+      "file": "x86-21_r05.zip",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86-21_r05.zip",
+      "sha256": "2a7d1a01a4a455b989353d16c3f2bc427b6e133300072c790c7650e5e0080095",
+      "sha1": "00f0eb0a1003efe3316347f762e20a85d8749cff",
+      "size": 208212529,
+      "metadata_url": "https://dl.google.com/android/repository/sys-img/android/sys-img2-1.xml",
       "encoding": "binary"
     },
     {

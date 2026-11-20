@@ -20,6 +20,7 @@
 
 #include <QColor>
 #include <QImage>
+#include <QMatrix4x4>
 #include <QLabel>
 #include <QPixmap>
 #include <QSizePolicy>
@@ -40,6 +41,9 @@ class LegacyGlView : public QGLWidget
 public:
     explicit LegacyGlView(QWidget *parent = 0)
         : QGLWidget(parent)
+#ifdef QT_OPENGL_ES_2
+        , mProgram(0)
+#endif
     {
         setMinimumSize(480, 340);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -48,25 +52,71 @@ public:
         timer->start(16);
     }
 
+#ifdef QT_OPENGL_ES_2
+    ~LegacyGlView()
+    {
+        if (isValid()) makeCurrent();
+        delete mProgram;
+    }
+#endif
+
 protected:
     void initializeGL() override
     {
         qglClearColor(QColor(18, 24, 38));
         glDisable(GL_DEPTH_TEST);
+#ifdef QT_OPENGL_ES_2
+        mProgram = new QGLShaderProgram(context(), this);
+        const bool vertex = mProgram->addShaderFromSourceCode(QGLShader::Vertex,
+            "attribute vec2 position; attribute vec3 color; uniform mat4 matrix;"
+            "varying vec3 tint; void main() { tint=color; gl_Position=matrix*vec4(position,0.0,1.0); }");
+        const bool fragment = mProgram->addShaderFromSourceCode(QGLShader::Fragment,
+            "precision mediump float; varying vec3 tint; void main() { gl_FragColor=vec4(tint,1.0); }");
+        mProgram->bindAttributeLocation("position", 0);
+        mProgram->bindAttributeLocation("color", 1);
+        if (!vertex || !fragment || !mProgram->link())
+            qWarning("Qt4 GLES gallery shader: %s", qPrintable(mProgram->log()));
+#endif
     }
 
     void resizeGL(int width, int height) override
     {
         glViewport(0, 0, width, height > 0 ? height : 1);
+#ifndef QT_OPENGL_ES_2
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glOrtho(-1.25, 1.25, -1.0, 1.0, -1.0, 1.0);
         glMatrixMode(GL_MODELVIEW);
+#endif
     }
 
     void paintGL() override
     {
         glClear(GL_COLOR_BUFFER_BIT);
+#ifdef QT_OPENGL_ES_2
+        if (!mProgram || !mProgram->isLinked() || !mProgram->bind()) return;
+        QMatrix4x4 matrix;
+        matrix.ortho(-1.25f, 1.25f, -1.0f, 1.0f, -1.0f, 1.0f);
+        const int elapsed = QTime(0, 0).msecsTo(QTime::currentTime());
+        matrix.rotate(float(elapsed % 10000) * 0.036f, 0.0f, 0.0f, 1.0f);
+        mProgram->setUniformValue("matrix", matrix);
+        const GLfloat vertices[] = {
+             0.0f,  0.72f, 0.20f, 0.75f, 1.00f,
+            -0.75f,-0.55f, 1.00f, 0.35f, 0.35f,
+             0.75f,-0.55f, 0.45f, 1.00f, 0.45f};
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), vertices);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), vertices + 2);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDisableVertexAttribArray(1);
+        glVertexAttrib3f(1, 1.0f, 1.0f, 1.0f);
+        const GLfloat outline[] = {0.0f, 0.78f, -0.82f, -0.60f, 0.82f, -0.60f};
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, outline);
+        glDrawArrays(GL_LINE_LOOP, 0, 3);
+        glDisableVertexAttribArray(0);
+        mProgram->release();
+#else
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         const int elapsed = QTime(0, 0).msecsTo(QTime::currentTime());
@@ -84,7 +134,12 @@ protected:
         glVertex2f(-0.82f, -0.60f);
         glVertex2f( 0.82f, -0.60f);
         glEnd();
+#endif
     }
+#ifdef QT_OPENGL_ES_2
+private:
+    QGLShaderProgram *mProgram;
+#endif
 };
 
 static QString glString(GLenum name)
@@ -355,7 +410,7 @@ void checkQt4OpenGLGallery(SmokeReporter &r)
         // The fixed-function triangle covers the center and must differ from
         // the dark clear color; RGB interpolation also produces a bright pixel.
         const bool triangle = qRed(center) + qGreen(center) + qBlue(center) > 200;
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath("gl-gallery-frame.png");
+        const QString path = smokeArtifactDirectory().filePath("gl-gallery-frame.png");
         const bool saved = frame.save(path, "PNG");
         d = QStringLiteral("%1 center=%2,%3,%4 %5x%6").arg(path).arg(qRed(center)).arg(qGreen(center))
                 .arg(qBlue(center)).arg(frame.width()).arg(frame.height());

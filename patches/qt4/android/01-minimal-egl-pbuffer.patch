@@ -1,0 +1,134 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+--- a/src/plugins/platforms/minimal/qminimalintegration.cpp
++++ b/src/plugins/platforms/minimal/qminimalintegration.cpp
+@@ -45,6 +45,112 @@
+ #include <QtGui/private/qpixmap_raster_p.h>
+ #include <QtGui/QPlatformWindow>
+ 
++#include <QtGui/QPlatformGLContext>
++#include <QtGui/QPlatformWindowFormat>
++#include <QtGui/QWidget>
++#include <EGL/egl.h>
++#include <dlfcn.h>
++
++// The Canvas bridge remains raster. QtOpenGL clients use real GLES2 pbuffer
++// contexts for offscreen rendering/readback without an Android native window.
++class QMinimalAndroidGLContext : public QPlatformGLContext
++{
++public:
++    explicit QMinimalAndroidGLContext(QWidget *widget)
++        : mWidget(widget), mDisplay(eglGetDisplay(EGL_DEFAULT_DISPLAY)),
++          mConfig(0), mContext(EGL_NO_CONTEXT), mSurface(EGL_NO_SURFACE),
++          mFormat(widget->platformWindowFormat())
++    {
++        if (mDisplay == EGL_NO_DISPLAY || !eglInitialize(mDisplay, 0, 0))
++            qFatal("Android minimal: EGL initialization failed");
++        const EGLint attributes[] = {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
++            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_RED_SIZE, 8,
++            EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
++            EGL_DEPTH_SIZE, 16, EGL_STENCIL_SIZE, 8, EGL_NONE};
++        EGLint count = 0;
++        if (!eglChooseConfig(mDisplay, attributes, &mConfig, 1, &count) || count != 1)
++            qFatal("Android minimal: no GLES2 pbuffer configuration");
++        if (!eglBindAPI(EGL_OPENGL_ES_API))
++            qFatal("Android minimal: cannot select GLES");
++        QMinimalAndroidGLContext *shared =
++            static_cast<QMinimalAndroidGLContext *>(mFormat.sharedGLContext());
++        const EGLint contextAttributes[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
++        mContext = eglCreateContext(mDisplay, mConfig,
++            shared ? shared->mContext : EGL_NO_CONTEXT, contextAttributes);
++        if (mContext == EGL_NO_CONTEXT)
++            qFatal("Android minimal: cannot create GLES2 context");
++        mFormat.setDoubleBuffer(false);
++        mFormat.setSampleBuffers(false);
++        EGLint depth = 0, stencil = 0;
++        eglGetConfigAttrib(mDisplay, mConfig, EGL_DEPTH_SIZE, &depth);
++        eglGetConfigAttrib(mDisplay, mConfig, EGL_STENCIL_SIZE, &stencil);
++        mFormat.setDepthBufferSize(depth);
++        mFormat.setStencilBufferSize(stencil);
++    }
++
++    ~QMinimalAndroidGLContext()
++    {
++        if (eglGetCurrentContext() == mContext)
++            doneCurrent();
++        if (mSurface != EGL_NO_SURFACE)
++            eglDestroySurface(mDisplay, mSurface);
++        if (mContext != EGL_NO_CONTEXT)
++            eglDestroyContext(mDisplay, mContext);
++        // EGLDisplay is shared by all platform windows for this process.
++    }
++
++    void makeCurrent()
++    {
++        const QSize size = mWidget->size().expandedTo(QSize(1, 1));
++        if (mSurface == EGL_NO_SURFACE || size != mSize) {
++            if (mSurface != EGL_NO_SURFACE) {
++                eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++                eglDestroySurface(mDisplay, mSurface);
++            }
++            const EGLint attributes[] = {EGL_WIDTH, size.width(), EGL_HEIGHT, size.height(), EGL_NONE};
++            mSurface = eglCreatePbufferSurface(mDisplay, mConfig, attributes);
++            mSize = size;
++        }
++        if (mSurface == EGL_NO_SURFACE || !eglMakeCurrent(mDisplay, mSurface, mSurface, mContext))
++            qFatal("Android minimal: cannot bind GLES2 pbuffer");
++        QPlatformGLContext::makeCurrent();
++    }
++
++    void doneCurrent()
++    {
++        eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++        QPlatformGLContext::doneCurrent();
++    }
++
++    void swapBuffers() { eglSwapBuffers(mDisplay, mSurface); }
++    void *getProcAddress(const QString &name)
++    {
++        const QByteArray bytes = name.toLatin1();
++        void *function = reinterpret_cast<void *>(eglGetProcAddress(bytes.constData()));
++        return function ? function : dlsym(RTLD_DEFAULT, bytes.constData());
++    }
++    QPlatformWindowFormat platformWindowFormat() const { return mFormat; }
++
++private:
++    QWidget *mWidget;
++    EGLDisplay mDisplay;
++    EGLConfig mConfig;
++    EGLContext mContext;
++    EGLSurface mSurface;
++    QSize mSize;
++    QPlatformWindowFormat mFormat;
++};
++
++class QMinimalAndroidGLWindow : public QPlatformWindow
++{
++public:
++    explicit QMinimalAndroidGLWindow(QWidget *widget)
++        : QPlatformWindow(widget), mContext(new QMinimalAndroidGLContext(widget)) {}
++    QPlatformGLContext *glContext() const { return mContext.data(); }
++private:
++    QScopedPointer<QMinimalAndroidGLContext> mContext;
++};
++
+ QMinimalIntegration::QMinimalIntegration()
+ {
+     QMinimalScreen *mPrimaryScreen = new QMinimalScreen();
+@@ -59,6 +165,7 @@
+ bool QMinimalIntegration::hasCapability(QPlatformIntegration::Capability cap) const
+ {
+     switch (cap) {
++    case OpenGL: return true;
+     case ThreadedPixmaps: return true;
+     default: return QPlatformIntegration::hasCapability(cap);
+     }
+@@ -72,6 +179,8 @@
+ QPlatformWindow *QMinimalIntegration::createPlatformWindow(QWidget *widget, WId winId) const
+ {
+     Q_UNUSED(winId);
++    if (widget->platformWindowFormat().windowApi() == QPlatformWindowFormat::OpenGL)
++        return new QMinimalAndroidGLWindow(widget);
+     return new QPlatformWindow(widget);
+ }
+ 

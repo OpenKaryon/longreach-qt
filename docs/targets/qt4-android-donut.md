@@ -7,6 +7,10 @@ compiler-rt against the old Bionic sysroot. Qt uses separate QtCore and
 Qt Quick 1 configurations. The latter displays Qt's raster output through
 JNI and Android Canvas using the Qt minimal QPA plugin.
 
+The additional [Android 5/API 21 x86_64 profile](qt4-android-lollipop.md)
+has separate SDK, examples, packaging and test modes. API 4/armeabi remains
+the default of the original build entry point.
+
 ## Inputs
 
 On Windows, use Docker Desktop with Linux containers, PowerShell 7, a JDK
@@ -69,3 +73,17 @@ Gallery and Widgets Gallery each appear in the Android launcher after
 installing `quick.apk`.
 See the [example validation report](../results/qt4-android-donut-examples-20261117.md)
 for platform limits and guest results.
+
+
+## Shared compiler inputs
+
+Android host tools build from the digest-pinned Ubuntu 22.04 image and the
+project's dated apt snapshot. Clang/LLD 21.1.8 come from the SHA256-pinned
+upstream LLVM source archive, with X86, ARM and AArch64 backends. The host
+compiler builds with two jobs and one link job. The shared image is refreshed
+through Docker's cache whenever SDK mode is requested; a pre-existing tag is
+not a freshness check. Build its Dockerfile with the repository root as context.
+
+These producer inputs describe the current recipe. Earlier result reports
+identify the SDKs actually tested; changing the compiler recipe does not
+retroactively qualify an older image as a fresh build from the new producer.

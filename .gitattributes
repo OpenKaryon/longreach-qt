@@ -21,6 +21,10 @@ Makefile        text eol=lf
 *.diff          text eol=lf whitespace=-blank-at-eol
 # This upstream diff also has context lines whose indentation starts with a tab.
 /patches/winpthreads/windows-95/01-osr2-threading.patch whitespace=-blank-at-eol,-space-before-tab
+# Preserve upstream indentation and trailing blank context in these Qt 4 diffs.
+/patches/qt4/android/01-minimal-egl-pbuffer.patch whitespace=-blank-at-eol,-blank-at-eof
+/patches/qt4/android/03-script-qt-threading.patch whitespace=-blank-at-eol,-blank-at-eof
+/patches/qt4/android/05-qt3support-api21.patch whitespace=-blank-at-eol,-space-before-tab
 *.sh            text eol=lf
 
 # Windows-native scripts, should any be added later, need real CRLF to run.

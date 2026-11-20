@@ -14,7 +14,7 @@ Runtime verification uses the archived Android 5.0.2/LSY66K API21 image.
 
 ## Build and run
 
-On Windows, install Docker Desktop, Python 3.11+, PowerShell, JDK17 or JDK21 with
+On Windows, install Docker Desktop, Python 3.11+, PowerShell 7, JDK17 or JDK21 with
 `javac`/`keytool`, and Android SDK platform 35, Build Tools 36.0.0 and Platform
 Tools. Select the Android SDK through `ANDROID_HOME` or `-AndroidSdk`.
 The entry point has four independent modes. Its default is `examples`, which
@@ -149,3 +149,43 @@ This target uses QtActivity and shared Qt libraries; applications
 must preserve applicable Qt/libc++/platform licences when distributed.
 
 See the [build and emulator evidence](../results/qt6-android-lollipop-armeabi-v7a-llvm21-20261118.md).
+
+
+## Shared compiler inputs
+
+Android host tools build from the digest-pinned Ubuntu 22.04 image and the
+project's dated apt snapshot. Clang/LLD 21.1.8 come from the SHA256-pinned
+upstream LLVM source archive, with X86, ARM and AArch64 backends. The host
+compiler builds with two jobs and one link job. The shared image is refreshed
+through Docker's cache whenever SDK mode is requested; a pre-existing tag is
+not a freshness check. Build its Dockerfile with the repository root as context.
+
+These producer inputs describe the current recipe. Earlier result reports
+identify the SDKs actually tested; changing the compiler recipe does not
+retroactively qualify an older image as a fresh build from the new producer.
+
+## Completed example generations
+
+Examples mode marks the output incomplete before changing any deployment,
+Java input or runtime. Only a successful complete build writes
+`examples-manifest.json`, recording the selected immutable SDK ID, ABI and
+hashes of every packaging input. Packaging checks those files before changing
+any APK and writes `apk-manifest.json` only after all APKs finish. Test mode
+requires the completed APK generation and verifies its hashes before booting.
+Qt 5 includes both core and extended selftest deployments.
+
+A failed rebuild leaves earlier APKs on disk for inspection, but they cannot
+be packaged or tested as the new generation. Complete examples mode, then
+package mode, before starting the new test run. Existing outputs without
+these manifests need that explicit refresh; the scripts do not silently adopt
+them or rebuild the SDK. Saved APK test mode needs the manifests and image-ID
+files, but it does not require the SDK or deployment directories.
+
+PowerShell 7 is required for the Windows entry points. Ordinary artifact
+regressions are `scripts/tests/test_android_artifacts.py` and
+`scripts/tests/test-android-generation.ps1`; they need no SDK build or guest.
+
+The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
+records the current generation checks and installed-APK consumer validation,
+with exact SDK identities and retained failures. Native SDK provenance stays
+separate from consumer refreshes.

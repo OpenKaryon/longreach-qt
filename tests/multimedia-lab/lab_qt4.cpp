@@ -385,7 +385,7 @@ void checkMultimedia4Pages(SmokeReporter &r)
         });
     }
     r.check("multimedia4/page-contact-sheet", [&sheet](QString &d) {
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("multimedia-lab-pages.png");
+        d = smokeArtifactDirectory().filePath("multimedia-lab-pages.png");
         return sheet.save(d, "PNG");
     });
     delete tabs;

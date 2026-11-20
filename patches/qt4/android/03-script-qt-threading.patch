@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Keep Android OS services while selecting the Qt port toolkit/thread backend.
+
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Platform.h
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Platform.h
+@@ -531,7 +531,7 @@
+ /* PLATFORM(ANDROID) */
+ /* FIXME: this is sometimes used as an OS() switch, and other times to drive
+    policy choices */
+-#if defined(ANDROID)
++#if defined(ANDROID) && !PLATFORM(QT)
+ #define WTF_PLATFORM_ANDROID 1
+ #endif
+ 

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+
+--- a/configure
++++ b/configure
+@@ -2546,10 +2546,7 @@
+     CFG_QT3SUPPORT="no"
+ fi
+ 
+-#disable Qt3Support for Lighthouse
+-if [ "$PLATFORM_QPA" = "yes" ]; then
+-    CFG_QT3SUPPORT="no"
+-fi
++# This Android QPA profile ports Qt3Support too; honor -qt3support.
+ 
+ # update QT_CONFIG to show our current predefined configuration
+ case "$CFG_QCONFIG" in

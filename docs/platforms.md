@@ -25,6 +25,10 @@ and the QtCore 4.8.7 JNI smoke test passed on the same guest.
 A separate Qt Quick 1 APK passed the first-frame, tap and pause/resume
 checks on that guest. The [Android build guide](targets/qt4-android-donut.md)
 covers the diagnostic APKs and emulator runner.
+The additional [Qt 4 x86_64/API 21 profile](targets/qt4-android-lollipop.md)
+provides fourteen static modules and all eight shared examples on Android 5.
+Its [qualification](results/qt4-android-lollipop-x86_64-llvm21-20261120.md)
+passed all twelve emulator cases, including strict C++23 25/25 without SKIP.
 
 For Qt 5.15.19 the selected Android floor is Android 2.3.3 (API 10),
 `armeabi-v7a`. This is an explicit Android exception to the preceding
@@ -39,6 +43,15 @@ selftest APKs, and strict C++23 25/25 without skips on the same guest.
 Widgets and QML gallery rendering passed. The clean Docker recipe, isolated
 SDK consumer builds and all 13 runtime profiles passed using the maintained
 scripts; details and platform limits are in the linked report.
+
+For Qt 6.8.5 the experimental Android floor is Android 5/API21.
+The [target guide](targets/qt6-android-lollipop.md) covers ARMv7, ARM64 and
+x86_64, each with strict C++23 25/25 without SKIP. The original ARMv7 report
+separates its prototype runtime suite from repository-producer build evidence;
+[ARM64](results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md) and
+[x86_64](results/qt6-android-lollipop-x86_64-llvm21-20261120.md) record their
+own complete eleven-case installed-SDK runs. Desktop result tables below
+retain their original scope.
 
 ## Results
 

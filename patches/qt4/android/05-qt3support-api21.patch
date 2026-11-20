@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: LGPL-2.1-only OR GPL-3.0-only
+
+--- a/src/qt3support/network/q3dns.cpp
++++ b/src/qt3support/network/q3dns.cpp
+@@ -42,6 +42,10 @@
+ #include "qplatformdefs.h"
+ #include "qbytearray.h"
+ #include <private/qsystemlibrary_p.h>
++#ifdef __ANDROID__
++#include <sys/system_properties.h>
++#endif
++
+ #if defined(Q_OS_WIN32) || defined(Q_OS_WINCE) || defined(Q_OS_CYGWIN)
+ # include "qt_windows.h"
+ #else
+@@ -2494,7 +2498,21 @@
+     }
+ 
+     if (theNs->isEmpty()) {
+-#if defined(Q_MODERN_RES_API)
++#if defined(__ANDROID__)
++        // API21 publishes default DNS addresses as properties; its Bionic
++        // resolver state is private. Keep Q3Dns's existing UDP query engine.
++        for (int index = 1; index <= 4; ++index) {
++            char key[16];
++            char value[PROP_VALUE_MAX];
++            qsnprintf(key, sizeof(key), "net.dns%d", index);
++            if (__system_property_get(key, value) > 0) {
++                QHostAddress address;
++                if (address.setAddress(QString::fromLatin1(value)) && !address.isNull()
++                        && (address.isIPv4Address() || ipv6support))
++                    theNs->append(new QHostAddress(address));
++            }
++        }
++#elif defined(Q_MODERN_RES_API)
+ 	struct __res_state res;
+ 	res_ninit( &res );
+ 	int i;
+--- a/src/qt3support/dialogs/q3filedialog.cpp
++++ b/src/qt3support/dialogs/q3filedialog.cpp
+@@ -3049,7 +3049,7 @@
+             i++;
+         Q3CString user;
+         if (i == 1) {
+-#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS)
++#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && (!defined(__ANDROID__) || __ANDROID_API__ >= 28)
+ 
+ #  ifndef _POSIX_LOGIN_NAME_MAX
+ #    define _POSIX_LOGIN_NAME_MAX 9

@@ -98,9 +98,65 @@ Android application targets are shared libraries, loaded by QtActivity.
 Build evidence, runtime results and platform limits are recorded in the
 [SDK result report](../results/qt5-android-gingerbread-sdk-llvm21-20261117.md).
 
+## QtActivity across Android versions
+
+The API 10 backport retains the upstream ActionMode and Fragment callbacks
+used by newer Android releases. Dalvik on API 10 can load that Activity, but
+reflecting its method list also resolves signature types absent from the old
+framework. Removing the newer callbacks would break forward compatibility.
+
+`27-api10-activity-reflection.patch` adds a small `QtActivityLegacy` interface
+to `QtAndroid.jar` and the Activity template. On API 10, the delegate reflects
+its ten legacy `super_*` calls through that interface, whose parameter types
+are all available. Callback registration filters against the running
+framework's Activity or Service class. API 11 and later retain the upstream
+reflection path. The shared APK Activity checks the expected bridge on API 10
+and the eight retained callback signatures on API 11 and later; native startup
+and example tests remain necessary to verify the full Java/native path.
+
 ## Lightweight mode checks
 
 `./scripts/tests/test-qt5-android-modes.ps1` verifies ready-image reuse, ABI
 rejection, phase isolation, SDK-only compatibility, all nine deployment inputs
 (core plus extended selftest) and test argument forwarding. It uses recording
 stubs and temporary fixtures, without building Qt or starting a guest.
+
+
+## Shared compiler inputs
+
+Android host tools build from the digest-pinned Ubuntu 22.04 image and the
+project's dated apt snapshot. Clang/LLD 21.1.8 come from the SHA256-pinned
+upstream LLVM source archive, with X86, ARM and AArch64 backends. The host
+compiler builds with two jobs and one link job. The shared image is refreshed
+through Docker's cache whenever SDK mode is requested; a pre-existing tag is
+not a freshness check. Build its Dockerfile with the repository root as context.
+
+These producer inputs describe the current recipe. Earlier result reports
+identify the SDKs actually tested; changing the compiler recipe does not
+retroactively qualify an older image as a fresh build from the new producer.
+
+## Completed example generations
+
+Examples mode marks the output incomplete before changing any deployment,
+Java input or runtime. Only a successful complete build writes
+`examples-manifest.json`, recording the selected immutable SDK ID, ABI and
+hashes of every packaging input. Packaging checks those files before changing
+any APK and writes `apk-manifest.json` only after all APKs finish. Test mode
+requires the completed APK generation and verifies its hashes before booting.
+Qt 5 includes both core and extended selftest deployments.
+
+A failed rebuild leaves earlier APKs on disk for inspection, but they cannot
+be packaged or tested as the new generation. Complete examples mode, then
+package mode, before starting the new test run. Existing outputs without
+these manifests need that explicit refresh; the scripts do not silently adopt
+them or rebuild the SDK. Saved APK test mode needs the manifests and image-ID
+files, but it does not require the SDK or deployment directories.
+
+PowerShell 7 is required for the Windows entry points. Ordinary artifact
+regressions are `scripts/tests/test_android_artifacts.py` and
+`scripts/tests/test-android-generation.ps1`; they need no SDK build or guest.
+
+The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
+records the current generation checks and installed-APK consumer validation,
+with exact SDK identities and retained failures. Native SDK provenance stays
+separate from consumer refreshes.

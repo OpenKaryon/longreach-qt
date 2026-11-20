@@ -21,7 +21,16 @@ jobs:
           [ast.parse(p.read_text(encoding='utf-8'), filename=str(p))
           for p in pathlib.Path('scripts').rglob('*.py')]"
       - name: Check tooling regressions
-        run: python3 -m unittest discover -s scripts/tests -p test_tooling.py
+        run: |
+          python3 -m unittest discover -s scripts/tests -p test_tooling.py
+          python3 -m unittest discover -s scripts/tests -p test_android_artifacts.py
+      - name: Check Android phase routing
+        shell: pwsh
+        run: |
+          ./scripts/tests/test-qt4-android-modes.ps1
+          ./scripts/tests/test-qt5-android-modes.ps1
+          ./scripts/tests/test-qt6-android-modes.ps1
+          ./scripts/tests/test-android-generation.ps1
       - name: Check API coverage inventory
         run: python3 scripts/tests/check_coverage.py --gate
       - name: Check license matrix

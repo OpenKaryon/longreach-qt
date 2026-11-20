@@ -1,5 +1,17 @@
 # Results
 
+The [Android audit follow-up](android-audit-fixes-20261120.md) records the
+pinned source compiler and cache checks, artifact-generation regressions,
+Qt4/5/6 runner validation and the Java repair. Qt5 passed thirteen cases on
+API10 and API21; Qt6 passed eleven on API21. Every strict C++23 profile passed
+25/25 without SKIP. The report preserves the initial API21 renderer failure
+and distinguishes existing native SDKs from refreshed consumer builds.
+
+The [Qt 4 Android x86_64/API 21 SDK run](qt4-android-lollipop-x86_64-llvm21-20261120.md)
+records fourteen static modules, all eight shared applications, twelve successful
+emulator cases and strict C++23 25/25 without SKIP. It also verifies the shared
+APK wrapper on Android 1.6 and the retained SDK configuration cache.
+
 The [Qt 6 macOS arm64 LLVM 21.1.8 SDK run](qt6-macos-arm64-llvm21-sdk-20261111.md)
 records the static cross-build, the macOS 11.0 deployment checks and
 required C++23 compilation. Execution on Apple silicon is pending.

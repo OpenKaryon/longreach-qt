@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: BSD-3-Clause AND BSL-1.0
+# Modern NDKs omit private libcutils; use the existing GCC/Clang builtins path.
+
+--- a/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Threading.h
++++ b/src/3rdparty/javascriptcore/JavaScriptCore/wtf/Threading.h
+@@ -73,7 +73,7 @@
+ #include <windows.h>
+ #elif OS(DARWIN)
+ #include <libkern/OSAtomic.h>
+-#elif OS(ANDROID)
++#elif OS(ANDROID) && __ANDROID_API__ < 21
+ #include <cutils/atomic.h>
+ #elif OS(QNX)
+ #include <atomic.h>
+@@ -230,7 +230,7 @@
+ inline int atomicIncrement(int volatile* addend) { return OSAtomicIncrement32Barrier(const_cast<int*>(addend)); }
+ inline int atomicDecrement(int volatile* addend) { return OSAtomicDecrement32Barrier(const_cast<int*>(addend)); }
+ 
+-#elif OS(ANDROID)
++#elif OS(ANDROID) && __ANDROID_API__ < 21
+ 
+ inline int atomicIncrement(int volatile* addend) { return android_atomic_inc(addend); }
+ inline int atomicDecrement(int volatile* addend) { return android_atomic_dec(addend); }

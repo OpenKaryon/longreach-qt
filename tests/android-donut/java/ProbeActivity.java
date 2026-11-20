@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import java.io.FileOutputStream;
 
 public class ProbeActivity extends Activity {
     private native int runProbe(String filesDirectory);
@@ -12,8 +13,14 @@ public class ProbeActivity extends Activity {
         super.onCreate(state);
         TextView status = new TextView(this);
         try {
-            System.loadLibrary("donut_probe");
+            NativeLoader.load(this);
             int result = runProbe(getFilesDir().getAbsolutePath());
+            FileOutputStream completion = new FileOutputStream(new java.io.File(getFilesDir(), "probe-result.txt"));
+            try {
+                completion.write(Integer.toString(result).getBytes("US-ASCII"));
+            } finally {
+                completion.close();
+            }
             String message = "Native probe returned " + result;
             Log.i("LongreachDonut", message);
             status.setText(message);

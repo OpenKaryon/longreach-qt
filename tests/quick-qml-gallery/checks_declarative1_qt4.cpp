@@ -328,28 +328,39 @@ void checkDeclarative1Pages(SmokeReporter &r)
         r.check(QStringLiteral("declarative1/page-render-%1").arg(label),
                 [&, index, label](QString &d) {
             if (!view.rootObject()->setProperty("section", index)) return false;
-            QEventLoop loop;
-            QTimer::singleShot(80, &loop, SLOT(quit()));
-            loop.exec();
-            view.viewport()->repaint();
-            QApplication::processEvents();
+            QElapsedTimer deadline;
+            deadline.start();
             QImage frame;
-            if (shaders) {
-                QGLWidget *glViewport = static_cast<QGLWidget *>(view.viewport());
-                glViewport->makeCurrent();
-                frame = glViewport->grabFrameBuffer();
-            } else {
-                frame = QImage(view.viewport()->size(), QImage::Format_RGB32);
-                frame.fill(0xffff00ff);
-                QPainter painter(&frame);
-                view.render(&painter);
-            }
-            if (frame.isNull()) return false;
             int varied = 0;
-            const QRgb corner = frame.pixel(0, 0);
-            for (int y = 100; y < frame.height(); y += 4)
-                for (int x = 220; x < frame.width(); x += 4)
-                    if (frame.pixel(x, y) != corner) ++varied;
+            // Software GL may need another event-driven paint after allocating
+            // its first surface. Wait for actual page pixels, keeping the same
+            // assertion and a bounded failure for a permanently blank frame.
+            do {
+                QEventLoop loop;
+                QTimer::singleShot(80, &loop, SLOT(quit()));
+                loop.exec();
+                view.viewport()->repaint();
+                QApplication::processEvents();
+                if (shaders) {
+                    QGLWidget *glViewport = static_cast<QGLWidget *>(view.viewport());
+                    glViewport->makeCurrent();
+                    frame = glViewport->grabFrameBuffer();
+                } else {
+                    frame = QImage(view.viewport()->size(), QImage::Format_RGB32);
+                    frame.fill(0xffff00ff);
+                    QPainter painter(&frame);
+                    view.render(&painter);
+                }
+                varied = 0;
+                if (!frame.isNull()) {
+                    const QRgb corner = frame.pixel(0, 0);
+                    for (int y = 100; y < frame.height(); y += 4)
+                        for (int x = 220; x < frame.width(); x += 4)
+                            if (frame.pixel(x, y) != corner) ++varied;
+                }
+            } while (varied <= 100 && deadline.elapsed() < 2000);
+            if (frame.isNull()) { d = QStringLiteral("empty page capture"); return false; }
+            d = QStringLiteral("page pixels=%1 wait=%2ms").arg(varied).arg(deadline.elapsed());
             QPainter contact(&sheet);
             const int left = (index % 4) * 320, top = (index / 4) * 250;
             contact.drawText(left + 8, top + 18, label);
@@ -361,7 +372,7 @@ void checkDeclarative1Pages(SmokeReporter &r)
                     QPointF(effect->width() / 2, effect->height() / 4)));
             }
             if (index == 0 || index == 7 || index == 10) {
-                d = QDir(QCoreApplication::applicationDirPath()).filePath(
+                d = smokeArtifactDirectory().filePath(
                     QString("qml-page-%1.png").arg(index, 2, 10, QLatin1Char('0')));
                 if (!frame.save(d, "PNG")) return false;
             }
@@ -369,7 +380,7 @@ void checkDeclarative1Pages(SmokeReporter &r)
         });
     }
     r.check("declarative1/page-contact-sheet", [&](QString &d) {
-        d = QDir(QCoreApplication::applicationDirPath()).filePath("qml-gallery-pages.png");
+        d = smokeArtifactDirectory().filePath("qml-gallery-pages.png");
         return sheet.save(d, "PNG");
     });
     r.check("declarative1/shader-output", [&](QString &d) {

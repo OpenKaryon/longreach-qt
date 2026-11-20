@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 OpenKaryon
 # Shared Android host tools; build context is the repository root.
+ARG ANDROID_ABI=x86_64
 FROM ghcr.io/openkaryonlab/ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 AS base
 ARG APT_SNAPSHOT
 COPY scripts/build/apt-snapshot.sh /usr/local/bin/apt-snapshot
@@ -34,3 +35,63 @@ RUN --network=none set -e; \
     done
 LABEL org.openkaryon.longreach-qt.role="android-llvm-tools" \
       org.openkaryon.longreach-qt.llvm="21.1.8"
+
+# API21 uses the common upstream LLVM runtime producer, not a Qt5/Qt6 SDK.
+FROM tools AS platform
+ARG ANDROID_ABI
+ENV ANDROID_ABI=${ANDROID_ABI} ANDROID_API=21
+WORKDIR /work
+COPY scripts/build/qt6-android/prepare-inputs.py /repo/scripts/build/qt6-android/
+COPY scripts/fetch/locks/qt6-android-api21-inputs.json /repo/scripts/fetch/locks/
+RUN --network=none \
+    --mount=type=bind,source=downloads/android-lollipop,target=/inputs \
+    python3 /repo/scripts/build/qt6-android/prepare-inputs.py
+
+FROM platform AS runtime
+COPY patches/android/lollipop /repo/patches/android/lollipop
+COPY scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
+COPY scripts/build/qt6-android/target-config.sh \
+     scripts/build/qt6-android/build-runtime.sh \
+     scripts/build/qt6-android/install-toolchain.sh \
+     scripts/build/qt6-android/clang-wrapper.sh \
+     scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
+COPY scripts/tests/android-api21-driver.sh /repo/scripts/tests/
+RUN --network=none \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
+    bash /repo/scripts/build/qt6-android/build-runtime.sh \
+    && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
+    && bash /repo/scripts/tests/android-api21-driver.sh
+
+FROM runtime AS qt-build
+COPY scripts/build/qt4-android/target-config.sh \
+     scripts/build/qt4-android/build-qtcore.sh \
+     scripts/build/qt4-android/patch-qtcore.py \
+     scripts/build/qt4-android/build-api21-sdk.sh \
+     scripts/build/qt4-android/sdk-provenance.py \
+     scripts/build/qt4-android/toolchain.cmake /repo/scripts/build/qt4-android/
+COPY patches/qt4/all/03-static-gui-animation-registration.patch \
+     patches/qt4/all/04-script-tagged-frame-pointers.patch /repo/patches/qt4/all/
+COPY patches/qt4/android /repo/patches/qt4/android
+COPY patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch /repo/patches/qt4/linux-sarge-llvm/
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    bash /repo/scripts/build/qt4-android/build-api21-sdk.sh quick
+
+FROM tools AS sdk
+ARG ANDROID_ABI
+ENV ANDROID_ABI=${ANDROID_ABI} ANDROID_API=21
+COPY --from=qt-build /opt/longreach-android-api21 /opt/longreach-android-api21
+COPY --from=qt-build /opt/qt4-android-${ANDROID_ABI}-llvm /opt/qt4-android-${ANDROID_ABI}-llvm
+COPY scripts/build/qt4-android/toolchain.cmake /opt/qt4-android-${ANDROID_ABI}-llvm/toolchain.cmake
+ENV PATH=/opt/qt4-android-${ANDROID_ABI}-llvm/bin:${PATH} \
+    QMAKESPEC=/opt/qt4-android-${ANDROID_ABI}-llvm/mkspecs/android-longreach-clang \
+    ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
+LABEL org.openkaryon.longreach-qt.platform="android-lollipop-${ANDROID_ABI}" \
+      org.openkaryon.longreach-qt.android-api="21" \
+      org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
+      org.openkaryon.longreach-qt.version="4.8.7"
+WORKDIR /work
+RUN --network=none test ! -d "/work/qt4-android-${ANDROID_ABI}"
+
+# Historical API4 and Qt5/6 bootstrap callers build only these host tools.
+FROM tools AS default

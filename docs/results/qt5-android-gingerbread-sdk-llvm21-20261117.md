@@ -1,5 +1,9 @@
 # Qt 5.15.19 SDK for Android 2.3.3/API 10 on LLVM 21.1.8
 
+The original full-suite table and image ID describe the original complete
+SDK build. The pre-publication follow-up below was a focused Java/selftest
+rerun; it does not replace all thirteen original cases with a new full run.
+
 The full shared SDK and the common examples have run on exact Android 2.3.3,
 API 10, armeabi-v7a. The native compiler is upstream LLVM 21.1.8 with libc++,
 not llvm-mingw. This continues the [initial QtCore/runtime probe](qt5-android-gingerbread-api10-llvm21-20261117.md).
@@ -156,3 +160,10 @@ The separate win-amd64 per-target inventory diagnostic reports 1097/1535
 classes (71.5%) both on the unchanged base revision and after these changes.
 It is distinct from the overall CI gate and was not treated as an Android
 regression or hidden by changing the threshold.
+
+## Separate audit follow-up — 2026-11-20
+
+See the [cross-version audit report](android-audit-fixes-20261120.md) for the
+source-compiler validation, result-generation checks and Java compatibility
+repair. Its fresh consumer runs have their own SDK/APK identities; they do
+not replace this report's original build or runtime provenance.

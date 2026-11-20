@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+--- a/src/plugins/platforms/fontdatabases/basicunix/qbasicunixfontdatabase.cpp
++++ b/src/plugins/platforms/fontdatabases/basicunix/qbasicunixfontdatabase.cpp
+@@ -241,9 +241,17 @@
+ {
+     Q_UNUSED(family);
+     Q_UNUSED(style);
+-    Q_UNUSED(styleHint);
+     Q_UNUSED(script);
+-    return QStringList();
++    // The minimal backend does not read Android's system font aliases.
++    // Generic Helvetica/Times/monospace requests must not fall through to
++    // the first registered family (for example the digits-only Clockopia).
++    QStringList families;
++    if (styleHint == QFont::Times || styleHint == QFont::Serif)
++        families << QLatin1String("Noto Serif");
++    else if (styleHint == QFont::Courier || styleHint == QFont::Monospace)
++        families << QLatin1String("Droid Sans Mono");
++    families << QLatin1String("Roboto") << QLatin1String("Droid Sans");
++    return families;
+ }
+ 
+ QStringList QBasicUnixFontDatabase::addApplicationFont(const QByteArray &fontData, const QString &fileName)

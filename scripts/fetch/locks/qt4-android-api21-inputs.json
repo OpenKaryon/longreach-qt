@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "qt": "4.8.7",
+  "llvm": "21.1.8",
+  "minimum_api": {
+    "x86_64": 21
+  },
+  "platform_lock": "qt6-android-api21-inputs.json",
+  "shared_sources": [
+    {
+      "file": "qt-everywhere-opensource-src-4.8.7.tar.gz",
+      "url": "https://download.qt.io/archive/qt/4.8/4.8.7/qt-everywhere-opensource-src-4.8.7.tar.gz",
+      "sha256": "e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f626ea0"
+    },
+    {
+      "file": "llvm-project-21.1.8.src.tar.xz",
+      "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
+      "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
+    }
+  ]
+}

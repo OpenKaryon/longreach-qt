@@ -144,6 +144,20 @@ void checkGuiValue(SmokeReporter &r)
 #endif
         return w>0 && fm.height()>0 && fi.pointSize()>0 && f.bold();
     });
+    r.check("font/default-ascii-glyphs", [](QString &d) {
+        const QFont font;
+        const QFontInfo info(font);
+        const QFontMetrics metrics(font);
+        const QString required = QStringLiteral("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+        for (int i = 0; i < required.size(); ++i) {
+            if (!metrics.inFont(required.at(i))) {
+                d = QStringLiteral("default family '%1' has no glyph for '%2'")
+                    .arg(info.family()).arg(required.at(i));
+                return false;
+            }
+        }
+        return true;
+    });
     r.check("font/database", [&r](QString &d) {
         QFontDatabase db;
         QStringList fams = db.families();

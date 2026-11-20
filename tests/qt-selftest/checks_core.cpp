@@ -5,6 +5,7 @@
 // primitives. All headless.
 #include "../common/smokecheck.h"
 #include "checks.h"
+#include <algorithm>
 
 #include <QString>
 #include <QStringList>

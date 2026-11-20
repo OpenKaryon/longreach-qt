@@ -7,7 +7,8 @@ the test suite - is GPL-3.0-or-later, Copyright (C) 2026 OpenKaryon
 | Files | Licence |
 |-------|---------|
 | Qt-owned code in `patches/qt5` and `patches/qt6`, the Qt 5 mkspecs, the runtime objects linked into Qt 5 applications | LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only (Qt 5/6's own) |
-| `patches/qt4`, the Qt 4 mkspecs, the Windows 95 runtime object | LGPL-2.1-only OR GPL-3.0-only (Qt 4.8's own) |
+| `patches/qt4`, the Qt 4 mkspecs, the Windows 95 runtime object, the Android 1.6 atomics (`scripts/build/qt4-android/armv5-compat.c`) | LGPL-2.1-only OR GPL-3.0-only (Qt 4.8's own) |
+| The Android runtime objects shared by the Qt 4, 5 and 6 targets (`scripts/build/qt4-android/crt-donut.c`, `tmpfile-donut.c`) | LGPL-2.1-only OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only (either Qt's terms) |
 | the Jaguar libgcc header (`scripts/build/qt4-macos-jaguar/libgcc-dlfcn.h`) | GPL-3.0-or-later WITH GCC-exception-3.1 |
 
 Patches to bundled third-party code name the upstream terms in their headers.

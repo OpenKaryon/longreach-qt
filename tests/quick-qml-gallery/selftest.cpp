@@ -19,7 +19,7 @@ int runSelfTest()
 {
     SmokeReporter r("quick-qml");
     r.setTrace(true);
-    if (!r.setLogFile(QDir(QCoreApplication::applicationDirPath()).filePath("qml-selftest.log")))
+    if (!r.setLogFile(smokeArtifactDirectory().filePath("qml-selftest.log")))
         return 2;
     addDeclarative1Checks(r);
     checkDeclarative1Pages(r);

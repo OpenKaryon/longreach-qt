@@ -17,7 +17,8 @@ static int runSelfTest()
 {
     SmokeReporter r("gl-heavy");
     r.setTrace(true);
-    if (!r.setLogFile(QDir(QCoreApplication::applicationDirPath()).filePath("gl-selftest.log")))
+    const QDir reports(smokeArtifactDirectory());
+    if (!r.setLogFile(reports.filePath("gl-selftest.log")))
         return 2;
     checkQt4OpenGL(r);
     checkQt4OpenGLGallery(r);

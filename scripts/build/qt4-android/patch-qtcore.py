@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
+import os
 import sys
 
 
@@ -54,6 +55,20 @@ edit("src/corelib/thread/qthread_unix.cpp", (
     ),
 ))
 
+# Modern Bionic headers expose POSIX feature macros even when these two
+# functions are newer than the selected Android deployment API.
+edit("src/corelib/thread/qthread_unix.cpp", (
+    ("#define QT_HAS_THREAD_PRIORITY_SCHEDULING\n",
+     "#if !defined(__ANDROID__) || __ANDROID_API__ >= 28\n"
+     "#define QT_HAS_THREAD_PRIORITY_SCHEDULING\n#endif\n"),
+))
+edit("src/corelib/io/qfilesystemengine_unix.cpp", (
+    ("    struct group *gr = 0;\n#if !defined(Q_OS_INTEGRITY)\n"
+     "#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_OPENBSD) && !defined(Q_OS_VXWORKS)\n",
+     "    struct group *gr = 0;\n#if !defined(Q_OS_INTEGRITY)\n"
+     "#if !defined(QT_NO_THREAD) && defined(_POSIX_THREAD_SAFE_FUNCTIONS) && !defined(Q_OS_OPENBSD) && !defined(Q_OS_VXWORKS) && (!defined(__ANDROID__) || __ANDROID_API__ >= 24)\n"),
+))
+
 edit("src/corelib/codecs/qtextcodec.cpp", (
     (
         "#if defined (_XOPEN_UNIX) && !defined(Q_OS_QNX) && !defined(Q_OS_OSF)\n#include <langinfo.h>",
@@ -86,6 +101,11 @@ if sys.argv[1:] == ["quick"]:
         ("INSTALLS += target",
          "INSTALLS += target\n\ninclude(../fontdatabases/basicunix/basicunix.pri)"),
     ))
+    if os.environ.get("ANDROID_API") == "21":
+        edit("src/plugins/platforms/minimal/minimal.pro", (
+            ("include(../fontdatabases/basicunix/basicunix.pri)",
+             "include(../fontdatabases/basicunix/basicunix.pri)\nLIBS += -lEGL -lGLESv2 -ldl"),
+        ))
     edit("src/plugins/platforms/minimal/qminimalintegration.h", (
         ("#include <QtGui/QPlatformScreen>",
          "#include <QtGui/QPlatformScreen>\n#include \"qbasicunixfontdatabase.h\""),

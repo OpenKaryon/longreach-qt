@@ -2,6 +2,11 @@
 #Requires -Version 7.0
 
 param(
+    [ValidateSet('armeabi','x86_64')][string]$Abi='armeabi',
+    [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
+    [string]$SdkImage,
+    [string]$RunName='sdk-suite',
+    [string[]]$Profiles,
     [string] $InputDirectory,
     [string] $OutputDirectory,
     [string] $AndroidSdk = $env:ANDROID_HOME
@@ -10,6 +15,18 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 . "$PSScriptRoot/qt4-android/host.ps1"
+
+if ($Abi -ne 'armeabi') {
+    if ($InputDirectory) { throw '-InputDirectory is only for the original API4 inputs' }
+    $options=@{} + $PSBoundParameters
+    $options.Remove('InputDirectory') | Out-Null
+    $options.Mode=$Mode
+    & "$PSScriptRoot/qt4-android/api21.ps1" @options
+    return
+}
+foreach ($option in @('Mode','SdkImage','RunName','Profiles')) {
+    if ($PSBoundParameters.ContainsKey($option)) { throw "-$option is currently supported by the API21 profiles only" }
+}
 
 if (!$InputDirectory) { $InputDirectory = Join-Path $repo 'downloads/android-donut' }
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'artifacts/qt4-android-donut' }

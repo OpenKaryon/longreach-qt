@@ -1,6 +1,8 @@
 package org.longreachqt.donut.quick;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.Context;
@@ -107,6 +109,29 @@ public class QuickInstrumentation extends Instrumentation {
         report.append(line).append('\n');
     }
 
+    private void saveFrame(final QuickActivity app, final String name) {
+        runOnMainSync(new Runnable() {
+            public void run() {
+                View view = app.display();
+                Bitmap image = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+                try {
+                    view.draw(new Canvas(image));
+                    FileOutputStream file = app.openFileOutput(name, Context.MODE_PRIVATE);
+                    try {
+                        if (!image.compress(Bitmap.CompressFormat.PNG, 100, file))
+                            throw new java.io.IOException("PNG encoder failed");
+                    } finally {
+                        file.close();
+                    }
+                } catch (java.io.IOException failure) {
+                    throw new IllegalStateException("Cannot save gallery frame", failure);
+                } finally {
+                    image.recycle();
+                }
+            }
+        });
+    }
+
     private void saveReport() throws java.io.IOException {
         FileOutputStream file = getTargetContext().openFileOutput("quick-smoke.txt", Context.MODE_PRIVATE);
         try {
@@ -155,6 +180,7 @@ public class QuickInstrumentation extends Instrumentation {
             tapAt(gallery, 0, 0, 1);
             waitForSection(gallery, 1, galleryFrames);
             passed("shared Qt Quick Gallery renders and navigates");
+            saveFrame(gallery, "qml-gallery.png");
             QuickActivity widgets = (QuickActivity) startActivitySync(activity(WidgetsActivity.class));
             waitForSection(widgets, 0, 0);
             int widgetFrames = widgets.frames;
@@ -165,6 +191,7 @@ public class QuickInstrumentation extends Instrumentation {
             // Each tab has four positions in the renderer's state value.
             waitForSection(widgets, 4 + checkState, widgetFrames);
             passed("shared Widgets Gallery toggles a checkbox and changes tabs");
+            saveFrame(widgets, "widgets-gallery.png");
             saveReport();
             Log.i(TAG, "Quick smoke passed");
             result.putString("result", "Quick smoke passed");

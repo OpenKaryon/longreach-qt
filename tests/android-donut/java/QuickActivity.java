@@ -1,6 +1,7 @@
 package org.longreachqt.donut.quick;
 
 import android.app.Activity;
+import org.longreachqt.donut.NativeLoader;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
@@ -37,7 +38,7 @@ public class QuickActivity extends Activity {
 
     public void onCreate(Bundle state) {
         super.onCreate(state);
-        System.loadLibrary("donut_probe");
+        NativeLoader.load(this);
         frameWidth = sceneMode() != SCENE_SWITCH ? 480 : 220;
         frameHeight = sceneMode() != SCENE_SWITCH ? 320 : 260;
         ready = openScene(sceneMode(), frameWidth, frameHeight);

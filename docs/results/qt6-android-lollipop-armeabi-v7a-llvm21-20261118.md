@@ -4,12 +4,18 @@ Original SDK/emulator verification: 2026-11-18 UTC. Repository producer
 integration and build verification: 2026-11-19 UTC. This report records a source backport; no binary SDK release
 is included.
 
-## Final result
+The complete runtime table below belongs to the original prototype SDK.
+The repository producer was separately built and packaged on 2026-11-19;
+that evidence does not establish a complete emulator rerun of its output.
+Later partial checks remain partial. Each SDK/image and run directory must
+be interpreted with its own recorded provenance.
+
+## Original full prototype run — 2026-11-18
 
 Qt **6.8.5** and its supported Android modules built with upstream LLVM
 **21.1.8** for **armeabi-v7a / API21**. The standalone C++23 APK passed before
 QtCore was built; QtCore then launched successfully, followed by the full SDK.
-The final installed-SDK examples passed all **11 required launch profiles**
+The prototype installed-SDK examples passed all **11 required launch profiles**
 in `sdk-suite-8`, with the default OpenGL backend and no forced software backend.
 
 | Case | PASS | FAIL | SKIP |
@@ -203,7 +209,7 @@ Artifact root: `artifacts/qt6-android-lollipop-probe/` (Git-ignored).
 ## Repository producer verification — 2026-11-19
 
 The build now lives in `docker/qt6/android/Dockerfile` and
-`scripts/build/qt6-android/`, with portable Windows build, packaging and
+`scripts/build/qt6-android/`, with Windows build, packaging and
 serial emulator wrappers. It no longer requires the external prototype
 workspace or a prepared experimental container. The Docker directory contains
 only Dockerfile. See the [target guide](../targets/qt6-android-lollipop.md).
@@ -289,3 +295,10 @@ legacy `-SdkOnly`, SDK/test fetch scopes, eight-app packaging preflight and
 runner option forwarding. Changed PowerShell files parsed successfully;
 the existing SDK image metadata was inspected read-only. No native build,
 APK-tool execution or emulator run was performed for this mode separation.
+
+## Separate audit follow-up — 2026-11-20
+
+See the [cross-version audit report](android-audit-fixes-20261120.md) for the
+source-compiler validation, result-generation checks and Java compatibility
+repair. Its fresh consumer runs have their own SDK/APK identities; they do
+not replace this report's original build or runtime provenance.

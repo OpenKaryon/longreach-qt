@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('x86','x86_64')][string]$Abi='x86_64',
+param([ValidateSet('x86','x86_64','arm64-v8a')][string]$Abi='x86_64',
       [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
       [string]$SdkImage, [string]$OutputDirectory, [string]$AndroidSdk=$env:ANDROID_HOME,
       [string]$RunName='sdk-suite', [string[]]$Profiles)
@@ -15,7 +15,7 @@ if (!$SdkImage) { $SdkImage="longreach-qt4-android-$platform-${Abi}:llvm21" }
 $root=(New-Item -ItemType Directory -Force -Path $OutputDirectory).FullName
 $prefix="/opt/qt4-android-$Abi-llvm"
 $allProfiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
-if ($Mode -in @('sdk','examples') -and (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
+if ($Mode -in @('sdk','examples') -and (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
     throw 'Stop the Android emulator before compiling'
 }
 switch ($Mode) {

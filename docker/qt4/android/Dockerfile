@@ -64,6 +64,8 @@ RUN --network=none \
 
 FROM api21-runtime AS x86_64-runtime
 
+FROM api21-runtime AS arm64-v8a-runtime
+
 # API10 reuses the legacy LLVM runtime producer, without a Qt5 SDK.
 FROM tools AS x86-runtime
 ARG PARALLEL_JOBS=2
@@ -112,11 +114,15 @@ LABEL org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
 WORKDIR /work
 RUN --network=none test ! -d "/work/qt4-android-${ANDROID_ABI}"
 
-FROM sdk-base AS x86_64-sdk
+FROM sdk-base AS api21-sdk
 ENV ANDROID_API=21 ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
 COPY --from=qt-build /opt/longreach-android-api21 /opt/longreach-android-api21
 LABEL org.openkaryon.longreach-qt.platform="android-lollipop-${ANDROID_ABI}" \
       org.openkaryon.longreach-qt.android-api="21"
+
+FROM api21-sdk AS x86_64-sdk
+
+FROM api21-sdk AS arm64-v8a-sdk
 
 FROM sdk-base AS x86-sdk
 ENV ANDROID_API=10 ANDROID_NDK_ROOT=/opt/longreach-android/ndk

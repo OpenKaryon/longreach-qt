@@ -21,10 +21,10 @@ elif [[ "$api" == 10 && "$abi" == x86 ]]; then
     quick_tree=/work/qt4-android-$abi/quick
     core_prefix=/opt/qt4-android-$abi-llvm-core
     quick_prefix=/opt/qt4-android-$abi-llvm
-elif [[ "$api" == 21 && "$abi" == x86_64 ]]; then
+elif [[ "$api" == 21 && ( "$abi" == x86_64 || "$abi" == arm64-v8a ) ]]; then
     source /opt/longreach-android-api21/target.sh
     [[ "$abi" == "$ANDROID_ABI" ]] || { echo 'Runtime ABI does not match Qt4 target' >&2; exit 1; }
-    qt_arch=x86_64
+    if [[ "$abi" == arm64-v8a ]]; then qt_arch=generic; else qt_arch=x86_64; fi
     sdk=/opt/longreach-android-api21/sysroot
     runtime=/opt/longreach-android-api21
     core_tree=/work/qt4-android-$abi/core

@@ -4,7 +4,8 @@
   "llvm": "21.1.8",
   "minimum_api": {
     "x86_64": 21,
-    "x86": 10
+    "x86": 10,
+    "arm64-v8a": 21
   },
   "platform_lock": "qt6-android-api21-inputs.json",
   "shared_sources": [
@@ -21,6 +22,7 @@
   ],
   "platform_lock_by_abi": {
     "x86": "qt5-android-api10-inputs.json",
-    "x86_64": "qt6-android-api21-inputs.json"
+    "x86_64": "qt6-android-api21-inputs.json",
+    "arm64-v8a": "qt6-android-api21-inputs.json"
   }
 }

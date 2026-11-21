@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('x86','x86_64')][string]$Abi='x86_64',
+param([ValidateSet('x86','x86_64','arm64-v8a')][string]$Abi='x86_64',
       [ValidateSet('bootstrap','strict','core','quick','selftest','graphics','network','painting','widgets','multimedia','gl','qml')][string[]]$Profiles,
       [string]$RunName='sdk-suite', [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
@@ -34,7 +34,7 @@ $quickChecks=@('PASS: qrc and first frame','PASS: Android tap updates QML and fr
     'PASS: shared Qt Quick Gallery renders and navigates',
     'PASS: shared Widgets Gallery toggles a checkbox and changes tabs')
 $labels=@{selftest='qt-selftest';widgets='widgets-gallery';graphics='graphics';painting='painting-lab';multimedia='multimedia-lab';gl='gl-heavy';qml='quick-qml';network='network-gui'}
-if (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue) { throw 'Stop the existing emulator before this suite' }
+if (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue) { throw 'Stop the existing emulator before this suite' }
 foreach ($profile in $Profiles) { if (!(Test-Path "$root/$profile.apk")) { throw "Missing APK: $profile" } }
 function Invoke-Adb([string[]]$Arguments) {
     $text=& $adb -s $serial @Arguments
@@ -45,7 +45,9 @@ function Invoke-Adb([string[]]$Arguments) {
 if ($api -eq 21) {
     & python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
     if ($LASTEXITCODE) { throw 'Cannot prepare pinned API21 guest' }
-    & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Abi $Abi -RunName $RunName -Emulator "$root/media/emulator-32.1.11/emulator/emulator.exe"
+    $emulator=if ($Abi -eq 'arm64-v8a') { "$root/media/emulator-25.2.5/tools/emulator.exe" }
+        else { "$root/media/emulator-32.1.11/emulator/emulator.exe" }
+    & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Abi $Abi -RunName $RunName -Emulator $emulator
 } else {
     $running = & docker ps --filter status=running --filter label=org.openkaryon.longreach-qt.android-api=10 --format '{{.Names}}'
     if ($LASTEXITCODE) { throw 'Cannot verify that the build slot is free' }

@@ -13,10 +13,11 @@ import zipfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--root', type=Path, required=True)
 parser.add_argument('--run', required=True)
-parser.add_argument('--abi', choices=('x86', 'x86_64'), required=True)
+parser.add_argument('--abi', choices=('x86', 'x86_64', 'arm64-v8a'), required=True)
 args = parser.parse_args()
 api, release, bits, machine = {'x86': (10, '2.3.7', 32, 3),
-                               'x86_64': (21, '5.0.2', 64, 62)}[args.abi]
+                               'x86_64': (21, '5.0.2', 64, 62),
+                               'arm64-v8a': (21, '5.0.2', 64, 183)}[args.abi]
 root = args.root.resolve()
 run = root / args.run
 required = {'bootstrap', 'strict', 'core', 'quick', 'selftest', 'widgets', 'graphics', 'painting', 'multimedia', 'gl', 'qml', 'network'}

@@ -129,6 +129,27 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Reset-Calls
     Invoke-Mode ($x86+@{Mode='test';RunName='x86-routing';Profiles=@('strict','quick')})
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86|x86-routing|strict,quick') 'x86 test routing lost profiles or compiled code'
+    $arm=@{} + $entry
+    $arm.Abi='arm64-v8a'
+    Reset-Calls
+    Expect-Failure $arm 'not the Qt4'
+    Assert-Mode (@(Calls).Count -eq 1) 'ARM64 consumed an x86 SDK'
+    $global:Qt4ModeAbi='arm64-v8a'
+    Reset-Calls
+    Invoke-Mode $arm
+    Assert-Mode (@(Calls)[0] -like '*longreach-qt4-android-lollipop-arm64-v8a:llvm21') 'Wrong ARM64 default SDK tag'
+    Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' -or $_ -like 'fetch|*' }).Count -eq 0) 'ARM64 clients rebuilt the SDK'
+    Reset-Calls
+    Invoke-Mode ($arm+@{Mode='sdk'})
+    Assert-Mode (@(Calls)[0] -eq 'fetch|arm64-v8a|sdk') 'Wrong ARM64 fetch routing'
+    Reset-Calls
+    Invoke-Mode ($arm+@{Mode='package'})
+    $armPackages=@(Get-Content "$output/apk-packages.json" -Raw | ConvertFrom-Json)
+    Assert-Mode (@(Calls).Count -eq 12 -and $armPackages.Count -eq 12) 'ARM64 packaging lost a client'
+    Assert-Mode (@($armPackages | Where-Object { $_.abi -ne 'arm64-v8a' -or $_.api -ne 21 }).Count -eq 0) 'ARM64 packaging selected the wrong ABI/API'
+    Reset-Calls
+    Invoke-Mode ($arm+@{Mode='test';RunName='arm-routing';Profiles=@('strict','quick')})
+    Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|arm64-v8a|arm-routing|strict,quick') 'ARM64 test routing lost profiles or compiled code'
     Write-Output 'PASS: explicit SDK build, ready-image clients, package/test isolation, stale SDK/native rejection, legacy default preserved'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG=$previousLog

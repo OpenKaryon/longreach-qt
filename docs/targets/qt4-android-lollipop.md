@@ -1,7 +1,7 @@
-# Experimental Qt 4.8.7 for Android API 21 x86_64
+# Experimental Qt 4.8.7 for Android API 21 x86_64 and ARM64
 
 This profile builds a static Qt 4 SDK and JNI APK clients for Android 5/API 21,
-`x86_64`, with upstream LLVM 21.1.8 and libc++. The original
+`x86_64` or `arm64-v8a`, with upstream LLVM 21.1.8 and libc++. The original
 [Android 1.6/armeabi profile](qt4-android-donut.md) remains the default.
 It does not use an NDK compiler or stock NDK C++ runtime. The same phase
 interface also supports [Android API 10 x86](qt4-android-gingerbread.md).
@@ -18,6 +18,11 @@ Android SDK platform 35, Build Tools 36.0.0 and Platform Tools. Set
 ./scripts/build/qt4-android.ps1 -Abi x86_64 -Mode package
 ./scripts/build/qt4-android.ps1 -Abi x86_64 -Mode test -RunName sdk-suite
 ```
+
+For ARM64 use `-Abi arm64-v8a` in each command. Its default image is
+`longreach-qt4-android-lollipop-arm64-v8a:llvm21`, installed prefix
+`/opt/qt4-android-arm64-v8a-llvm`, output directory
+`artifacts/qt4-android-lollipop-arm64-v8a/`.
 
 Only `sdk` fetches source inputs and builds Qt. Its Docker stage is explicitly
 `--target sdk`; the Dockerfile's default stage remains the original host tools
@@ -51,7 +56,10 @@ API 21 reuses the shared LLVM/Bionic producer and pinned platform input lock.
 NDK r27 supplies platform headers, CRT, link stubs and helper sources. Qt source
 and LLVM archives have a separate Qt 4 lock. Qt libraries build as GNU++98;
 client applications select GNU++23 with `-fexperimental-library`.
-The x86_64 CPU baseline is `-march=x86-64-v2`.
+The x86_64 CPU baseline is `-march=x86-64-v2`. ARM64 targets
+`aarch64-linux-android21` and uses Qt 4's portable generic atomic backend.
+The 4.8.7 JavaScriptCore sources already select AArch64 and the 64-bit JSValue
+layout. JavaScript JIT is disabled for both profiles.
 
 The selected SDK contains fourteen modules: Core, Gui, Network, Sql, Xml, Svg,
 Script, Declarative, Test, Multimedia, OpenGL, ScriptTools, XmlPatterns and
@@ -70,6 +78,8 @@ Installed qconfig metadata is refreshed when configuration changes.
 The runner uses the pinned Android 5.0.2/LSY66K x86_64 r05 guest and official
 Emulator 32.1.11/build 9536276, software CPU/GLES, 1 GiB RAM and no visible window
 or host input capture. Build containers use two jobs, two CPUs and 3 GiB RAM.
+The ARM64 profile uses the pinned Android 5.0.2/LSY66K r04 guest, Tools
+25.2.5 and a software-emulated Cortex-A57 with 1 GiB RAM and GLES.
 Builds and guests must run sequentially.
 
 The full suite includes bootstrap, strict C++23, an installed-qmake QtCore
@@ -95,4 +105,6 @@ manager logs from the current case. Current native/Java fatal errors still fail
 the suite. The final collector checks all twelve APK hashes, ABI/runtime
 identity, guest properties, native/instrumentation results and gallery PNGs.
 See the [target result record](../results/qt4-android-lollipop-x86_64-llvm21-20261120.md)
-for measured counts and limitations.
+for measured x86_64 counts and limitations. The
+[ARM64 result record](../results/qt4-android-lollipop-arm64-v8a-llvm21-20261121.md)
+records its independent qualification.

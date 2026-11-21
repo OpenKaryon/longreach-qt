@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi', 'x86', 'x86_64')] [string] $Abi = 'armeabi',
+    [ValidateSet('armeabi', 'x86', 'x86_64', 'arm64-v8a')] [string] $Abi = 'armeabi',
     [Parameter(Mandatory)] [ValidateSet('bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting', 'widgets', 'multimedia', 'gl', 'qml')] [string] $Profile,
     [Parameter(Mandatory)] [string] $NativeDirectory,
     [Parameter(Mandatory)] [string] $OutputDirectory,
@@ -31,7 +31,7 @@ if (Test-Path -LiteralPath $apk) {
 }
 $work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("package-" + [guid]::NewGuid()))).FullName
 
-$minimum = switch ($Abi) { 'armeabi' { '4' }; 'x86' { '10' }; 'x86_64' { '21' } }
+$minimum = switch ($Abi) { 'armeabi' { '4' }; 'x86' { '10' }; 'x86_64' { '21' }; 'arm64-v8a' { '21' } }
 $manifest = 'AndroidManifest.xml'
 $sources = @("$fixtures/ProbeActivity.java")
 if ($Profile -in 'selftest', 'network', 'widgets') {

@@ -15,7 +15,8 @@ parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
 abi = os.environ['ANDROID_ABI']
 settings = {'x86': (10, 32, 3, '/opt/longreach-android'),
-            'x86_64': (21, 64, 62, '/opt/longreach-android-api21')}
+            'x86_64': (21, 64, 62, '/opt/longreach-android-api21'),
+            'arm64-v8a': (21, 64, 183, '/opt/longreach-android-api21')}
 api, bits, machine, runtime = settings[abi]
 repo = Path('/repo')
 

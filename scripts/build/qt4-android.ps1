@@ -2,7 +2,7 @@
 #Requires -Version 7.0
 
 param(
-    [ValidateSet('armeabi','x86','x86_64')][string]$Abi='armeabi',
+    [ValidateSet('armeabi','x86','x86_64','arm64-v8a')][string]$Abi='armeabi',
     [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
     [string]$SdkImage,
     [string]$RunName='sdk-suite',

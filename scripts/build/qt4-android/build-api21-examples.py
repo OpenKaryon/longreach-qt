@@ -15,7 +15,8 @@ parser.add_argument('--profiles', default=os.environ.get('QT4_EXAMPLE_PROFILES',
 args = parser.parse_args()
 prefix = args.prefix
 repo = Path('/repo')
-cxx = Path('/opt/longreach-android-api21/bin/cxx')
+runtime = Path('/opt/longreach-android' if os.environ['ANDROID_ABI'] == 'x86' else '/opt/longreach-android-api21')
+cxx = runtime / 'bin/cxx'
 work = Path('/work/qt4-android-' + os.environ['ANDROID_ABI']) / 'clients'
 args.output.mkdir(parents=True, exist_ok=True)
 work.mkdir(parents=True, exist_ok=True)
@@ -113,5 +114,5 @@ for profile in profiles:
                           '#include "/repo/tests/android-donut/suite-jni.cpp"\n')
         project = repo / 'tests' / app / (app + '.pro')
         build(profile, project, [bridge], ['main=longreachSuiteMain', 'LONGREACH_DONUT_JNI'])
-shutil.copyfile('/opt/longreach-android-api21/lib/libc++_shared.so', args.output / 'libc++_shared.so')
+shutil.copyfile(runtime / 'lib/libc++_shared.so', args.output / 'libc++_shared.so')
 (args.output / 'examples-build.json').write_text(json.dumps(records, indent=2) + '\n')

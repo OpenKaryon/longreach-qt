@@ -1,15 +1,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('x86_64')][string]$Abi='x86_64',
+param([ValidateSet('x86','x86_64')][string]$Abi='x86_64',
       [ValidateSet('bootstrap','strict','core','quick','selftest','graphics','network','painting','widgets','multimedia','gl','qml')][string[]]$Profiles,
       [string]$RunName='sdk-suite', [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 . "$PSScriptRoot/android-api21-log.ps1"
+. "$PSScriptRoot/android-wait-boot.ps1"
+$api=if ($Abi -eq 'x86') { 10 } else { 21 }
+$platform=if ($api -eq 10) { 'gingerbread' } else { 'lollipop' }
+$release=if ($api -eq 10) { '2.3.7' } else { '5.0.2' }
+if ($RunName -notmatch '^[a-z0-9-]+$') { throw 'Invalid run directory name' }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
-if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt4-android-lollipop-$Abi" }
+if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt4-android-$platform-$Abi" }
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
 $adb=(Get-Item "$AndroidSdk/platform-tools/adb.exe").FullName
-$serial='emulator-5582'
+$serial=if ($api -eq 10) { 'emulator-5580' } else { 'emulator-5582' }
 $requiredProfiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
 $fullRun=!$Profiles
 if (!$Profiles) { $Profiles=$requiredProfiles }
@@ -19,7 +24,7 @@ $sdkId=(Get-Content "$root/sdk-image-id.txt" -Raw).Trim()
 if ($sdkId -notmatch '^sha256:[0-9a-f]{64}$' -or (Get-Content "$root/examples-sdk-image-id.txt" -Raw).Trim() -ne $sdkId) { throw 'SDK/example identities differ' }
 foreach ($profile in $Profiles) {
     $package=@($packages | Where-Object { $_.profile -eq $profile })
-    if ($package.Count -ne 1 -or $package[0].abi -ne $Abi -or $package[0].api -ne 21 -or $package[0].sdk_image_id -ne $sdkId -or
+    if ($package.Count -ne 1 -or $package[0].abi -ne $Abi -or $package[0].api -ne $api -or $package[0].sdk_image_id -ne $sdkId -or
             $package[0].apk -ne "$profile.apk" -or (Get-FileHash "$root/$profile.apk" -Algorithm SHA256).Hash.ToLowerInvariant() -ne $package[0].sha256) {
         throw "APK does not match the current SDK/package manifest: $profile"
     }
@@ -29,28 +34,52 @@ $quickChecks=@('PASS: qrc and first frame','PASS: Android tap updates QML and fr
     'PASS: shared Qt Quick Gallery renders and navigates',
     'PASS: shared Widgets Gallery toggles a checkbox and changes tabs')
 $labels=@{selftest='qt-selftest';widgets='widgets-gallery';graphics='graphics';painting='painting-lab';multimedia='multimedia-lab';gl='gl-heavy';qml='quick-qml';network='network-gui'}
-if (Get-Process -Name emulator,emulator-arm,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue) { throw 'Stop the existing emulator before this suite' }
+if (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue) { throw 'Stop the existing emulator before this suite' }
 foreach ($profile in $Profiles) { if (!(Test-Path "$root/$profile.apk")) { throw "Missing APK: $profile" } }
 function Invoke-Adb([string[]]$Arguments) {
     $text=& $adb -s $serial @Arguments
     if ($LASTEXITCODE) { throw "adb failed: $Arguments" }
     return $text
 }
-& "$repo/scripts/fetch/qt6-android.ps1" -Scope test -Abi $Abi -AndroidSdk $AndroidSdk
-& python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
-if ($LASTEXITCODE) { throw 'Cannot prepare pinned API21 guest' }
-& "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Abi $Abi -RunName $RunName -Emulator "$root/media/emulator-32.1.11/emulator/emulator.exe"
+& "$repo/scripts/fetch/qt4-android.ps1" -Scope test -Abi $Abi -AndroidSdk $AndroidSdk
+if ($api -eq 21) {
+    & python "$repo/scripts/build/qt6-android/prepare-emulator.py" --repo $repo --output $root --abi $Abi
+    if ($LASTEXITCODE) { throw 'Cannot prepare pinned API21 guest' }
+    & "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Abi $Abi -RunName $RunName -Emulator "$root/media/emulator-32.1.11/emulator/emulator.exe"
+} else {
+    $running = & docker ps --filter status=running --filter label=org.openkaryon.longreach-qt.android-api=10 --format '{{.Names}}'
+    if ($LASTEXITCODE) { throw 'Cannot verify that the build slot is free' }
+    if ($running) { throw 'Stop the API10 native builder before starting the emulator' }
+    $media=(New-Item -ItemType Directory -Force "$root/media").FullName
+    & tar.exe -xf "$repo/downloads/android-gingerbread/x86-10_r05.zip" -C $media
+    if ($LASTEXITCODE) { throw 'Cannot extract API10 x86 image' }
+    & tar.exe -xf "$repo/downloads/android-gingerbread/tools_r24.4.1-windows.zip" -C $media
+    if ($LASTEXITCODE) { throw 'Cannot extract legacy emulator' }
+    $run="$root/$RunName"
+    if (Test-Path -LiteralPath $run) { throw 'Archive the previous run before starting a fresh one' }
+    New-Item -ItemType Directory -Path $run | Out-Null
+    Copy-Item -LiteralPath "$media/x86/userdata.img" -Destination "$run/userdata-qemu.img"
+    $arguments=@('-sysdir',"$media/x86",'-datadir',$run,'-system',"$media/x86/system.img",
+        '-kernel',"$media/x86/kernel-qemu",'-ramdisk',"$media/x86/ramdisk.img",
+        '-data',"$run/userdata-qemu.img",'-initdata',"$media/x86/userdata.img",
+        '-no-window','-no-audio','-no-snapshot','-no-snapstorage','-skin','480x320',
+        '-partition-size','512','-memory','256','-gpu','on','-port','5580',
+        '-no-boot-anim','-verbose','-show-kernel','-no-accel','-qemu','-cpu','core2duo')
+    $arguments=$arguments | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
+    # The direct legacy backend does not add its GLES translator DLL directory.
+    $previousPath=$env:PATH
+    try {
+        $env:PATH="$media/tools/lib;$previousPath"
+        $process=Start-Process -FilePath "$media/tools/emulator-x86.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput "$run/emulator.stdout" -RedirectStandardError "$run/emulator.stderr"
+    } finally { $env:PATH=$previousPath }
+    $process.Id | Set-Content "$run/emulator.pid"
+}
 $run="$root/$RunName"
 $outcomes=[Collections.Generic.List[object]]::new()
 try {
-    $ready=$false
-    for ($attempt=0; $attempt -lt 150; $attempt++) {
-        if ((& $adb -s $serial shell getprop sys.boot_completed 2>$null) -match '^\s*1\s*$') { $ready=$true; break }
-        if ($attempt % 10 -eq 0) { & $adb reconnect offline | Out-Null }
-        Start-Sleep -Seconds 2
-    }
-    if (!$ready) { throw 'API21 guest did not boot' }
-    foreach ($pair in @(@('ro.build.version.sdk','21'),@('ro.build.version.release','5.0.2'),@('ro.product.cpu.abi',$Abi))) {
+    $owned=[int](Get-Content "$run/emulator.pid")
+    Wait-AndroidBoot -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $owned -TimeoutSeconds 300
+    foreach ($pair in @(@('ro.build.version.sdk',"$api"),@('ro.build.version.release',$release),@('ro.product.cpu.abi',$Abi))) {
         $actual=((Invoke-Adb @('shell','getprop',$pair[0])) -join '').Trim()
         if ($actual -ne $pair[1]) { throw "Wrong guest: $($pair[0])=$actual" }
     }
@@ -66,7 +95,8 @@ try {
         Invoke-Adb @('shell','am','force-stop',$package) | Out-Null
         $clear=Invoke-Adb @('shell','pm','clear',$package)
         if (!($clear -match '^\s*Success\s*$')) { throw 'Could not reset app data' }
-        Invoke-Adb @('logcat','-b','all','-c') | Out-Null
+        if ($api -eq 21) { Invoke-Adb @('logcat','-b','all','-c') | Out-Null }
+        else { Invoke-Adb @('logcat','-c') | Out-Null }
         $marker='BEGIN-'+[guid]::NewGuid().ToString('N')
         $marker | Set-Content "$case/log-marker.txt"
         Invoke-Adb @('shell','log','-p','i','-t','LongreachCase',$marker) | Out-Null
@@ -148,5 +178,5 @@ try {
 
 if ($fullRun) {
     & python "$repo/scripts/build/qt4-android/collect-api21-results.py" --root $root --run $RunName --abi $Abi
-    if ($LASTEXITCODE) { throw 'Incomplete Qt4 API21 suite evidence' }
+    if ($LASTEXITCODE) { throw 'Incomplete Qt4 Android suite evidence' }
 }

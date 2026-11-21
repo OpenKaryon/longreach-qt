@@ -11,6 +11,16 @@ if [[ "$api" == 4 && "$abi" == armeabi ]]; then
     quick_tree=/work/qt4-donut-quick
     core_prefix=/work/qtcore-donut-sdk
     quick_prefix=/work/qtquick-donut-sdk
+elif [[ "$api" == 10 && "$abi" == x86 ]]; then
+    source /opt/longreach-android/target.sh
+    [[ "$abi" == "$ANDROID_ABI" ]] || { echo 'Runtime ABI does not match Qt4 target' >&2; exit 1; }
+    qt_arch=i386
+    sdk=/opt/longreach-android/sysroot
+    runtime=/opt/longreach-android
+    core_tree=/work/qt4-android-$abi/core
+    quick_tree=/work/qt4-android-$abi/quick
+    core_prefix=/opt/qt4-android-$abi-llvm-core
+    quick_prefix=/opt/qt4-android-$abi-llvm
 elif [[ "$api" == 21 && "$abi" == x86_64 ]]; then
     source /opt/longreach-android-api21/target.sh
     [[ "$abi" == "$ANDROID_ABI" ]] || { echo 'Runtime ABI does not match Qt4 target' >&2; exit 1; }

@@ -20,8 +20,8 @@ function docker {
         if ($global:Qt4ModeMissing) { $global:LASTEXITCODE=1; return }
         if ($Arguments -contains '{{json .}}') {
             return (@{Id=$global:Qt4ModeId;Os='linux';Architecture='amd64';Config=@{Labels=@{
-                'org.openkaryon.longreach-qt.platform'="android-lollipop-$global:Qt4ModeAbi"
-                'org.openkaryon.longreach-qt.android-api'='21'
+                'org.openkaryon.longreach-qt.platform'="android-$(if ($global:Qt4ModeAbi -eq 'x86') { 'gingerbread' } else { 'lollipop' })-$global:Qt4ModeAbi"
+                'org.openkaryon.longreach-qt.android-api'="$(if ($global:Qt4ModeAbi -eq 'x86') { '10' } else { '21' })"
                 'org.openkaryon.longreach-qt.version'='4.8.7'
                 'org.openkaryon.longreach-qt.compiler'='LLVM 21.1.8'
             }}} | ConvertTo-Json -Depth 5 -Compress)
@@ -101,8 +101,34 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     ('sha256:'+('c'*64)) | Set-Content "$output/examples-sdk-image-id.txt"
     Expect-Failure ($entry+@{Mode='package'}) 'SDK/example identities differ'
     Reset-Calls
-    Expect-Failure @{Mode='examples';AndroidSdk="$fixture/sdk"} 'API21 profiles only'
+    Expect-Failure @{Mode='examples';AndroidSdk="$fixture/sdk"} 'API10/API21 profiles only'
     Assert-Mode (@(Calls).Count -eq 0) 'Explicit API4 mode unexpectedly built an SDK'
+    $x86=@{} + $entry
+    $x86.Abi='x86'
+    Reset-Calls
+    Expect-Failure $x86 'not the Qt4'
+    Assert-Mode (@(Calls).Count -eq 1) 'x86 consumed an x86_64 SDK'
+    $global:Qt4ModeAbi='x86'
+    Reset-Calls
+    Invoke-Mode $x86
+    Assert-Mode (@(Calls)[0] -like '*longreach-qt4-android-gingerbread-x86:llvm21') 'Wrong x86 default SDK tag'
+    Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' -or $_ -like 'fetch|*' }).Count -eq 0) 'x86 clients rebuilt the SDK'
+    Reset-Calls
+    Invoke-Mode ($x86+@{Mode='sdk'})
+    Assert-Mode (@(Calls)[0] -eq 'fetch|x86|sdk') 'Wrong API10 x86 fetch routing'
+    $built=foreach ($profile in $profiles) {
+        [IO.File]::WriteAllText("$output/native/$profile.so",$profile)
+        @{profile=$profile;native="$profile.so";sha256=(Get-FileHash "$output/native/$profile.so").Hash.ToLowerInvariant()}
+    }
+    $built | ConvertTo-Json | Set-Content "$output/native/examples-build.json"
+    Reset-Calls
+    Invoke-Mode ($x86+@{Mode='package'})
+    $x86Packages=@(Get-Content "$output/apk-packages.json" -Raw | ConvertFrom-Json)
+    Assert-Mode (@(Calls).Count -eq 12 -and $x86Packages.Count -eq 12) 'x86 packaging lost a client'
+    Assert-Mode (@($x86Packages | Where-Object { $_.abi -ne 'x86' -or $_.api -ne 10 }).Count -eq 0) 'x86 packaging selected API21 metadata'
+    Reset-Calls
+    Invoke-Mode ($x86+@{Mode='test';RunName='x86-routing';Profiles=@('strict','quick')})
+    Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86|x86-routing|strict,quick') 'x86 test routing lost profiles or compiled code'
     Write-Output 'PASS: explicit SDK build, ready-image clients, package/test isolation, stale SDK/native rejection, legacy default preserved'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG=$previousLog

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import struct
+import shutil
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--prefix', type=Path, required=True)
@@ -13,7 +14,9 @@ parser.add_argument('--source', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
 abi = os.environ['ANDROID_ABI']
-assert abi == 'x86_64'
+settings = {'x86': (10, 32, 3, '/opt/longreach-android'),
+            'x86_64': (21, 64, 62, '/opt/longreach-android-api21')}
+api, bits, machine, runtime = settings[abi]
 repo = Path('/repo')
 
 def digest(path):
@@ -40,7 +43,7 @@ def archive_members(path):
         if name.startswith('#1/'):
             data = data[int(name[3:]):]
         if data.startswith(b'\x7fELF'):
-            if data[4:6] != b'\x02\x01' or struct.unpack_from('<H', data, 18)[0] != 62:
+            if data[4:6] != bytes((1 if bits == 32 else 2, 1)) or struct.unpack_from('<H', data, 18)[0] != machine:
                 raise RuntimeError(f'Wrong ABI object in {path}: {name}')
             members += 1
         elif name not in ('/', '//', '/SYM64/'):
@@ -55,7 +58,7 @@ if len(modules) != 14:
     raise RuntimeError(f'Expected fourteen selected Qt4 modules, got {modules}')
 archives = sorted(args.prefix.glob('lib/libQt*.a')) + sorted(args.prefix.glob('plugins/**/*.a')) + sorted(args.prefix.glob('imports/**/*.a'))
 records = [{'archive': str(path.relative_to(args.prefix)), 'objects': archive_members(path),
-            'elf_class': 64, 'machine': 62, 'sha256': digest(path)} for path in archives]
+            'elf_class': bits, 'machine': machine, 'sha256': digest(path)} for path in archives]
 patches = [repo / 'patches/qt4/all/03-static-gui-animation-registration.patch',
            repo / 'patches/qt4/all/04-script-tagged-frame-pointers.patch',
            repo / 'patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch']
@@ -79,8 +82,9 @@ args.output.mkdir(parents=True, exist_ok=True)
 (args.output / 'sdk-modules.txt').write_text('\n'.join(modules) + '\n')
 (args.output / 'sdk-static-elf.json').write_text(json.dumps({'abi': abi, 'archives': records}, indent=2) + '\n')
 (args.output / 'sdk-provenance.json').write_text(json.dumps({
-    'qt': '4.8.7', 'llvm': '21.1.8', 'abi': abi, 'api': 21,
+    'qt': '4.8.7', 'llvm': '21.1.8', 'abi': abi, 'api': api,
     'qt_archive_sha256': digest(Path('/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz')),
-    'runtime_sha256': digest(Path('/opt/longreach-android-api21/lib/libc++_shared.so')),
+    'runtime_sha256': digest(Path(runtime) / 'lib/libc++_shared.so'),
+    'compiler_executable_sha256': digest(Path(shutil.which('clang-21')).resolve()),
     'configuration_fingerprint': configurations[0], 'recipe_inputs': inputs, 'patched_source': actual_source}, indent=2) + '\n')
-print(f'Validated {len(modules)} Qt4 modules and {len(records)} target archives, all ELF64/machine62')
+print(f'Validated {len(modules)} Qt4 modules and {len(records)} target archives, all ELF{bits}/machine{machine}')

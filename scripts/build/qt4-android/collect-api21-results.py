@@ -13,8 +13,10 @@ import zipfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--root', type=Path, required=True)
 parser.add_argument('--run', required=True)
-parser.add_argument('--abi', choices=('x86_64',), required=True)
+parser.add_argument('--abi', choices=('x86', 'x86_64'), required=True)
 args = parser.parse_args()
+api, release, bits, machine = {'x86': (10, '2.3.7', 32, 3),
+                               'x86_64': (21, '5.0.2', 64, 62)}[args.abi]
 root = args.root.resolve()
 run = root / args.run
 required = {'bootstrap', 'strict', 'core', 'quick', 'selftest', 'widgets', 'graphics', 'painting', 'multimedia', 'gl', 'qml', 'network'}
@@ -29,12 +31,16 @@ sdk_id = (root / 'sdk-image-id.txt').read_text().strip()
 if not re.fullmatch(r'sha256:[0-9a-f]{64}', sdk_id) or (root / 'examples-sdk-image-id.txt').read_text().strip() != sdk_id:
     raise RuntimeError('SDK/example identity differs')
 properties = (run / 'guest-properties.txt').read_text(encoding='utf-8-sig')
-for key, value in [('ro.build.version.sdk', '21'), ('ro.build.version.release', '5.0.2'), ('ro.product.cpu.abi', args.abi)]:
+for key, value in [('ro.build.version.sdk', str(api)), ('ro.build.version.release', release), ('ro.product.cpu.abi', args.abi)]:
     if f'[{key}]: [{value}]' not in properties:
         raise RuntimeError('Wrong guest: ' + key)
 rt = hashlib.sha256((root / 'native/libc++_shared.so').read_bytes()).hexdigest()
-probe_rt = hashlib.sha256((root / 'probe/libc++_shared.so').read_bytes()).hexdigest()
-if rt != probe_rt:
+producer_rt = (root / 'sdk-reports/runtime-sha256.txt').read_text().split()[0]
+if rt != producer_rt:
+    raise RuntimeError('Packaged runtime differs from installed SDK provenance')
+# Older qualification workflows also retained a platform-only runtime probe.
+probe = root / 'probe/libc++_shared.so'
+if probe.exists() and rt != hashlib.sha256(probe.read_bytes()).hexdigest():
     raise RuntimeError('Packaged runtime differs from separately tested C++23 runtime')
 labels = {'selftest': 'qt-selftest', 'widgets': 'widgets-gallery', 'graphics': 'graphics', 'painting': 'painting-lab',
           'multimedia': 'multimedia-lab', 'gl': 'gl-heavy', 'qml': 'quick-qml', 'network': 'network-gui'}
@@ -49,7 +55,7 @@ for record in records:
     case = run / name
     package = packages[name]
     apk = root / (name + '.apk')
-    if package['apk'] != apk.name or package['abi'] != args.abi or package['api'] != 21 or package['sdk_image_id'] != sdk_id:
+    if package['apk'] != apk.name or package['abi'] != args.abi or package['api'] != api or package['sdk_image_id'] != sdk_id:
         raise RuntimeError('Wrong APK metadata: ' + name)
     sha = hashlib.sha256(apk.read_bytes()).hexdigest()
     if sha != package['sha256'] or sha != record['apk_sha256'] or record['sdk_image_id'] != sdk_id:
@@ -114,13 +120,13 @@ for record in records:
             raise RuntimeError('Unexpected packaged native libraries: ' + name)
         for member in libs:
             header = archive.read(member)[:20]
-            if header[:6] != b'\x7fELF\x02\x01' or struct.unpack_from('<H', header, 18)[0] != 62:
+            if header[:6] != b'\x7fELF' + bytes((1 if bits == 32 else 2, 1)) or struct.unpack_from('<H', header, 18)[0] != machine:
                 raise RuntimeError('Wrong native ABI: ' + member)
         if hashlib.sha256(archive.read(f'lib/{args.abi}/libc++_shared.so')).hexdigest() != rt:
             raise RuntimeError('APK contains another C++ runtime: ' + name)
-    proof.append({'profile': name, 'apk': apk.name, 'sha256': sha, 'elf64_x86_64_libraries': len(libs), 'runtime_sha256': rt})
+    proof.append({'profile': name, 'apk': apk.name, 'sha256': sha, 'native_libraries': len(libs), 'elf_bits': bits, 'elf_machine': machine, 'runtime_sha256': rt})
     table.append(f'| {name} | {counts[0]} | 0 | {counts[2]} |')
-report = {'qt': '4.8.7', 'llvm': '21.1.8', 'abi': args.abi, 'api': 21, 'android_release': '5.0.2',
+report = {'qt': '4.8.7', 'llvm': '21.1.8', 'abi': args.abi, 'api': api, 'android_release': release,
           'sdk_image_id': sdk_id, 'run': args.run, 'required_cases': 12, 'all_required_passed': True, 'cases': records}
 (root / 'final-results.json').write_text(json.dumps(report, indent=2) + '\n')
 (root / 'final-results-table.md').write_text('\n'.join(table) + '\n')

@@ -101,7 +101,7 @@ if sys.argv[1:] == ["quick"]:
         ("INSTALLS += target",
          "INSTALLS += target\n\ninclude(../fontdatabases/basicunix/basicunix.pri)"),
     ))
-    if os.environ.get("ANDROID_API") == "21":
+    if os.environ.get("ANDROID_API") in ("10", "21"):
         edit("src/plugins/platforms/minimal/minimal.pro", (
             ("include(../fontdatabases/basicunix/basicunix.pri)",
              "include(../fontdatabases/basicunix/basicunix.pri)\nLIBS += -lEGL -lGLESv2 -ldl"),

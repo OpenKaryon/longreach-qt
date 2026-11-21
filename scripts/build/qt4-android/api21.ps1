@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('x86_64')][string]$Abi='x86_64',
+param([ValidateSet('x86','x86_64')][string]$Abi='x86_64',
       [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
       [string]$SdkImage, [string]$OutputDirectory, [string]$AndroidSdk=$env:ANDROID_HOME,
       [string]$RunName='sdk-suite', [string[]]$Profiles)
@@ -8,12 +8,14 @@ $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 . "$PSScriptRoot/host.ps1"
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
-if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt4-android-lollipop-$Abi" }
-if (!$SdkImage) { $SdkImage="longreach-qt4-android-lollipop-${Abi}:llvm21" }
+$api=if ($Abi -eq 'x86') { 10 } else { 21 }
+$platform=if ($api -eq 10) { 'gingerbread' } else { 'lollipop' }
+if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt4-android-$platform-$Abi" }
+if (!$SdkImage) { $SdkImage="longreach-qt4-android-$platform-${Abi}:llvm21" }
 $root=(New-Item -ItemType Directory -Force -Path $OutputDirectory).FullName
 $prefix="/opt/qt4-android-$Abi-llvm"
 $allProfiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
-if ($Mode -in @('sdk','examples') -and (Get-Process -Name emulator,emulator-arm,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
+if ($Mode -in @('sdk','examples') -and (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
     throw 'Stop the Android emulator before compiling'
 }
 switch ($Mode) {
@@ -29,9 +31,9 @@ switch ($Mode) {
         if ($image.Os -ne 'linux' -or $image.Architecture -ne 'amd64' -or
                 $labels.'org.openkaryon.longreach-qt.version' -ne '4.8.7' -or
                 $labels.'org.openkaryon.longreach-qt.compiler' -ne 'LLVM 21.1.8' -or
-                $labels.'org.openkaryon.longreach-qt.android-api' -ne '21' -or
-                $labels.'org.openkaryon.longreach-qt.platform' -ne "android-lollipop-$Abi") {
-            throw "Image '$SdkImage' is not the Qt4.8.7/LLVM21.1.8 API21 $Abi SDK"
+                $labels.'org.openkaryon.longreach-qt.android-api' -ne "$api" -or
+                $labels.'org.openkaryon.longreach-qt.platform' -ne "android-$platform-$Abi") {
+            throw "Image '$SdkImage' is not the Qt4.8.7/LLVM21.1.8 API$api $Abi SDK"
         }
         $native=(New-Item -ItemType Directory -Force "$root/native").FullName
         $reports=(New-Item -ItemType Directory -Force "$root/sdk-reports").FullName
@@ -66,7 +68,7 @@ switch ($Mode) {
         foreach ($profile in $allProfiles) {
             & "$PSScriptRoot/package.ps1" -Abi $Abi -Profile $profile -NativeDirectory "$root/native" `
                 -OutputDirectory $root -AndroidSdk $AndroidSdk -AndroidJar $jar
-            $packages.Add([pscustomobject]@{profile=$profile;apk="$profile.apk";abi=$Abi;api=21;sdk_image_id=$sdkId;
+            $packages.Add([pscustomobject]@{profile=$profile;apk="$profile.apk";abi=$Abi;api=$api;sdk_image_id=$sdkId;
                 sha256=(Get-FileHash "$root/$profile.apk" -Algorithm SHA256).Hash.ToLowerInvariant()})
         }
         $packages | ConvertTo-Json -Depth 5 | Set-Content "$root/apk-packages.json"

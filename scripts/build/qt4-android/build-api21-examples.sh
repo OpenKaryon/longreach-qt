@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 source /repo/scripts/build/qt4-android/target-config.sh
-[[ "$api" == 21 ]] || { echo 'This client producer requires API21' >&2; exit 1; }
+[[ "$api" == 10 || "$api" == 21 ]] || { echo 'This client producer requires API10 or API21' >&2; exit 1; }
 phase=${1:-core}
-cxx=/opt/longreach-android-api21/bin/cxx
+cxx=$runtime/bin/cxx
 mkdir -p /out /work/qt4-android-$abi/clients
 cp "$runtime/lib/libc++_shared.so" /out/
 if [[ "$phase" == core ]]; then

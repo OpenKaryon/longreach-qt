@@ -4,7 +4,8 @@ param(
     [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string] $Abi = 'armeabi-v7a',
     [ValidateSet('all','sdk','test')][string] $Scope = 'all',
     [string] $OutputDirectory,
-    [string] $AndroidSdk = $env:ANDROID_HOME
+    [string] $AndroidSdk = $env:ANDROID_HOME,
+    [switch] $PlatformOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,7 +50,7 @@ foreach ($source in $lock.sources) {
     Write-Output "$($source.file): verified"
 }
 
-if ($Scope -eq 'test') { return }
+if ($Scope -eq 'test' -or $PlatformOnly) { return }
 foreach ($source in $lock.shared_sources) {
     & python "$PSScriptRoot/fetch.py" $source.url "$repo/downloads/$($source.file)" $source.sha256
     if ($LASTEXITCODE) { throw "Could not fetch $($source.file)" }

@@ -3,7 +3,8 @@
 This profile builds a static Qt 4 SDK and JNI APK clients for Android 5/API 21,
 `x86_64`, with upstream LLVM 21.1.8 and libc++. The original
 [Android 1.6/armeabi profile](qt4-android-donut.md) remains the default.
-It does not use an NDK compiler or stock NDK C++ runtime.
+It does not use an NDK compiler or stock NDK C++ runtime. The same phase
+interface also supports [Android API 10 x86](qt4-android-gingerbread.md).
 
 ## Build and run
 

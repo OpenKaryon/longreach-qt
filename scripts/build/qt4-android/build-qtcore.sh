@@ -20,7 +20,7 @@ case "$profile" in
         features=(-qpa minimal -no-opengl -script -declarative -no-javascript-jit -svg -qt-sql-sqlite
                   -qt-freetype -no-fontconfig -no-gtkstyle -no-accessibility)
         modules=(sub-sql sub-xml sub-svg sub-declarative)
-        if [[ "$api" == 21 ]]; then
+        if [[ "$api" != 4 ]]; then
             features=(-qpa minimal -opengl es2 -script -declarative -no-javascript-jit -svg -qt-sql-sqlite
                       -qt-freetype -no-fontconfig -no-gtkstyle -no-accessibility)
             module_features=(-multimedia -scripttools -xmlpatterns)
@@ -58,7 +58,7 @@ if [[ "$profile" == quick && ! -f .donut-script-frames ]]; then
     touch .donut-script-frames
 fi
 
-if [[ "$api" == 21 && "$profile" == quick ]]; then
+if [[ "$api" != 4 && "$profile" == quick ]]; then
     for compatibility_patch in /repo/patches/qt4/android/*.patch \
             /repo/patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch; do
         if ! patch -p1 --reverse --dry-run --fuzz=0 < "$compatibility_patch" >/dev/null 2>&1; then
@@ -67,14 +67,14 @@ if [[ "$api" == 21 && "$profile" == quick ]]; then
     done
 fi
 
-if [[ "$api" == 21 ]]; then
+if [[ "$api" != 4 ]]; then
     cat >/work/donut-bin/donut-cxx <<'EOF'
 #!/bin/bash
-exec /opt/longreach-android-api21/bin/cxx -DQT_NO_SHAREDMEMORY -DQT_NO_SYSTEMSEMAPHORE "$@"
+exec @RUNTIME@/bin/cxx -DQT_NO_SHAREDMEMORY -DQT_NO_SYSTEMSEMAPHORE "$@"
 EOF
     cat >/work/donut-bin/donut-cc <<'EOF'
 #!/bin/bash
-exec /opt/longreach-android-api21/bin/cc "$@"
+exec @RUNTIME@/bin/cc "$@"
 EOF
     cat >/work/donut-bin/donut-config-link <<'EOF'
 #!/bin/bash
@@ -98,6 +98,9 @@ cat >/work/donut-bin/donut-config-link <<EOF
 exec /work/donut-bin/donut-cxx --ld-path=/usr/bin/ld.lld-21 -shared -nostdlib \\
     -Wl,--hash-style=sysv "\$@" -L$sdk/usr/lib -ldl -lm -lc
 EOF
+fi
+if [[ "$api" != 4 ]]; then
+    sed -i "s|@RUNTIME@|$runtime|g" /work/donut-bin/donut-cxx /work/donut-bin/donut-cc
 fi
 chmod +x /work/donut-bin/donut-*
 
@@ -142,7 +145,7 @@ configuration=$({
 configuration=${configuration%% *}
 reconfigure=false
 if [[ ! -f .donut-configured ]]; then reconfigure=true; fi
-if [[ "$api" == 21 && "$(cat .longreach-configuration 2>/dev/null || true)" != "$configuration" ]]; then
+if [[ "$api" != 4 && "$(cat .longreach-configuration 2>/dev/null || true)" != "$configuration" ]]; then
     reconfigure=true
 fi
 if $reconfigure; then
@@ -164,7 +167,7 @@ if [[ "$profile" == quick && ! -f .donut-host-clang ]]; then
     touch .donut-host-clang
 fi
 
-if [[ "$api" == 21 && "$(cat .longreach-object-configuration 2>/dev/null || true)" != "$configuration" ]]; then
+if [[ "$api" != 4 && "$(cat .longreach-object-configuration 2>/dev/null || true)" != "$configuration" ]]; then
     # Make does not track changes to -D flags. Retain objects only when their
     # effective configuration matches; source-only fixes still rebuild incrementally.
     for module in corelib network gui sql xml svg script declarative testlib multimedia opengl scripttools xmlpatterns qt3support; do
@@ -182,7 +185,7 @@ else
     for module in QtGui QtScript QtDeclarative QtSql QtXml QtSvg; do
         test -s "lib/lib$module.a"
     done
-    if [[ "$api" == 21 && "$(cat .longreach-plugin-configuration 2>/dev/null || true)" != "$configuration" ]]; then
+    if [[ "$api" != 4 && "$(cat .longreach-plugin-configuration 2>/dev/null || true)" != "$configuration" ]]; then
         for plugin in src/plugins/platforms/minimal src/plugins/imageformats/svg src/imports/folderlistmodel src/imports/gestures src/imports/particles src/imports/shaders; do
             if [[ -f "$plugin/Makefile" ]]; then make -C "$plugin" clean; fi
         done

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 source /repo/scripts/build/qt4-android/target-config.sh
-[[ "$api" == 21 ]] || { echo 'This producer requires API21' >&2; exit 1; }
+[[ "$api" == 10 || "$api" == 21 ]] || { echo 'This producer requires API10 or API21' >&2; exit 1; }
 echo 'e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f626ea0  /inputs/qt-everywhere-opensource-src-4.8.7.tar.gz' | sha256sum -c -
 phase=${1:-core}
 case "$phase" in
@@ -40,8 +40,8 @@ mkdir -p "$spec"
 cp "$tree/mkspecs/linux-donut-llvm/qplatformdefs.h" "$spec/"
 cat > "$spec/qmake.conf" <<'EOF'
 include(../linux-g++/qmake.conf)
-QMAKE_CC = /opt/longreach-android-api21/bin/cc -fgnu89-inline
-QMAKE_CXX = /opt/longreach-android-api21/bin/cxx -DQT_NO_SHAREDMEMORY -DQT_NO_SYSTEMSEMAPHORE
+QMAKE_CC = @RUNTIME@/bin/cc -fgnu89-inline
+QMAKE_CXX = @RUNTIME@/bin/cxx -DQT_NO_SHAREDMEMORY -DQT_NO_SYSTEMSEMAPHORE
 QMAKE_LINK = $$QMAKE_CXX
 QMAKE_LINK_SHLIB = $$QMAKE_CXX
 QMAKE_AR = llvm-ar-21 cqs
@@ -50,6 +50,12 @@ QMAKE_LIBS_THREAD =
 QMAKE_CFLAGS_THREAD =
 QMAKE_CXXFLAGS_THREAD =
 DEFINES += QT_NO_LINUX_FUTEX
+EOF
+sed -i "s|@RUNTIME@|$runtime|g" "$spec/qmake.conf"
+cat > "$prefix/longreach-target.cmake" <<EOF
+set(LONGREACH_ANDROID_API "$api")
+set(LONGREACH_ANDROID_ABI "$abi")
+set(LONGREACH_ANDROID_RUNTIME "$runtime")
 EOF
 "$prefix/bin/qmake" -query > /out/qt4-sdk/qmake-$phase.txt
 test "$("$prefix/bin/qmake" -query QT_VERSION)" = 4.8.7
@@ -65,6 +71,9 @@ if [[ "$phase" == quick ]]; then
     cp /out/qt4-sdk/qmake-quick.txt "$prefix/longreach-reports/sdk-qmake-query.txt"
     sha256sum "$runtime/lib/libc++_shared.so" > "$prefix/longreach-reports/runtime-sha256.txt"
     "$runtime/bin/cxx" --version > "$prefix/longreach-reports/sdk-compiler-version.txt"
+    if [[ "$api" == 10 ]]; then
+        cp "$runtime/runtime-input-provenance.json" "$prefix/longreach-reports/"
+    fi
     cp "$tree"/LICENSE* "$tree/LGPL_EXCEPTION.txt" "$prefix/licenses/"
 fi
 echo "Qt4 $abi/API$api $phase SDK phase passed"

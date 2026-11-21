@@ -3,7 +3,8 @@
   "qt": "4.8.7",
   "llvm": "21.1.8",
   "minimum_api": {
-    "x86_64": 21
+    "x86_64": 21,
+    "x86": 10
   },
   "platform_lock": "qt6-android-api21-inputs.json",
   "shared_sources": [
@@ -17,5 +18,9 @@
       "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.8/llvm-project-21.1.8.src.tar.xz",
       "sha256": "4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142"
     }
-  ]
+  ],
+  "platform_lock_by_abi": {
+    "x86": "qt5-android-api10-inputs.json",
+    "x86_64": "qt6-android-api21-inputs.json"
+  }
 }

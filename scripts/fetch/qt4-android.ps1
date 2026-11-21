@@ -1,9 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([ValidateSet('x86_64')][string]$Abi='x86_64',
+param([ValidateSet('x86','x86_64')][string]$Abi='x86_64',
       [ValidateSet('all','sdk','test')][string]$Scope='all', [string]$AndroidSdk=$env:ANDROID_HOME)
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
-& "$PSScriptRoot/qt6-android.ps1" -Abi $Abi -Scope $Scope -PlatformOnly -AndroidSdk $AndroidSdk
+if ($Abi -eq 'x86') {
+    & "$PSScriptRoot/qt5-android.ps1" -Abi $Abi -Scope $Scope -PlatformOnly -AndroidSdk $AndroidSdk
+} else {
+    & "$PSScriptRoot/qt6-android.ps1" -Abi $Abi -Scope $Scope -PlatformOnly -AndroidSdk $AndroidSdk
+}
 if ($Scope -eq 'test') { return }
 $lock=Get-Content "$PSScriptRoot/locks/qt4-android-api21-inputs.json" -Raw | ConvertFrom-Json
 foreach ($source in $lock.shared_sources) {

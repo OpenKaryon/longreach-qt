@@ -13,9 +13,11 @@ test "$("$sdk_prefix/bin/qmake" -query QT_INSTALL_PREFIX)" = "$sdk_prefix"
 /opt/longreach-android/bin/cxx --version > "$report/sdk-compiler-version.txt"
 grep -q '21.1.8' "$report/sdk-compiler-version.txt"
 sha256sum /opt/longreach-android/lib/libc++_shared.so > "$report/runtime-sha256.txt"
+python3 /repo/scripts/build/qt6-android/validate-api21-elf.py "$sdk_prefix" --api "$api" --abi "$abi" --report "$report/sdk-api${api}-elf.json"
 if [[ "$api" == 21 ]]; then
-    python3 /repo/scripts/build/qt6-android/validate-api21-elf.py "$sdk_prefix" --abi "$abi" --report "$report/sdk-api21-elf.json"
     python3 /repo/scripts/build/qt6-android/input-provenance.py
     cp /out/platform-input-provenance.json "$report/"
+else
+    cp /opt/longreach-android/runtime-input-provenance.json "$report/"
 fi
 echo "Qt5 $abi API$api installed SDK checks passed"

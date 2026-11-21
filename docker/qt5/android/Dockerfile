@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Qt 5.15.19, upstream LLVM21.1.8: ARMv7/API10 or ARM64/x86_64 API21.
+# Qt 5.15.19, upstream LLVM21.1.8: ARMv7/x86 API10 or ARM64/x86_64 API21.
 # The Qt 4 Android image is a shared host-tools image, not its target SDK.
 
 ARG ANDROID_ABI=armeabi-v7a
@@ -12,21 +12,28 @@ RUN apt-get update \
 RUN clang-21 --version | grep -E 'clang version 21\.1\.8([[:space:]]|$)'
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
-FROM tools AS armeabi-v7a-runtime
+FROM tools AS api10-runtime
+ARG ANDROID_ABI
+ENV ANDROID_ABI=${ANDROID_ABI}
 ARG PARALLEL_JOBS=2
 ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 WORKDIR /work
 COPY patches/android/gingerbread /repo/patches/android/gingerbread
+COPY scripts/fetch/locks/qt5-android-api10-inputs.json /repo/scripts/fetch/locks/
 COPY scripts/build/qt4-android/crt-donut.c scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
 COPY scripts/build/qt5-android/build-runtime.sh \
+     scripts/build/qt5-android/target-config.sh \
+     scripts/build/qt5-android/input-provenance.py \
      scripts/build/qt5-android/install-toolchain.sh \
      scripts/build/qt5-android/clang-wrapper.sh \
      scripts/build/qt5-android/compat.c /repo/scripts/build/qt5-android/
 RUN --network=none \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
-    --mount=type=bind,source=downloads/android-gingerbread/aosp-ndk-r7-api9-arm.tar.gz,target=/repo/downloads/android-gingerbread/aosp-ndk-r7-api9-arm.tar.gz \
-    --mount=type=bind,source=downloads/android-gingerbread/aosp-cpufeatures-android-4.0.3-r1.tar.gz,target=/repo/downloads/android-gingerbread/aosp-cpufeatures-android-4.0.3-r1.tar.gz \
+    --mount=type=bind,source=downloads/android-gingerbread,target=/repo/downloads/android-gingerbread \
     bash /repo/scripts/build/qt5-android/build-runtime.sh && rm -rf /work/* /work/.android-runtime-prepared
+
+FROM api10-runtime AS armeabi-v7a-runtime
+FROM api10-runtime AS x86-runtime
 
 # API21 reuses the platform/runtime producer, not a Qt6 target SDK/image.
 FROM tools AS api21-platform
@@ -112,11 +119,14 @@ LABEL org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
       org.openkaryon.longreach-qt.version="5.15.19"
 WORKDIR /work
 
-FROM sdk-base AS armeabi-v7a-sdk
+FROM sdk-base AS api10-sdk
 COPY --from=validated /opt/longreach-android /opt/longreach-android
 COPY --from=validated /opt/openssl-api10 /opt/openssl-api10
-LABEL org.openkaryon.longreach-qt.platform="android-gingerbread-armeabi-v7a" \
+LABEL org.openkaryon.longreach-qt.platform="android-gingerbread-${ANDROID_ABI}" \
       org.openkaryon.longreach-qt.android-api="10"
+
+FROM api10-sdk AS armeabi-v7a-sdk
+FROM api10-sdk AS x86-sdk
 
 FROM sdk-base AS api21-sdk
 COPY --from=validated /opt/openssl-api21 /opt/openssl-api21

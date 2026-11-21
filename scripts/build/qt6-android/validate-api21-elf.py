@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Check target ELF compatibility with the Android API21 loader (not a security scan)."""
+"""Check target ELF compatibility with Android API10/API21 loaders."""
 import argparse
 import json
 from pathlib import Path
@@ -9,8 +9,11 @@ import struct
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('prefix', type=Path)
 parser.add_argument('--abi', choices=('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'), default='armeabi-v7a')
+parser.add_argument('--api', choices=(10, 21), type=int, default=21)
 parser.add_argument('--report', type=Path, required=True)
 args = parser.parse_args()
+if args.api == 10 and args.abi not in ('armeabi-v7a', 'x86'):
+    parser.error('API10 supports only ARMv7 or x86')
 
 
 def inspect(path):
@@ -55,7 +58,7 @@ def inspect(path):
                     break
                 dynamic.setdefault(tag, []).append(value)
     if 4 not in dynamic:
-        raise RuntimeError(f'API21 needs a SysV DT_HASH table: {path}')
+        raise RuntimeError(f'API{args.api} needs a SysV DT_HASH table: {path}')
     if any(tag in dynamic for tag in (35, 36, 37, 0x6000000f, 0x60000011, 0x6fffe000)):
         raise RuntimeError(f'Packed relocations require a newer Android loader: {path}')
     strings = offset(dynamic[5][0])
@@ -82,10 +85,11 @@ def inspect(path):
 paths = set()
 for directory in ('lib', 'plugins', 'qml'):
     paths.update(path.resolve() for path in (args.prefix / directory).rglob('*.so') if path.is_file())
-runtime = Path('/opt/longreach-android-api21/lib/libc++_shared.so')
+runtime_prefix = '/opt/longreach-android' if args.api == 10 else '/opt/longreach-android-api21'
+runtime = Path(runtime_prefix) / 'lib/libc++_shared.so'
 paths.add(runtime)
 results = [inspect(path) for path in sorted(paths)]
 if len(results) < 2:
     raise RuntimeError('No Qt target libraries found')
-args.report.write_text(json.dumps({'platform': f'Android API21 {args.abi}', 'libraries': results}, indent=2) + '\n')
-print(f'API21 ELF loader compatibility: {len(results)} {args.abi} libraries, SysV hash, no native TLS or newer relocations')
+args.report.write_text(json.dumps({'platform': f'Android API{args.api} {args.abi}', 'libraries': results}, indent=2) + '\n')
+print(f'API{args.api} ELF loader compatibility: {len(results)} {args.abi} libraries, SysV hash, no native TLS or newer relocations')

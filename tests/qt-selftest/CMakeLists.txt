@@ -267,6 +267,29 @@ if(NOT SMOKE_ANDROID_SELFTEST_PROFILE STREQUAL "full")
     if(NOT ANDROID OR NOT QT_VERSION_MAJOR EQUAL 5)
         message(FATAL_ERROR "Split selftest profiles are for the Qt 5 Android SDK only")
     endif()
+    # MOC-generated registration code can keep a module alive even when the
+    # profile's main never calls its checks. Exclude whole translation units
+    # owned solely by the other profile, retaining mixed units in both.
+    set(smoke_android_extended_only_sources
+        checks_connectivity.cpp checks_declarative1.cpp checks_location2.cpp
+        checks_misc_hw.cpp checks_multimedia.cpp checks_multimedia2.cpp
+        checks_purchasing.cpp checks_sensors.cpp)
+    set(smoke_android_shared_sources
+        checks_modern_cpp.cpp checks_extra.cpp checks_platform_extras.cpp
+        checks_qt6_modules.cpp checks_wayland_live.cpp)
+    get_target_property(smoke_android_sources qt-selftest SOURCES)
+    if(SMOKE_ANDROID_SELFTEST_PROFILE STREQUAL "core")
+        list(REMOVE_ITEM smoke_android_sources ${smoke_android_extended_only_sources})
+    else()
+        foreach(smoke_source IN LISTS smoke_android_sources)
+            if(smoke_source MATCHES "^checks_.*\\.cpp$" AND
+                    NOT smoke_source IN_LIST smoke_android_extended_only_sources AND
+                    NOT smoke_source IN_LIST smoke_android_shared_sources)
+                list(REMOVE_ITEM smoke_android_sources "${smoke_source}")
+            endif()
+        endforeach()
+    endif()
+    set_property(TARGET qt-selftest PROPERTY SOURCES "${smoke_android_sources}")
     string(TOUPPER "${SMOKE_ANDROID_SELFTEST_PROFILE}" smoke_android_profile)
     target_compile_definitions(qt-selftest PRIVATE SMOKE_ANDROID_SELFTEST_${smoke_android_profile})
     message(STATUS "qt-selftest: Android ${SMOKE_ANDROID_SELFTEST_PROFILE} profile; shared sources")

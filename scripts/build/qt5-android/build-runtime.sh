@@ -9,17 +9,29 @@ llvm=/work/android-llvm/llvm-project-21.1.8.src
 sysroot=/work/android-sysroot
 runtime=/work/android-runtime
 builtins=/work/android-builtins
-target=armv7a-linux-androideabi10
+source "$repo/scripts/build/qt5-android/target-config.sh"
+[[ "$api" == 10 ]] || { echo "This runtime producer requires API10" >&2; exit 1; }
 
 echo '4633a23617fa31a3ea51242586ea7fb1da7140e426bd62fc164261fe036aa142  '"$repo/downloads/llvm-project-21.1.8.src.tar.xz" | sha256sum -c -
-echo '6f7ec1a9b177ccd1da48c2045d14c5f62fc7db32581919535269cc2738a35f8d  '"$inputs/aosp-ndk-r7-api9-arm.tar.gz" | sha256sum -c -
+echo "$sysroot_sha256  $inputs/$sysroot_archive" | sha256sum -c -
 
+state="$target $sysroot_sha256"
+if [[ -f /work/.android-runtime-prepared ]]; then
+    previous=$(cat /work/.android-runtime-prepared)
+    # An empty marker belongs to the historical ARMv7-only producer.
+    if [[ -z "$previous" && "$abi" == armeabi-v7a ]]; then
+        printf '%s\n' "$state" > /work/.android-runtime-prepared
+    elif [[ "$previous" != "$state" ]]; then
+        echo 'The API10 work cache belongs to another ABI/sysroot; use a matching build container' >&2
+        exit 1
+    fi
+fi
 if [[ ! -f /work/.android-runtime-prepared ]]; then
     mkdir -p /work/android-llvm "$sysroot"
     tar -xf "$repo/downloads/llvm-project-21.1.8.src.tar.xz" -C /work/android-llvm \
         "llvm-project-21.1.8.src"/{cmake,compiler-rt,libc,libcxx,libcxxabi,libunwind,llvm,runtimes,third-party}
-    tar -xzf "$inputs/aosp-ndk-r7-api9-arm.tar.gz" -C "$sysroot"
-    touch /work/.android-runtime-prepared
+    tar -xzf "$inputs/$sysroot_archive" -C "$sysroot"
+    printf '%s\n' "$state" > /work/.android-runtime-prepared
 fi
 for change in "$repo"/patches/android/gingerbread/*.patch; do
     root="$sysroot"
@@ -32,9 +44,9 @@ for change in "$repo"/patches/android/gingerbread/*.patch; do
     (cd "$root" && git apply "$change")
 done
 
-flags='-march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -fPIC -femulated-tls -ffunction-sections -fdata-sections -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -DSIZE_MAX=__SIZE_MAX__'
+flags="${arch_flags[*]} -fPIC -femulated-tls -ffunction-sections -fdata-sections -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -DSIZE_MAX=__SIZE_MAX__"
 options=(
-    -G Ninja -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_BUILD_TYPE=Release
+    -G Ninja -DCMAKE_SYSTEM_NAME=Linux "-DCMAKE_SYSTEM_PROCESSOR=$runtime_processor" -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_ASM_COMPILER=clang-21
     "-DCMAKE_SYSROOT=$sysroot" "-DCMAKE_C_COMPILER_TARGET=$target"
     "-DCMAKE_CXX_COMPILER_TARGET=$target" "-DCMAKE_ASM_COMPILER_TARGET=$target"
@@ -47,6 +59,7 @@ options=(
 cmake -S "$llvm/runtimes" -B "$runtime" "${options[@]}" "-DCMAKE_C_FLAGS=$flags" \
     '-DLLVM_ENABLE_RUNTIMES=libunwind;libcxxabi;libcxx' \
     -DLIBUNWIND_ENABLE_SHARED=OFF -DLIBUNWIND_ENABLE_STATIC=ON -DLIBUNWIND_INCLUDE_TESTS=OFF \
+    -DLIBUNWIND_USE_FRAME_HEADER_CACHE=OFF \
     -DLIBCXXABI_ENABLE_SHARED=OFF -DLIBCXXABI_ENABLE_STATIC=ON -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
     -DLIBCXXABI_INCLUDE_TESTS=OFF -DLIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL=OFF \
     -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC=ON -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF \
@@ -63,3 +76,4 @@ cmake -S "$llvm/runtimes" -B "$builtins" "${options[@]}" \
     -DCOMPILER_RT_BUILD_MEMPROF=OFF -DCOMPILER_RT_BUILD_GWP_ASAN=OFF -DCOMPILER_RT_BUILD_CRT=OFF
 cmake --build "$builtins" --parallel "${PARALLEL_JOBS:-2}"
 bash "$repo/scripts/build/qt5-android/install-toolchain.sh"
+python3 "$repo/scripts/build/qt5-android/input-provenance.py"

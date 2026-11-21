@@ -2,7 +2,7 @@
 #Requires -Version 7.0
 param(
     [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
-    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string]$Abi='armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi='armeabi-v7a',
     [string]$AndroidSdk=$env:ANDROID_HOME,
     [string]$OutputDirectory,
     [string]$SdkImage,
@@ -23,13 +23,13 @@ if ($SdkOnly) {
     if ($PSBoundParameters.ContainsKey('Mode') -and $Mode -ne 'sdk') { throw '-SdkOnly cannot be combined with a mode other than sdk.' }
     $Mode='sdk'
 }
-$api=if ($Abi -eq 'armeabi-v7a') { '10' } else { '21' }
+$api=if ($Abi -in @('armeabi-v7a','x86')) { '10' } else { '21' }
 $platform=if ($api -eq '10') { "android-gingerbread-$Abi" } else { "android-lollipop-$Abi" }
-$profile=if ($api -eq '10') { 'gingerbread' } else { "lollipop-$Abi" }
+$profile=if ($Abi -eq 'armeabi-v7a') { 'gingerbread' } elseif ($api -eq '10') { "gingerbread-$Abi" } else { "lollipop-$Abi" }
 if (!$SdkImage) { $SdkImage="longreach-qt5-android-${profile}:llvm21" }
 if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt5-android-$profile" }
 if ($Mode -in @('sdk','examples') -and
-        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless -ErrorAction SilentlyContinue)) {
+        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-i386,qemu-system-i386-headless -ErrorAction SilentlyContinue)) {
     throw 'Stop the Android emulator before compiling.'
 }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
@@ -78,7 +78,7 @@ switch ($Mode) {
             Invoke-AndroidBuildTool docker @('cp',"${container}:/opt/qt5-android-$Abi-llvm/.",$sdk)
             Invoke-AndroidBuildTool docker @('cp',"${container}:/opt/longreach-android/lib/libc++_shared.so","$native/libc++_shared.so")
             & docker cp "${container}:/opt/longreach-reports/." $output 2>$null
-            if ($LASTEXITCODE -ne 0 -and $api -eq '21') { throw 'Missing API21 SDK producer reports' }
+            if ($LASTEXITCODE -ne 0 -and ($api -eq '21' -or $Abi -eq 'x86')) { throw "Missing API$api SDK producer reports" }
         } finally { Invoke-AndroidBuildTool docker @('rm',$container) | Out-Null }
         $image.Id | Set-Content "$output/sdk-image-id.txt"
         Invoke-AndroidBuildTool docker @('run','--rm','--platform','linux/amd64','--cpus','2','--memory','3g','--network','none',

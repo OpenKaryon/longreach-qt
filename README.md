@@ -35,7 +35,7 @@ in the target guides; packaging currently runs on Windows with PowerShell 7.
 | Qt | Original floor | Additional qualified ABIs |
 | --- | --- | --- |
 | [4.8.7](docs/targets/qt4-android-donut.md) | Android 1.6/API4, armeabi | [Android 5/API21 x86_64](docs/targets/qt4-android-lollipop.md) |
-| [5.15.19](docs/targets/qt5-android-gingerbread.md) | Android 2.3.3/API10, armeabi-v7a | [API21 ARM64 and x86_64](docs/targets/qt5-android-lollipop.md) |
+| [5.15.19](docs/targets/qt5-android-gingerbread.md) | Android 2.3.3/API10, armeabi-v7a | [API10 x86](docs/targets/qt5-android-gingerbread.md); [API21 ARM64 and x86_64](docs/targets/qt5-android-lollipop.md) |
 | [6.8.5](docs/targets/qt6-android-lollipop.md) | Android 5/API21, armeabi-v7a | API21 ARM64, x86 and x86_64 |
 
 Each ABI has its own runtime evidence and limitations in the linked guides.

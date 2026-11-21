@@ -1,11 +1,14 @@
 {
-  "purpose": "Pinned inputs for the Qt 5 Android 2.3.3/API 10 armeabi-v7a SDK and emulator.",
+  "purpose": "Pinned inputs for Qt5 Android API10 ARMv7 (2.3.3) and x86 (official image revision5), plus API21 Java compile inputs.",
   "sources": [
     {
       "file": "aosp-ndk-r7-api9-arm.tar.gz",
       "url": "https://android.googlesource.com/platform/prebuilt/+archive/968372cd8fffab51ff89c6b3cb40bc74ede24cb9/ndk/android-ndk-r7/platforms/android-9/arch-arm.tar.gz",
       "sha256": "6f7ec1a9b177ccd1da48c2045d14c5f62fc7db32581919535269cc2738a35f8d",
-      "encoding": "binary"
+      "encoding": "binary",
+      "abis": [
+        "armeabi-v7a"
+      ]
     },
     {
       "file": "aosp-cpufeatures-android-4.0.3-r1.tar.gz",
@@ -17,13 +20,19 @@
       "file": "android-2.3.3_r02-linux.zip",
       "url": "https://dl.google.com/android/repository/android-2.3.3_r02-linux.zip",
       "sha256": "54bdb0f1ca06ba5747061ddeea20f431af72c448334fd4d3d7f84ea2ccd29fea",
-      "encoding": "binary"
+      "encoding": "binary",
+      "abis": [
+        "armeabi-v7a"
+      ]
     },
     {
       "file": "kernel-qemu-armv7",
       "url": "https://android.googlesource.com/platform/prebuilt/+/android-2.3.3_r1/android-arm/kernel/kernel-qemu-armv7?format=TEXT",
       "sha256": "6dcf3553f233825cdb83ae8c62b7af23f72ddf753d828e2343c0a482bb23b5ce",
-      "encoding": "base64"
+      "encoding": "base64",
+      "abis": [
+        "armeabi-v7a"
+      ]
     },
     {
       "file": "tools_r24.4.1-windows.zip",
@@ -36,6 +45,26 @@
       "installed_sdk_path": "platforms/android-35/android.jar",
       "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
       "encoding": "installed"
+    },
+    {
+      "file": "aosp-ndk-r7-api9-x86.tar.gz",
+      "url": "https://android.googlesource.com/platform/prebuilt/+archive/968372cd8fffab51ff89c6b3cb40bc74ede24cb9/ndk/android-ndk-r7/platforms/android-9/arch-x86.tar.gz",
+      "sha256": "b439f09f897cda29bb7600308f5b928c4ba00407c1503f76d9c6482807e78b92",
+      "size": 1933613,
+      "encoding": "binary",
+      "abis": [
+        "x86"
+      ]
+    },
+    {
+      "file": "x86-10_r05.zip",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86-10_r05.zip",
+      "sha256": "1c0ecc0c76e64aa011e9f3739ab72b41537f4f7c5ffde0d59da23e9939665666",
+      "size": 75386095,
+      "encoding": "binary",
+      "abis": [
+        "x86"
+      ]
     }
   ],
   "shared_sources": [

@@ -1,7 +1,8 @@
-# Experimental Qt 5.15.19 for Android 2.3.3
+# Experimental Qt 5.15.19 for Android API 10
 
-This SDK targets Android 2.3.3 (API 10), ARMv7 `armeabi-v7a`, using upstream
-LLVM/Clang/LLD 21.1.8. It builds shared Qt libraries and the actual QtActivity
+This SDK targets Android API 10 with ARMv7 `armeabi-v7a` or `x86`, using
+upstream LLVM/Clang/LLD 21.1.8. The ARMv7 guest is Android 2.3.3; the official
+x86 revision5 image actually runs Android 2.3.7. It builds shared Qt libraries and the actual QtActivity
 Android platform integration. The eight applications use the existing
 `tests/` sources; Android adds only a common native entry wrapper and a thin
 QtActivity subclass.
@@ -22,7 +23,7 @@ listed in `scripts/fetch/locks/qt5-android-api10-inputs.json`:
 
 The old AOSP NDK r7 API 9 native headers/libraries are used with an API 10
 compiler target; that archive has no separate native API 10 directory.
-The matching Android 2.3.3 ARMv7 kernel is required. The later Google API 10
+For ARMv7, the matching Android 2.3.3 kernel is required. The later Google API 10
 ARMv7 image is Android 2.3.7 and is not a substitute for this guest.
 The emulator preparation script changes only the SDK 2.3.3 ramdisk ABI
 properties and leaves the system image unchanged.
@@ -47,7 +48,15 @@ The examples invocation records and runs the inspected immutable image ID.
 
 The [ARM64/x86_64 API21 profiles](qt5-android-lollipop.md) use the same Dockerfile
 and phase entry point with `-Abi arm64-v8a` or `-Abi x86_64`. The original API10
-floor remains the default for ARMv7.
+floor remains the default for ARMv7. Select `-Abi x86` for the 32-bit Intel
+API10 profile; all four modes support it. Its output is
+`artifacts/qt5-android-gingerbread-x86/` and its default image is
+`longreach-qt5-android-gingerbread-x86:llvm21`. The fetcher selects the matching
+NDKr7 native archive and official x86 image, and the legacy emulator runs
+headlessly with software acceleration disabled and the `core2duo` CPU model.
+The x86 runtime targets i686/SSSE3 without SSE4 or AVX. Its DWARF unwinder uses
+the old Bionic program-header iterator with frame-header caching disabled;
+concurrent library unloading during unwinding has not been qualified.
 The Docker recipe contains host tools, runtime, OpenSSL, QtBase, complete Qt
 and installed SDK stages. Native source builds run offline against verified
 archives with two jobs. Example builds run one application at a time in a
@@ -56,7 +65,9 @@ The suite boots one emulator per APK, first for the mandatory C++23 profile
 and then for the eight normal example selftests. Qt-selftest additionally
 runs an extended APK built from the same sources: stock Bionic allows only
 96 DSOs per process, including the Android framework. The core and extended
-profiles partition all 74 Qt check groups without deleting checks, and both
+profiles partition all 74 Qt check groups without deleting checks. Each
+compiles only its relevant translation units so unused MOC registrations
+do not retain extra libraries in the fixed loader pool. Both
 retain all 25 mandatory C++23 checks. The default desktop/full selftest is
 unchanged. Widgets and QML also run --gallery-selftest to verify actual
 rendering and save PNG artifacts. Android APKs use hidden visibility and
@@ -84,7 +95,7 @@ Android application targets are shared libraries, loaded by QtActivity.
 - C/libc++ locale support is C/POSIX. Qt Unicode/QLocale data is separate.
   libc++ wide-character APIs and named Unicode
   locales are not provided by this profile.
-- Stock Android 2.3.3 emulator rendering uses Qt Quick's software backend.
+- Stock API10 emulator rendering uses Qt Quick's software backend.
   This does not establish GPU rendering or real-device hardware support.
 - QtWebEngine is excluded. Google Billing is optional: without its Java
   classes QtPurchasing uses Qt's generic backend, not real purchases.
@@ -96,7 +107,8 @@ Android application targets are shared libraries, loaded by QtActivity.
   Bluetooth, NFC, sensors, GPS, audio capture or other absent guest hardware.
 
 Build evidence, runtime results and platform limits are recorded in the
-[SDK result report](../results/qt5-android-gingerbread-sdk-llvm21-20261117.md).
+[ARMv7 SDK result report](../results/qt5-android-gingerbread-sdk-llvm21-20261117.md)
+and [x86 qualification report](../results/qt5-android-gingerbread-x86-llvm21-20261121.md).
 
 ## QtActivity across Android versions
 

@@ -38,7 +38,11 @@ unset PKG_CONFIG_SYSROOT_DIR
 export PKG_CONFIG_LIBDIR="$openssl_prefix/lib/pkgconfig"
 cd "$build"
 if [[ ! -f .longreach-configured ]]; then
-    "$source/configure" -opensource -confirm-license -release -shared -optimize-size \
+    # A failed configure may have cached a negative dependency probe. Recheck
+    # those results on retry while retaining qmake and all compiled objects.
+    retry_options=()
+    if [[ -f config.cache ]]; then retry_options=(-recheck); fi
+    "$source/configure" "${retry_options[@]}" -opensource -confirm-license -release -shared -optimize-size \
         -prefix "$prefix" -platform linux-clang -xplatform android-longreach-clang \
         -android-abis "$abi" -android-ndk "$ANDROID_NDK_ROOT" \
         -android-ndk-host linux-x86_64 -android-ndk-platform "android-$api" \

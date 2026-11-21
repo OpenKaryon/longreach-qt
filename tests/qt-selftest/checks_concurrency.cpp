@@ -200,13 +200,16 @@ void checkConcurrency(SmokeReporter &r)
 #endif
         // A static build of this binary can take seconds to start on a busy
         // host; wait as long as the Qt 4 branch does.
-        p.waitForFinished(10000);
+        const bool finished = p.state() == QProcess::NotRunning || p.waitForFinished(10000);
         QFile markerFile(markerPath);
         const QString output = markerFile.open(QIODevice::ReadOnly)
             ? QString::fromLocal8Bit(markerFile.readAll()) : QString();
-        const bool ok = output.contains("smoke");
+        const bool ok = finished && p.state() == QProcess::NotRunning
+                && p.exitStatus() == QProcess::NormalExit && p.exitCode() == 0
+                && output.contains("smoke");
         if (!ok) {
-            d = QStringLiteral("state=%1 exit=%2 error=%3 stdout='%4' stderr='%5'")
+            d = QStringLiteral("finished=%1 state=%2 exit=%3 error=%4 stdout='%5' stderr='%6'")
+                    .arg(int(finished))
                     .arg(int(p.state()))
                     .arg(p.exitCode())
                     .arg(p.errorString())

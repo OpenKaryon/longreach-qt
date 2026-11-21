@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
+    [ValidateSet('armeabi-v7a','x86')][string] $Abi = 'armeabi-v7a',
     [Parameter(Mandatory)] [string] $Apk,
     [Parameter(Mandatory)] [string] $SystemDirectory,
     [Parameter(Mandatory)] [string] $Emulator,
@@ -12,10 +13,21 @@ param(
     [string] $ApplicationArguments = '--selftest',
     [ValidateSet('16', '32')] [string] $RasterImageDepth = '32',
     [ValidateSet('default', 'software')] [string] $QtQuickBackend = 'software',
-    [switch] $StrictCxx23
+    [switch] $StrictCxx23,
+    [switch] $RuntimeProbe,
+    [switch] $DebugQtPlugins
 )
 
 $ErrorActionPreference = 'Stop'
+if ($RuntimeProbe) {
+    $StrictCxx23=$true
+    if (!$PSBoundParameters.ContainsKey('Package')) { $Package='org.longreachqt.donut' }
+}
+$completionName=if ($RuntimeProbe) { 'probe-result.txt' } else { 'selftest-result.txt' }
+$stdoutName=if ($RuntimeProbe) { 'strict-cxx23.log' } else { 'selftest.stdout' }
+$activity=if ($RuntimeProbe) { 'org.longreachqt.donut.ProbeActivity' } else { 'org.longreachqt.examples.SmokeActivity' }
+
+. "$PSScriptRoot/android-wait-boot.ps1"
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 function Invoke-AndroidTool([string] $Program, [string[]] $Arguments) {
     & $Program @Arguments
@@ -43,7 +55,7 @@ function Initialize-AndroidRunDirectory([string] $Directory) {
 }
 
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
-if (Get-Process -Name emulator-arm, emulator, qemu-system-armel -ErrorAction SilentlyContinue) {
+if (Get-Process -Name emulator-arm, emulator, qemu-system-armel, emulator-x86, emulator64-x86, qemu-system-i386, qemu-system-i386-headless, qemu-system-x86_64, qemu-system-x86_64-headless -ErrorAction SilentlyContinue) {
     throw 'Another Android emulator is running.'
 }
 $adb = (Get-Item -LiteralPath "$AndroidSdk/platform-tools/adb.exe").FullName
@@ -62,33 +74,25 @@ $arguments = @('-sysdir', $SystemDirectory, '-datadir', $output,
     '-ramdisk', $Ramdisk, '-data', $data, '-initdata', "$SystemDirectory/userdata.img",
     '-no-window', '-no-audio', '-no-snapshot', '-no-snapstorage',
     '-skin', '480x320', '-partition-size', '512', '-memory', '256', '-gpu', 'off', '-port', '5580',
-    '-no-boot-anim', '-verbose', '-show-kernel', '-qemu', '-cpu', 'cortex-a8') |
+    '-no-boot-anim', '-verbose', '-show-kernel')
+if ($Abi -eq 'x86') { $arguments += @('-no-accel', '-qemu', '-cpu', 'core2duo') }
+else { $arguments += @('-qemu', '-cpu', 'cortex-a8') }
+$arguments = $arguments |
     ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
 $process = Start-Process -FilePath $Emulator -ArgumentList $arguments -WindowStyle Hidden -PassThru `
     -RedirectStandardOutput "$output/emulator.stdout" -RedirectStandardError "$output/emulator.stderr"
 try {
-    $ready = $false
-    for ($attempt = 0; $attempt -lt 90; $attempt++) {
-        $process.Refresh()
-        if ($process.HasExited) { throw "Emulator exited: $($process.ExitCode)." }
-        if ((& $adb devices) -match "^$serial\s+device") {
-            if ((& $adb -s $serial shell getprop sys.boot_completed) -match '^\s*1\s*$') {
-                $ready = $true
-                break
-            }
-        }
-        Start-Sleep -Seconds 2
-    }
-    if (!$ready) { throw 'Android did not boot within 180 seconds.' }
+    Wait-AndroidBoot -Adb $adb -Serial $serial -RunDirectory $output -EmulatorPid $process.Id -TimeoutSeconds 180
     foreach ($entry in @(
-        @('ro.build.version.release', '2.3.3'),
+        @('ro.build.version.release', $(if ($Abi -eq 'x86') { '2.3.7' } else { '2.3.3' })),
         @('ro.build.version.sdk', '10'),
-        @('ro.product.cpu.abi', 'armeabi-v7a')
+        @('ro.product.cpu.abi', $Abi)
     )) {
         $value = ((Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'getprop', $entry[0])) -join '').Trim()
         if ($value -ne $entry[1]) { throw "Unexpected $($entry[0]): $value." }
         "$($entry[0])=$value" | Add-Content -LiteralPath "$output/guest.txt"
     }
+    Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'cat', '/proc/cpuinfo') | Set-Content "$output/guest-cpuinfo.txt"
     Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'input', 'keyevent', '82')
     Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'logcat', '-c')
     Invoke-AndroidTool $adb @('-s', $serial, 'push', $Apk, '/data/local/longreach-example.apk')
@@ -96,8 +100,9 @@ try {
     if (!($install -match '^\s*Success\s*$')) { throw "APK install failed: $install" }
     if ($StrictCxx23) { $ApplicationArguments = '--modern-cpp' }
     $launchArguments = @('-s', $serial, 'shell', 'am', 'start', '-n',
-        "$Package/org.longreachqt.examples.SmokeActivity", '--es', 'applicationArguments', $ApplicationArguments,
+        "$Package/$activity", '--es', 'applicationArguments', $ApplicationArguments,
         '--es', 'qtRasterImageDepth', $RasterImageDepth)
+    if ($DebugQtPlugins) { $launchArguments += @('--ez', 'debugQtPlugins', 'true') }
     if ($QtQuickBackend -ne 'default') {
         $launchArguments += @('--es', 'qtQuickBackend', $QtQuickBackend)
     }
@@ -107,7 +112,7 @@ try {
         Start-Sleep -Seconds 2
         $process.Refresh()
         if ($process.HasExited) { break }
-        $result = @(& $adb -s $serial shell cat "/data/data/$Package/files/selftest-result.txt" 2>$null)
+        $result = @(& $adb -s $serial shell cat "/data/data/$Package/files/$completionName" 2>$null)
         if ($result -match '^\s*[0-9]+\s*$') { $complete = $true; break }
         $logs = @(& $adb -s $serial shell logcat -d -v brief)
         $processDied = 'Process ' + [regex]::Escape($Package) + ' \(pid \d+\) has died'
@@ -117,9 +122,9 @@ try {
     Invoke-AndroidTool $adb @('-s', $serial, 'pull', "/data/data/$Package/files", $output)
     if (!$complete -or !($result -match '^\s*0\s*$')) { throw "Example did not return zero: $result" }
     if ($StrictCxx23) {
-        Invoke-AndroidTool python @("$repo/scripts/tests/require-modern-cpp.py", "$output/files/selftest.stdout")
+        Invoke-AndroidTool python @("$repo/scripts/tests/require-modern-cpp.py", "$output/files/$stdoutName")
     }
-    $report = @(Get-Content -LiteralPath "$output/files/selftest.stdout")
+    $report = @(Get-Content -LiteralPath "$output/files/$stdoutName")
     $knownApps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" |
         Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
     $appName = [IO.Path]::GetFileNameWithoutExtension($Apk)

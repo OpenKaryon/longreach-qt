@@ -7,6 +7,7 @@ $fixture=Join-Path $temporaryRoot ('longreach-qt5-modes-'+[guid]::NewGuid())
 $previousLog=$env:LONGREACH_MODE_TEST_LOG
 $global:Qt5ModeAbi='armeabi-v7a'
 $global:Qt5ModeMissing=$false
+$global:Qt5ModeReportsMissing=$false
 $global:Qt5ModeId='sha256:'+('a'*64)
 function Assert-Mode([bool]$Condition,[string]$Message) { if (!$Condition) { throw $Message } }
 function Calls { @(Get-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG) }
@@ -19,7 +20,7 @@ function docker {
     if ($Arguments[0] -eq 'image' -and $Arguments[1] -eq 'inspect') {
         if ($global:Qt5ModeMissing) { $global:LASTEXITCODE=1; return }
         if ($Arguments -contains '{{json .}}') {
-            $api=if ($global:Qt5ModeAbi -eq 'armeabi-v7a') { '10' } else { '21' }
+            $api=if ($global:Qt5ModeAbi -in @('armeabi-v7a','x86')) { '10' } else { '21' }
             $profile=if ($api -eq '10') { 'gingerbread' } else { 'lollipop' }
             return (@{Id=$global:Qt5ModeId;Os='linux';Architecture='amd64';Config=@{Labels=@{
                 'org.openkaryon.longreach-qt.platform'="android-$profile-$global:Qt5ModeAbi"
@@ -33,6 +34,10 @@ function docker {
     if ($Arguments[0] -eq 'create') { return ('b'*64) }
     if ($Arguments[0] -eq 'cp') {
         $destination=$Arguments[2]
+        if ($Arguments[1] -like '*:/opt/longreach-reports/*' -and $global:Qt5ModeReportsMissing) {
+            $global:LASTEXITCODE=1
+            return
+        }
         if ($Arguments[1] -like '*:/opt/qt5-android-*') {
             foreach ($path in @('jar','src/android/java/src','src/android/java/res')) { New-Item -ItemType Directory -Force "$destination/$path" | Out-Null }
             [IO.File]::WriteAllText("$destination/jar/QtAndroid.jar",'fixture')
@@ -118,7 +123,7 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Expect-Failure ($entry+@{Mode='package';SdkOnly=$true}) 'cannot be combined'
     Assert-Mode (@(Calls).Count -eq 0) 'Conflicting modes started work'
     $apps=@(Get-Content "$fixture/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
-    foreach ($abi in @('armeabi-v7a','arm64-v8a','x86_64')) {
+    foreach ($abi in @('armeabi-v7a','arm64-v8a','x86','x86_64')) {
         foreach ($directory in (@($apps | ForEach-Object { "deployment/$_" })+'deployment-extended/qt-selftest')) {
             $app=Split-Path $directory -Leaf
             New-Item -ItemType Directory -Force "$output/$directory/libs/$abi","$output/$directory/res/values" | Out-Null
@@ -140,6 +145,25 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='test';Abi='x86_64';RunName='x86-64-routing';CaseNames=@('strict-cxx23-extended')})
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86_64|x86-64-routing|strict-cxx23-extended|False') 'x86_64 test mode lost ABI or extended-case routing'
+    Reset-Calls
+    Expect-Failure ($entry+@{Mode='examples';Abi='x86'}) 'not the Qt5'
+    Assert-Mode (@(Calls).Count -eq 1) '32-bit x86 consumed a 64-bit SDK'
+    $global:Qt5ModeAbi='x86'
+    $global:Qt5ModeReportsMissing=$true
+    Reset-Calls
+    Expect-Failure ($entry+@{Mode='examples';Abi='x86'}) 'Missing API10 SDK producer reports'
+    Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|run|*' }).Count -eq 0) 'Missing producer reports started a consumer build'
+    Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|rm|*' }).Count -eq 1) 'Failed export leaked its temporary container'
+    $global:Qt5ModeReportsMissing=$false
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='examples';Abi='x86'})
+    Assert-Mode (@(Calls)[0] -like '*longreach-qt5-android-gingerbread-x86:llvm21') 'Wrong x86 API10 default tag'
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='sdk';Abi='x86'})
+    Assert-Mode (@((Calls) | Where-Object { $_ -eq 'fetch|x86|sdk' }).Count -eq 1) 'Wrong x86 SDK fetch ABI'
+    Reset-Calls
+    Invoke-Mode ($entry+@{Mode='test';Abi='x86';RunName='x86-api10-routing'})
+    Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86|x86-api10-routing||False') 'x86 test mode lost API10 routing'
     Write-Output 'PASS: Qt5 ready-image reuse, independent modes, ABI checks, nine-deployment packaging and test routing'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG=$previousLog
@@ -151,5 +175,5 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
             catch { if ($attempt -eq 2) { throw }; Start-Sleep -Milliseconds 100 }
         }
     }
-    Remove-Variable Qt5ModeAbi,Qt5ModeMissing,Qt5ModeId -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt5ModeAbi,Qt5ModeMissing,Qt5ModeReportsMissing,Qt5ModeId -Scope Global -ErrorAction SilentlyContinue
 }

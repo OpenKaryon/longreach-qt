@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# ELF program-header ID used by the x86 DWARF unwinder.
+--- a/usr/include/elf.h
++++ b/usr/include/elf.h
+@@ -27,6 +27,10 @@
+  */
+ #ifndef _ELF_H
+ #define _ELF_H
++
++#ifndef PT_GNU_EH_FRAME
++#define PT_GNU_EH_FRAME 0x6474e550
++#endif
+ 
+ /* these definitions are missing from the BSD sources */
+ enum {

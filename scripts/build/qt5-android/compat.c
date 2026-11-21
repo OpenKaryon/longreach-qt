@@ -42,12 +42,19 @@ float log2f(float value)
 
 pid_t wait4(pid_t process, int *status, int options, struct rusage *usage)
 {
+#if defined(__i386__)
+    // Gingerbread x86 syscall.S restores the incoming EAX after the kernel
+    // call, losing the result. Bionic's exported wait stub preserves it.
+    extern pid_t __wait4(pid_t, int *, int, struct rusage *);
+    return __wait4(process, status, options, usage);
+#else
     return syscall(__NR_wait4, process, status, options, usage);
+#endif
 }
 
-// ARMv7's long double is exactly the native double representation.
+// These 32-bit Android profiles give long double the native double ABI.
 _Static_assert(LDBL_MANT_DIG == DBL_MANT_DIG && LDBL_MAX_EXP == DBL_MAX_EXP
-               && sizeof(long double) == sizeof(double), "ARMv7 long-double ABI required");
+               && sizeof(long double) == sizeof(double), "32-bit Android long-double ABI required");
 
 #define LONGREACH_LONG_DOUBLE_UNARY(name) \
     long double name##l(long double value) { return name((double)value); }

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Retain the C11 assert.h spelling expected by upstream compiler-rt.
+--- a/usr/include/assert.h
++++ b/usr/include/assert.h
+@@ -44,6 +44,12 @@
+ 
+ #include <sys/cdefs.h>
+ 
++#if !defined(__cplusplus) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
++#ifndef static_assert
++#define static_assert _Static_assert
++#endif
++#endif
++
+ #undef assert
+ #undef _assert
+ 

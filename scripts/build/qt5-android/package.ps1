@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi-v7a','arm64-v8a','x86_64')][string] $Abi = 'armeabi-v7a',
+    [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string] $Abi = 'armeabi-v7a',
     [Parameter(Mandatory)] [string] $QtSdk,
     [Parameter(Mandatory)] [string] $NativeLibrary,
     [Parameter(Mandatory)] [string] $RuntimeLibrary,
@@ -15,7 +15,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$minimumApi = if ($Abi -eq 'armeabi-v7a') { '10' } else { '21' }
+$minimumApi = if ($Abi -in @('armeabi-v7a','x86')) { '10' } else { '21' }
 if (!$PSBoundParameters.ContainsKey('Plugins')) { $Plugins = @("platforms/libplugins_platforms_qtforandroid_$Abi.so") }
 function Invoke-AndroidTool([string] $Program, [string[]] $Arguments) {
     & $Program @Arguments

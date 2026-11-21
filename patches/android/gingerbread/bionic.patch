@@ -117,16 +117,32 @@
  int syscall(int number, ...);
 --- /dev/null
 +++ b/usr/include/link.h
-@@ -0,0 +1,13 @@
+@@ -0,0 +1,29 @@
 +#ifndef LONGREACH_DONUT_LINK_H
 +#define LONGREACH_DONUT_LINK_H
 +
 +#include <sys/cdefs.h>
 +#include <stdint.h>
++#if defined(__i386__)
++#include <elf.h>
++#include <stddef.h>
++#define ElfW(type) Elf32_##type
++#endif
 +
 +__BEGIN_DECLS
 +
++#if defined(__i386__)
++struct dl_phdr_info {
++    Elf32_Addr dlpi_addr;
++    const char *dlpi_name;
++    const Elf32_Phdr *dlpi_phdr;
++    Elf32_Half dlpi_phnum;
++};
++
++int dl_iterate_phdr(int (*callback)(struct dl_phdr_info *, size_t, void *), void *data);
++#else
 +uintptr_t dl_unwind_find_exidx(uintptr_t pc, int *count);
++#endif
 +
 +__END_DECLS
 +

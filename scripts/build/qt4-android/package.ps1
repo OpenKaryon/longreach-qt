@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 param(
-    [ValidateSet('armeabi', 'x86_64')] [string] $Abi = 'armeabi',
+    [ValidateSet('armeabi', 'x86', 'x86_64')] [string] $Abi = 'armeabi',
     [Parameter(Mandatory)] [ValidateSet('bootstrap', 'strict', 'core', 'quick', 'selftest', 'graphics', 'network', 'painting', 'widgets', 'multimedia', 'gl', 'qml')] [string] $Profile,
     [Parameter(Mandatory)] [string] $NativeDirectory,
     [Parameter(Mandatory)] [string] $OutputDirectory,
@@ -31,7 +31,7 @@ if (Test-Path -LiteralPath $apk) {
 }
 $work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("package-" + [guid]::NewGuid()))).FullName
 
-$minimum = if ($Abi -eq 'armeabi') { '4' } else { '21' }
+$minimum = switch ($Abi) { 'armeabi' { '4' }; 'x86' { '10' }; 'x86_64' { '21' } }
 $manifest = 'AndroidManifest.xml'
 $sources = @("$fixtures/ProbeActivity.java")
 if ($Profile -in 'selftest', 'network', 'widgets') {
@@ -49,11 +49,11 @@ try {
     New-Item -ItemType Directory -Path "$work/lib/$Abi", "$work/classes" -Force | Out-Null
     Copy-Item -LiteralPath $library -Destination "$work/lib/$Abi/libdonut_probe.so"
     Copy-Item -LiteralPath "$fixtures/$manifest" -Destination "$work/AndroidManifest.xml"
-    if ($minimum -eq '21') {
+    if ($minimum -ne '4') {
         Copy-Item -LiteralPath "$NativeDirectory/libc++_shared.so" -Destination "$work/lib/$Abi/libc++_shared.so"
         $xml = [IO.File]::ReadAllText("$work/AndroidManifest.xml")
         $xml = $xml.Replace('android:minSdkVersion="4" android:targetSdkVersion="4"',
-                            'android:minSdkVersion="21" android:targetSdkVersion="21"')
+                            ('android:minSdkVersion="' + $minimum + '" android:targetSdkVersion="' + $minimum + '"'))
         $xml = $xml.Replace('</application>', '<meta-data android:name="org.longreachqt.sharedRuntime" android:value="true" /></application>')
         [IO.File]::WriteAllText("$work/AndroidManifest.xml", $xml)
     }
@@ -67,7 +67,7 @@ try {
     Push-Location -LiteralPath $work
     try {
         $members = @('add', 'unsigned.apk', 'classes.dex', "lib/$Abi/libdonut_probe.so")
-        if ($minimum -eq '21') { $members += "lib/$Abi/libc++_shared.so" }
+        if ($minimum -ne '4') { $members += "lib/$Abi/libc++_shared.so" }
         Invoke-DonutCommand "$tools/aapt.exe" $members
         if (!(Test-Path -LiteralPath $keyStore)) {
             Invoke-DonutCommand "$java/keytool.exe" @('-genkeypair', '-keystore', $keyStore,

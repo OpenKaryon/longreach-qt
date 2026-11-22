@@ -87,3 +87,8 @@ not a freshness check. Build its Dockerfile with the repository root as context.
 These producer inputs describe the current recipe. Earlier result reports
 identify the SDKs actually tested; changing the compiler recipe does not
 retroactively qualify an older image as a fresh build from the new producer.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.

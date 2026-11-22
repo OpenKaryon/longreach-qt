@@ -164,3 +164,17 @@ Raw compiler, fixture and Java preparation logs remain under the ignored
 source snapshots, scoped/raw logs and images remain under the corresponding
 ignored `artifacts/*-audit-20261120/` roots. API21 collectors matched every
 case to its current APK SHA256, launch marker and native result.
+
+
+## Scope after the additional ABI integration
+
+The ARMv7 API10 consumer run above used its recorded older native runtime.
+Later Gingerbread runtime-header changes introduced with the x86 profile are
+part of the current producer recipe, not retroactive evidence for that ARMv7
+image. A runtime built with those changed inputs requires a new ARMv7 strict
+25/25 qualification; this historical report does not claim it. Likewise the
+older Qt5 ARM64 SDK retains its recorded 56-patch Java stack.
+
+The next [audit follow-up](android-audit-fixes-20261121.md) distinguishes the
+focused x86 futex repair from untouched native SDKs and documents cache,
+packaging and coverage corrections.

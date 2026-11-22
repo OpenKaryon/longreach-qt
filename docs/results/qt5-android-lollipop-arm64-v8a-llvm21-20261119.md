@@ -51,7 +51,7 @@ The example build records the same immutable image identity.
 
 Runtime SHA256, identical to the separately tested standalone runtime:
 `fa08e29dc1ee5cb12af97b2ca60b25c1b15dd8d198ab7dd648d48395f78e69db`.
-The final source stack contains 56 patches; fingerprint:
+The SDK tested in this historical run contains 56 patches; fingerprint:
 `e51fbce1185ece0ff4d1a7eef3d7c9625870754cc5e01fba8b9f563b8a4351f6`.
 Producer evidence under `artifacts/qt5-android-lollipop-arm64-v8a/` includes
 `sdk-modules.txt`, `sdk-api21-elf.json`, `platform-input-provenance.json`,
@@ -185,3 +185,14 @@ with this pre-API 24 stdio profile. The emulator validates Android 5.0.2, not
 separate physical 5.0.0 devices. No local security tests, push or tag creation.
 
 See [the target guide](../targets/qt5-android-lollipop.md) for exact mode commands.
+
+
+## Provenance scope after the audit
+
+This saved SDK/report predates the 57-patch shared Android recipe. The later
+change modifies patch 02 and adds patch 27 for QtActivity Java reflection; it
+is not a native Qt rebuild recorded by this report. The earlier 56-patch hash
+above remains the identity actually tested. The current recipe and this
+historical qualification must not be described as the same patched-source
+snapshot. A current Java/template refresh on ARM64 still needs its own complete
+installed-APK report; the x86_64 audit run does not qualify ARM64 by substitution.

@@ -166,3 +166,12 @@ Evidence is under `artifacts/qt5-android-gingerbread-x86`:
 The normal phase-routing/coverage/syntax checks passed. Native builds and
 guests ran serially with two build CPUs and 3 GiB RAM; emulator guests were
 headless. No local security suites, push or new tag were run.
+
+
+## Later timed-wait correction
+
+The saved `sdk-suite-3` report above predates the targeted QtCore futex repair.
+Strict C++23 passed there, but it did not exercise Qt's timed mutex/semaphore
+wakeups with stale ETIMEDOUT. The [audit follow-up](android-audit-fixes-20261121.md)
+records that reproduced defect, its x86-only repair and the refreshed shared
+selftest. The older APK/SDK identities above remain historical evidence.

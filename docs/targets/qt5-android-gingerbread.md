@@ -172,3 +172,22 @@ The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
 records the current generation checks and installed-APK consumer validation,
 with exact SDK identities and retained failures. Native SDK provenance stays
 separate from consumer refreshes.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.
+
+
+The API10 QML gallery APK limits optional image plugins to GIF/JPEG/SVG from
+Qt's deployer selection (PNG is built into QtGui) to leave room below Bionic's 96-DSO loader limit. It does not
+package unused desktop image handlers. Other example APKs retain the normal
+Qt deployer selection. This packaging limit does not remove modules from the
+SDK or relax any QML/strict-C++23 checks.
+
+
+The console `qt-selftest` APK uses Qt's `android.app.background_running=true`
+metadata so its synchronous checks, which have no outer app.exec(), can finish
+independently of Activity suspension. GUI examples retain normal lifecycle
+handling. The API10 runner also verifies stay-awake for the disposable guest
+and retains the power-policy receipt; it does not change host power settings.

@@ -199,3 +199,8 @@ The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
 records the current generation checks and installed-APK consumer validation,
 with exact SDK identities and retained failures. Native SDK provenance stays
 separate from consumer refreshes.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.

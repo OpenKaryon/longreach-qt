@@ -84,3 +84,13 @@ require device validation. QtWebEngine is excluded. Files above 2 GiB are untest
 with this pre-API 24 stdio profile. AndroidExtras native service/Binder/Intent
 coverage remains the previously documented gap. Passing these cases does not
 claim exhaustive Qt/C++23 conformance or validation on Android 5.0.0.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.
+
+
+Qt 5 console selftest packages use the standard
+`android.app.background_running=true` metadata for synchronous checks without
+an outer app.exec(). Other GUI example APKs retain their normal lifecycle.

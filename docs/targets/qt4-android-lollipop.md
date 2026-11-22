@@ -68,10 +68,21 @@ plugins are static. Producer reports verify every target archive's ELF class
 and machine, effective configuration, source archive, compatibility patches,
 patched sources and C++ runtime.
 
-A change in effective configure flags invalidates affected target module/plugin
+The public Docker `qt-build` stage mounts an ABI-specific BuildKit cache at
+`/work` with exclusive sharing. SDK fingerprints include configure flags,
+actual compiler binary/version, runtime wrappers/target settings, mkspec and
+runtime/platform headers. A change invalidates affected target module/plugin
 objects. Source-only corrections retain incremental objects; repeating an
 unchanged SDK configuration does not rerun configure or target compilation.
-Installed qconfig metadata is refreshed when configuration changes.
+Installed qconfig metadata is refreshed when configuration changes. Introducing
+this expanded fingerprint may invalidate an older unrecorded cache once.
+
+Public examples mode retains a named client `/work` volume per ABI and output
+root. Its compile key also includes installed Qt headers and host qmake/moc/rcc/uic.
+Compiler/header/option changes clean affected clients. Archive-manifest changes
+only relink clients and retain their compilation objects. Cache storage lives
+outside the final SDK image; clearing Docker build cache or that client volume
+naturally removes the corresponding incremental state.
 
 ## Emulator cases and limits
 
@@ -108,3 +119,8 @@ See the [target result record](../results/qt4-android-lollipop-x86_64-llvm21-202
 for measured x86_64 counts and limitations. The
 [ARM64 result record](../results/qt4-android-lollipop-arm64-v8a-llvm21-20261121.md)
 records its independent qualification.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.

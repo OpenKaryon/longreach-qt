@@ -56,3 +56,13 @@ wrapped for arbitrary consumer code.
 
 See the [measured results](../results/qt4-android-gingerbread-x86-llvm21-20261121.md)
 for the exact guest cases and further limits.
+
+
+See [Android artifact generations and coverage](android-artifacts.md) for phase
+ownership, packaging receipts, ABI preflight, per-target coverage limits and
+the private ADB environment used in local reproduction.
+
+The shared Qt 4 SDK/client cache rules are described in the
+[API21 guide](qt4-android-lollipop.md#runtime-and-modules). API10 uses its own
+ABI-specific BuildKit cache and per-output client volume; archive-only changes
+relink without recompiling unchanged client objects.

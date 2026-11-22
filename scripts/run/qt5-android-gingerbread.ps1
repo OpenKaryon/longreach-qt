@@ -15,6 +15,9 @@ param(
     [ValidateSet('default', 'software')] [string] $QtQuickBackend = 'software',
     [switch] $StrictCxx23,
     [switch] $RuntimeProbe,
+    [string] $SdkImageId,
+    [string] $CaseName,
+    [switch] $ClassicEmulator,
     [switch] $DebugQtPlugins
 )
 
@@ -65,6 +68,14 @@ $Kernel = (Get-Item -LiteralPath $Kernel).FullName
 $Ramdisk = (Get-Item -LiteralPath $Ramdisk).FullName
 $SystemDirectory = (Resolve-Path -LiteralPath $SystemDirectory).Path
 $output = Initialize-AndroidRunDirectory $OutputDirectory
+$receipt = @{
+    schema_version=1; case=$CaseName; abi=$Abi; api=10; sdk_image_id=$SdkImageId
+    emulator_sha256=(Get-FileHash -LiteralPath $Emulator -Algorithm SHA256).Hash.ToLowerInvariant()
+    apk_sha256=(Get-FileHash -LiteralPath $Apk -Algorithm SHA256).Hash.ToLowerInvariant()
+    adb_server_socket=$env:ADB_SERVER_SOCKET; adb_server_port=$env:ANDROID_ADB_SERVER_PORT
+    started_utc=[DateTime]::UtcNow.ToString('o'); completed=$false
+}
+$receipt | ConvertTo-Json | Set-Content "$output/input-receipt.json"
 $serial = 'emulator-5580'
 $data = Join-Path $output 'userdata-qemu.img'
 Copy-Item -LiteralPath "$SystemDirectory/userdata.img" -Destination $data -Force
@@ -75,14 +86,24 @@ $arguments = @('-sysdir', $SystemDirectory, '-datadir', $output,
     '-no-window', '-no-audio', '-no-snapshot', '-no-snapstorage',
     '-skin', '480x320', '-partition-size', '512', '-memory', '256', '-gpu', 'off', '-port', '5580',
     '-no-boot-anim', '-verbose', '-show-kernel')
-if ($Abi -eq 'x86') { $arguments += @('-no-accel', '-qemu', '-cpu', 'core2duo') }
+if ($Abi -eq 'x86') {
+    if ($ClassicEmulator) { $arguments += @('-qemu', '-disable-hax', '-cpu', 'qemu32') }
+    else { $arguments += @('-no-accel', '-qemu', '-cpu', 'core2duo') }
+}
 else { $arguments += @('-qemu', '-cpu', 'cortex-a8') }
 $arguments = $arguments |
     ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
-$process = Start-Process -FilePath $Emulator -ArgumentList $arguments -WindowStyle Hidden -PassThru `
-    -RedirectStandardOutput "$output/emulator.stdout" -RedirectStandardError "$output/emulator.stderr"
+$previousSdkHome = $env:ANDROID_SDK_HOME
+try {
+    # Classic QEMU otherwise writes emulator-user.ini in the host user's home.
+    $env:ANDROID_SDK_HOME = $output
+    $process = Start-Process -FilePath $Emulator -ArgumentList $arguments -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput "$output/emulator.stdout" -RedirectStandardError "$output/emulator.stderr"
+} finally { $env:ANDROID_SDK_HOME = $previousSdkHome }
 try {
     Wait-AndroidBoot -Adb $adb -Serial $serial -RunDirectory $output -EmulatorPid $process.Id -TimeoutSeconds 180
+    Set-AndroidGuestStayAwake -Adb $adb -Serial $serial -RunDirectory $output
+    $receipt.guest_power_sha256=(Get-FileHash -LiteralPath "$output/power-before.txt" -Algorithm SHA256).Hash.ToLowerInvariant()
     foreach ($entry in @(
         @('ro.build.version.release', $(if ($Abi -eq 'x86') { '2.3.7' } else { '2.3.3' })),
         @('ro.build.version.sdk', '10'),
@@ -124,6 +145,7 @@ try {
     if ($StrictCxx23) {
         Invoke-AndroidTool python @("$repo/scripts/tests/require-modern-cpp.py", "$output/files/$stdoutName")
     }
+    Start-Sleep -Seconds 2
     $report = @(Get-Content -LiteralPath "$output/files/$stdoutName")
     $knownApps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" |
         Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
@@ -133,6 +155,18 @@ try {
             throw 'The APK returned zero but did not report successful smoke checks.'
         }
     }
+    if ($CaseName) {
+        Invoke-AndroidTool python @("$repo/scripts/run/android-baselines.py", '--qt', '5', '--api', '10', '--abi', $Abi, '--case', $CaseName, '--report', "$output/files/$stdoutName")
+    }
+    if ($receipt.apk_sha256 -ne (Get-FileHash -LiteralPath $Apk -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw 'APK changed while the guest was running'
+    }
+    $logs = @(Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'logcat', '-d', '-v', 'brief'))
+    if ($logs -match 'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting') { throw 'Fatal cleanup error; see logcat.log' }
+    $receipt.completed=$true
+    $receipt.stdout_sha256=(Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant()
+    $receipt.finished_utc=[DateTime]::UtcNow.ToString('o')
+    $receipt | ConvertTo-Json | Set-Content "$output/input-receipt.json"
     $report
 } finally {
     try {

@@ -24,13 +24,21 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p test_tooling.py
           python3 -m unittest discover -s scripts/tests -p test_android_artifacts.py
+          python3 -m unittest discover -s scripts/tests -p test_android_baselines.py
+          python3 -m unittest discover -s scripts/tests -p test_android_native_abi.py
+          python3 -m unittest discover -s scripts/tests -p test_android_legacy_results.py
+          python3 -m unittest discover -s scripts/tests -p test_qt4_android_cache.py
       - name: Check Android phase routing
         shell: pwsh
         run: |
           ./scripts/tests/test-qt4-android-modes.ps1
           ./scripts/tests/test-qt5-android-modes.ps1
+          ./scripts/tests/test-qt5-android-legacy-suite.ps1
           ./scripts/tests/test-qt6-android-modes.ps1
           ./scripts/tests/test-android-generation.ps1
+          ./scripts/tests/test-android-artifact-lock.ps1
+          ./scripts/tests/test-android-package-policy.ps1
+          ./scripts/tests/test-android-guest-awake.ps1
       - name: Check API coverage inventory
         run: python3 scripts/tests/check_coverage.py --gate
       - name: Check license matrix

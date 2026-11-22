@@ -10,6 +10,7 @@ param(
     [string] $CompileApi = '35',
     [string[]] $Modules = @('Core', 'Gui', 'Widgets'),
     [string[]] $Plugins,
+    [string[]] $ImageFormats,
     [string] $Package = 'org.longreachqt.examples.probe',
     [string] $DeploymentDirectory
 )
@@ -79,6 +80,9 @@ try {
 "@
         [IO.File]::WriteAllText("$work/res/values/libs.xml", $libs)
     }
+    . "$PSScriptRoot/package-example-policy.ps1"
+    Select-AndroidImageFormats "$work/lib/$Abi" $Abi $ImageFormats
+    $exampleMetadata=Get-AndroidExampleMetadata $appName
     # Explicit native/runtime inputs take precedence over deployment copies.
     Copy-Item -LiteralPath $NativeLibrary, $RuntimeLibrary -Destination "$work/lib/$Abi" -Force
     $permissions = @('android.permission.INTERNET')
@@ -123,6 +127,7 @@ try {
             <meta-data android:name="android.app.use_local_qt_libs" android:value="1"/>
             <meta-data android:name="android.app.bundle_local_qt_libs" android:value="1"/>
             $moduleInitialization
+            $exampleMetadata
             <meta-data android:name="android.app.extract_android_style" android:value="none"/>
         </activity>
     </application>

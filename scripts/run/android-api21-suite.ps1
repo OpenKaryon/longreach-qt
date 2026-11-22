@@ -137,6 +137,8 @@ try {
         } elseif (!($report -match '^---- [^:]+: [1-9][0-9]* passed, 0 failed, [0-9]+ skipped ----\s*$')) {
             throw "$($case.Name) has no successful ordinary summary"
         }
+        & python "$repo/scripts/run/android-baselines.py" --qt $QtMajor --api 21 --abi $Abi --case $case.Name --report $stdout
+        if ($LASTEXITCODE) { throw "Coverage regression: $($case.Name)" }
         $summary = @($report | Where-Object { $_ -match 'passed,.*failed,.*skipped' })
         $outcomes.Add([pscustomobject]@{ name=$case.Name; log_marker=$logMarker; app=$app; arguments=$case.Arguments; apk_relative=$apkRelative; result=0; summary=$summary; apk_sha256=(Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant(); finished_utc=[DateTime]::UtcNow.ToString('o') })
         $outcomes | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$run/results.json"

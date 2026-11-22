@@ -60,3 +60,17 @@ function Wait-AndroidBoot {
     }
     throw "Android did not boot within $TimeoutSeconds seconds ($timeouts timed-out queries)"
 }
+
+
+function Set-AndroidGuestStayAwake {
+    param([Parameter(Mandatory)][string]$Adb, [Parameter(Mandatory)][string]$Serial,
+          [Parameter(Mandatory)][string]$RunDirectory)
+    & $Adb -s $Serial shell svc power stayon true | Out-Null
+    if ($LASTEXITCODE) { throw 'Could not keep the test guest awake' }
+    $state=@(& $Adb -s $Serial shell dumpsys power)
+    if ($LASTEXITCODE) { throw 'Could not read the guest power policy' }
+    $state | Set-Content -LiteralPath (Join-Path $RunDirectory 'power-before.txt')
+    if (($state -join "`n") -notmatch '\bmStayOn(?:Conditions|Setting)=(?:3|7)\b') {
+        throw 'The guest did not confirm stay-awake on all power sources'
+    }
+}

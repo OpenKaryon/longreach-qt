@@ -4,6 +4,9 @@ param([ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi = 'arm
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
+ . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $root
+try {
 $apps=@(Get-Content "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 if ($apps.Count -ne 8) { throw 'Expected eight applications' }
 # Validate every input before signing or replacing any APK. No SDK image is needed.
@@ -22,8 +25,9 @@ foreach ($app in $apps) {
 }
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-examples --root $root --qt-major 6 --abi $Abi
 if ($LASTEXITCODE) { throw 'Packaging requires a complete, unchanged example generation' }
-# A failed replacement must not leave an earlier package generation marked ready.
-Remove-Item -LiteralPath "$root/apk-manifest.json" -Force -ErrorAction SilentlyContinue
+$javac=(Get-Command javac.exe,javac -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" begin-apks --root $root --qt-major 6 --abi $Abi --android-sdk $AndroidSdk --javac $javac
+if ($LASTEXITCODE) { throw 'Cannot begin a consistent APK generation' }
 $packages=[Collections.Generic.List[object]]::new()
 foreach ($app in $apps) {
     $deployment="$root/deployment/$app"
@@ -39,5 +43,7 @@ foreach ($app in $apps) {
     Write-Output "Packaged $app ($($apk.Length) bytes)"
 }
 
-& python "$repo/scripts/build/android-api21/artifact-manifest.py" record-apks --root $root --qt-major 6 --abi $Abi
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" record-apks --root $root --qt-major 6 --abi $Abi --android-sdk $AndroidSdk --javac $javac
 if ($LASTEXITCODE) { throw 'Cannot bind APKs to the completed example generation' }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

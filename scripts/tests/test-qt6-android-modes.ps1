@@ -56,7 +56,7 @@ function Expect-ModeFailure([hashtable]$Parameters, [string]$Pattern) {
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG = Join-Path $fixture 'calls.log'
-    foreach ($relative in @('scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
+    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
             'scripts/fetch/qt6-android.ps1','tests/expected-apps.txt')) {
         $destination = Join-Path $fixture $relative
         New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null

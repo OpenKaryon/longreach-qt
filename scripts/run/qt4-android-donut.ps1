@@ -125,6 +125,7 @@ function Invoke-DonutRun([string] $Profile) {
             $report = Invoke-DonutCommand $adb @('-s', $serial, 'shell', 'cat',
                 '/data/data/org.longreachqt.donut/files/suite.log')
             $report | Set-Content -Encoding utf8 -LiteralPath "$run/$suite-guest.stdout"
+            Invoke-DonutCommand python @("$repo/scripts/run/android-baselines.py", '--qt', '4', '--api', '4', '--abi', 'armeabi', '--case', $Profile, '--report', "$run/$suite-guest.stdout")
             $report | Write-Output
             $summary = '^---- ' + [regex]::Escape($suite) + ': [1-9][0-9]* passed, 0 failed, \d+ skipped ----\s*$'
             if (!($complete -match 'Native probe returned 0\s*$') -or !($report -match $summary)) {

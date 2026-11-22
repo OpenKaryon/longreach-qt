@@ -4,6 +4,9 @@ param([ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi='armea
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
+ . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $root
+try {
 $apps=@(Get-Content "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 if ($apps.Count -ne 8) { throw 'Expected eight shared applications' }
 $deployments=@($apps | ForEach-Object { @{App=$_; Directory="deployment/$_"; ApkDirectory='apk'} })
@@ -19,13 +22,20 @@ foreach ($item in $deployments) {
 }
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-examples --root $root --qt-major 5 --abi $Abi
 if ($LASTEXITCODE) { throw 'Packaging requires a complete, unchanged example generation' }
-# A failed replacement must not leave an earlier package generation marked ready.
-Remove-Item -LiteralPath "$root/apk-manifest.json" -Force -ErrorAction SilentlyContinue
+$javac=(Get-Command javac.exe,javac -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" begin-apks --root $root --qt-major 5 --abi $Abi --android-sdk $AndroidSdk --javac $javac
+if ($LASTEXITCODE) { throw 'Cannot begin a consistent APK generation' }
 $packages=[Collections.Generic.List[object]]::new()
 foreach ($item in $deployments) {
     $app=$item.App
     $deployment="$root/$($item.Directory)"
-    & "$PSScriptRoot/package.ps1" -Abi $Abi -QtSdk "$root/sdk" -AndroidSdk $AndroidSdk `
+    $pluginOptions=@{}
+    if ($Abi -in @('armeabi-v7a','x86') -and $app -eq 'quick-qml-gallery') {
+        # Bionic API10 has only 96 DSO slots. PNG is built in; the shared
+        # gallery uses GIF/JPEG/SVG, not the remaining desktop image handlers.
+        $pluginOptions.ImageFormats=@('gif','jpeg','svg')
+    }
+    & "$PSScriptRoot/package.ps1" @pluginOptions -Abi $Abi -QtSdk "$root/sdk" -AndroidSdk $AndroidSdk `
         -NativeLibrary "$deployment/libs/$Abi/lib${app}_$Abi.so" -RuntimeLibrary "$root/native/libc++_shared.so" `
         -DeploymentDirectory $deployment -OutputDirectory "$root/$($item.ApkDirectory)" `
         -Package ('org.longreachqt.examples.'+$app.Replace('-',''))
@@ -35,5 +45,7 @@ foreach ($item in $deployments) {
     Write-Output "Packaged $($item.ApkDirectory)/$app.apk ($($apk.Length) bytes)"
 }
 
-& python "$repo/scripts/build/android-api21/artifact-manifest.py" record-apks --root $root --qt-major 5 --abi $Abi
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" record-apks --root $root --qt-major 5 --abi $Abi --android-sdk $AndroidSdk --javac $javac
 if ($LASTEXITCODE) { throw 'Cannot bind APKs to the completed example generation' }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

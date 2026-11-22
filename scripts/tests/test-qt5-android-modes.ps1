@@ -60,7 +60,7 @@ function Expect-Failure([hashtable]$Options,[string]$Message) {
 try {
     New-Item -ItemType Directory $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG="$fixture/calls.log"
-    foreach ($relative in @('scripts/build/qt5-android.ps1','scripts/build/qt5-android/package-suite.ps1','tests/expected-apps.txt')) {
+    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt5-android.ps1','scripts/build/qt5-android/package-suite.ps1','tests/expected-apps.txt')) {
         $destination=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
         Copy-Item -LiteralPath (Join-Path $RepoRoot $relative) -Destination $destination
@@ -71,7 +71,8 @@ param($Abi,$Scope,$AndroidSdk)
 Add-Content $env:LONGREACH_MODE_TEST_LOG "fetch|$Abi|$Scope"
 '@ | Set-Content "$fixture/scripts/fetch/qt5-android.ps1"
     @'
-param($Abi,$RunName,$AndroidSdk,$OutputDirectory,$Gpu,$CaseNames,[switch]$DebugQtPlugins,$QtQuickBackend)
+param($Abi,$RunName,$AndroidSdk,$OutputDirectory,$Gpu,$CaseNames,[switch]$DebugQtPlugins,$QtQuickBackend,$Emulator)
+if ($Emulator) { Add-Content $env:LONGREACH_MODE_TEST_LOG "emulator|$Emulator" }
 Add-Content $env:LONGREACH_MODE_TEST_LOG "test|$Abi|$RunName|$($CaseNames -join ',')|$DebugQtPlugins"
 '@ | Set-Content "$fixture/scripts/run/qt5-android-suite.ps1"
     @'
@@ -146,6 +147,11 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Invoke-Mode ($entry+@{Mode='test';Abi='x86_64';RunName='x86-64-routing';CaseNames=@('strict-cxx23-extended')})
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86_64|x86-64-routing|strict-cxx23-extended|False') 'x86_64 test mode lost ABI or extended-case routing'
     Reset-Calls
+    Invoke-Mode ($entry+@{Mode='test';Abi='x86';Emulator='already-built/emulator-x86.exe'})
+    Assert-Mode (@(Calls).Count -eq 2 -and @(Calls)[0] -eq 'emulator|already-built/emulator-x86.exe') 'Test mode lost the explicit emulator'
+    Reset-Calls
+    Expect-Failure ($entry+@{Mode='examples';Abi='x86';Emulator='unused.exe'}) 'requires -Mode test -Abi x86'
+    Assert-Mode (@(Calls).Count -eq 0) 'An invalid emulator override started work'
     Expect-Failure ($entry+@{Mode='examples';Abi='x86'}) 'not the Qt5'
     Assert-Mode (@(Calls).Count -eq 1) '32-bit x86 consumed a 64-bit SDK'
     $global:Qt5ModeAbi='x86'

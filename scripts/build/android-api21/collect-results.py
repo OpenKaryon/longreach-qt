@@ -3,11 +3,17 @@
 """Collect complete API21 example evidence and bind each result to its current APK."""
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
 import subprocess
 import sys
+
+
+_spec = importlib.util.spec_from_file_location('android_baselines', Path(__file__).resolve().parents[2] / 'run/android-baselines.py')
+_baselines = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_baselines)
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--qt-major', choices=(5, 6), type=int, default=6)
@@ -78,6 +84,7 @@ for record in records:
         raise RuntimeError(f'Ambiguous or failed report: {name}: {counts}')
     if name.startswith('strict-cxx23') and counts[0] != (25, 0, 0):
         raise RuntimeError('Strict C++23 must pass exactly25 without FAIL/SKIP')
+    _baselines.require(args.qt_major, 21, args.abi, name, stdout)
     record.update(zip(('passed', 'failed', 'skipped'), counts[0]))
     record['evidence'] = str(case.relative_to(root)).replace('\\', '/')
     table.append(f'| {name} | {counts[0][0]} | {counts[0][1]} | {counts[0][2]} |')

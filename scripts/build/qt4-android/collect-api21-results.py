@@ -2,6 +2,7 @@
 """Verify a complete Qt4 Android run against its current SDK/APKs/raw reports."""
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -9,6 +10,11 @@ import struct
 import subprocess
 import sys
 import zipfile
+
+
+_spec = importlib.util.spec_from_file_location('android_baselines', Path(__file__).resolve().parents[2] / 'run/android-baselines.py')
+_baselines = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_baselines)
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--root', type=Path, required=True)
@@ -113,6 +119,8 @@ for record in records:
         if name == 'core' and 'QtCore 4.8.7 PASS' not in log:
             raise RuntimeError('Missing QtCore behavior check')
         counts = (1, 0, 0)
+    if name in labels:
+        _baselines.require(4, api, args.abi, name, stdout)
     if tuple(record[field] for field in ('passed', 'failed', 'skipped')) != counts:
         raise RuntimeError('Counts differ from captured report: ' + name)
     with zipfile.ZipFile(apk) as archive:

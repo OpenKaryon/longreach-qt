@@ -6,6 +6,7 @@ param(
     [string]$AndroidSdk=$env:ANDROID_HOME,
     [string]$OutputDirectory,
     [string]$SdkImage,
+    [string]$Emulator,
     [switch]$SdkOnly,
     [string]$RunName='sdk-suite',
     [ValidateSet('on','mesa')][string]$Gpu='on',
@@ -23,6 +24,7 @@ if ($SdkOnly) {
     if ($PSBoundParameters.ContainsKey('Mode') -and $Mode -ne 'sdk') { throw '-SdkOnly cannot be combined with a mode other than sdk.' }
     $Mode='sdk'
 }
+if ($Emulator -and ($Mode -ne 'test' -or $Abi -ne 'x86')) { throw '-Emulator requires -Mode test -Abi x86.' }
 $api=if ($Abi -in @('armeabi-v7a','x86')) { '10' } else { '21' }
 $platform=if ($api -eq '10') { "android-gingerbread-$Abi" } else { "android-lollipop-$Abi" }
 $profile=if ($Abi -eq 'armeabi-v7a') { 'gingerbread' } elseif ($api -eq '10') { "gingerbread-$Abi" } else { "lollipop-$Abi" }
@@ -34,6 +36,9 @@ if ($Mode -in @('sdk','examples') -and
 }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
+ . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $OutputDirectory
+try {
 switch ($Mode) {
     'sdk' {
         & "$repo/scripts/fetch/qt5-android.ps1" -Abi $Abi -Scope sdk -AndroidSdk $AndroidSdk
@@ -95,7 +100,11 @@ switch ($Mode) {
     }
     'test' {
         $output=(Resolve-Path -LiteralPath $OutputDirectory).Path
-        & "$repo/scripts/run/qt5-android-suite.ps1" -Abi $Abi -AndroidSdk $AndroidSdk -OutputDirectory $output `
+        $testOptions=@{}
+        if ($Emulator) { $testOptions.Emulator=$Emulator }
+        & "$repo/scripts/run/qt5-android-suite.ps1" @testOptions -Abi $Abi -AndroidSdk $AndroidSdk -OutputDirectory $output `
             -RunName $RunName -Gpu $Gpu -CaseNames $CaseNames -DebugQtPlugins:$DebugQtPlugins -QtQuickBackend $QtQuickBackend
     }
 }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

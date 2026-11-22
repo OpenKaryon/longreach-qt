@@ -34,6 +34,9 @@ if ($Mode -in @('sdk','examples') -and
     throw 'Stop the Android emulator before compiling.'
 }
 
+ . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $OutputDirectory
+try {
 switch ($Mode) {
     'sdk' {
         # Fail before downloads or provisioning when the required ready host SDK is absent.
@@ -93,3 +96,5 @@ switch ($Mode) {
             -RunName $RunName -Gpu $Gpu -Abi $Abi -CaseNames $CaseNames -QtQuickBackend $QtQuickBackend @testOptions
     }
 }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

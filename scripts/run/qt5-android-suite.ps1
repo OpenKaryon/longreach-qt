@@ -8,10 +8,13 @@ param(
     [switch]$DebugQtPlugins,
     [ValidateSet('default','software')][string]$QtQuickBackend = 'default',
     [string] $AndroidSdk = $env:ANDROID_HOME,
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+    [string] $Emulator
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Emulator -and $Abi -ne 'x86') { throw '-Emulator is only supported for the API10 x86 suite' }
+if ($Emulator) { $Emulator=(Get-Item -LiteralPath $Emulator).FullName }
 if ($Abi -notin @('armeabi-v7a','x86')) {
     $options=@{} + $PSBoundParameters
     $options.RunName=$RunName
@@ -33,6 +36,10 @@ if (!$OutputDirectory) {
     $OutputDirectory = Join-Path $repo "artifacts/qt5-android-gingerbread$suffix"
 }
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
+# A failed new run must not leave an earlier batch advertised as complete.
+foreach ($name in @('final-results.json','final-results-table.md','apk-native-abi-check.json')) {
+    Remove-Item -LiteralPath (Join-Path $output $name) -Force -ErrorAction SilentlyContinue
+}
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $output --qt-major 5 --abi $Abi
 if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
 $inputs = Join-Path $repo 'downloads/android-gingerbread'
@@ -40,12 +47,13 @@ $media = (New-Item -ItemType Directory -Force -Path "$output/inputs").FullName
 & "$repo/scripts/fetch/qt5-android.ps1" -Abi $Abi -AndroidSdk $AndroidSdk -Scope test
 if ($Abi -eq 'x86') {
     Invoke-AndroidSuiteTool tar.exe @('-xf', "$inputs/x86-10_r05.zip", '-C', $media)
-    Invoke-AndroidSuiteTool tar.exe @('-xf', "$inputs/tools_r24.4.1-windows.zip", '-C', $media)
+    if (!$Emulator) { Invoke-AndroidSuiteTool tar.exe @('-xf', "$inputs/tools_r24.4.1-windows.zip", '-C', $media) }
     $guest = @{
         Abi = $Abi
         AndroidSdk = $AndroidSdk
         SystemDirectory = "$media/x86"
-        Emulator = "$media/tools/emulator-x86.exe"
+        Emulator = $(if ($Emulator) { $Emulator } else { "$media/tools/emulator-x86.exe" })
+        ClassicEmulator = [bool]$Emulator
         Kernel = "$media/x86/kernel-qemu"
         Ramdisk = "$media/x86/ramdisk.img"
         QtQuickBackend = 'software'
@@ -65,22 +73,30 @@ if ($Abi -eq 'x86') {
         QtQuickBackend = 'software'
     }
 }
+$guest.SdkImageId=(Get-Content -LiteralPath "$output/sdk-image-id.txt" -Raw).Trim()
 $runner = "$PSScriptRoot/qt5-android-gingerbread.ps1"
-& $runner @guest -Apk "$output/apk/qt-selftest.apk" -StrictCxx23 `
+if ($Abi -eq 'x86') {
+    & $runner @guest -CaseName atomic-cow -Apk "$output/apk/qt-selftest.apk" `
+        -ApplicationArguments '--atomic-cow' -Package org.longreachqt.examples.qtselftest `
+        -OutputDirectory "$output/$RunName/atomic-cow"
+}
+& $runner @guest -CaseName strict-cxx23 -Apk "$output/apk/qt-selftest.apk" -StrictCxx23 `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/strict-cxx23"
 $apps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" |
     ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 foreach ($app in $apps) {
-    & $runner @guest -Apk "$output/apk/$app.apk" -ApplicationArguments '--selftest' `
+    & $runner @guest -CaseName $app -Apk "$output/apk/$app.apk" -ApplicationArguments '--selftest' `
         -Package ("org.longreachqt.examples." + $app.Replace('-', '')) -OutputDirectory "$output/$RunName/$app"
 }
 
-& $runner @guest -Apk "$output/apk/extended/qt-selftest.apk" -StrictCxx23 `
+& $runner @guest -CaseName strict-cxx23-extended -Apk "$output/apk/extended/qt-selftest.apk" -StrictCxx23 `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/strict-cxx23-extended"
-& $runner @guest -Apk "$output/apk/extended/qt-selftest.apk" -ApplicationArguments '--selftest' `
+& $runner @guest -CaseName qt-selftest-extended -Apk "$output/apk/extended/qt-selftest.apk" -ApplicationArguments '--selftest' `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/qt-selftest-extended"
 
 foreach ($app in @('widgets-gallery', 'quick-qml-gallery')) {
-    & $runner @guest -Apk "$output/apk/$app.apk" -ApplicationArguments '--gallery-selftest' `
+    & $runner @guest -CaseName "$app-render" -Apk "$output/apk/$app.apk" -ApplicationArguments '--gallery-selftest' `
         -Package ("org.longreachqt.examples." + $app.Replace('-', '')) -OutputDirectory "$output/$RunName/$app-render"
 }
+
+Invoke-AndroidSuiteTool python @("$repo/scripts/build/qt5-android/collect-legacy-results.py", '--root', $output, '--run', $RunName, '--abi', $Abi)

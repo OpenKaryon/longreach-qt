@@ -156,6 +156,10 @@ try {
             $passed=[int]$Matches[1]
             $skipped=[int]$Matches[2]
         }
+        if ($labels.ContainsKey($profile)) {
+            & python "$repo/scripts/run/android-baselines.py" --qt 4 --api $api --abi $Abi --case $profile --report "$case/files/suite.log"
+            if ($LASTEXITCODE) { throw "Coverage regression: $profile" }
+        }
         if ($profile -eq 'quick') {
             $stdout=Get-Content "$case/files/quick-smoke.txt"
             foreach ($check in $quickChecks) { if ($check -notin $stdout.Trim()) { throw "Missing gallery check: $check" } }

@@ -1,0 +1,681 @@
+{
+  "schema": 1,
+  "targets": {
+    "4/10/x86": {
+      "bootstrap": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "strict": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "core": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "selftest": {
+        "min_pass": 114,
+        "max_skip": 120
+      },
+      "widgets": {
+        "min_pass": 135,
+        "max_skip": 12
+      },
+      "graphics": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia": {
+        "min_pass": 9,
+        "max_skip": 3
+      },
+      "gl": {
+        "min_pass": 13,
+        "max_skip": 1,
+        "required_pass": [
+          "qgl/widget-context",
+          "qgl/vertex-buffer",
+          "qgl/framebuffer-render-readback",
+          "qgl/shader-program",
+          "qgl/gallery-triangle-render"
+        ]
+      },
+      "qml": {
+        "min_pass": 30,
+        "max_skip": 0
+      },
+      "network": {
+        "min_pass": 2,
+        "max_skip": 2
+      },
+      "quick": {
+        "min_pass": 5,
+        "max_skip": 0
+      }
+    },
+    "4/21/x86_64": {
+      "bootstrap": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "strict": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "core": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "selftest": {
+        "min_pass": 114,
+        "max_skip": 120
+      },
+      "widgets": {
+        "min_pass": 135,
+        "max_skip": 12
+      },
+      "graphics": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia": {
+        "min_pass": 9,
+        "max_skip": 3
+      },
+      "gl": {
+        "min_pass": 13,
+        "max_skip": 1,
+        "required_pass": [
+          "qgl/widget-context",
+          "qgl/vertex-buffer",
+          "qgl/framebuffer-render-readback",
+          "qgl/shader-program",
+          "qgl/gallery-triangle-render"
+        ]
+      },
+      "qml": {
+        "min_pass": 30,
+        "max_skip": 0
+      },
+      "network": {
+        "min_pass": 2,
+        "max_skip": 2
+      },
+      "quick": {
+        "min_pass": 5,
+        "max_skip": 0
+      }
+    },
+    "4/21/arm64-v8a": {
+      "bootstrap": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "strict": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "core": {
+        "min_pass": 1,
+        "max_skip": 0
+      },
+      "selftest": {
+        "min_pass": 114,
+        "max_skip": 120
+      },
+      "widgets": {
+        "min_pass": 135,
+        "max_skip": 12
+      },
+      "graphics": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia": {
+        "min_pass": 9,
+        "max_skip": 3
+      },
+      "gl": {
+        "min_pass": 13,
+        "max_skip": 1,
+        "required_pass": [
+          "qgl/widget-context",
+          "qgl/vertex-buffer",
+          "qgl/framebuffer-render-readback",
+          "qgl/shader-program",
+          "qgl/gallery-triangle-render"
+        ]
+      },
+      "qml": {
+        "min_pass": 30,
+        "max_skip": 0
+      },
+      "network": {
+        "min_pass": 2,
+        "max_skip": 2
+      },
+      "quick": {
+        "min_pass": 5,
+        "max_skip": 0
+      }
+    },
+    "5/21/arm64-v8a": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 208,
+        "max_skip": 63
+      },
+      "widgets-gallery": {
+        "min_pass": 90,
+        "max_skip": 5
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 53,
+        "max_skip": 6,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 25,
+        "max_skip": 13,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "strict-cxx23-extended": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest-extended": {
+        "min_pass": 106,
+        "max_skip": 4
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "5/21/x86_64": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 208,
+        "max_skip": 63
+      },
+      "widgets-gallery": {
+        "min_pass": 90,
+        "max_skip": 5
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 53,
+        "max_skip": 6,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 25,
+        "max_skip": 13,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "strict-cxx23-extended": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest-extended": {
+        "min_pass": 106,
+        "max_skip": 4
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "6/21/armeabi-v7a": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 292,
+        "max_skip": 43
+      },
+      "widgets-gallery": {
+        "min_pass": 91,
+        "max_skip": 4
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 58,
+        "max_skip": 1,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 35,
+        "max_skip": 5,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "6/21/arm64-v8a": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 292,
+        "max_skip": 43
+      },
+      "widgets-gallery": {
+        "min_pass": 91,
+        "max_skip": 4
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 58,
+        "max_skip": 1,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 35,
+        "max_skip": 5,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "6/21/x86": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 293,
+        "max_skip": 43
+      },
+      "widgets-gallery": {
+        "min_pass": 91,
+        "max_skip": 4
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 58,
+        "max_skip": 1,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 35,
+        "max_skip": 5,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "6/21/x86_64": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 292,
+        "max_skip": 43
+      },
+      "widgets-gallery": {
+        "min_pass": 91,
+        "max_skip": 4
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 58,
+        "max_skip": 1,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append",
+          "qt3d/quick-aspect-scene2d",
+          "datavis/bars-series-proxy"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 35,
+        "max_skip": 5,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "5/10/x86": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 213,
+        "max_skip": 63,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ]
+      },
+      "widgets-gallery": {
+        "min_pass": 90,
+        "max_skip": 5
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 38,
+        "max_skip": 8,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 24,
+        "max_skip": 14,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "strict-cxx23-extended": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest-extended": {
+        "min_pass": 106,
+        "max_skip": 4
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      },
+      "atomic-cow": {
+        "min_pass": 3,
+        "max_skip": 0,
+        "required_pass": [
+          "sync/atomic-cow-qt",
+          "sync/atomic-cow-std",
+          "sync/atomic-cow-builtin"
+        ]
+      }
+    },
+    "5/10/armeabi-v7a": {
+      "strict-cxx23": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest": {
+        "min_pass": 209,
+        "max_skip": 63
+      },
+      "widgets-gallery": {
+        "min_pass": 90,
+        "max_skip": 5
+      },
+      "graphics-gallery": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting-lab": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "multimedia-lab": {
+        "min_pass": 4,
+        "max_skip": 0
+      },
+      "gl-heavy-gallery": {
+        "min_pass": 38,
+        "max_skip": 8,
+        "required_pass": [
+          "qt3d/entity-component-transform",
+          "charts/xyseries-append"
+        ]
+      },
+      "quick-qml-gallery": {
+        "min_pass": 24,
+        "max_skip": 14,
+        "required_pass": [
+          "qml/visual-files-compile"
+        ]
+      },
+      "network-gui": {
+        "min_pass": 7,
+        "max_skip": 0
+      },
+      "strict-cxx23-extended": {
+        "min_pass": 25,
+        "max_skip": 0
+      },
+      "qt-selftest-extended": {
+        "min_pass": 106,
+        "max_skip": 4
+      },
+      "widgets-gui": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "qml-gui": {
+        "min_pass": 3,
+        "max_skip": 0
+      }
+    },
+    "4/4/armeabi": {
+      "selftest": {
+        "min_pass": 102,
+        "max_skip": 122
+      },
+      "graphics": {
+        "min_pass": 32,
+        "max_skip": 0
+      },
+      "painting": {
+        "min_pass": 16,
+        "max_skip": 0
+      },
+      "network": {
+        "min_pass": 2,
+        "max_skip": 2
+      },
+      "strict": {
+        "min_pass": 25,
+        "max_skip": 0
+      }
+    }
+  }
+}

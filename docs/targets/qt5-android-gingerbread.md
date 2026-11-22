@@ -191,3 +191,9 @@ metadata so its synchronous checks, which have no outer app.exec(), can finish
 independently of Activity suspension. GUI examples retain normal lifecycle
 handling. The API10 runner also verifies stay-awake for the disposable guest
 and retains the power-policy receipt; it does not change host power settings.
+
+
+The [2026-11-22 x86 sound-cache shutdown qualification](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
+records the narrow QtMultimedia cleanup correction and all fourteen successful
+cases on the unchanged corrected emulator, including COW and both strict C++23
+profiles. This result does not qualify the affected stock emulator or another ABI.

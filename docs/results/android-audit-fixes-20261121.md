@@ -37,7 +37,7 @@ The refreshed installed SDK is
 `sha256:b039116780201a5fb4e7395396184ded7a570ea91e6c572ffaddfb355e51c5c6`.
 Its QtCore SHA256 is `2f290de9cf1b94c6216fdba1c256b7d6d30411ddc5829a80ee5a0c562de49345`; runtime remains
 `c253eff8207403db045f4980c07620f213e7e31427e9f2680c784570eee33489`.
-All 58 recorded patch hashes match the current target stack, fingerprint
+All 58 recorded patch hashes match the target stack used in that batch, fingerprint
 `2ebdeee0f2abfdc2d54bc2c9bde0a777533326aacaf6cec434a3274c985e1c53`.
 A comparison of installed shared libraries found only QtCore changed relative
 to the previous qualified x86 SDK. The other native modules were reused.
@@ -211,8 +211,18 @@ failed new run or collection. Regression fixtures exercise emulator selection,
 preflight ordering, default SDK-tool routing and invalidation without launching
 guests. Review validation passed 41 ordinary Python tests and eight PowerShell
 fixtures, plus compilation syntax checks of the two changed C++ translation
-units against the saved Qt 5 x86 SDK. The emulator was not rebuilt. These local
-changes have not been qualified by a new installed-APK run.
+units against the saved Qt 5 x86 SDK. The emulator was not rebuilt. At the end
+of that review, a new installed-APK run was still pending.
+
+## Sound-cache shutdown follow-up, 2026-11-22
+
+The first subsequent fourteen-case attempt found a real extended-selftest
+teardown SIGSEGV after its 106 successful checks. The failure was retained.
+A narrow x86 QtMultimedia correction stops the loader before locking and
+detaches samples before cache-owned deletion. Two focused non-instrumented
+runs and a new complete fourteen-case batch passed the existing cleanup gate.
+See the [recorded result](qt5-android-gingerbread-x86-sample-cache-fix-20261122.md) for the 59-patch SDK identity, unchanged
+QtCore/runtime/emulator hashes, exact counts and remaining scope limits.
 
 ## Findings not converted into speculative changes
 

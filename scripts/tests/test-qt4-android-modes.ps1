@@ -30,6 +30,19 @@ function docker {
     }
     if ($Arguments[0] -eq 'create') { return ('b'*64) }
 }
+function Write-ModeNative([string]$Path,[string]$Text) {
+    $header=[byte[]]::new(20)
+    $header[0]=127;$header[1]=69;$header[2]=76;$header[3]=70;$header[5]=1
+    $header[4]=if($global:Qt4ModeAbi -eq 'x86'){1}else{2}
+    $header[18]=switch($global:Qt4ModeAbi){'x86'{3};'x86_64'{62};default{183}}
+    [IO.File]::WriteAllBytes($Path,($header+[Text.Encoding]::UTF8.GetBytes($Text)))
+}
+function Write-ModeManifest($Built) {
+    Write-ModeNative "$output/native/libc++_shared.so" 'runtime'
+    @{schema_version=2;abi=$global:Qt4ModeAbi;api=$(if($global:Qt4ModeAbi -eq 'x86'){10}else{21});
+      sdk_image_id=$global:Qt4ModeId;clients=@($Built);runtime_sha256=(Get-FileHash "$output/native/libc++_shared.so").Hash.ToLowerInvariant()} |
+      ConvertTo-Json -Depth 6 | Set-Content "$output/native/examples-build.json"
+}
 function Invoke-Mode([hashtable]$Options) { & "$fixture/scripts/build/qt4-android.ps1" @Options | Out-Null }
 function Expect-Failure([hashtable]$Options,[string]$Message) {
     try { Invoke-Mode $Options } catch { Assert-Mode ($_.Exception.Message -match $Message) "Unexpected error: $_"; return }
@@ -38,7 +51,7 @@ function Expect-Failure([hashtable]$Options,[string]$Message) {
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG="$fixture/calls.log"
-    foreach ($relative in @('scripts/build/qt4-android.ps1','scripts/build/qt4-android/api21.ps1','scripts/build/qt4-android/host.ps1')) {
+    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/android-api21/native-abi.py','scripts/build/qt4-android.ps1','scripts/build/qt4-android/api21.ps1','scripts/build/qt4-android/host.ps1')) {
         $destination=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
         Copy-Item -LiteralPath (Join-Path $RepoRoot $relative) -Destination $destination
@@ -86,10 +99,10 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86_64|fixture-suite|strict,quick') 'Test mode compiled or lost its subset'
     $profiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
     $built=foreach ($profile in $profiles) {
-        [IO.File]::WriteAllText("$output/native/$profile.so",$profile)
+        Write-ModeNative "$output/native/$profile.so" $profile
         @{profile=$profile;native="$profile.so";sha256=(Get-FileHash "$output/native/$profile.so").Hash.ToLowerInvariant()}
     }
-    $built | ConvertTo-Json | Set-Content "$output/native/examples-build.json"
+    Write-ModeManifest $built
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='package'})
     Assert-Mode (@(Calls).Count -eq 12 -and @((Calls) | Where-Object { $_ -notlike 'package|x86_64|*' }).Count -eq 0) 'Package mode entered another phase'
@@ -117,10 +130,10 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Invoke-Mode ($x86+@{Mode='sdk'})
     Assert-Mode (@(Calls)[0] -eq 'fetch|x86|sdk') 'Wrong API10 x86 fetch routing'
     $built=foreach ($profile in $profiles) {
-        [IO.File]::WriteAllText("$output/native/$profile.so",$profile)
+        Write-ModeNative "$output/native/$profile.so" $profile
         @{profile=$profile;native="$profile.so";sha256=(Get-FileHash "$output/native/$profile.so").Hash.ToLowerInvariant()}
     }
-    $built | ConvertTo-Json | Set-Content "$output/native/examples-build.json"
+    Write-ModeManifest $built
     Reset-Calls
     Invoke-Mode ($x86+@{Mode='package'})
     $x86Packages=@(Get-Content "$output/apk-packages.json" -Raw | ConvertFrom-Json)
@@ -142,6 +155,17 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Reset-Calls
     Invoke-Mode ($arm+@{Mode='sdk'})
     Assert-Mode (@(Calls)[0] -eq 'fetch|arm64-v8a|sdk') 'Wrong ARM64 fetch routing'
+    Reset-Calls
+    Expect-Failure ($arm+@{Mode='package'}) 'Native generation ABI'
+    Write-ModeManifest $built
+    Reset-Calls
+    Expect-Failure ($arm+@{Mode='package'}) 'Native ABI preflight'
+    Assert-Mode (@(Calls).Count -eq 0) 'Wrong ELF bytes reached APK packaging'
+    $built=foreach ($profile in $profiles) {
+        Write-ModeNative "$output/native/$profile.so" $profile
+        @{profile=$profile;native="$profile.so";sha256=(Get-FileHash "$output/native/$profile.so").Hash.ToLowerInvariant()}
+    }
+    Write-ModeManifest $built
     Reset-Calls
     Invoke-Mode ($arm+@{Mode='package'})
     $armPackages=@(Get-Content "$output/apk-packages.json" -Raw | ConvertFrom-Json)

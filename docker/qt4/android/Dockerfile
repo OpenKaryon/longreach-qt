@@ -89,6 +89,7 @@ FROM ${ANDROID_ABI}-runtime AS runtime
 
 FROM runtime AS qt-build
 COPY scripts/build/qt4-android/target-config.sh \
+     scripts/build/qt4-android/cache-inputs.py \
      scripts/build/qt4-android/build-qtcore.sh \
      scripts/build/qt4-android/patch-qtcore.py \
      scripts/build/qt4-android/build-api21-sdk.sh \
@@ -99,6 +100,7 @@ COPY patches/qt4/all/03-static-gui-animation-registration.patch \
 COPY patches/qt4/android /repo/patches/qt4/android
 COPY patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch /repo/patches/qt4/linux-sarge-llvm/
 RUN --network=none \
+    --mount=type=cache,id=qt4-android-${ANDROID_ABI}-sdk,target=/work,sharing=locked \
     --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz \
     bash /repo/scripts/build/qt4-android/build-api21-sdk.sh quick
 

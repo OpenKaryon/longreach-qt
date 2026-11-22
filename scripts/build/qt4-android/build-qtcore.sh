@@ -141,6 +141,9 @@ configure_args=(-prefix "$prefix" -opensource -confirm-license -release -static 
 configuration=$({
     printf '%s\0' "${configure_args[@]}"
     sha256sum configure /work/donut-bin/donut-cxx /work/donut-bin/donut-cc
+    if [[ "$api" != 4 ]]; then
+        python3 /repo/scripts/build/qt4-android/cache-inputs.py --runtime "$runtime" --mkspec "$PWD/mkspecs/linux-donut-llvm"
+    fi
 } | sha256sum)
 configuration=${configuration%% *}
 reconfigure=false

@@ -18,6 +18,10 @@ $fixtures = (Resolve-Path "$PSScriptRoot/../../../tests/android-donut/java").Pat
 $java = (Get-Command javac.exe).Source | Split-Path
 $tools = Join-Path $AndroidSdk 'build-tools/36.0.0'
 $library = (Get-Item -LiteralPath "$NativeDirectory/$Profile.so").FullName
+$repo=(Resolve-Path "$PSScriptRoot/../../..").Path
+$nativeInputs=@($library)
+if ($Abi -ne 'armeabi') { $nativeInputs+="$NativeDirectory/libc++_shared.so" }
+Invoke-DonutCommand python (@("$repo/scripts/build/android-api21/native-abi.py",'--abi',$Abi) + $nativeInputs)
 $keyStore = Join-Path $OutputDirectory 'local-probe.jks'
 $apk = Join-Path $OutputDirectory "$Profile.apk"
 if (Test-Path -LiteralPath $apk) {

@@ -65,7 +65,7 @@ patches = [repo / 'patches/qt4/all/03-static-gui-animation-registration.patch',
            repo / 'patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch']
 patches += sorted((repo / 'patches/qt4/android').glob('*.patch'))
 helpers = [repo / 'scripts/build/qt4-android' / name for name in
-           ('target-config.sh', 'build-qtcore.sh', 'patch-qtcore.py', 'build-api21-sdk.sh', 'sdk-provenance.py')]
+           ('target-config.sh', 'build-qtcore.sh', 'patch-qtcore.py', 'build-api21-sdk.sh', 'sdk-provenance.py', 'cache-inputs.py')]
 inputs = {str(path.relative_to(repo)): digest(path) for path in patches + helpers}
 source_names = {'src/corelib/thread/qthread_unix.cpp', 'src/corelib/io/qfilesystemengine_unix.cpp',
                 'src/corelib/codecs/qtextcodec.cpp', 'src/gui/kernel/qwidget.cpp',

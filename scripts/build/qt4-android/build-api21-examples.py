@@ -2,6 +2,7 @@
 """Build the shared Qt4 projects as JNI clients of an installed Android SDK."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,11 @@ for path in plugins:
 libs = ['-Wl,--start-group'] + list(map(str, plugins + qml_plugins + modules)) + ['-Wl,--end-group', '-lEGL', '-lGLESv2', '-ldl']
 records = []
 link_inputs = hashlib.sha256((prefix / 'longreach-reports/sdk-static-elf.json').read_bytes()).hexdigest()
+module = importlib.util.spec_from_file_location('qt4_cache', Path(__file__).with_name('cache-inputs.py'))
+cache = importlib.util.module_from_spec(module)
+module.loader.exec_module(cache)
+compile_inputs = cache.fingerprint(cache.client_compile_inputs(prefix, runtime))
+
 
 def write_if_changed(path, text):
     if not path.exists() or path.read_text() != text:
@@ -52,6 +58,10 @@ def build(profile, project, extra=(), definitions=()):
         options.append('SOURCES+=' + ' '.join(map(str, extra)))
     if definitions:
         options.append('DEFINES+=' + ' '.join(definitions))
+    compile_key = cache.fingerprint([compile_inputs, options])
+    saved_compile = directory / '.longreach-sdk-compile-inputs'
+    if cache.needs_clean(saved_compile, compile_key) and (directory / 'Makefile').exists():
+        command(['make', 'clean'], directory)
     command([qmake, '-spec', spec, project, '-after'] + options, directory)
     saved_inputs = directory / '.longreach-sdk-link-inputs'
     if not saved_inputs.exists() or saved_inputs.read_text().strip() != link_inputs:
@@ -61,6 +71,7 @@ def build(profile, project, extra=(), definitions=()):
             output.unlink()
     command(['make', '-j2'], directory)
     write_if_changed(saved_inputs, link_inputs + '\n')
+    write_if_changed(saved_compile, compile_key + '\n')
     source = directory / ('lib' + profile + '.so')
     target = args.output / (profile + '.so')
     shutil.copyfile(source, target)
@@ -115,4 +126,9 @@ for profile in profiles:
         project = repo / 'tests' / app / (app + '.pro')
         build(profile, project, [bridge], ['main=longreachSuiteMain', 'LONGREACH_DONUT_JNI'])
 shutil.copyfile(runtime / 'lib/libc++_shared.so', args.output / 'libc++_shared.so')
-(args.output / 'examples-build.json').write_text(json.dumps(records, indent=2) + '\n')
+manifest = {'schema_version': 2, 'abi': os.environ['ANDROID_ABI'],
+            'api': 10 if os.environ['ANDROID_ABI'] == 'x86' else 21,
+            'sdk_image_id': os.environ.get('LONGREACH_SDK_IMAGE_ID'),
+            'runtime_sha256': hashlib.sha256((runtime / 'lib/libc++_shared.so').read_bytes()).hexdigest(),
+            'clients': records}
+(args.output / 'examples-build.json').write_text(json.dumps(manifest, indent=2) + '\n')

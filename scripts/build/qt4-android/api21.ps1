@@ -18,6 +18,9 @@ $allProfiles=@('bootstrap','strict','core','selftest','widgets','graphics','pain
 if ($Mode -in @('sdk','examples') -and (Get-Process -Name emulator,emulator-arm,emulator-x86,emulator64-x86,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-aarch64 -ErrorAction SilentlyContinue)) {
     throw 'Stop the Android emulator before compiling'
 }
+ . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $root
+try {
 switch ($Mode) {
     'sdk' {
         & "$repo/scripts/fetch/qt4-android.ps1" -Abi $Abi -Scope sdk -AndroidSdk $AndroidSdk
@@ -42,16 +45,23 @@ switch ($Mode) {
         try { Invoke-DonutCommand docker @('cp',"${export}:${prefix}/longreach-reports/.",$reports) }
         finally { Invoke-DonutCommand docker @('rm',$export) | Out-Null }
         $image.Id | Set-Content "$root/sdk-image-id.txt"
+        $cacheKey=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($root.ToLowerInvariant()))).Substring(0,16).ToLowerInvariant()
+        $clientCache="longreach-qt4-$Abi-clients-$cacheKey"
         Invoke-DonutCommand docker @('run','--rm','--platform','linux/amd64','--cpus','2','--memory','3g','--network','none',
-            '--mount',"type=bind,source=$repo,target=/repo,readonly",'--mount',"type=bind,source=$native,target=/out",
-            $image.Id,'bash','/repo/scripts/build/qt4-android/build-api21-examples.sh','all')
+            '--mount',"type=bind,source=$repo,target=/repo,readonly",'--mount',"type=bind,source=$native,target=/out",'--mount',"type=volume,source=$clientCache,target=/work",
+            '--env',"LONGREACH_SDK_IMAGE_ID=$($image.Id)",$image.Id,'bash','/repo/scripts/build/qt4-android/build-api21-examples.sh','all')
         $image.Id | Set-Content "$root/examples-sdk-image-id.txt"
     }
     'package' {
         $sdkId=(Get-Content "$root/sdk-image-id.txt" -Raw).Trim()
         if ($sdkId -notmatch '^sha256:[0-9a-f]{64}$' -or
                 (Get-Content "$root/examples-sdk-image-id.txt" -Raw).Trim() -ne $sdkId) { throw 'SDK/example identities differ' }
-        $built=@(Get-Content "$root/native/examples-build.json" -Raw | ConvertFrom-Json)
+        $manifest=Get-Content "$root/native/examples-build.json" -Raw | ConvertFrom-Json
+        if ($manifest.schema_version -ne 2 -or $manifest.abi -ne $Abi -or $manifest.api -ne $api -or $manifest.sdk_image_id -ne $sdkId -or
+                (Get-FileHash "$root/native/libc++_shared.so" -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.runtime_sha256) {
+            throw 'Native generation ABI/API/SDK/runtime differs from the requested package'
+        }
+        $built=@($manifest.clients)
         if ($built.Count -ne $allProfiles.Count -or @($built.profile | Sort-Object -Unique).Count -ne $allProfiles.Count -or
                 @($allProfiles | Where-Object { $_ -notin $built.profile }).Count) { throw 'Expected all twelve Qt4 JNI clients' }
         foreach ($item in $built) {
@@ -60,6 +70,9 @@ switch ($Mode) {
                 throw "Native artifact differs from example build: $($item.profile)"
             }
         }
+        $nativePaths=@($built | ForEach-Object { "$root/native/$($_.native)" }) + @("$root/native/libc++_shared.so")
+        & python "$repo/scripts/build/android-api21/native-abi.py" --abi $Abi @nativePaths
+        if ($LASTEXITCODE) { throw 'Native ABI preflight failed' }
         $jar=(Get-Item "$AndroidSdk/platforms/android-35/android.jar").FullName
         $lock=Get-Content "$repo/scripts/fetch/locks/qt6-android-api21-inputs.json" -Raw | ConvertFrom-Json
         $jarHash=($lock.sources | Where-Object { $_.file -eq 'android-35.jar' }).sha256
@@ -79,3 +92,5 @@ switch ($Mode) {
         & "$repo/scripts/run/qt4-android-api21-suite.ps1" @options
     }
 }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

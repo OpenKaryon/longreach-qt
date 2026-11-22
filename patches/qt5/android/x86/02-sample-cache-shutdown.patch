@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Stop the sound loader before locking and detach samples during cache teardown.
+
+--- a/qtmultimedia/src/multimedia/audio/qsamplecache_p.cpp
++++ b/qtmultimedia/src/multimedia/audio/qsamplecache_p.cpp
+@@ -118,20 +118,25 @@
+ 
+ QSampleCache::~QSampleCache()
+ {
+-    const std::lock_guard<QRecursiveMutex> locker(m_mutex);
+-
++    // The loader can call back into this cache while finishing. Do not hold
++    // the cache mutex while waiting for it to stop.
+     m_loadingThread.quit();
+     m_loadingThread.wait();
++
++    const std::lock_guard<QRecursiveMutex> locker(m_mutex);
+ 
+     // Killing the loading thread means that no samples can be
+     // deleted using deleteLater.  And some samples that had deleteLater
+     // already called won't have been processed (m_staleSamples)
+-    for (auto it = m_samples.cbegin(), end = m_samples.cend(); it != end; ++it)
+-        delete it.value();
+-
+-    const auto copyStaleSamples = m_staleSamples; //deleting a sample does affect the m_staleSamples list, but we create a copy
+-    for (QSample* sample : copyStaleSamples)
++    for (QSample *sample : qAsConst(m_samples)) {
++        sample->m_parent = nullptr;
+         delete sample;
++    }
++
++    for (QSample *sample : qAsConst(m_staleSamples)) {
++        sample->m_parent = nullptr;
++        delete sample;
++    }
+ 
+     delete m_networkAccessManager;
+ }
+@@ -274,8 +279,10 @@
+ // Also called from application thread after loader thread dies.
+ QSample::~QSample()
+ {
+-    // Remove ourselves from our parent
+-    m_parent->removeUnreferencedSample(this);
++    // Cache-owned destruction detaches the sample after the loader has stopped.
++    // There is no stale-list entry to update once the cache itself is dying.
++    if (m_parent)
++        m_parent->removeUnreferencedSample(this);
+ 
+     QMutexLocker locker(&m_mutex);
+ #ifdef QT_SAMPLECACHE_DEBUG

@@ -26,6 +26,7 @@
 #include <QTextStream>
 
 #include "../common/crashinfo.h"
+#include "../android/atomic-cow.h"
 
 #if !SMOKE_QT5 && defined(SMOKE_STATIC_QSQLITE)
 #include <QtPlugin>
@@ -124,6 +125,13 @@ void runExtendedChecks(SmokeReporter &r)
 
 int main(int argc, char *argv[])
 {
+#if defined(LONGREACH_ANDROID_APK) && defined(__i386__) && SMOKE_QT5
+    // Run before QGuiApplication: a bad emulator must fail without entering
+    // the Android dispatcher that a false CAS can leave suspended forever.
+    if (SmokeAndroidAtomicCow::requested(argc, argv))
+        return SmokeAndroidAtomicCow::run();
+#endif
+
 #ifdef Q_OS_WIN
     // Before anything else, so it also covers the teardown after main()
     // returns - which is where the XP build dies with 0xC0000005.

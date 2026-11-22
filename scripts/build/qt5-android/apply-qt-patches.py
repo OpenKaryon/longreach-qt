@@ -43,6 +43,8 @@ def main():
 
     patches = sorted((repo / "patches/qt5/all").glob("*.patch"))
     patches += sorted((repo / "patches/qt5/android").glob("*.patch"))
+    if os.environ.get("ANDROID_ABI", "armeabi-v7a") == "x86":
+        patches += sorted((repo / "patches/qt5/android/x86").glob("*.patch"))
     # Shared LLVM fix: inspect host-call tags before treating frames as objects.
     patches.append(repo / "patches/qt5/windows-xp-llvm/02-qtscript-host-call-flag.patch")
     if os.environ.get("ANDROID_ABI", "armeabi-v7a") == "arm64-v8a":

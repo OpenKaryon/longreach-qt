@@ -17,6 +17,7 @@
 #include <QSemaphore>
 #include <QWaitCondition>
 #include <QAtomicInt>
+#include <cerrno>
 #if SMOKE_QT5
 #include <QtConcurrent>
 #else
@@ -40,6 +41,53 @@
 #include <QTemporaryFile>
 #if defined(Q_OS_WIN) && SMOKE_QT5
 #include <QWinEventNotifier>
+#endif
+
+#if SMOKE_QT5
+namespace {
+bool timedSyncCheck(bool semaphore, bool timeout, QString &detail)
+{
+    QMutex mutex;
+    QSemaphore available;
+    class Peer : public QThread {
+    public:
+        QMutex *mutex;
+        QSemaphore *available;
+        int delay;
+        QAtomicInt ready{0};
+        Peer(QMutex *m, QSemaphore *s, int ms) : mutex(m), available(s), delay(ms) {}
+        void run() override {
+            if (mutex) mutex->lock();
+            ready.storeRelease(1);
+            msleep(delay);
+            if (mutex) mutex->unlock();
+            if (available) available->release();
+        }
+    } peer(semaphore ? nullptr : &mutex, semaphore ? &available : nullptr,
+           timeout ? 1200 : 250);
+    peer.start();
+    QElapsedTimer preparation;
+    preparation.start();
+    while (!peer.ready.loadAcquire() && preparation.elapsed() < 5000)
+        QThread::yieldCurrentThread();
+    const bool ready = peer.ready.loadAcquire();
+    QElapsedTimer elapsed;
+    elapsed.start();
+#ifdef ETIMEDOUT
+    // Successful wakeups must ignore errno left by a preceding timeout.
+    errno = timeout ? 0 : ETIMEDOUT;
+#endif
+    const bool acquired = ready && (semaphore ? available.tryAcquire(1, timeout ? 200 : 5000)
+                                             : mutex.tryLock(timeout ? 200 : 5000));
+    const qint64 milliseconds = elapsed.elapsed();
+    if (acquired && !semaphore) mutex.unlock();
+    peer.wait();
+    detail = QStringLiteral("ready=%1 acquired=%2 elapsed=%3 ms")
+            .arg(ready).arg(acquired).arg(milliseconds);
+    return ready && (timeout ? !acquired && milliseconds >= 150
+                            : acquired && milliseconds < 4500);
+}
+}
 #endif
 
 void checkConcurrency(SmokeReporter &r)
@@ -87,6 +135,10 @@ void checkConcurrency(SmokeReporter &r)
         QMutex m; { QMutexLocker lock(&m); }
         return m.tryLock() ? (m.unlock(), true) : false;
     });
+    r.check("sync/mutex-timed-wakeup", [](QString &d) { return timedSyncCheck(false, false, d); });
+    r.check("sync/mutex-timed-timeout", [](QString &d) { return timedSyncCheck(false, true, d); });
+    r.check("sync/semaphore-timed-wakeup", [](QString &d) { return timedSyncCheck(true, false, d); });
+    r.check("sync/semaphore-timed-timeout", [](QString &d) { return timedSyncCheck(true, true, d); });
     r.check("sync/readwritelock", [&r](QString &d) {
         QReadWriteLock lock; { QReadLocker r0(&lock); }
         if (!lock.tryLockForWrite()) { d="write lock"; return false; }

@@ -1,5 +1,8 @@
 # Experimental Qt 4.8.7 for Android 1.6
 
+The [make interface](../android-build.md) exposes this original combined recipe
+as `qt4-android-arm-legacy`. It remains separate from installed-SDK batch targets.
+
 The Android profile builds diagnostic and example APKs for Android 1.6 (API 4,
 `armeabi`). The native build runs in a Linux amd64 Docker container with
 Clang and LLD 21.1.8. It builds static libc++, libc++abi, libunwind and

@@ -1,5 +1,9 @@
 # Experimental Qt 4.8.7 for Android API 21 x86_64 and ARM64
 
+The [make and build-all interface](../android-build.md) provides SDK and ready-APK
+`-examples` targets. The individual PowerShell phases below remain available;
+use the Android runners to launch saved APKs.
+
 This profile builds a static Qt 4 SDK and JNI APK clients for Android 5/API 21,
 `x86_64` or `arm64-v8a`, with upstream LLVM 21.1.8 and libc++. The original
 [Android 1.6/armeabi profile](qt4-android-donut.md) remains the default.

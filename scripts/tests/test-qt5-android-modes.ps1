@@ -60,7 +60,7 @@ function Expect-Failure([hashtable]$Options,[string]$Message) {
 try {
     New-Item -ItemType Directory $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG="$fixture/calls.log"
-    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt5-android.ps1','scripts/build/qt5-android/package-suite.ps1','tests/expected-apps.txt')) {
+    foreach ($relative in @('scripts/build/android-api21/build-options.ps1','scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt5-android.ps1','scripts/build/qt5-android/package-suite.ps1','tests/expected-apps.txt')) {
         $destination=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
         Copy-Item -LiteralPath (Join-Path $RepoRoot $relative) -Destination $destination
@@ -109,9 +109,12 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$app"
     Invoke-Mode ($entry+@{Mode='examples';Abi='x86_64'})
     Assert-Mode (@(Calls)[0] -like '*longreach-qt5-android-lollipop-x86_64:llvm21') 'Wrong x86_64 default tag'
     Reset-Calls
-    Invoke-Mode ($entry+@{Mode='sdk';Abi='x86_64'})
+    Invoke-Mode ($entry+@{Mode='sdk';Abi='x86_64';ParallelJobs=3;NoCache=$true;DockerBuildFlagsJson='["--pull"]'})
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'x86_64 SDK mode did not build once'
     Assert-Mode (@((Calls) | Where-Object { $_ -eq 'fetch|x86_64|sdk' }).Count -eq 1) 'Wrong x86_64 SDK fetch scope'
+    foreach ($call in @((Calls) | Where-Object { $_ -like 'docker|build|*' })) {
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+    }
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='sdk';Abi='arm64-v8a'})
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'SDK mode did not build once'

@@ -5,6 +5,12 @@
 Source-only pre-release candidate. See the [release notes](docs/releases/0.3.0.md)
 and [migration results](docs/releases/0.3.0-migration.md).
 
+- Android's eleven installed-SDK profiles have a pair of make targets: SDK
+  and ready-APK examples, integrated with build-all. Existing scripts retain
+  individual phases; Android runners launch saved APKs. Batch jobs run alone.
+  The original Qt 4 API4 ARM recipe remains an explicitly named legacy
+  combined build.
+
 - Default builds for 17 Qt 4.8.7, 5.15.19 and 6.8.5 SDKs use upstream
   LLVM 21.1.8 with canonical Dockerfiles. `v0.2.2` preserves the GCC and
   MinGW build recipes.

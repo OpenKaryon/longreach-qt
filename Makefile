@@ -153,6 +153,7 @@ endef
 include $(PROJECT_DIR)mk/qt4.mk
 include $(PROJECT_DIR)mk/qt5.mk
 include $(PROJECT_DIR)mk/qt6.mk
+include $(PROJECT_DIR)mk/android.mk
 
 .PHONY: help build-all build-all-examples download-openssl download-llvm-mingw verify-downloads check-coverage regen-db image-sizes clean prune-cache
 
@@ -163,7 +164,7 @@ include $(PROJECT_DIR)mk/qt6.mk
 #   make build-all-examples BUILD_ALL_JOBS=2
 BUILD_ALL_JOBS ?= 1
 BUILD_ALL_ARGS ?=
-BUILD_ALL_FLAGS = --jobs $(BUILD_ALL_JOBS) --make-jobs $(PARALLEL_JOBS) --license-profile $(LICENSE_PROFILE) $(if $(filter 1,$(YES)),--yes,) $(if $(filter 1,$(NO_CACHE)),--no-cache,$(if $(filter 1,$(FORCE)),--force,)) $(BUILD_ALL_ARGS)
+BUILD_ALL_FLAGS = --jobs $(BUILD_ALL_JOBS) --make-jobs $(PARALLEL_JOBS) --android-make-jobs $(ANDROID_PARALLEL_JOBS) --powershell "$(POWERSHELL)" --license-profile $(LICENSE_PROFILE) $(if $(filter 1,$(YES)),--yes,) $(if $(filter 1,$(NO_CACHE)),--no-cache,$(if $(filter 1,$(FORCE)),--force,)) $(BUILD_ALL_ARGS)
 
 build-all:
 	$(PYTHON) scripts/build/build-all.py --sdk-only $(BUILD_ALL_FLAGS)

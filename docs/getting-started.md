@@ -30,8 +30,16 @@ against it under `/opt/qt-smoke-bin`. The names of every target are on the
 [target pages](targets/); `make -n <target>` shows what it would do. The
 Makefile holds the shared settings; each generation's inputs, images and
 targets are in `mk/qt4.mk`, `mk/qt5.mk` and `mk/qt6.mk`.
+Android is integrated through `mk/android.mk`: see the
+[Android target matrix and phase settings](android-build.md). For example,
+`make qt4-android-arm64` builds the SDK and
+`make qt4-android-arm64-examples` consumes that ready SDK and packages APKs.
+Android has only this pair of make targets; use the Android runners for
+execution. Android currently requires Windows and PowerShell 7; the old
+API4 ARM recipe remains
+the separate `qt4-android-arm-legacy` combined build/package target.
 
-`make <target>-examples` (`make qt5-win-i386-examples`) builds the SDK only
+For desktop targets, `make <target>-examples` (`make qt5-win-i386-examples`) builds the SDK only
 when one of its own inputs changed, and then builds the test applications
 into `artifacts/tests-<image>/`. The image is labelled with a fingerprint of
 what its `docker build` uses: the Dockerfile, the build arguments, the
@@ -43,8 +51,8 @@ not reach a build rebuild nothing (`python scripts/build/ensure-image.py
 `make build-<target>` does the first half alone. `FORCE=1` rebuilds the
 image anyway, `NO_CACHE=1` rebuilds it without the Docker cache.
 
-`make build-all-examples` runs `<target>-examples` for every target
-(`make build-all`: `build-<target>`, the SDKs alone) after asking whether to
+`make build-all-examples` prepares every SDK and its applications
+(`make build-all`: SDKs alone) after asking whether to
 start (`YES=1` does not ask). Up to `BUILD_ALL_JOBS` targets build at once:
 no more than Docker's memory holds at about 2 GB per compiler job
 (`PARALLEL_JOBS` 6 makes 12 GB a build, so a 31 GB Docker VM runs two), one
@@ -60,6 +68,12 @@ started after it out.
 `--help`).
 
 Useful variables:
+
+Android uses `ANDROID_PARALLEL_JOBS=2` rather than the desktop default of six,
+and runs alone in batch builds. Its `-examples` target never builds an SDK
+implicitly; batch examples explicitly schedule SDK then applications and APK
+packaging. Individual script phases remain available for reusing outputs.
+Existing SDK tags and output paths are kept.
 
 | Variable | Default | |
 |----------|---------|---|

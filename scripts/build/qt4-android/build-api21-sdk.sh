@@ -18,11 +18,11 @@ else
         make -C "$tree/src/$module" install
     done
     for module in folderlistmodel gestures particles shaders; do
-        make -C "$tree/src/imports/$module" -j2
+        make -C "$tree/src/imports/$module" -j"${PARALLEL_JOBS:-2}"
         make -C "$tree/src/imports/$module" install
     done
     make -C "$tree/src/plugins/platforms/minimal" install
-    make -C "$tree/src/plugins/imageformats/svg" -j2
+    make -C "$tree/src/plugins/imageformats/svg" -j"${PARALLEL_JOBS:-2}"
     make -C "$tree/src/plugins/imageformats/svg" install
 fi
 mkdir -p "$prefix/bin" /out/qt4-sdk

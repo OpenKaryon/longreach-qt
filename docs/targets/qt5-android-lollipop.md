@@ -1,5 +1,9 @@
 # Experimental Qt 5.15.19 for Android API 21
 
+The [make and build-all interface](../android-build.md) provides SDK and ready-APK
+`-examples` targets. The individual PowerShell phases below remain available;
+use the Android runners to launch saved APKs.
+
 These profiles select `arm64-v8a` or `x86_64` on Android 5/API 21 with upstream
 LLVM 21.1.8.
 The original ARMv7 [API 10 profile](qt5-android-gingerbread.md) remains the default.

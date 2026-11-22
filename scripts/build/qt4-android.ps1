@@ -9,7 +9,10 @@ param(
     [string[]]$Profiles,
     [string] $InputDirectory,
     [string] $OutputDirectory,
-    [string] $AndroidSdk = $env:ANDROID_HOME
+    [string] $AndroidSdk = $env:ANDROID_HOME,
+    [ValidateRange(1,256)][int]$ParallelJobs=2,
+    [switch]$NoCache,
+    [string]$DockerBuildFlagsJson='[]'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,7 +27,7 @@ if ($Abi -ne 'armeabi') {
     & "$PSScriptRoot/qt4-android/api21.ps1" @options
     return
 }
-foreach ($option in @('Mode','SdkImage','RunName','Profiles')) {
+foreach ($option in @('Mode','SdkImage','RunName','Profiles','ParallelJobs','NoCache','DockerBuildFlagsJson')) {
     if ($PSBoundParameters.ContainsKey($option)) { throw "-$option is currently supported by the API10/API21 profiles only" }
 }
 

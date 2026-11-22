@@ -48,6 +48,8 @@ RUN --network=none \
     python3 /repo/scripts/build/qt6-android/prepare-inputs.py
 
 FROM platform AS api21-runtime
+ARG PARALLEL_JOBS=2
+ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 COPY patches/android/lollipop /repo/patches/android/lollipop
 COPY scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
 COPY scripts/build/qt6-android/target-config.sh \
@@ -88,6 +90,8 @@ RUN --network=none \
 FROM ${ANDROID_ABI}-runtime AS runtime
 
 FROM runtime AS qt-build
+ARG PARALLEL_JOBS=2
+ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 COPY scripts/build/qt4-android/target-config.sh \
      scripts/build/qt4-android/cache-inputs.py \
      scripts/build/qt4-android/build-qtcore.sh \

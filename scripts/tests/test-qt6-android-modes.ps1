@@ -56,7 +56,7 @@ function Expect-ModeFailure([hashtable]$Parameters, [string]$Pattern) {
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG = Join-Path $fixture 'calls.log'
-    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
+    foreach ($relative in @('scripts/build/android-api21/build-options.ps1','scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
             'scripts/fetch/qt6-android.ps1','tests/expected-apps.txt')) {
         $destination = Join-Path $fixture $relative
         New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null
@@ -119,9 +119,12 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     @{sources=@($sources);shared_sources=@(@{file='llvm-fixture.tar.xz';url='https://example.invalid/not-requested';sha256='fixture'})} |
         ConvertTo-Json -Depth 5 | Set-Content "$fixture/scripts/fetch/locks/qt6-android-api21-inputs.json"
     Reset-ModeCalls
-    Invoke-Mode @{Mode='sdk';OutputDirectory=$output;AndroidSdk=''}
+    Invoke-Mode @{Mode='sdk';OutputDirectory=$output;AndroidSdk='';ParallelJobs=3;NoCache=$true;DockerBuildFlagsJson='["--pull"]'}
     $calls = @(Get-ModeCalls)
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'SDK mode must refresh tools and build its SDK'
+    foreach ($call in @($calls | Where-Object { $_ -like 'docker|build|*' })) {
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+    }
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|run|*' -or $_ -like 'package|*' -or $_ -like 'test|*' }).Count -eq 0) 'SDK mode entered another phase'
     Assert-Mode (@($calls | Where-Object { $_ -like 'python|*llvm-fixture*' }).Count -eq 1) 'SDK source fetch was omitted'
     Reset-ModeCalls

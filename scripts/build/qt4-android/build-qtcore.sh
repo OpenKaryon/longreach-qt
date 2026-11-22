@@ -163,7 +163,7 @@ if [[ "$profile" == quick && ! -f .donut-host-clang ]]; then
             make -C "src/tools/$tool" clean
         fi
     done
-    make -C src -j2 sub-moc sub-rcc sub-uic
+    make -C src -j"${PARALLEL_JOBS:-2}" sub-moc sub-rcc sub-uic
     if [[ -d src/gui/.uic ]]; then
         find src/gui/.uic -name 'ui_*.h' -delete
     fi
@@ -180,7 +180,7 @@ if [[ "$api" != 4 && "$(cat .longreach-object-configuration 2>/dev/null || true)
     printf '%s\n' "$configuration" > .longreach-object-configuration
 fi
 
-make -C src -k -j2 "${modules[@]}"
+make -C src -k -j"${PARALLEL_JOBS:-2}" "${modules[@]}"
 if [[ "$profile" == core ]]; then
     test -s lib/libQtCore.a
     test -s bin/qmake
@@ -194,6 +194,6 @@ else
         done
         printf '%s\n' "$configuration" > .longreach-plugin-configuration
     fi
-    make -C src/plugins/platforms/minimal -j2
+    make -C src/plugins/platforms/minimal -j"${PARALLEL_JOBS:-2}"
 fi
 bin/qmake -v

@@ -24,7 +24,7 @@ QMAKE_CXXFLAGS += -std=gnu++23 -fexperimental-library
 QMAKE_LFLAGS += -Wl,--exclude-libs,ALL,-soname,libdonut_probe.so
 EOF
     "$core_prefix/bin/qmake" -spec "$core_prefix/mkspecs/android-longreach-clang" core.pro
-    make -j2
+    make -j"${PARALLEL_JOBS:-2}"
     cp libcore.so /out/core.so
     llvm-readobj-21 --file-header --dynamic-table /out/core.so > /out/core-elf.txt
     echo 'Qt4 core client built through the installed SDK qmake in C++23'

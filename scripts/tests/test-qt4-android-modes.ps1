@@ -51,7 +51,7 @@ function Expect-Failure([hashtable]$Options,[string]$Message) {
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG="$fixture/calls.log"
-    foreach ($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/android-api21/native-abi.py','scripts/build/qt4-android.ps1','scripts/build/qt4-android/api21.ps1','scripts/build/qt4-android/host.ps1')) {
+    foreach ($relative in @('scripts/build/android-api21/build-options.ps1','scripts/build/android-api21/artifact-lock.ps1','scripts/build/android-api21/native-abi.py','scripts/build/qt4-android.ps1','scripts/build/qt4-android/api21.ps1','scripts/build/qt4-android/host.ps1')) {
         $destination=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
         Copy-Item -LiteralPath (Join-Path $RepoRoot $relative) -Destination $destination
@@ -91,9 +91,12 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Assert-Mode (@(Calls).Count -eq 1) 'Wrong ABI entered another phase'
     $global:Qt4ModeAbi='x86_64'
     Reset-Calls
-    Invoke-Mode ($entry+@{Mode='sdk'})
+    Invoke-Mode ($entry+@{Mode='sdk';ParallelJobs=3;NoCache=$true;DockerBuildFlagsJson='["--pull"]'})
     Assert-Mode (@(Calls)[0] -eq 'fetch|x86_64|sdk') 'SDK fetch scope changed'
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*|--target|sdk|*' }).Count -eq 1) 'SDK did not request its explicit stage'
+    foreach ($call in @((Calls) | Where-Object { $_ -like 'docker|build|*' })) {
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+    }
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='test';RunName='fixture-suite';Profiles=@('strict','quick')})
     Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'test|x86_64|fixture-suite|strict,quick') 'Test mode compiled or lost its subset'

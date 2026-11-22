@@ -31,6 +31,11 @@ The Android recipes use LLVM 21.1.8 and the same eight application sources.
 Qt 4 has a static embedded profile; Qt 5 and Qt 6 use shared libraries with
 QtActivity. Android SDK, example, package and emulator phases are documented
 in the target guides; packaging currently runs on Windows with PowerShell 7.
+The [make and build-all interface](docs/android-build.md) exposes the eleven
+installed-SDK profiles as `qt<N>-android-<arch>` SDK targets and `-examples`
+targets producing ready APKs. Run APKs through the Android runners.
+The original Qt 4 API4 ARM recipe remains an explicitly named legacy
+combined build.
 
 | Qt | Original floor | Additional qualified ABIs |
 | --- | --- | --- |
@@ -53,12 +58,12 @@ make qt5-win-amd64            # the SDK: toolchain and static Qt
 make qt5-win-amd64-examples   # the SDK if needed, then the test applications
 ```
 
-`<target>-examples` builds the eight test applications against the SDK and
-copies them to `artifacts/tests-<image>/` on this machine; copy that
+Desktop `<target>-examples` builds the eight test applications against the
+SDK and copies them to `artifacts/tests-<image>/` on this machine; copy that
 directory to the target system and run `smoke-runner`, or let
 `scripts/run/run.py` do it ([testing](docs/testing.md)).
 
-Every target, one per Qt version, OS and architecture, each from its floor:
+Desktop targets, one per Qt version, OS and architecture, each from its floor:
 
 | Qt | Windows | Linux | macOS |
 |----|---------|-------|-------|
@@ -72,6 +77,14 @@ and details are on the [target pages](docs/targets/). Make variables tune a
 build (compiler jobs, Qt version, licence profile, deployment target): see
 [getting started](docs/getting-started.md).
 
+Android adds `qt4-android-{i386,amd64,arm64}`,
+`qt5-android-{armv7,i386,amd64,arm64}` and
+`qt6-android-{armv7,i386,amd64,arm64}`. Each has only the SDK target and
+`-examples`, which consumes a ready SDK and produces APKs. Android ABI names
+remain `-Abi` values in the scripts rather than additional make aliases.
+Use the [Android runners](docs/android-build.md#reusing-native-outputs-and-running-apks)
+to run saved APKs; individual script phases remain available for reusing outputs.
+
 All of them in one run - hours to a day or more, so it asks before it
 starts:
 
@@ -83,6 +96,9 @@ make build-all-examples       # every SDK and its test applications
 `BUILD_ALL_JOBS=2` builds two targets at once; logs and a summary go to
 `build/build-all-<time>/`. `scripts/build/build-all.py --help` has the other
 options (`--only`, `--skip`, `--no-cache`, ...).
+Android runs alone and currently requires a Windows host. Its batch examples
+route explicitly prepares the SDK, then builds and packages applications;
+it never runs APKs. `--list` is read-only on every host.
 
 ## How it works
 

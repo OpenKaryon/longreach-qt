@@ -1,5 +1,9 @@
 # Qt 4.8.7 for Android API 10 x86
 
+The [make and build-all interface](../android-build.md) provides SDK and ready-APK
+`-examples` targets. The individual PowerShell phases below remain available;
+use the Android runners to launch saved APKs.
+
 This additional profile uses upstream LLVM 21.1.8 and libc++ for Android
 2.3/API 10, x86. The original [Android 1.6/armeabi](qt4-android-donut.md)
 profile remains the default. The shared [API 21 guide](qt4-android-lollipop.md)

@@ -2,7 +2,9 @@
 param([ValidateSet('x86','x86_64','arm64-v8a')][string]$Abi='x86_64',
       [ValidateSet('sdk','examples','package','test')][string]$Mode='examples',
       [string]$SdkImage, [string]$OutputDirectory, [string]$AndroidSdk=$env:ANDROID_HOME,
-      [string]$RunName='sdk-suite', [string[]]$Profiles)
+      [string]$RunName='sdk-suite', [string[]]$Profiles,
+      [ValidateRange(1,256)][int]$ParallelJobs=2,
+      [switch]$NoCache, [string]$DockerBuildFlagsJson='[]')
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 . "$PSScriptRoot/host.ps1"
@@ -23,9 +25,11 @@ $artifactLock=Enter-AndroidArtifactLock $root
 try {
 switch ($Mode) {
     'sdk' {
+        . "$repo/scripts/build/android-api21/build-options.ps1"
+        $buildFlags=@(Get-AndroidDockerBuildFlags -NoCache:$NoCache -DockerBuildFlagsJson $DockerBuildFlagsJson)
         & "$repo/scripts/fetch/qt4-android.ps1" -Abi $Abi -Scope sdk -AndroidSdk $AndroidSdk
-        Invoke-DonutCommand docker @('build','--platform','linux/amd64','--progress','plain','--target','sdk',
-            '--build-arg',"ANDROID_ABI=$Abi",'--file',"$repo/docker/qt4/android/Dockerfile",'--tag',$SdkImage,$repo)
+        Invoke-DonutCommand docker (@('build') + $buildFlags + @('--platform','linux/amd64','--progress','plain','--target','sdk',
+            '--build-arg',"ANDROID_ABI=$Abi",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",'--file',"$repo/docker/qt4/android/Dockerfile",'--tag',$SdkImage,$repo))
         Invoke-DonutCommand docker @('image','inspect','--format','{{.Id}}',$SdkImage) | Set-Content "$root/sdk-image-id.txt"
     }
     'examples' {
@@ -47,7 +51,7 @@ switch ($Mode) {
         $image.Id | Set-Content "$root/sdk-image-id.txt"
         $cacheKey=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($root.ToLowerInvariant()))).Substring(0,16).ToLowerInvariant()
         $clientCache="longreach-qt4-$Abi-clients-$cacheKey"
-        Invoke-DonutCommand docker @('run','--rm','--platform','linux/amd64','--cpus','2','--memory','3g','--network','none',
+        Invoke-DonutCommand docker @('run','--rm','--platform','linux/amd64','--cpus','2','--memory','3g','--network','none','--env',"PARALLEL_JOBS=$ParallelJobs",
             '--mount',"type=bind,source=$repo,target=/repo,readonly",'--mount',"type=bind,source=$native,target=/out",'--mount',"type=volume,source=$clientCache,target=/work",
             '--env',"LONGREACH_SDK_IMAGE_ID=$($image.Id)",$image.Id,'bash','/repo/scripts/build/qt4-android/build-api21-examples.sh','all')
         $image.Id | Set-Content "$root/examples-sdk-image-id.txt"

@@ -1,5 +1,9 @@
 # Qt 6.8.5 for Android API 21
 
+The [make and build-all interface](../android-build.md) provides SDK and ready-APK
+`-examples` targets. The individual PowerShell phases below remain available;
+use the Android runners to launch saved APKs.
+
 This experimental recipe selects ARMv7 `armeabi-v7a`, ARM64 `arm64-v8a`
 or `x86`/`x86_64` from Android 5/API21. ARMv7 remains the default. All four profiles have
 SDK and example runtime evidence, including strict C++23 25/25 without SKIP.

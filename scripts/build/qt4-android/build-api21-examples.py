@@ -14,6 +14,9 @@ parser.add_argument('--prefix', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--profiles', default=os.environ.get('QT4_EXAMPLE_PROFILES', ''))
 args = parser.parse_args()
+jobs = int(os.environ.get('PARALLEL_JOBS', '2'))
+if jobs < 1:
+    parser.error('PARALLEL_JOBS must be positive')
 prefix = args.prefix
 repo = Path('/repo')
 runtime = Path('/opt/longreach-android' if os.environ['ANDROID_ABI'] == 'x86' else '/opt/longreach-android-api21')
@@ -69,7 +72,7 @@ def build(profile, project, extra=(), definitions=()):
         # SDK's archives. Relink against their actual contents, retaining objects.
         for output in directory.glob('lib' + profile + '.so*'):
             output.unlink()
-    command(['make', '-j2'], directory)
+    command(['make', f'-j{jobs}'], directory)
     write_if_changed(saved_inputs, link_inputs + '\n')
     write_if_changed(saved_compile, compile_key + '\n')
     source = directory / ('lib' + profile + '.so')

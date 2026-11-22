@@ -12,7 +12,10 @@ param(
     [ValidateSet('on','mesa')][string]$Gpu = 'on',
     [string[]]$CaseNames,
     [switch]$DebugQtPlugins,
-    [ValidateSet('default','software')][string]$QtQuickBackend = 'default'
+    [ValidateSet('default','software')][string]$QtQuickBackend = 'default',
+    [ValidateRange(1,256)][int]$ParallelJobs=2,
+    [switch]$NoCache,
+    [string]$DockerBuildFlagsJson='[]'
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
@@ -39,16 +42,18 @@ $artifactLock=Enter-AndroidArtifactLock $OutputDirectory
 try {
 switch ($Mode) {
     'sdk' {
+        . "$repo/scripts/build/android-api21/build-options.ps1"
+        $buildFlags=@(Get-AndroidDockerBuildFlags -NoCache:$NoCache -DockerBuildFlagsJson $DockerBuildFlagsJson)
         # Fail before downloads or provisioning when the required ready host SDK is absent.
         Invoke-Qt6AndroidTool docker @('image','inspect',$HostImage) | Out-Null
         # This is the only mode allowed to fetch build inputs or build images.
         & "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope sdk -Abi $Abi
         $tools = 'longreach-qt4-android-donut:llvm21'
-        Invoke-Qt6AndroidTool docker @('build','--platform','linux/amd64','--file',
-            "$repo/docker/qt4/android/Dockerfile",'--build-arg','PARALLEL_JOBS=2','--tag',$tools,$repo)
-        Invoke-Qt6AndroidTool docker @('build','--platform','linux/amd64','--progress','plain',
-            '--file',"$repo/docker/qt6/android/Dockerfile",'--build-arg','PARALLEL_JOBS=2',
-            '--build-arg',"QT_HOST_IMAGE=$HostImage",'--build-arg',"ANDROID_ABI=$Abi",'--target','sdk','--tag',$SdkImage,$repo)
+        Invoke-Qt6AndroidTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--file',
+            "$repo/docker/qt4/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",'--tag',$tools,$repo))
+        Invoke-Qt6AndroidTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--progress','plain',
+            '--file',"$repo/docker/qt6/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",
+            '--build-arg',"QT_HOST_IMAGE=$HostImage",'--build-arg',"ANDROID_ABI=$Abi",'--target','sdk','--tag',$SdkImage,$repo))
         $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
         Invoke-Qt6AndroidTool docker @('image','inspect','--format','{{.Id}}',$SdkImage) |
             Set-Content -LiteralPath "$output/sdk-image-id.txt"
@@ -73,7 +78,7 @@ switch ($Mode) {
         if ($LASTEXITCODE) { throw 'Cannot start an example generation' }
         # Pin this invocation to the inspected image even if its tag is retargeted.
         Invoke-Qt6AndroidTool docker @('run','--rm','--platform','linux/amd64','--cpus','2',
-            '--memory','3g','--network','none','--mount',"type=bind,source=$repo,target=/repo,readonly",
+            '--memory','3g','--network','none','--env',"PARALLEL_JOBS=$ParallelJobs",'--mount',"type=bind,source=$repo,target=/repo,readonly",
             '--mount',"type=bind,source=$output,target=/out",$image.Id,
             'bash','/repo/scripts/build/qt6-android/build-examples.sh')
         $image.Id | Set-Content -LiteralPath "$output/examples-sdk-image-id.txt"

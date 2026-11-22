@@ -1,5 +1,9 @@
 # Experimental Qt 5.15.19 for Android API 10
 
+The [make and build-all interface](../android-build.md) provides SDK and ready-APK
+`-examples` targets. The individual PowerShell phases below remain available;
+use the Android runners to launch saved APKs.
+
 This SDK targets Android API 10 with ARMv7 `armeabi-v7a` or `x86`, using
 upstream LLVM/Clang/LLD 21.1.8. The ARMv7 guest is Android 2.3.3; the official
 x86 revision5 image actually runs Android 2.3.7. It builds shared Qt libraries and the actual QtActivity

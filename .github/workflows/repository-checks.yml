@@ -28,6 +28,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p test_android_native_abi.py
           python3 -m unittest discover -s scripts/tests -p test_android_legacy_results.py
           python3 -m unittest discover -s scripts/tests -p test_qt4_android_cache.py
+          python3 -m unittest discover -s scripts/tests -p test_android_make.py
       - name: Check Android phase routing
         shell: pwsh
         run: |

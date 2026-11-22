@@ -13,17 +13,23 @@
 It asks before it starts (--yes does not); without a terminal to ask on it
 stops unless --yes is given.
 
-Each target runs `make <target>-examples` (`make build-<target>` with
+Each desktop target runs `make <target>-examples` (`make build-<target>` with
 --sdk-only): the SDK image is built when one of
 its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
 machine. Make prepares the required LLVM compiler and target toolchain
 images. qt6-host is prepared first for Qt 6 targets that still use it.
+Android uses eleven installed-SDK profiles on Windows, preserving their
+existing image tags and output directories. It runs alone even with --jobs N;
+its examples route explicitly schedules SDK then applications. Direct Android
+make -examples never builds an SDK; it compiles applications and packages APKs.
+Guests are not part of build-all. The original Qt4 API4 ARM recipe remains separate.
 A failed target does not stop the others and is retried at the end
 (--retries, default once).
 
 --jobs sets how many targets build at the same time; --make-jobs the compiler
-jobs inside each (PARALLEL_JOBS). A Qt link can take several GB, so a new
+jobs inside each desktop build (PARALLEL_JOBS); --android-make-jobs defaults
+to two in the existing Android containers. A Qt link can take several GB, so a new
 target starts only while at least --min-free-gb of memory is free; with
 several targets at once keep --jobs x --make-jobs within the machine.
 
@@ -54,6 +60,8 @@ import sys
 import time
 from pathlib import Path
 
+from android_targets import ANDROID_TARGETS, artifact_dir, startable_targets
+
 ROOT = Path(__file__).resolve().parents[2]
 
 # target: (whether a licence profile other than the default is added to its
@@ -81,6 +89,7 @@ TARGETS = {
     'qt6-macos-amd64': (True, False),
     'qt6-macos-arm64': (True, True),
 }
+TARGETS.update({name: (False, False) for name in ANDROID_TARGETS})
 QT6_LLVM_TARGETS = {'qt6-linux-amd64', 'qt6-linux-arm64', 'qt6-win-amd64', 'qt6-macos-amd64'}
 # Seconds a stopped build gets to end by itself before it is killed.
 STOP_GRACE = 60
@@ -129,12 +138,37 @@ def docker_memory_gb() -> float | None:
 
 
 def image_of(target: str, profile: str) -> str:
+    if target in ANDROID_TARGETS:
+        return ANDROID_TARGETS[target].image
     if target.startswith('qt4-') and target in TARGETS:
         return f'{target}-llvm21'
     suffix = f'-{profile}' if TARGETS[target][0] and profile != 'gpl-enabled' else ''
     if target in QT6_LLVM_TARGETS or (target.startswith('qt5-') and target not in {'qt5-win-arm64', 'qt5-macos-arm64'}):
         return f'{target}-llvm21{suffix}'
     return f'{target}{suffix}'
+
+
+def output_of(target: str, profile: str) -> str:
+    if target in ANDROID_TARGETS:
+        return artifact_dir(target)
+    return f'artifacts/tests-{image_of(target, profile)}'
+
+
+def matches(target: str, patterns) -> bool:
+    return any(fnmatch.fnmatch(target, pattern) for pattern in patterns)
+
+
+def steps_for(target, make='make', make_vars=(), sdk_only=False):
+    sdk_goal = target if target in ANDROID_TARGETS else f'build-{target}'
+    sdk = [make, '--no-print-directory', sdk_goal, *make_vars]
+    if sdk_only:
+        return [sdk]
+    examples = [make, '--no-print-directory', f'{target}-examples', *make_vars]
+    # Android's direct examples phase never builds its SDK implicitly.
+    steps = [sdk, examples] if target in ANDROID_TARGETS else [examples]
+    if target in AUDITS:
+        steps.append([make, '--no-print-directory', AUDITS[target], *make_vars])
+    return steps
 
 
 # Stopping build-all reaches every process it started, however deep (make,
@@ -396,6 +430,9 @@ def main() -> int:
     parser.add_argument('--jobs', type=int, default=1, help='targets built at the same time (default 1)')
     parser.add_argument('--make-jobs', type=int, default=None,
                         help='compiler jobs inside one build, PARALLEL_JOBS (default: the Makefile\'s)')
+    parser.add_argument('--android-make-jobs', type=int, default=2,
+                        help='Android compiler jobs in its two-CPU/3-GiB containers (default 2)')
+    parser.add_argument('--powershell', help='PowerShell 7 executable for Android (default: make POWERSHELL)')
     parser.add_argument('--min-free-gb', type=float, default=12.0,
                         help='start another target only while this much memory is free (default 12)')
     parser.add_argument('--gb-per-job', type=float, default=2.0,
@@ -420,23 +457,35 @@ def main() -> int:
     parser.add_argument('--sdk-only', action='store_true', help='build the SDK images, not the test applications')
     parser.add_argument('--yes', action='store_true', help='start without asking')
     args = parser.parse_args()
+    if args.android_make_jobs < 1:
+        parser.error('--android-make-jobs must be positive')
 
     targets = [t for t in TARGETS
-               if (not args.only or any(fnmatch.fnmatch(t, p) for p in args.only))
-               and not any(fnmatch.fnmatch(t, p) for p in args.skip)]
+               if (not args.only or matches(t, args.only)) and not matches(t, args.skip)]
     # lgpl-friendly is enforced for the Linux Qt 5/6 targets only; make refuses
     # it for the others (docs/licensing.md).
-    refused = [t for t in targets if args.license_profile == 'lgpl-friendly'
-               and TARGETS[t][0] and '-linux-' not in t]
+    refused = [t for t in targets if
+               (t in ANDROID_TARGETS and args.license_profile != 'gpl-enabled') or
+               (args.license_profile == 'lgpl-friendly' and TARGETS[t][0] and '-linux-' not in t)]
     if refused:
-        print('LICENSE_PROFILE=lgpl-friendly: skipping ' + ', '.join(refused) + ' (Linux Qt 5/6 only)')
+        print(f'LICENSE_PROFILE={args.license_profile}: skipping ' + ', '.join(refused)
+              + ' (Android requires gpl-enabled; lgpl-friendly is Linux Qt 5/6 only)')
         targets = [t for t in targets if t not in refused]
     if not targets:
         parser.error('no target left after --only/--skip')
     if args.list:
         for t in targets:
-            print(f'{t:18} -> artifacts/tests-{image_of(t, args.license_profile)}/')
+            host = ' [Windows host]' if t in ANDROID_TARGETS else ''
+            print(f'{t:22} -> {output_of(t, args.license_profile)}/{host}')
         return 0
+
+    if os.name != 'nt':
+        unsupported = [t for t in targets if t in ANDROID_TARGETS]
+        if unsupported:
+            print('Skipping Android host scripts (Windows required): ' + ', '.join(unsupported))
+            targets = [t for t in targets if t not in unsupported]
+        if not targets:
+            parser.error('selected Android recipes currently require a Windows host')
 
     # A target's memory peaks hours in, when Qt links, so the free memory at
     # its start says little: cap the concurrency by what Docker has.
@@ -510,6 +559,9 @@ def main() -> int:
     log_dir = args.log_dir or ROOT / 'build' / f'build-all-{stamp}'
     log_dir.mkdir(parents=True, exist_ok=True)
     make_vars = [f'LICENSE_PROFILE={args.license_profile}']
+    make_vars.append(f'ANDROID_PARALLEL_JOBS={args.android_make_jobs}')
+    if args.powershell:
+        make_vars.append(f'POWERSHELL={args.powershell}')
     if args.make_jobs:
         make_vars.append(f'PARALLEL_JOBS={args.make_jobs}')
     if args.no_cache:
@@ -517,14 +569,6 @@ def main() -> int:
     elif args.force:
         make_vars.append('FORCE=1')
     env = dict(os.environ, LONGREACH_BUILDS_COORDINATED='1')
-
-    def steps_for(target):
-        if args.sdk_only:
-            return [[args.make, '--no-print-directory', f'build-{target}', *make_vars]]
-        steps = [[args.make, '--no-print-directory', f'{target}-examples', *make_vars]]
-        if target in AUDITS:
-            steps.append([args.make, '--no-print-directory', AUDITS[target], *make_vars])
-        return steps
 
     def say(text):
         """Log a line; never fails, so that a full disk or a closed terminal
@@ -581,6 +625,7 @@ def main() -> int:
                     record(skipped)
                     say(f'SKIP {target} (qt6-host failed)')
             startable = [t for t in pending if host_ready or not TARGETS[t][1]]
+            startable = startable_targets(startable, [job.target for job in jobs])
             # A target whose image was current is done in a minute: no gap after it.
             settled = last not in jobs or time.time() - last.started >= args.start_gap
             if startable and len(jobs) < parallel and settled:
@@ -588,7 +633,7 @@ def main() -> int:
                 if not jobs or free is None or free >= args.min_free_gb:
                     target = startable[0]
                     pending.remove(target)
-                    last = Job(target, steps_for(target), log_dir, env)
+                    last = Job(target, steps_for(target, args.make, make_vars, args.sdk_only), log_dir, env)
                     jobs.append(last)
                     say(f'started {target}' + (f' ({free:.1f} GB free)' if free is not None else ''))
             if pending or jobs:
@@ -598,7 +643,7 @@ def main() -> int:
         results = []
         for job in done.values():
             image = image_of(job.target, args.license_profile) if job.target in TARGETS else None
-            out = ROOT / 'artifacts' / f'tests-{image}' if image else None
+            out = ROOT / output_of(job.target, args.license_profile) if image else None
             newest = max((p.stat().st_mtime for p in out.rglob('*') if p.is_file()), default=0) \
                 if out and out.is_dir() else 0
             fresh = newest >= job.started

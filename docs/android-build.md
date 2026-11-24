@@ -115,7 +115,7 @@ Qt versions remain pinned to their existing patch series.
 | `POWERSHELL` | PowerShell 7 executable; default `pwsh`. Paths with spaces are supported. |
 | `ANDROID_SDK` | Host Android SDK; defaults to `ANDROID_HOME`. |
 | `ANDROID_PARALLEL_JOBS` | Android compiler jobs; default 2 for the existing two-CPU / 3-GiB containers. Batch CLI: `--android-make-jobs`. |
-| `NO_CACHE=1` | Disable Docker build cache in SDK mode, including shared tools. Explicit SDK mode always invokes Docker, including with `FORCE=1`. |
+| `NO_CACHE=1` | Disable reusable Docker image layers in SDK mode, including shared tools. BuildKit cache mounts retain source/object caches. Explicit SDK mode always invokes Docker, including with `FORCE=1`. |
 | `DOCKER_BUILD_FLAGS` | Extra SDK Docker arguments, parsed as shell words and forwarded as an array. |
 | `ANDROID_OUTPUT` | Override the existing output directory for an individual invocation; both native and APK stages use it. |
 | `ANDROID_SDK_IMAGE` | Select a ready SDK in examples mode, or its output tag in SDK mode. |
@@ -136,3 +136,24 @@ It uses read-only make queries and disposable PowerShell recording fixtures.
 The Qt 4/5/6 mode fixtures continue to cover the individual script phases.
 No SDK build, Docker run, download, guest, security suite or repository
 scanner is required by these ordinary tooling checks.
+
+
+## Retained Android build caches
+
+`NO_CACHE=1` rebuilds image layers; it does not clear BuildKit cache mounts.
+Qt4 retains source/object caches separately. A new source recipe refreshes its
+owned inputs; an unmanifested legacy tree is archived intact beside the new
+tree before migration. Old temporary source directories and historical APKs
+are preserved. New preparation stages live outside the persistent cache mount.
+
+For an intentional cold rebuild, use a separate Docker builder/cache namespace
+and output directory. Keep the existing builder and its caches for recovery;
+pruning cache mounts is a separate destructive maintenance operation.
+Compiler job counts are supplied through an optional BuildKit secret, default 2,
+and are not persisted in SDK image ENV or its cache key. Examples still receive
+`PARALLEL_JOBS` as a container execution option.
+
+Docker provenance attestations can still create a different manifest/index ID
+on a cache hit even when runtime layers and configuration are identical. The
+job-count change fixes compiler-layer invalidation; it does not promise that
+attestation-bearing image IDs are stable across separate build invocations.

@@ -12,7 +12,6 @@ RUN sh /usr/local/bin/apt-snapshot "$APT_SNAPSHOT" \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS compiler
-ARG PARALLEL_JOBS=2
 ENV LLVM_ROOT=/opt/llvm-21
 COPY scripts/build/qt6-llvm-probes/build-compiler.sh /tmp/build-compiler.sh
 RUN --network=none \
@@ -49,8 +48,6 @@ RUN --network=none \
     python3 /repo/scripts/build/qt6-android/prepare-inputs.py
 
 FROM platform AS api21-runtime
-ARG PARALLEL_JOBS=2
-ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 COPY patches/android/lollipop /repo/patches/android/lollipop
 COPY scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
 COPY scripts/build/qt6-android/target-config.sh \
@@ -60,7 +57,9 @@ COPY scripts/build/qt6-android/target-config.sh \
      scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
 COPY scripts/tests/android/android-api21-driver.sh /repo/scripts/tests/android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt6-android/build-runtime.sh \
     && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
     && bash /repo/scripts/tests/android/android-api21-driver.sh
@@ -71,8 +70,7 @@ FROM api21-runtime AS arm64-v8a-runtime
 
 # API10 reuses the legacy LLVM runtime producer, without a Qt5 SDK.
 FROM tools AS x86-runtime
-ARG PARALLEL_JOBS=2
-ENV ANDROID_ABI=x86 ANDROID_API=10 PARALLEL_JOBS=${PARALLEL_JOBS}
+ENV ANDROID_ABI=x86 ANDROID_API=10
 WORKDIR /work
 COPY patches/android/gingerbread /repo/patches/android/gingerbread
 COPY scripts/fetch/locks/qt5-android-api10-inputs.json /repo/scripts/fetch/locks/
@@ -84,8 +82,10 @@ COPY scripts/build/qt5-android/build-runtime.sh \
      scripts/build/qt5-android/clang-wrapper.sh \
      scripts/build/qt5-android/compat.c /repo/scripts/build/qt5-android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
     --mount=type=bind,source=downloads/android-gingerbread,target=/repo/downloads/android-gingerbread \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt5-android/build-runtime.sh && rm -rf /work/* /work/.android-runtime-prepared
 
 FROM ${ANDROID_ABI}-runtime AS runtime
@@ -94,8 +94,6 @@ FROM ${ANDROID_ABI}-runtime AS runtime
 FROM runtime AS qt-build
 ARG ANDROID_ABI
 COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
-ARG PARALLEL_JOBS=2
-ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 COPY scripts/build/qt4-android/target-config.sh \
      scripts/build/qt4-android/cache-inputs.py \
      scripts/build/qt4-android/prepare-source.py \
@@ -110,8 +108,10 @@ COPY patches/qt4/all/03-static-gui-animation-registration.patch \
 COPY patches/qt4/android /repo/patches/qt4/android
 COPY patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch /repo/patches/qt4/linux-sarge-llvm/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=cache,id=qt4-android-${ANDROID_ABI}-sdk,target=/work,sharing=locked \
     --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt4-android/build-api21-sdk.sh quick
 
 FROM tools AS sdk-base

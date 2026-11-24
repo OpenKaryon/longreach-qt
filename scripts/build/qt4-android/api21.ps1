@@ -27,6 +27,7 @@ $prefix="/opt/qt4-android-$Abi-llvm"
 $allProfiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
 if ($Mode -in @('sdk','examples')) { Assert-AndroidNoEmulatorRunning -Message 'Stop the Android emulator before compiling' }
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$jobsFile=$null
 $artifactLock=Enter-AndroidArtifactLock $root
 try {
 switch ($Mode) {
@@ -34,9 +35,10 @@ switch ($Mode) {
         Clear-AndroidResultAggregates $root
         . "$repo/scripts/build/android-api21/build-options.ps1"
         $buildFlags=@(Get-AndroidDockerBuildFlags -NoCache:$NoCache -DockerBuildFlagsJson $DockerBuildFlagsJson)
+        $jobsFile=New-AndroidBuildJobsFile $ParallelJobs
         & "$repo/scripts/fetch/qt4-android.ps1" -Abi $Abi -Scope sdk -AndroidSdk $AndroidSdk
         Invoke-DonutCommand docker (@('build') + $buildFlags + @('--platform','linux/amd64','--progress','plain','--target','sdk',
-            '--build-arg',"ANDROID_ABI=$Abi",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",'--file',"$repo/docker/qt4/android/Dockerfile",'--tag',$SdkImage,$repo))
+            '--build-arg',"ANDROID_ABI=$Abi",'--secret',"id=longreach-jobs,src=$jobsFile",'--file',"$repo/docker/qt4/android/Dockerfile",'--tag',$SdkImage,$repo))
         Invoke-DonutCommand docker @('image','inspect','--format','{{.Id}}',$SdkImage) | Set-Content "$root/sdk-image-id.txt"
     }
     'examples' {
@@ -96,4 +98,7 @@ switch ($Mode) {
     }
 }
 
-} finally { if ($artifactLock) { $artifactLock.Dispose() } }
+} finally {
+    if ($jobsFile) { [IO.File]::Delete($jobsFile) }
+    if ($artifactLock) { $artifactLock.Dispose() }
+}

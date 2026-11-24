@@ -17,8 +17,6 @@ RUN ln -s /opt/qt6-linux-amd64-llvm /opt/qt6-host-llvm21 \
     && /opt/qt6-host-llvm21/libexec/moc --version | grep -E '^moc 6\.8\.5$' \
     && /opt/qt6-host-llvm21/bin/qsb --version | grep -E '6\.8\.5$'
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ARG PARALLEL_JOBS=2
-ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 WORKDIR /work
 
 FROM tools AS platform
@@ -40,7 +38,9 @@ COPY scripts/build/qt6-android/target-config.sh \
      scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
 COPY scripts/tests/android/android-api21-driver.sh /repo/scripts/tests/android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt6-android/build-runtime.sh \
     && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
     && bash /repo/scripts/tests/android/android-api21-driver.sh
@@ -48,7 +48,9 @@ RUN --network=none \
 FROM runtime AS openssl
 COPY scripts/build/qt6-android/build-openssl.sh /repo/scripts/build/qt6-android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/openssl-3.5.7.tar.gz,target=/repo/downloads/openssl-3.5.7.tar.gz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt6-android/build-openssl.sh
 
 FROM openssl AS qt-build
@@ -57,7 +59,9 @@ COPY patches/qt6/android /repo/patches/qt6/android
 COPY scripts/build/qt6-android/build-sdk.sh \
      scripts/build/qt6-android/apply-qt-patches.py /repo/scripts/build/qt6-android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/qt-everywhere-src-6.8.5.tar.xz,target=/repo/downloads/qt-everywhere-src-6.8.5.tar.xz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt6-android/build-sdk.sh
 
 # Report-only recipe updates reuse the completed native SDK layer.

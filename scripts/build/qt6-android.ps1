@@ -36,21 +36,23 @@ if (!$OutputDirectory) { $OutputDirectory = "$repo/artifacts/qt6-android-lollipo
 if ($Mode -in @('sdk','examples')) { Assert-AndroidNoEmulatorRunning -Message 'Stop the Android emulator before compiling.' }
 
  . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$jobsFile=$null
 $artifactLock=Enter-AndroidArtifactLock $OutputDirectory
 try {
 switch ($Mode) {
     'sdk' {
         . "$repo/scripts/build/android-api21/build-options.ps1"
         $buildFlags=@(Get-AndroidDockerBuildFlags -NoCache:$NoCache -DockerBuildFlagsJson $DockerBuildFlagsJson)
+        $jobsFile=New-AndroidBuildJobsFile $ParallelJobs
         # Fail before downloads or provisioning when the required ready host SDK is absent.
         Invoke-Qt6AndroidTool docker @('image','inspect',$HostImage) | Out-Null
         # This is the only mode allowed to fetch build inputs or build images.
         & "$repo/scripts/fetch/qt6-android.ps1" -AndroidSdk $AndroidSdk -Scope sdk -Abi $Abi
         $tools = 'longreach-qt4-android-donut:llvm21'
         Invoke-Qt6AndroidTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--file',
-            "$repo/docker/qt4/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",'--tag',$tools,$repo))
+            "$repo/docker/qt4/android/Dockerfile",'--secret',"id=longreach-jobs,src=$jobsFile",'--tag',$tools,$repo))
         Invoke-Qt6AndroidTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--progress','plain',
-            '--file',"$repo/docker/qt6/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",
+            '--file',"$repo/docker/qt6/android/Dockerfile",'--secret',"id=longreach-jobs,src=$jobsFile",
             '--build-arg',"QT_HOST_IMAGE=$HostImage",'--build-arg',"ANDROID_ABI=$Abi",'--target','sdk','--tag',$SdkImage,$repo))
         $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
         Invoke-Qt6AndroidTool docker @('image','inspect','--format','{{.Id}}',$SdkImage) |
@@ -100,4 +102,7 @@ switch ($Mode) {
     }
 }
 
-} finally { if ($artifactLock) { $artifactLock.Dispose() } }
+} finally {
+    if ($jobsFile) { [IO.File]::Delete($jobsFile) }
+    if ($artifactLock) { $artifactLock.Dispose() }
+}

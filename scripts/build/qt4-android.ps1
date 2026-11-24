@@ -58,7 +58,7 @@ $api4 = Expand-DonutInput "$inputs/android-1.6_r03-linux.zip" `
     'a8c4e3b32269c6b04c2adeabd112fce42f292dab1a40ef3b08ea7d4212be0df4' `
     (Join-Path $output 'inputs') 'android-1.6_r03-linux/android.jar'
 $image = 'longreach-qt4-android-donut:llvm21'
-Invoke-DonutCommand docker @('build', '--platform', 'linux/amd64', '--file', "$repo/docker/qt4/android/Dockerfile", '--build-arg', 'PARALLEL_JOBS=2', '--tag', $image, $repo)
+Invoke-DonutCommand docker @('build', '--platform', 'linux/amd64', '--file', "$repo/docker/qt4/android/Dockerfile", '--tag', $image, $repo)
 $imageId=((Invoke-DonutCommand docker @('image','inspect','--format','{{.Id}}',$image)) -join '').Trim()
 if ($imageId -notmatch '^sha256:[0-9a-f]{64}$') { throw 'Missing immutable API4 tool image identity' }
 Invoke-DonutCommand docker @(

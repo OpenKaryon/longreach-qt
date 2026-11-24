@@ -16,8 +16,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 FROM tools AS api10-runtime
 ARG ANDROID_ABI
 ENV ANDROID_ABI=${ANDROID_ABI}
-ARG PARALLEL_JOBS=2
-ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 WORKDIR /work
 COPY patches/android/gingerbread /repo/patches/android/gingerbread
 COPY scripts/fetch/locks/qt5-android-api10-inputs.json /repo/scripts/fetch/locks/
@@ -29,8 +27,10 @@ COPY scripts/build/qt5-android/build-runtime.sh \
      scripts/build/qt5-android/clang-wrapper.sh \
      scripts/build/qt5-android/compat.c /repo/scripts/build/qt5-android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
     --mount=type=bind,source=downloads/android-gingerbread,target=/repo/downloads/android-gingerbread \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt5-android/build-runtime.sh && rm -rf /work/* /work/.android-runtime-prepared
 
 FROM api10-runtime AS armeabi-v7a-runtime
@@ -40,8 +40,6 @@ FROM api10-runtime AS x86-runtime
 FROM tools AS api21-platform
 ARG ANDROID_ABI
 ENV ANDROID_ABI=${ANDROID_ABI}
-ARG PARALLEL_JOBS=2
-ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 WORKDIR /work
 COPY scripts/build/qt6-android/prepare-inputs.py /repo/scripts/build/qt6-android/
 COPY scripts/fetch/locks/qt6-android-api21-inputs.json /repo/scripts/fetch/locks/
@@ -59,7 +57,9 @@ COPY scripts/build/qt6-android/target-config.sh \
      scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
 COPY scripts/tests/android/android-api21-driver.sh /repo/scripts/tests/android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt6-android/build-runtime.sh \
     && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
     && bash /repo/scripts/tests/android/android-api21-driver.sh \
@@ -79,7 +79,9 @@ FROM runtime AS openssl
 COPY scripts/build/openssl.sh /repo/scripts/build/
 COPY scripts/build/qt5-android/build-openssl.sh /repo/scripts/build/qt5-android/
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/openssl-3.5.7.tar.gz,target=/repo/downloads/openssl-3.5.7.tar.gz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt5-android/build-openssl.sh
 
 FROM openssl AS qtbase
@@ -91,15 +93,19 @@ COPY patches/qt5/linux-lucid-llvm/01-qml-x86-register-enum.patch /repo/patches/q
 COPY scripts/build/qt5-android/build-qt.sh scripts/build/qt5-android/apply-qt-patches.py /repo/scripts/build/qt5-android/
 COPY scripts/build/qt5-android/mkspec /repo/scripts/build/qt5-android/mkspec
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/repo/downloads/qt-everywhere-opensource-src-5.15.19.tar.xz \
     --mount=type=bind,source=downloads/android-gingerbread/android-35.jar,target=/work/android-sdk/platforms/android-35/android.jar \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     echo '4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b  /work/android-sdk/platforms/android-35/android.jar' | sha256sum -c - \
     && bash /repo/scripts/build/qt5-android/build-qt.sh base
 
 FROM qtbase AS qt-build
 RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
     --mount=type=bind,source=downloads/qt-everywhere-opensource-src-5.15.19.tar.xz,target=/repo/downloads/qt-everywhere-opensource-src-5.15.19.tar.xz \
     --mount=type=bind,source=downloads/android-gingerbread/android-35.jar,target=/work/android-sdk/platforms/android-35/android.jar \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
     bash /repo/scripts/build/qt5-android/build-qt.sh all
 
 FROM qt-build AS validated

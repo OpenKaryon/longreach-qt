@@ -38,18 +38,20 @@ if ($Mode -in @('sdk','examples')) { Assert-AndroidNoEmulatorRunning -Message 'S
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
  . "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$jobsFile=$null
 $artifactLock=Enter-AndroidArtifactLock $OutputDirectory
 try {
 switch ($Mode) {
     'sdk' {
         . "$repo/scripts/build/android-api21/build-options.ps1"
         $buildFlags=@(Get-AndroidDockerBuildFlags -NoCache:$NoCache -DockerBuildFlagsJson $DockerBuildFlagsJson)
+        $jobsFile=New-AndroidBuildJobsFile $ParallelJobs
         & "$repo/scripts/fetch/qt5-android.ps1" -Abi $Abi -Scope sdk -AndroidSdk $AndroidSdk
         $tools='longreach-qt4-android-donut:llvm21'
         Invoke-AndroidBuildTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--file',
-            "$repo/docker/qt4/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",'--tag',$tools,$repo))
+            "$repo/docker/qt4/android/Dockerfile",'--secret',"id=longreach-jobs,src=$jobsFile",'--tag',$tools,$repo))
         Invoke-AndroidBuildTool docker (@('build') + $buildFlags + @('--platform','linux/amd64','--progress','plain',
-            '--file',"$repo/docker/qt5/android/Dockerfile",'--build-arg',"PARALLEL_JOBS=$ParallelJobs",
+            '--file',"$repo/docker/qt5/android/Dockerfile",'--secret',"id=longreach-jobs,src=$jobsFile",
             '--build-arg',"ANDROID_ABI=$Abi",'--target','sdk','--tag',$SdkImage,$repo))
         $output=(New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
         Invoke-AndroidBuildTool docker @('image','inspect','--format','{{.Id}}',$SdkImage) | Set-Content "$output/sdk-image-id.txt"
@@ -110,4 +112,7 @@ switch ($Mode) {
     }
 }
 
-} finally { if ($artifactLock) { $artifactLock.Dispose() } }
+} finally {
+    if ($jobsFile) { [IO.File]::Delete($jobsFile) }
+    if ($artifactLock) { $artifactLock.Dispose() }
+}

@@ -9,3 +9,11 @@ function Get-AndroidDockerBuildFlags {
     if ($NoCache) { '--no-cache' }
     $flags
 }
+
+
+function New-AndroidBuildJobsFile {
+    param([ValidateRange(1,256)][int]$Jobs=2)
+    $path=[IO.Path]::GetTempFileName()
+    [IO.File]::WriteAllText($path,[string]$Jobs,[Text.Encoding]::ASCII)
+    return $path
+}

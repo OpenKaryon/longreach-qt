@@ -137,6 +137,14 @@ The Qt 4/5/6 mode fixtures continue to cover the individual script phases.
 No SDK build, Docker run, download, guest, security suite or repository
 scanner is required by these ordinary tooling checks.
 
+The `Repository checks` GitHub Actions workflow runs functional tooling
+checks on pushes and pull requests, including Android Python discovery,
+PowerShell fixtures and the host x86 futex probe. Changes to scripts,
+patches and Dockerfiles should use this workflow without `[skip ci]`.
+The same automatic workflow checks tracked files for accidental developer
+paths, private keys and other leaks, and verifies SPDX headers. These
+standard publication checks stay enabled on pushes and pull requests.
+
 
 ## Retained Android build caches
 

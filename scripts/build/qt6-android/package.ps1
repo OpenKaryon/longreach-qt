@@ -41,8 +41,7 @@ if (Test-Path -LiteralPath $apk) {
     if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($apk)) -ne $OutputDirectory) {
         throw 'Unexpected APK output path'
     }
-    $previous = (New-Item -ItemType Directory -Path "$OutputDirectory/previous" -Force).FullName
-    Move-Item -LiteralPath $apk -Destination (Join-Path $previous ("$appName-" + [guid]::NewGuid() + '.apk'))
+    Save-AndroidApkHistory -Apk $apk -HistoryDirectory "$OutputDirectory/previous"
 }
 
 try {

@@ -30,3 +30,17 @@ function Initialize-AndroidExamplesKey([string]$OutputDirectory,$JavaTools) {
     if (!(Test-Path -LiteralPath $keyStore -PathType Leaf)) { throw 'Missing initialized examples signing key' }
     return (Get-Item -LiteralPath $keyStore).FullName
 }
+
+
+function Save-AndroidApkHistory {
+    param([Parameter(Mandatory)][string]$Apk,[Parameter(Mandatory)][string]$HistoryDirectory)
+    $sha=(Get-FileHash -LiteralPath $Apk -Algorithm SHA256).Hash.ToLowerInvariant()
+    $directory=(New-Item -ItemType Directory -Force -Path (Join-Path $HistoryDirectory $sha)).FullName
+    $destination=Join-Path $directory ([IO.Path]::GetFileName($Apk))
+    if (!(Test-Path -LiteralPath $destination)) { Copy-Item -LiteralPath $Apk -Destination $destination }
+    if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant() -cne $sha) {
+        throw 'Saved APK history differs from its content hash'
+    }
+    # Keep the current APK until packaging replaces it successfully. Existing
+    # UUID-named historical files remain untouched; no automatic purge runs.
+}

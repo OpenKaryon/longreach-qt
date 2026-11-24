@@ -17,7 +17,7 @@ def load(name, path):
 
 HERE = Path(__file__).resolve().parent
 owned = load('final_log_owned', HERE / 'android-owned-process.py')
-common = load('final_log_artifacts', HERE.parent / 'build/android-api21/artifact-manifest.py')
+common = load('final_log_artifacts', HERE.parents[1] / 'build/android-api21/artifact-manifest.py')
 FATAL = re.compile(r'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting|\*\*\*\s+\*\*\*\s+\*\*\*|>>>\s*org\.longreachqt\.donut(?:\.quick)?\s*<<<')
 CASE_FIELDS = ('case_cleanup_raw_logcat_sha256', 'case_cleanup_logcat_sha256')
 FINAL_FIELDS = ('final_logcat_sha256', 'final_logcat_capture_sha256')

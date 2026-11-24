@@ -254,10 +254,9 @@ class ShellMetadata(unittest.TestCase):
 class Provenance(unittest.TestCase):
     def seed(self, root, abi):
         repo, tree, prefix, output = root / 'repo', root / 'tree', root / 'prefix', root / 'reports'
-        tree.mkdir()
+        # Prepare an empty tree first: a non-empty tree without a prepared-source
+        # receipt is a legacy tree and is archived before migration.
         selected_source, prepared_prefix = seed_source(root)
-        selected_source.rename(tree / 'seed')
-        (tree / 'seed/mkspecs').rename(tree / 'mkspecs')
         prepared_prefix.rename(prefix)
         runtime = root / 'runtime'
         (runtime / 'lib').mkdir(parents=True)
@@ -284,6 +283,8 @@ class Provenance(unittest.TestCase):
         helper = provenance.source_helper
         def recipe(stage, *args): (stage / 'src/unit.cpp').write_bytes(b'prepared source')
         with patch.object(helper, 'apply_recipe', recipe): helper.prepare(repo, archive, tree, 'quick', api)
+        selected_source.rename(tree / 'seed')
+        (tree / 'seed/mkspecs').rename(tree / 'mkspecs')
         for name in ('.longreach-configuration', '.longreach-object-configuration', '.longreach-plugin-configuration'):
             (tree / name).write_text('a' * 64)
         exporter.export(tree, prefix, runtime_prefix)

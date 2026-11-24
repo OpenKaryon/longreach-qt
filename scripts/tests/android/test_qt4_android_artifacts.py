@@ -141,7 +141,7 @@ class Qt4Artifacts(unittest.TestCase):
             fixtures.qt4(root)
             artifacts.begin(root, 'x86_64', fixtures.SDK)
             (root / 'final-results.json').write_text('current owner report')
-            with self.assertRaises(FileExistsError):
+            with self.assertRaisesRegex(ValueError, 'incomplete or active'):
                 artifacts.begin(root, 'x86_64', fixtures.SDK)
             self.assertEqual((root / 'final-results.json').read_text(), 'current owner report')
 

@@ -45,7 +45,7 @@ function python {
     }
 }
 try {
-    foreach ($relative in @('scripts/run/android/android-adb-endpoint.ps1','scripts/run/android/android-emulator-state.ps1','scripts/run/android-api21-suite.ps1','scripts/run/android/android-cpu.ps1',
+    foreach ($relative in @('scripts/run/android/android-adb-endpoint.ps1','scripts/run/android/android-shell.ps1','scripts/run/android/android-shell-status.ps1','scripts/run/android/android-emulator-state.ps1','scripts/run/android-api21-suite.ps1','scripts/run/android/android-cpu.ps1',
             'scripts/build/android-api21/artifact-lock.ps1','scripts/run/android/android-baselines.json','tests/expected-apps.txt')) {
         $target=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
@@ -152,6 +152,14 @@ function Invoke-AndroidApi21Adb {
         }
         [IO.File]::WriteAllText("$target/selftest-result.txt",'0')
         return 'files pulled'
+    }
+    if ($Parameters.Count -eq 2 -and $Parameters[0] -eq 'shell' -and $Parameters[1] -match 'LONGREACH_SHELL_[a-f0-9]{32}') {
+        $status=$Matches[0]
+        if ($Parameters[1] -match 'LongreachCase (BEGIN-[a-f0-9]+)') {
+            $global:Api21FixtureMarker=$Matches[1]
+            if ($global:Api21FixtureMutation -eq 'manifest-after-marker') { [IO.File]::AppendAllText("$global:Api21FixtureRoot/apk-manifest.json","`n") }
+        }
+        return "${status}:0"
     }
     if ($Parameters[0] -eq 'shell') {
         switch ($Parameters[1]) {

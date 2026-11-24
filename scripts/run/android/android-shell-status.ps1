@@ -3,14 +3,15 @@
 function Invoke-AndroidSetupCommand {
     param([Parameter(Mandatory)][string]$Adb,[Parameter(Mandatory)][string]$Serial,
           [Parameter(Mandatory)][ValidatePattern('^[a-z0-9-]+$')][string]$Step,
-          [Parameter(Mandatory)][string]$Command,[Parameter(Mandatory)][string]$OutputPath)
+          [Parameter(Mandatory)][string]$Command,[Parameter(Mandatory)][string]$OutputPath,
+          [ValidateRange(1,600000)][int]$TimeoutMilliseconds=15000)
     $marker='LONGREACH_SHELL_'+[guid]::NewGuid().ToString('N')
     # Commands are runner-owned shell fragments. A subshell also captures an
     # explicit exit without preventing the outer shell from printing status.
-    $wrapped='( '+$Command+' ); longreach_status=$?; printf ''\n'+$marker+':%s\n'' "$longreach_status"; exit "$longreach_status"'
+    $wrapped='( '+$Command+' ); longreach_status=$?; echo; echo "'+$marker+':$longreach_status"; exit "$longreach_status"'
     # A transport failure must not leave an earlier successful setup transcript.
     [IO.File]::WriteAllText($OutputPath,'',[Text.UTF8Encoding]::new($false))
-    $lines=@(Invoke-AndroidApi21Adb -Adb $Adb -Serial $Serial -Parameters @('shell',$wrapped) -TimeoutMilliseconds 15000)
+    $lines=@(Invoke-AndroidApi21Adb -Adb $Adb -Serial $Serial -Parameters @('shell',$wrapped) -TimeoutMilliseconds $TimeoutMilliseconds)
     $clientCode=$LASTEXITCODE
     [IO.File]::WriteAllLines($OutputPath,[string[]]$lines,[Text.UTF8Encoding]::new($false))
     if ($clientCode -ne 0) { throw "Android setup $Step ADB client failed with status $clientCode" }

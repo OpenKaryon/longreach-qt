@@ -3,8 +3,12 @@
 function Save-AndroidGuestCpuBaseline([string]$Directory,[string]$Abi) {
     $source=Join-Path $Directory 'guest-cpuinfo.txt'
     $report=Join-Path $Directory 'guest-cpu-baseline.json'
-    $json=@(& python "$PSScriptRoot/android-cpu.py" --abi $Abi --cpuinfo $source 2>&1)
-    if ($LASTEXITCODE) { throw ($json -join "`n") }
+    $stderrPath=Join-Path $Directory ('cpu-validator-'+[guid]::NewGuid().ToString('N')+'.stderr')
+    $json=@(& python "$PSScriptRoot/android-cpu.py" --abi $Abi --cpuinfo $source 2> $stderrPath)
+    $exitCode=$LASTEXITCODE
+    $stderr=if (Test-Path -LiteralPath $stderrPath) { [IO.File]::ReadAllText($stderrPath) } else { '' }
+    if ($exitCode) { throw "Guest CPU validation failed: $stderr" }
+    if ($stderr) { Write-Verbose $stderr }
     $result=($json -join "`n") | ConvertFrom-Json
     if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant() -cne $result.guest_cpuinfo_sha256) {
         throw 'Guest CPU evidence changed during validation'

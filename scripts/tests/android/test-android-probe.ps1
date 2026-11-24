@@ -15,8 +15,8 @@ function python {
         return
     }
     $validator=[IO.Path]::GetFileName([string]$args[0])
-    if ($validator -notin @('require-modern-cpp.py','require-android-atomic.py')) { throw 'Unexpected Python tool' }
-    $validatorDirectory=if ($validator -eq 'require-android-atomic.py') { 'scripts/tests/android' } else { 'scripts/tests' }
+    if ($validator -notin @('require-modern-cpp.py','require-android-atomic.py','android-cpu.py')) { throw 'Unexpected Python tool' }
+    $validatorDirectory=if ($validator -eq 'android-cpu.py') { 'scripts/run/android' } elseif ($validator -eq 'require-android-atomic.py') { 'scripts/tests/android' } else { 'scripts/tests' }
     & $context.Python "$($context.Repo)/$validatorDirectory/$validator" @($args | Select-Object -Skip 1)
 }
 try {
@@ -26,6 +26,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $RepoRoot $relative) -Destination $target
     }
     New-Item -ItemType Directory -Force "$fixture/scripts/run/android" | Out-Null
+    Copy-Item -LiteralPath "$RepoRoot/scripts/run/android/android-cpu.ps1" -Destination "$fixture/scripts/run/android/android-cpu.ps1"
     Copy-Item -LiteralPath "$RepoRoot/scripts/run/android/android-shell-status.ps1" -Destination "$fixture/scripts/run/android/android-shell-status.ps1"
     New-Item -ItemType Directory -Force "$fixture/scripts/fetch" | Out-Null
     @'
@@ -77,6 +78,7 @@ function Invoke-AndroidApi21Adb {
             default { throw 'Unexpected property' }
         }
     }
+    if ($Parameters -contains '/proc/cpuinfo') { return @('processor: 0','flags: ssse3 cx16 lahf_lm pni popcnt sse4_1 sse4_2') }
     $step=''
     if ($Parameters[0] -eq 'shell') {
         $command=$Parameters -join ' '

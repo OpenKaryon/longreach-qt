@@ -5,6 +5,7 @@ param([ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi='armea
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot/android/android-wait-boot.ps1"
 . "$PSScriptRoot/android/android-api21-adb.ps1"
+. "$PSScriptRoot/android/android-cpu.ps1"
 . "$PSScriptRoot/android/android-shell-status.ps1"
 . "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/../build/android-api21/artifact-lock.ps1"
@@ -44,6 +45,7 @@ try {
     }
     Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters @('shell','getprop') | Set-Content "$run/guest-properties.txt"
     Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters @('shell','cat','/proc/cpuinfo') | Set-Content "$run/guest-cpuinfo.txt"
+    $guestCpu=Save-AndroidGuestCpuBaseline $run $Abi
     $remote="/data/local/tmp/longreach-cxx23-$Abi"
     Invoke-AndroidSetupCommand -Adb $adb -Serial $serial -Step mkdir -Command "mkdir -p $remote" -OutputPath "$run/setup-mkdir.stdout" | Out-Null
     foreach ($name in $probeFiles) {
@@ -65,6 +67,7 @@ try {
     if ($exitCode -ne 0) { throw 'Generic atomic ADB client failed' }
     & python "$repo/scripts/tests/android/require-android-atomic.py" "$run/atomic.stdout"
     if ($LASTEXITCODE) { throw 'Generic cross-DSO atomic runtime behavior failed' }
+    Assert-AndroidGuestCpuBinding $run $guestCpu
 
 } finally {
     try {

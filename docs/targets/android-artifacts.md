@@ -225,3 +225,7 @@ fixtures. Build recipes and reusable checks stay public; local working diaries
 and raw lab protocols live in the private test lab, as for other targets.
 Historical result reports identify their tested SDKs and never qualify changed
 producer recipes, current source or other ABIs by implication.
+
+The owned-host `frontend_signaled` field means a signaled Windows process handle
+after wait, not a delivered shutdown signal; the receipt states its passive
+grace/Job-termination policy explicitly.

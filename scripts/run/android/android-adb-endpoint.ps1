@@ -100,7 +100,10 @@ function Get-AndroidAdbArguments {
         }
         if (!$context) { $context=@{Endpoint=$Endpoint;RequestSha=$null} }
     }
-    if (!$context) { return $Arguments } # Unbound helper calls are diagnostics, not qualification.
+    if (!$context -and $Directory) {
+        throw 'No frozen ADB endpoint found for the specified owned run directory'
+    }
+    if (!$context) { return $Arguments } # Calls without a run directory remain diagnostics.
     Assert-AndroidAdbEndpoint $context.Endpoint
     if ($context.RequestSha) {
         $snapshot=Read-AndroidAdbEndpointRequest (Join-Path $context.Directory 'host-process-request.json')

@@ -25,6 +25,8 @@ $QtQuickBackend=$QtQuickBackend.ToLowerInvariant()
 . "$PSScriptRoot/android/android-cpu.ps1"
 . "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/android/android-process-exit.ps1"
+. "$PSScriptRoot/android/android-shell.ps1"
+. "$PSScriptRoot/android/android-shell-status.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
@@ -52,6 +54,12 @@ $serial = 'emulator-5582'
 function Invoke-Adb {
     param([string[]]$Parameters,[switch]$AllowNonzero)
     Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters $Parameters -AllowNonzero:$AllowNonzero
+}
+function Invoke-CheckedAndroidShell {
+    param([string]$Step,[string[]]$Arguments,[string]$OutputPath)
+    $command=($Arguments | ForEach-Object { ConvertTo-AndroidShellArgument $_ }) -join ' '
+    $budget=if ($Arguments[0] -eq 'am') { 30000 } else { 15000 }
+    Invoke-AndroidSetupCommand -Adb $adb -Serial $serial -Step $Step -Command $command -OutputPath $OutputPath -TimeoutMilliseconds $budget | Out-Null
 }
 $apps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
 if ($apps.Count -ne 8) { throw 'Expected exactly eight shared applications' }
@@ -95,6 +103,7 @@ $emulator="$root/media/$emulatorName"
 $emulatorOwner=& "$PSScriptRoot/qt6-android-start.ps1" -OutputDirectory $root -Emulator $emulator -RunName $RunName -Gpu $Gpu -Abi $Abi -PassThru
 $run = "$root/$RunName"
 $outcomes = [Collections.Generic.List[object]]::new()
+$caseError=$null
 try {
     $emulatorLaunch=Get-Content -LiteralPath "$run/emulator-launch.json" -Raw | ConvertFrom-Json
     $emulatorIdentitySha=(Get-FileHash -LiteralPath "$run/emulator-identity.json").Hash.ToLowerInvariant()
@@ -117,7 +126,7 @@ try {
     Invoke-Adb @('shell','getprop') | Set-Content -LiteralPath "$run/guest-properties.txt"
     Invoke-Adb @('shell','cat','/proc/cpuinfo') | Set-Content -LiteralPath "$run/guest-cpuinfo.txt"
     $guestCpu=Save-AndroidGuestCpuBaseline $run $Abi
-    Invoke-Adb @('shell','input','keyevent','82') | Out-Null
+    Invoke-CheckedAndroidShell -Step unlock -Arguments @('input','keyevent','82') -OutputPath "$run/setup-unlock.stdout"
     foreach ($case in $cases) {
         $app = $case.App
         $package = if ($QtMajor -eq 6) { 'org.longreachqt.examples.qt6.' + $app.Replace('-','_') } else { 'org.longreachqt.examples.' + $app.Replace('-','') }
@@ -132,14 +141,14 @@ try {
         if (!($install -match '^\s*Success\s*$')) { throw "APK install failed: $app" }
         Get-AndroidVerifiedHash $apk $installedApkSha | Out-Null
         Get-AndroidVerifiedHash "$root/apk-manifest.json" $apkManifestSha | Out-Null
-        Invoke-Adb @('shell','am','force-stop',$package) | Out-Null
+        Invoke-CheckedAndroidShell -Step force-stop-before -Arguments @('am','force-stop',$package) -OutputPath "$destination/force-stop-before.stdout"
         $clear = Invoke-Adb @('shell','pm','clear',$package)
         if (!($clear -match '^\s*Success\s*$')) { throw "Could not reset previous app reports: $package" }
         # API21's default clear leaves system-buffer deaths from the prior APK.
         Invoke-Adb @('logcat','-b','all','-c') | Out-Null
         $logMarker = 'BEGIN-' + [guid]::NewGuid().ToString('N')
         $logMarker | Set-Content "$destination/log-marker.txt"
-        Invoke-Adb @('shell','log','-p','i','-t','LongreachCase',$logMarker) | Out-Null
+        Invoke-CheckedAndroidShell -Step launch-marker -Arguments @('log','-p','i','-t','LongreachCase',$logMarker) -OutputPath "$destination/launch-marker.stdout"
         $launchArguments = @('shell','am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments)
         if ($DebugQtPlugins) { $launchArguments += @('--ez','debugQtPlugins','true') }
         if ($QtQuickBackend -ne 'default') {
@@ -204,7 +213,7 @@ try {
         Get-AndroidVerifiedHash "$run/emulator-identity.json" $emulatorIdentitySha | Out-Null
         Get-AndroidVerifiedHash "$run/emulator-media.json" $emulatorMediaSha | Out-Null
         Assert-AndroidGuestCpuBinding $run $guestCpu
-        Invoke-Adb @('shell','am','force-stop',$package) | Out-Null
+        Invoke-CheckedAndroidShell -Step force-stop-after -Arguments @('am','force-stop',$package) -OutputPath "$destination/force-stop-after.stdout"
         # This is a disposable task-owned guest. Release extracted native
         # libraries between cases; all reports and exact APKs remain on host.
         $removed = Invoke-Adb @('uninstall',$package)
@@ -233,8 +242,19 @@ try {
         $outcomes | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$run/results.json"
         Write-Output "$($case.Name): $($summary -join ' ')"
     }
+} catch {
+    $caseError=$_
+    throw
 } finally {
-    $hostTree=& "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
+    try {
+        $hostTree=& "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
+    } catch {
+        if ($caseError) {
+            $errors=[Exception[]]@($caseError.Exception,$_.Exception)
+            throw [AggregateException]::new('Android case failed and cleanup also failed',$errors)
+        }
+        throw
+    }
 }
 
 # A filtered run has no final collector, so verify the tested inputs here too.

@@ -473,7 +473,11 @@ def supervise(directory, expected_request_sha256):
                          owner_sha256=owner_sha, supervisor_pid=os.getpid(), frontend_pid=frontend_pid,
                          active_processes=active, total_processes=total, frontend_exit_code=code.value,
                          reason=reason, forced=forced, host_tree_exit_confirmed=(active == 0),
-                         frontend_signaled=True, logs_closed_before_hash=True, frontend_exited_before_stop=frontend_exited_before_stop,
+                         # Signaled is the Windows process-handle wait state,
+                         # established by wait_frontend(), not a sent shutdown signal.
+                         frontend_signaled=True, shutdown_signal_sent=False,
+                         shutdown_policy='passive-grace-then-owned-job-termination',
+                         logs_closed_before_hash=True, frontend_exited_before_stop=frontend_exited_before_stop,
                          stdout_sha256=completed_log_digest(directory / spec['stdout']),
                          stderr_sha256=completed_log_digest(directory / spec['stderr']))
             proof['host_slot_held_until_tree_exit'] = True

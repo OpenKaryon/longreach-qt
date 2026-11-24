@@ -23,6 +23,12 @@ void checkSensors(SmokeReporter &r)
 #else
 
 #include <QAccelerometer>
+#if defined(Q_OS_ANDROID)
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QThread>
+#endif
 #if QT_VERSION_MAJOR < 6
 #include <QAltimeter>
 #endif
@@ -118,6 +124,90 @@ struct PressureFlt : QPressureFilter { bool filter(QPressureReading *) override 
 struct RotationFlt : QRotationFilter { bool filter(QRotationReading *) override { return true; } };
 struct TapFlt : QTapFilter { bool filter(QTapReading *) override { return true; } };
 struct TiltFlt : QTiltFilter { bool filter(QTiltReading *) override { return true; } };
+
+#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+template <typename Sensor>
+void checkAndroidQueueLifecycle(SmokeReporter &r, const QByteArray &nativeId, const QString &name, int timeoutMs = 1000)
+{
+    r.check(name, [&](QString &d) {
+        if (!QSensor::sensorsForType(Sensor::type).contains(nativeId)) {
+            r.skip(d, QStringLiteral("No selected Android sensor backend"));
+            return false;
+        }
+        int totalReadings = 0;
+        for (int cycle = 0; cycle < 32; ++cycle) {
+            int readings = 0;
+            {
+                Sensor sensor;
+                sensor.setIdentifier(nativeId);
+                sensor.setDataRate(100);
+                QObject::connect(&sensor, &QSensor::readingChanged, &sensor,
+                                 [&] { ++readings; });
+                if (!sensor.start() || !sensor.isActive()) {
+                    d = QStringLiteral("Native sensor failed to start, cycle %1").arg(cycle);
+                    return false;
+                }
+                QElapsedTimer timer;
+                timer.start();
+                do {
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+                    QThread::msleep(5);
+                } while (!readings && timer.elapsed() < timeoutMs);
+            }
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+            if (!readings) {
+                d = QStringLiteral("No native sensor reading, cycle %1").arg(cycle);
+                return false;
+            }
+            totalReadings += readings;
+        }
+        d = QStringLiteral("32 native queue lifecycles, %1 readings").arg(totalReadings);
+        r.observe(name, d);
+        return true;
+    });
+}
+
+// Some legacy emulator/HAL pairs advertise a magnetometer but use incompatible
+// magnetic message names. Exercise destruction under a verified native producer
+// there, without claiming that the compass produced a heading.
+void checkAndroidCompassTeardown(SmokeReporter &r)
+{
+    const QString name = QStringLiteral("sensors/android-compass-queue-lifecycle");
+    r.check(name, [&](QString &d) {
+        QAccelerometer producer;
+        producer.setIdentifier(QByteArray("1"));
+        producer.setDataRate(100);
+        producer.setSkipDuplicates(false);
+        int readings = 0;
+        QObject::connect(&producer, &QSensor::readingChanged, &producer, [&] { ++readings; });
+        if (!producer.start()) { d = "Native acceleration producer failed to start"; return false; }
+        for (int cycle = 0; cycle < 32; ++cycle) {
+            const int before = readings;
+            {
+                QCompass compass;
+                compass.setIdentifier(QByteArray("android.synthetic.compass"));
+                compass.setDataRate(100);
+                if (!compass.start() || !compass.isActive()) {
+                    d = QStringLiteral("Native compass failed to start, cycle %1").arg(cycle);
+                    return false;
+                }
+                QElapsedTimer timer;
+                timer.start();
+                while (readings == before && timer.elapsed() < 1000) {
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+                    QThread::msleep(5);
+                }
+                if (readings == before) { d = "Native acceleration stream stopped"; return false; }
+            }
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+        d = QStringLiteral("32 compass lifecycles during native acceleration, %1 acceleration readings; heading unavailable (no magnetic samples)").arg(readings);
+        r.observe(name, d);
+        return true;
+    });
+}
+#endif
+
 }
 
 void checkSensors(SmokeReporter &r)
@@ -129,7 +219,19 @@ void checkSensors(SmokeReporter &r)
         QRotationSensor rot; RotationFlt rf; rot.addFilter(&rf);
         QCompass compass; CompassFlt cf; compass.addFilter(&cf);
         QOrientationSensor orient; OrientFilter of; orient.addFilter(&of);
-        accel.start(); gyro.start(); mag.start(); rot.start(); compass.start(); orient.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting accelerometer"));
+        accel.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting gyroscope"));
+        gyro.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting magnetometer"));
+        mag.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting rotation sensor"));
+        rot.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting compass"));
+        compass.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("starting orientation sensor"));
+        orient.start();
+        r.observe(QStringLiteral("sensors/motion-start"), QStringLiteral("all start calls returned; scope teardown follows"));
         QAccelerometerReading *ar = accel.reading();
         QGyroscopeReading *gr = gyro.reading();
         QMagnetometerReading *mr = mag.reading();
@@ -193,6 +295,52 @@ void checkSensors(SmokeReporter &r)
         return false;
 #endif
     });
+#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+    bool nativeMagneticReadingsAvailable = false;
+    r.check("sensors/android-acceleration-input", [&](QString &d) {
+        QAccelerometer accel;
+        QMagnetometer magnetic;
+        accel.setIdentifier(QByteArray("1"));
+        magnetic.setIdentifier(QByteArray("2"));
+        accel.setDataRate(100);
+        magnetic.setDataRate(100);
+        accel.setSkipDuplicates(false);
+        magnetic.setSkipDuplicates(false);
+        int accelerationReadings = 0, magneticReadings = 0;
+        QObject::connect(&accel, &QSensor::readingChanged, &accel, [&] { ++accelerationReadings; });
+        QObject::connect(&magnetic, &QSensor::readingChanged, &magnetic, [&] { ++magneticReadings; });
+        const bool accelerationStarted = accel.start();
+        const bool magneticStarted = magnetic.start();
+        QElapsedTimer timer;
+        timer.start();
+        while ((!accelerationReadings || !magneticReadings) && timer.elapsed() < 5000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+            QThread::msleep(5);
+        }
+        QString accelerationValues("none"), magneticValues("none");
+        if (auto reading = accel.reading())
+            accelerationValues = QStringLiteral("%1:%2:%3").arg(reading->x(), 0, 'g', 9).arg(reading->y(), 0, 'g', 9).arg(reading->z(), 0, 'g', 9);
+        if (auto reading = magnetic.reading())
+            magneticValues = QStringLiteral("%1:%2:%3").arg(reading->x(), 0, 'g', 9).arg(reading->y(), 0, 'g', 9).arg(reading->z(), 0, 'g', 9);
+        d = QStringLiteral("accel start=%1 reads=%2 error=%3 values=%4; magnetic start=%5 reads=%6 error=%7 values=%8")
+                .arg(accelerationStarted).arg(accelerationReadings).arg(int(accel.error())).arg(accelerationValues)
+                .arg(magneticStarted).arg(magneticReadings).arg(int(magnetic.error())).arg(magneticValues);
+        r.observe(QStringLiteral("sensors/android-native-inputs"), d);
+        nativeMagneticReadingsAvailable = magneticStarted && magneticReadings > 0;
+        // This check qualifies acceleration only. Magnetic availability is
+        // recorded above and selects the appropriate compass check below.
+        return accelerationStarted && accelerationReadings > 0;
+    });
+    // Select the actual platform backends before the fixed backend below
+    // changes the default. Both native queue owners must survive teardown.
+    checkAndroidQueueLifecycle<QAccelerometer>(r, QByteArray("1"),
+                                               QStringLiteral("sensors/android-queue-lifecycle"));
+    if (nativeMagneticReadingsAvailable)
+        checkAndroidQueueLifecycle<QCompass>(r, QByteArray("android.synthetic.compass"),
+                                            QStringLiteral("sensors/android-compass-queue-lifecycle"), 5000);
+    else
+        checkAndroidCompassTeardown(r);
+#endif
     r.check("sensors/real-backend-produces-reading", [&](QString &d) {
         // Registering a real backend and making it the default is what lets
         // start() actually succeed and reading() return a live object,

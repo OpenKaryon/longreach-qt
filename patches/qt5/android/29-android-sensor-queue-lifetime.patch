@@ -1,0 +1,447 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Retire Android queues after dispatch and stop polling before runtime teardown.
+
+--- a/qtsensors/src/plugins/sensors/android/sensormanager.h
++++ b/qtsensors/src/plugins/sensors/android/sensormanager.h
+@@ -44,6 +44,8 @@
+ #include <QSemaphore>
+ #include <QMutex>
+ #include <QWaitCondition>
++#include <atomic>
++#include <functional>
+ 
+ #include <private/qjni_p.h>
+ #include <private/qjnihelpers_p.h>
+@@ -56,6 +58,7 @@
+     ~SensorManager() override;
+     static QSharedPointer<SensorManager> &instance();
+     ALooper *looper() const;
++    void retireQueue(const std::function<void()> &cleanup);
+     ASensorManager *manager() const;
+ 
+     QJNIObjectPrivate javaSensor(const ASensor *sensor) const;
+@@ -66,11 +69,19 @@
+     SensorManager();
+     // QThread interface
+     void run() override;
++    void drainRetiredQueues();
++    void shutdown();
++    struct RetiredQueue {
++        std::function<void()> cleanup;
++        RetiredQueue *next;
++    };
+ 
+ private:
+     QAtomicInt m_quit{0};
+     ALooper *m_looper = nullptr;
+     QSemaphore m_waitForStart;
++    std::atomic<RetiredQueue *> m_retiredQueues{nullptr};
++    std::atomic<bool> m_dispatchStopped{false};
+     QJNIObjectPrivate m_sensorManager;
+ };
+ 
+--- a/qtsensors/src/plugins/sensors/android/sensormanager.cpp
++++ b/qtsensors/src/plugins/sensors/android/sensormanager.cpp
+@@ -38,17 +38,32 @@
+ ****************************************************************************/
+ #include "sensormanager.h"
+ #include <dlfcn.h>
++#include <QCoreApplication>
+ 
+ SensorManager::SensorManager()
+ {
+     auto sensorService =  QJNIObjectPrivate::getStaticObjectField("android.content.Context", "SENSOR_SERVICE", "Ljava/lang/String;");
+     m_sensorManager = QJNIObjectPrivate{QtAndroidPrivate::context()}.callObjectMethod("getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;", sensorService.object());
+     setObjectName("QtSensorsLooperThread");
++    if (auto application = QCoreApplication::instance()) {
++        // Android's Binder globals can be gone before C++ static teardown.
++        // Stop polling while the application still owns its runtime services.
++        QObject::connect(application, &QCoreApplication::aboutToQuit,
++                         this, &SensorManager::shutdown, Qt::DirectConnection);
++        QObject::connect(application, &QObject::destroyed,
++                         this, &SensorManager::shutdown, Qt::DirectConnection);
++    }
+     start();
+     m_waitForStart.acquire();
+ }
+ 
+ SensorManager::~SensorManager()
++{
++    shutdown();
++    drainRetiredQueues();
++}
++
++void SensorManager::shutdown()
+ {
+     m_quit.store(1);
+     wait();
+@@ -68,6 +83,33 @@
+ ALooper *SensorManager::looper() const
+ {
+     return m_looper;
++}
++
++// Backends never wait for the looper during QObject destruction. Keep the
++// queue and callback context alive until a complete dispatch has returned.
++void SensorManager::retireQueue(const std::function<void()> &cleanup)
++{
++    auto retired = new RetiredQueue{cleanup, nullptr};
++    auto head = m_retiredQueues.load(std::memory_order_relaxed);
++    do {
++        retired->next = head;
++    } while (!m_retiredQueues.compare_exchange_weak(head, retired,
++                 std::memory_order_release, std::memory_order_relaxed));
++    // Backends can outlive aboutToQuit. Once dispatch has stopped, there is
++    // no native callback to wait for and no worker left to drain this list.
++    if (m_dispatchStopped.load(std::memory_order_acquire))
++        drainRetiredQueues();
++}
++
++void SensorManager::drainRetiredQueues()
++{
++    auto retired = m_retiredQueues.exchange(nullptr, std::memory_order_acquire);
++    while (retired) {
++        auto next = retired->next;
++        retired->cleanup();
++        delete retired;
++        retired = next;
++    }
+ }
+ 
+ static inline ASensorManager* androidManager()
+@@ -114,7 +156,13 @@
+     m_looper = ALooper_prepare(0);
+     m_waitForStart.release();
+     do {
+-        if (ALooper_pollOnce(5 /*ms*/, nullptr, nullptr, nullptr) == ALOOPER_POLL_TIMEOUT)
+-            QThread::yieldCurrentThread();
++        ALooper_pollOnce(5 /*ms*/, nullptr, nullptr, nullptr);
++        drainRetiredQueues();
++        QThread::yieldCurrentThread();
+     } while (!m_quit.load());
++    drainRetiredQueues();
++    m_dispatchStopped.store(true, std::memory_order_release);
++    // Catch a producer that enqueued after the first drain but before it
++    // could observe the stopped flag. Later producers drain themselves.
++    drainRetiredQueues();
+ }
+--- a/qtsensors/src/plugins/sensors/android/sensoreventqueue.h
++++ b/qtsensors/src/plugins/sensors/android/sensoreventqueue.h
+@@ -43,9 +43,11 @@
+ #include "sensormanager.h"
+ 
+ #include <functional>
++#include <memory>
+ 
+ #include <QCoreApplication>
+ #include <QEvent>
++#include <QPointer>
+ #include <QSensorBackend>
+ 
+ class FunctionEvent : public QEvent
+@@ -68,6 +70,20 @@
+     Function m_function;
+ };
+ 
++// This receiver outlives its backend until the native callback has stopped.
++// Its queued functions check the backend only on the backend's own thread.
++class SensorEventReceiver : public QObject
++{
++    bool event(QEvent *event) override
++    {
++        if (event->type() == FunctionEvent::FunctionEventType) {
++            static_cast<FunctionEvent *>(event)->callFunction();
++            return true;
++        }
++        return QObject::event(event);
++    }
++};
++
+ class ThreadSafeSensorBackend : public QSensorBackend
+ {
+ public:
+@@ -95,19 +111,38 @@
+ template <typename T>
+ class SensorEventQueue : public ThreadSafeSensorBackend
+ {
++    struct DeliveryState {
++        std::atomic<bool> retired{false};
++        QPointer<SensorEventQueue> backend;
++    };
++    struct QueueContext {
++        std::atomic<ASensorEventQueue *> queue{nullptr};
++        std::shared_ptr<DeliveryState> delivery = std::make_shared<DeliveryState>();
++        SensorEventReceiver *receiver = new SensorEventReceiver;
++    };
+ public:
+     explicit SensorEventQueue(int androidSensorType, QSensor *sensor, QObject *parent = nullptr)
+         : ThreadSafeSensorBackend(sensor, parent)
+     {
+         setReading<T>(&m_reader);
+-        m_sensorEventQueue = ASensorManager_createEventQueue(m_sensorManager->manager(), m_sensorManager->looper(), -1, &looperCallback, this);
++        m_context = new QueueContext;
++        m_context->delivery->backend = this;
++        m_sensorEventQueue = ASensorManager_createEventQueue(m_sensorManager->manager(), m_sensorManager->looper(), -1, &looperCallback, m_context);
++        m_context->queue.store(m_sensorEventQueue, std::memory_order_release);
+         setSensorType(androidSensorType);
+     }
+ 
+     ~SensorEventQueue() override
+     {
++        stopDelivery();
+         stop();
+-        ASensorManager_destroyEventQueue(m_sensorManager->manager(), m_sensorEventQueue);
++        m_sensorManager->retireQueue([manager = m_sensorManager->manager(),
++                                     queue = m_sensorEventQueue, context = m_context] {
++            ASensorManager_destroyEventQueue(manager, queue);
++            context->receiver->deleteLater();
++            delete context;
++        });
++        m_sensorEventQueue = nullptr;
+     }
+ 
+     void setSensorType(int type)
+@@ -146,15 +181,31 @@
+     }
+ 
+ protected:
++    void stopDelivery()
++    {
++        m_context->delivery->retired.store(true, std::memory_order_release);
++    }
+     virtual void dataReceived(const ASensorEvent &event) = 0;
+     static int looperCallback(int /*fd*/, int /*events*/, void* data)
+     {
++        auto context = static_cast<QueueContext *>(data);
++        const auto delivery = context->delivery;
++        auto queue = context->queue.load(std::memory_order_acquire);
++        if (!queue)
++            return 1; // Creation has not yet published the native queue.
+         ASensorEvent sensorEvent;
+-        auto self = reinterpret_cast<SensorEventQueue*>(data);
+-        while (ASensorEventQueue_getEvents(self->m_sensorEventQueue, &sensorEvent, 1))
+-            QCoreApplication::postEvent(self, new FunctionEvent{[=]{self->dataReceived(sensorEvent);}});
+-
+-        return 1; // 1 means keep receiving events
++        for (int remaining = 32; remaining > 0
++             && !delivery->retired.load(std::memory_order_acquire)
++             && ASensorEventQueue_getEvents(queue, &sensorEvent, 1) > 0;
++             --remaining) {
++            QCoreApplication::postEvent(context->receiver, new FunctionEvent{[delivery, sensorEvent] {
++                const auto backend = delivery->backend;
++                if (!delivery->retired.load(std::memory_order_acquire) && backend)
++                    backend->dataReceived(sensorEvent);
++            }});
++        }
++        // Stop a ready retired fd so pollOnce can reach deferred cleanup.
++        return delivery->retired.load(std::memory_order_acquire) ? 0 : 1;
+     }
+ 
+ protected:
+@@ -162,6 +213,7 @@
+     const ASensor *m_sensor = nullptr;
+     ASensorEventQueue* m_sensorEventQueue = nullptr;
+     bool m_started = false;
++    QueueContext *m_context = nullptr;
+ };
+ 
+ #endif // SENSOREVENTQUEUE_H
+--- a/qtsensors/src/plugins/sensors/android/androidcompass.h
++++ b/qtsensors/src/plugins/sensors/android/androidcompass.h
+@@ -40,12 +40,11 @@
+ #ifndef ANDROIDCOMPASS_H
+ #define ANDROIDCOMPASS_H
+ 
+-#include <QMutex>
+ #include <qcompass.h>
+ 
+ #include "sensoreventqueue.h"
+ 
+-class AndroidCompass : public ThreadSafeSensorBackend
++class AndroidCompass : public SensorEventQueue<QCompassReading>
+ {
+     Q_OBJECT
+ 
+@@ -56,17 +55,13 @@
+     void start() override;
+     void stop() override;
+ private:
+-    void readAllEvents();
+-    static int looperCallback(int /*fd*/, int /*events*/, void* data);
++    void dataReceived(const ASensorEvent &event) override;
+ 
+ private:
+-    QCompassReading m_reading;
+     const ASensor *m_accelerometer = nullptr;
+     const ASensor *m_magnetometer = nullptr;
+-    ASensorEventQueue* m_sensorEventQueue = nullptr;
+     ASensorVector m_accelerometerEvent;
+     ASensorVector m_magneticEvent;
+-    QMutex m_sensorsMutex;
+ };
+ 
+ #endif // ANDROIDCOMPASS_H
+--- a/qtsensors/src/plugins/sensors/android/androidcompass.cpp
++++ b/qtsensors/src/plugins/sensors/android/androidcompass.cpp
+@@ -61,32 +61,30 @@
+ #include "sensormanager.h"
+ 
+ AndroidCompass::AndroidCompass(QSensor *sensor, QObject *parent)
+-    : ThreadSafeSensorBackend(sensor, parent)
++    : SensorEventQueue<QCompassReading>(ASENSOR_TYPE_ACCELEROMETER, sensor, parent)
+ {
+     setDescription("Compass");
+-    setReading<QCompassReading>(&m_reading);
+     memset(&m_accelerometerEvent, 0, sizeof(ASensorVector));
+     memset(&m_magneticEvent, 0, sizeof(ASensorVector));
+-    m_sensorEventQueue = ASensorManager_createEventQueue(m_sensorManager->manager(), m_sensorManager->looper(), -1, &looperCallback, this);
+     m_accelerometer = ASensorManager_getDefaultSensor(m_sensorManager->manager(), ASENSOR_TYPE_ACCELEROMETER);
+     m_magnetometer = ASensorManager_getDefaultSensor(m_sensorManager->manager(), ASENSOR_TYPE_MAGNETIC_FIELD);
+ }
+ 
+ AndroidCompass::~AndroidCompass()
+ {
++    stopDelivery();
+     stop();
+-    ASensorManager_destroyEventQueue(m_sensorManager->manager(), m_sensorEventQueue);
+ }
+ 
+ void AndroidCompass::start()
+ {
+     ASensorEventQueue_enableSensor(m_sensorEventQueue, m_accelerometer);
+     if (sensor()->dataRate() > 0)
+-        ASensorEventQueue_setEventRate(m_sensorEventQueue, m_accelerometer, std::max(ASensor_getMinDelay(m_accelerometer), sensor()->dataRate()));
++        ASensorEventQueue_setEventRate(m_sensorEventQueue, m_accelerometer, std::max(ASensor_getMinDelay(m_accelerometer), 1000000 / sensor()->dataRate()));
+ 
+     ASensorEventQueue_enableSensor(m_sensorEventQueue, m_magnetometer);
+     if (sensor()->dataRate() > 0)
+-        ASensorEventQueue_setEventRate(m_sensorEventQueue, m_magnetometer, std::max(ASensor_getMinDelay(m_magnetometer), sensor()->dataRate()));
++        ASensorEventQueue_setEventRate(m_sensorEventQueue, m_magnetometer, std::max(ASensor_getMinDelay(m_magnetometer), 1000000 / sensor()->dataRate()));
+ }
+ 
+ void AndroidCompass::stop()
+@@ -95,73 +93,61 @@
+     ASensorEventQueue_disableSensor(m_sensorEventQueue, m_magnetometer);
+ }
+ 
+-void AndroidCompass::readAllEvents()
++void AndroidCompass::dataReceived(const ASensorEvent &event)
+ {
+-    {
+-        ASensorEvent sensorEvent;
+-        QMutexLocker lock(&m_sensorsMutex);
+-        while (ASensorEventQueue_getEvents(m_sensorEventQueue, &sensorEvent, 1)) {
+-            switch (sensorEvent.type) {
+-            case ASENSOR_TYPE_ACCELEROMETER:
+-                m_accelerometerEvent = sensorEvent.acceleration;
+-                m_accelerometerEvent.status = m_accelerometerEvent.status == ASENSOR_STATUS_NO_CONTACT ? 0 : m_accelerometerEvent.status;
+-                break;
+-            case ASENSOR_TYPE_MAGNETIC_FIELD:
+-                m_magneticEvent = sensorEvent.magnetic;
+-                m_magneticEvent.status = m_magneticEvent.status == ASENSOR_STATUS_NO_CONTACT ? 0 : m_magneticEvent.status;
+-                break;
+-            }
+-        }
++    // The shared queue delivers this function on the backend's own thread.
++    // Keep both sensor vectors here, with no worker access to backend members.
++    switch (event.type) {
++    case ASENSOR_TYPE_ACCELEROMETER:
++        m_accelerometerEvent = event.acceleration;
++        m_accelerometerEvent.status = m_accelerometerEvent.status == ASENSOR_STATUS_NO_CONTACT ? 0 : m_accelerometerEvent.status;
++        break;
++    case ASENSOR_TYPE_MAGNETIC_FIELD:
++        m_magneticEvent = event.magnetic;
++        m_magneticEvent.status = m_magneticEvent.status == ASENSOR_STATUS_NO_CONTACT ? 0 : m_magneticEvent.status;
++        break;
++    default:
++        return;
+     }
+ 
+-    QCoreApplication::postEvent(this, new FunctionEvent{[=]() {
+-        // merged getRotationMatrix https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/hardware/SensorManager.java#1182
+-        // and getOrientation https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/hardware/SensorManager.java#1477
+-        QMutexLocker lock(&m_sensorsMutex);
+-        auto Ax = qreal(m_accelerometerEvent.x);
+-        auto Ay = qreal(m_accelerometerEvent.y);
+-        auto Az = qreal(m_accelerometerEvent.z);
++    // merged getRotationMatrix https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/hardware/SensorManager.java#1182
++    // and getOrientation https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/hardware/SensorManager.java#1477
++    auto Ax = qreal(m_accelerometerEvent.x);
++    auto Ay = qreal(m_accelerometerEvent.y);
++    auto Az = qreal(m_accelerometerEvent.z);
+ 
+-        const qreal normsqA = (Ax * Ax + Ay * Ay + Az * Az);
+-        const auto g = qreal(ASENSOR_STANDARD_GRAVITY);
+-        const qreal freeFallGravitySquared = 0.01 * g * g;
+-        if (normsqA < freeFallGravitySquared)
+-            return;
++    const qreal normsqA = (Ax * Ax + Ay * Ay + Az * Az);
++    const auto g = qreal(ASENSOR_STANDARD_GRAVITY);
++    const qreal freeFallGravitySquared = 0.01 * g * g;
++    if (normsqA < freeFallGravitySquared)
++        return;
+ 
+-        auto Ex = qreal(m_magneticEvent.x);
+-        auto Ey = qreal(m_magneticEvent.y);
+-        auto Ez = qreal(m_magneticEvent.z);
+-        qreal Hx = Ey * Az - Ez * Ay;
+-        qreal Hy = Ez * Ax - Ex * Az;
+-        qreal Hz = Ex * Ay - Ey * Ax;
+-        const qreal normH = std::sqrt(Hx * Hx + Hy * Hy + Hz * Hz);
++    auto Ex = qreal(m_magneticEvent.x);
++    auto Ey = qreal(m_magneticEvent.y);
++    auto Ez = qreal(m_magneticEvent.z);
++    qreal Hx = Ey * Az - Ez * Ay;
++    qreal Hy = Ez * Ax - Ex * Az;
++    qreal Hz = Ex * Ay - Ey * Ax;
++    const qreal normH = std::sqrt(Hx * Hx + Hy * Hy + Hz * Hz);
+ 
+-        if (normH < 0.1)
+-            return;
+-        const qreal invH = 1.0 / normH;
+-        Hx *= invH;
+-        Hy *= invH;
+-        Hz *= invH;
+-        const qreal invA = 1.0 / std::sqrt(Ax * Ax + Ay * Ay + Az * Az);
+-        Ax *= invA;
+-        Ay *= invA;
+-        Az *= invA;
+-        const qreal My = Az * Hx - Ax * Hz;
+-        qreal azimuth = std::atan2(Hy, My);
+-        qreal accuracyValue = (m_accelerometerEvent.status + m_magneticEvent.status) / 6.0;
+-        if (sensor()->skipDuplicates() && qFuzzyCompare(azimuth, m_reading.azimuth()) &&
+-                qFuzzyCompare(accuracyValue, m_reading.calibrationLevel())) {
+-            return;
+-        }
+-        m_reading.setAzimuth(qRadiansToDegrees(azimuth));
+-        m_reading.setCalibrationLevel(accuracyValue);
+-        newReadingAvailable();
+-    }});
++    if (normH < 0.1)
++        return;
++    const qreal invH = 1.0 / normH;
++    Hx *= invH;
++    Hy *= invH;
++    Hz *= invH;
++    const qreal invA = 1.0 / std::sqrt(Ax * Ax + Ay * Ay + Az * Az);
++    Ax *= invA;
++    Ay *= invA;
++    Az *= invA;
++    const qreal My = Az * Hx - Ax * Hz;
++    qreal azimuth = std::atan2(Hy, My);
++    qreal accuracyValue = (m_accelerometerEvent.status + m_magneticEvent.status) / 6.0;
++    if (sensor()->skipDuplicates() && qFuzzyCompare(azimuth, m_reader.azimuth()) &&
++            qFuzzyCompare(accuracyValue, m_reader.calibrationLevel())) {
++        return;
++    }
++    m_reader.setAzimuth(qRadiansToDegrees(azimuth));
++    m_reader.setCalibrationLevel(accuracyValue);
++    newReadingAvailable();
+ }
+-
+-int AndroidCompass::looperCallback(int, int, void *data)
+-{
+-    auto self = reinterpret_cast<AndroidCompass*>(data);
+-    self->readAllEvents();
+-    return 1; // 1 means keep receiving events
+-}

@@ -21,7 +21,8 @@ param(
     [string] $BatchReceipt,
     [string] $ArtifactRoot,
     [switch] $ClassicEmulator,
-    [switch] $DebugQtPlugins
+    [switch] $DebugQtPlugins,
+    [switch] $NativeSensorFixture
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,6 +44,10 @@ if ($soundCacheTeardown -and ($StrictCxx23 -or $RuntimeProbe -or $CaseName -or $
 if ($RuntimeProbe) {
     $StrictCxx23=$true
     if (!$PSBoundParameters.ContainsKey('Package')) { $Package='org.longreachqt.donut' }
+}
+if ($NativeSensorFixture -and ($Abi -ne 'x86' -or $StrictCxx23 -or $RuntimeProbe -or
+        $ApplicationArguments -cne '--selftest' -or $Package -cne 'org.longreachqt.examples.qtselftest')) {
+    throw 'Native sensor inputs require an ordinary x86 Qt5 selftest'
 }
 $completionName=if ($RuntimeProbe) { 'probe-result.txt' } else { 'selftest-result.txt' }
 $stdoutName=if ($RuntimeProbe) { 'strict-cxx23.log' } else { 'selftest.stdout' }
@@ -153,10 +158,30 @@ try {
     $guestCpu=Save-AndroidGuestCpuBaseline $output $Abi
     $receipt.guest_cpuinfo_sha256=$guestCpu.guest_cpuinfo_sha256
     $receipt.guest_cpu_baseline_sha256=$guestCpu.guest_cpu_baseline_sha256
+    if ($NativeSensorFixture) {
+        $process.Refresh()
+        if ($process.HasExited) { throw 'The owned emulator stopped before sensor inputs' }
+        Invoke-AndroidTool python @("$PSScriptRoot/android-sensor-inputs.py",'--directory',$output,
+            '--request-sha256',$emulatorOwner.RequestSha)
+        $receipt.native_sensor_fixture='nonparallel-compass-v1'
+        $receipt.native_sensor_fixture_sha256=(Get-FileHash -LiteralPath "$output/native-sensor-inputs.json").Hash.ToLowerInvariant()
+    }
     Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'input', 'keyevent', '82')
     Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'logcat', '-c')
     Assert-AndroidApi10ApkBinding $roots.Root $Apk $binding
-    Invoke-AndroidTool $adb @('-s',$serial,'push',$Apk,'/data/local/longreach-example.apk') -Endpoint $adbEndpoint
+    # Classic software x86 can transfer these ordinary APKs below120 KiB/s.
+    # Keep a bounded transfer deadline separate from app completion/exit checks.
+    $pushTimeout=if ($Abi -eq 'x86' -and $ClassicEmulator) { 600000 } else { 180000 }
+    $receipt.apk_push_timeout_ms=$pushTimeout
+    Write-AndroidCaseReceipt $output $receipt
+    $pushTimer=[Diagnostics.Stopwatch]::StartNew()
+    $pushOutput=@(Invoke-AndroidTool $adb @('-s',$serial,'push',$Apk,'/data/local/longreach-example.apk') `
+        -Endpoint $adbEndpoint -TimeoutMilliseconds $pushTimeout)
+    $push=@{schema_version=1;apk_sha256=$binding.apk_sha256;bytes=(Get-Item -LiteralPath $Apk).Length;
+        timeout_ms=$pushTimeout;elapsed_ms=$pushTimer.ElapsedMilliseconds;output=$pushOutput}
+    Write-AndroidOwnedProcessJson "$output/apk-push.json" $push
+    $receipt.apk_push_evidence_sha256=(Get-FileHash -LiteralPath "$output/apk-push.json").Hash.ToLowerInvariant()
+    Write-AndroidCaseReceipt $output $receipt
     $install = Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'pm', 'install', '/data/local/longreach-example.apk')
     Assert-AndroidApi10ApkBinding $roots.Root $Apk $binding
     if (!($install -match '^\s*Success\s*$')) { throw "APK install failed: $install" }
@@ -258,6 +283,10 @@ Assert-AndroidGuestCpuBinding $output $guestCpu
 $stdoutHash=(Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($soundCacheTeardown -and $stdoutHash -cne $receipt.diagnostic_stdout_sha256) {
     throw 'Sound-cache stdout changed after validation'
+}
+if ($NativeSensorFixture -and $receipt.native_sensor_fixture_sha256 -cne
+        (Get-FileHash -LiteralPath "$output/native-sensor-inputs.json").Hash.ToLowerInvariant()) {
+    throw 'Native sensor input record changed during the run'
 }
 $receipt.completed=$true
 $receipt.stdout_sha256=$stdoutHash

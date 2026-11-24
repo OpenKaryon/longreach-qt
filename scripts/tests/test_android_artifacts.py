@@ -2,10 +2,15 @@
 # Copyright (C) 2026 OpenKaryon
 """Ordinary artifact-generation regressions; no builds, SDK, emulator or network."""
 import importlib.util
+import json
 from pathlib import Path
+import struct
 import tempfile
 import unittest
+import zipfile
+import android_native_abi_fixtures as native_fixtures
 from unittest.mock import patch
+import android_sdk_report_fixtures as sdk_reports
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('artifacts', ROOT / 'scripts/build/android-api21/artifact-manifest.py')
@@ -16,6 +21,38 @@ PACKAGING_INPUTS = artifacts.packaging_inputs
 
 
 class ArtifactTests(unittest.TestCase):
+    def test_native_abi_is_checked_at_packaging_and_even_after_a_matching_outer_digest(self):
+        for qt in (5, 6):
+            for phase in ('record', 'check'):
+                with self.subTest(qt=qt, phase=phase), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.fixture(root, qt)
+                    relative = 'apk/qt-selftest.apk'
+                    path = root / relative
+                    with zipfile.ZipFile(path) as archive:
+                        entries = {name: archive.read(name) for name in archive.namelist()}
+                    data = bytearray(entries['lib/arm64-v8a/libfixture.so'])
+                    struct.pack_into('<H', data, 16, 1)
+                    entries['lib/arm64-v8a/libfixture.so'] = data
+                    if phase == 'record':
+                        artifacts.begin_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                    with zipfile.ZipFile(path, 'w') as archive:
+                        for name, value in entries.items():
+                            archive.writestr(name, value)
+                    if phase == 'check':
+                        manifest = root / 'apk-manifest.json'
+                        receipt = json.loads(manifest.read_text())
+                        receipt['files'][relative] = artifacts.digest(path)
+                        manifest.write_text(json.dumps(receipt))
+                    with self.assertRaisesRegex(ValueError, 'ET_DYN'):
+                        if phase == 'record':
+                            artifacts.record_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                        else:
+                            artifacts.check_apks(root, qt, 'arm64-v8a')
+                    if phase == 'record':
+                        self.assertTrue((root / 'apk-in-progress.json').exists())
+                        self.assertFalse((root / 'apk-manifest.json').exists())
+
     def setUp(self):
         stub = patch.object(artifacts, 'packaging_inputs', return_value={'java': 'fixture', 'tools': 'fixture'})
         stub.start()
@@ -33,13 +70,18 @@ class ArtifactTests(unittest.TestCase):
             path.write_text('java fixture')
         runtime = root / ('libc++_shared.so' if qt == 6 else 'native/libc++_shared.so')
         runtime.parent.mkdir(parents=True, exist_ok=True)
-        runtime.write_text('matching runtime')
+        runtime.write_bytes(native_fixtures.elf('arm64-v8a', b'matching runtime'))
+        sdk_reports.export(root, qt, 'arm64-v8a', SDK, runtime.read_bytes())
         artifacts.begin(root, qt, 'arm64-v8a', SDK)
         artifacts.finish(root, qt, 'arm64-v8a', SDK)
         for name in artifacts.apk_paths(qt):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(name)
+            with zipfile.ZipFile(path, 'w') as archive:
+                archive.writestr('lib/arm64-v8a/libfixture.so', native_fixtures.elf('arm64-v8a', name.encode()))
+                archive.writestr('lib/arm64-v8a/libc++_shared.so', runtime.read_bytes())
+        for name in ('apk/local-examples.jks', *(['apk/extended/local-examples.jks'] if qt == 5 else [])):
+            (root / name).write_text('fixture initial key')
         artifacts.begin_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
         artifacts.record_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
 
@@ -47,7 +89,46 @@ class ArtifactTests(unittest.TestCase):
         for relative in (f'libs/arm64-v8a/lib{app}_arm64-v8a.so', 'res/values/libs.xml'):
             path = root / directory / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(app)
+            if path.suffix == '.so':
+                path.write_bytes(native_fixtures.elf('arm64-v8a', app.encode()))
+            else:
+                path.write_text(app)
+
+    def test_native_and_apk_generations_invalidate_previous_aggregate_success(self):
+        reports = ('final-results.json', 'final-results-table.md', 'apk-native-abi-check.json',
+                   'apk-architecture-final.json', 'screenshots.json')
+        for qt in (5, 6):
+            for phase in ('native', 'apk'):
+                with self.subTest(qt=qt, phase=phase), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.fixture(root, qt)
+                    for name in reports:
+                        (root / name).write_text('old successful run')
+                    old_apk = root / 'apk/qt-selftest.apk'
+                    old_bytes = old_apk.read_bytes()
+                    if phase == 'native':
+                        artifacts.begin(root, qt, 'arm64-v8a', SDK)
+                    else:
+                        artifacts.begin_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                    self.assertFalse(any((root / name).exists() for name in reports))
+                    self.assertEqual(old_apk.read_bytes(), old_bytes)
+
+    def test_refused_generation_does_not_clear_the_active_owners_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifacts.begin(root, 6, 'arm64-v8a', SDK)
+            (root / 'final-results.json').write_text('owner report')
+            with self.assertRaisesRegex(ValueError, 'incomplete example generation'):
+                artifacts.begin(root, 6, 'arm64-v8a', SDK)
+            self.assertEqual((root / 'final-results.json').read_text(), 'owner report')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root, 6)
+            artifacts.begin_apks(root, 6, 'arm64-v8a', 'fixture-sdk')
+            (root / 'final-results.json').write_text('APK owner report')
+            with self.assertRaisesRegex(ValueError, 'incomplete APK generation'):
+                artifacts.begin_apks(root, 6, 'arm64-v8a', 'fixture-sdk')
+            self.assertEqual((root / 'final-results.json').read_text(), 'APK owner report')
 
     def test_completed_qt5_and_qt6_generations(self):
         for qt in (5, 6):
@@ -166,9 +247,41 @@ class ArtifactTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root, 6)
-            (root / 'sdk-modules.txt').write_text('another SDK')
+            source = root / sdk_reports.FIXTURE_SOURCE
+            (source / 'sdk-modules.txt').write_text('another SDK')
+            sdk_reports.reports.seal(source, 6, 'arm64-v8a')
+            sdk_reports.reports.export(source, root, 6, 'arm64-v8a', SDK)
             with self.assertRaisesRegex(ValueError, 'producer reports differ'):
                 artifacts.check_apks(root, 6, 'arm64-v8a')
+
+    def test_missing_initial_keys_refuse_begin_and_clear_old_aggregate(self):
+        for qt in (5, 6):
+            names = ['apk/local-examples.jks'] + (['apk/extended/local-examples.jks'] if qt == 5 else [])
+            for name in names:
+                with self.subTest(qt=qt, key=name), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.fixture(root, qt)
+                    old_apk = (root / 'apk/qt-selftest.apk').read_bytes()
+                    (root / name).unlink()
+                    (root / 'final-results.json').write_text('previous PASS')
+                    with self.assertRaisesRegex(ValueError, 'Missing initial signing key'):
+                        artifacts.begin_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                    self.assertFalse((root / 'apk-in-progress.json').exists())
+                    self.assertFalse((root / 'final-results.json').exists())
+                    self.assertEqual((root / 'apk/qt-selftest.apk').read_bytes(), old_apk)
+
+    def test_signing_set_cannot_change_or_grow_after_begin(self):
+        for qt in (5, 6):
+            for changed in ('existing', 'extra'):
+                with self.subTest(qt=qt, changed=changed), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    self.fixture(root, qt)
+                    artifacts.begin_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                    (root / ('apk/local-examples.jks' if changed == 'existing' else 'apk/unrecorded.jks')).write_text('new key bytes')
+                    with self.assertRaisesRegex(ValueError, 'Signing input changed'):
+                        artifacts.record_apks(root, qt, 'arm64-v8a', 'fixture-sdk')
+                    self.assertFalse((root / 'apk-manifest.json').exists())
+                    self.assertTrue((root / 'apk-in-progress.json').exists())
 
     def test_real_packaging_snapshot_tracks_java_scripts_and_tools(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -182,12 +295,12 @@ class ArtifactTests(unittest.TestCase):
             javac = root / 'jdk/bin/javac.exe'
             keytool = root / 'jdk/bin/keytool.exe'
             modules = root / 'jdk/lib/modules'
-            for p in (java, script, jar, tool, javac, keytool, modules, sdk / 'platforms/android-35/framework.aidl'):
+            for p in (java, script, jar, tool, javac, keytool, modules, root / 'jdk/release', root / 'jdk/bin/java.exe', sdk / 'platforms/android-35/framework.aidl'):
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text('original')
             # The setup-wide packaging mock is bypassed for this direct snapshot test.
             real = PACKAGING_INPUTS
-            with patch.object(artifacts, 'REPO', repo), patch.object(artifacts.subprocess, 'check_output', return_value='javac 21'), patch.object(artifacts.shutil, 'which', return_value=None), patch.dict(artifacts.os.environ, {'JAVA_HOME': str(root / 'jdk')}):
+            with patch.object(artifacts, 'REPO', repo), patch.object(artifacts.subprocess, 'check_output', return_value=f'java.home = {root / "jdk"}\njavac 21\n'), patch.object(artifacts.shutil, 'which', return_value=None), patch.dict(artifacts.os.environ, {'JAVA_HOME': str(root / 'jdk')}):
                 initial = real(6, sdk, javac)
                 for p in (java, script, jar, tool, javac, keytool, modules):
                     p.write_text('changed')

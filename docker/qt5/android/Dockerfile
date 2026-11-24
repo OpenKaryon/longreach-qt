@@ -6,6 +6,7 @@
 ARG ANDROID_ABI=armeabi-v7a
 ARG LLVM_TOOLS_IMAGE=longreach-qt4-android-donut:llvm21
 FROM ${LLVM_TOOLS_IMAGE} AS tools
+COPY scripts/build/android-api21/generic-atomics.sh /repo/scripts/build/android-api21/
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git openjdk-17-jdk-headless pkg-config \
     && rm -rf /var/lib/apt/lists/*

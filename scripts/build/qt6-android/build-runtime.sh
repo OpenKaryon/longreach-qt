@@ -40,6 +40,7 @@ cmake --build "$runtime" --parallel "${PARALLEL_JOBS:-2}"
 cmake -S "$llvm/runtimes" -B "$builtins" "${options[@]}" "-DCMAKE_C_FLAGS=$flags" \
     -DLLVM_ENABLE_RUNTIMES=compiler-rt -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
     -DCOMPILER_RT_LIBATOMIC_USE_PTHREAD=ON -DCOMPILER_RT_INCLUDE_TESTS=OFF \
+    -DCOMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=ON -DCOMPILER_RT_BUILD_STANDALONE_LIBATOMIC=OFF \
     -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF \
     -DCOMPILER_RT_BUILD_LIBFUZZER=OFF -DCOMPILER_RT_BUILD_PROFILE=OFF \
     -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF -DCOMPILER_RT_BUILD_ORC=OFF \
@@ -51,14 +52,9 @@ builtins_archive="$builtins/compiler-rt/lib/linux/libclang_rt.builtins-${builtin
 cp "$builtins_archive" "$prefix/lib/"
 platform="$sysroot/usr/lib/$ndk_triple/21"
 arch=(--target="$target" --sysroot="$sysroot" "${arch_flags[@]}" -fPIC -femulated-tls)
-atomic_objects=()
-if [[ "$abi" == x86 ]]; then
-    # Generic atomics need one shared lock table across SDK libraries. Keep
-    # LLVM's implementation in the shared runtime, not in each static client.
-    clang-21 "${arch[@]}" -O2 -D_LIBATOMIC_USE_PTHREAD -fvisibility=default \
-        -c "$llvm/compiler-rt/lib/builtins/atomic.c" -o "$prefix/lib/atomic-android.o"
-    atomic_objects=("$prefix/lib/atomic-android.o")
-fi
+source /repo/scripts/build/android-api21/generic-atomics.sh
+build_android_generic_atomics "$llvm/compiler-rt/lib/builtins/atomic.c" "$prefix/lib/atomic-android.o"
+check_android_atomic_builtins "$builtins_archive" /out/runtime-builtins-atomic-exports.txt
 clang++-21 "${arch[@]}" -shared -nostdlib -fuse-ld=lld \
     -Wl,--hash-style=sysv,--no-undefined,--no-dependent-libraries,-soname,libc++_shared.so \
     "$platform/crtbegin_so.o" "${atomic_objects[@]}" -Wl,--whole-archive \
@@ -66,12 +62,7 @@ clang++-21 "${arch[@]}" -shared -nostdlib -fuse-ld=lld \
     "$runtime/lib/libunwind.a" -Wl,--no-whole-archive \
     -Wl,-u,__emutls_get_address,-u,__emutls_register_common "$builtins_archive" \
     -L"$platform" -llog -ldl -lm -lc "$platform/crtend_so.o" -o "$prefix/lib/libc++_shared.so"
-if [[ "$abi" == x86 ]]; then
-    llvm-nm-21 -D --defined-only "$prefix/lib/libc++_shared.so" > /out/runtime-atomic-exports.txt
-    for symbol in __atomic_load __atomic_store __atomic_exchange __atomic_compare_exchange __atomic_is_lock_free; do
-        awk '$2 ~ /^[TW]$/ { print $3 }' /out/runtime-atomic-exports.txt | grep -Fx "$symbol"
-    done
-fi
+check_android_generic_atomic_exports "$prefix/lib/libc++_shared.so" /out/runtime-atomic-exports.txt
 llvm-readobj-21 --file-header --dynamic-table "$prefix/lib/libc++_shared.so" > /out/runtime-elf.txt
 cp "$prefix/lib/libc++_shared.so" /out/
 echo 'Upstream LLVM 21.1.8 API21 shared runtime built'

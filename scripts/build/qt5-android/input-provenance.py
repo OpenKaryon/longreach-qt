@@ -61,12 +61,15 @@ manifest = {
     'locale_profile': 'classic C/POSIX; wide characters disabled',
     'unwind_frame_header_cache': False,
 }
-if abi == 'x86':
-    source = Path('/work/android-llvm/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c')
-    manifest['generic_atomic_provider'] = {
-        'implementation': 'upstream compiler-rt 21.1.8 atomic.c',
-        'source_sha256': digest(source), 'shared_library': 'libc++_shared.so',
-        'lock_backend': 'pthread',
-    }
+source = Path('/work/android-llvm/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c')
+manifest['generic_atomic_provider'] = {
+    'implementation': 'upstream compiler-rt 21.1.8 atomic.c',
+    'source_sha256': digest(source), 'shared_library': 'libc++_shared.so',
+    'lock_backend': 'pthread',
+    'recipe_sha256': digest(repo / 'scripts/build/android-api21/generic-atomics.sh'),
+    'placement': 'shared-runtime',
+    'static_builtin_policy': 'exclude-generic-atomic-provider',
+    'runtime_behavior_verified': False,
+}
 (prefix / 'runtime-input-provenance.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
 print(f'Recorded API10 {abi} runtime provenance and {len(headers)} effective headers')

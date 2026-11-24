@@ -29,7 +29,7 @@ function docker {
     throw 'Unexpected Docker work'
 }
 try {
-    foreach($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
+    foreach($relative in @('scripts/build/android-api21/artifact-lock.ps1','scripts/build/android-api21/host-tools.py','scripts/build/android-api21/sdk-reports.py','scripts/build/android-api21/sdk-reports.ps1','scripts/build/android-api21/packaging-host.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
             'scripts/build/android-api21/artifact-manifest.py','tests/expected-apps.txt')) {
         $destination=Join-Path $fixture $relative
         New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null

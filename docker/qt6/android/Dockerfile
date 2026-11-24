@@ -4,6 +4,7 @@ ARG LLVM_TOOLS_IMAGE=longreach-qt4-android-donut:llvm21
 ARG QT_HOST_IMAGE=qt6-linux-amd64-llvm21:latest
 FROM ${QT_HOST_IMAGE} AS qt-host
 FROM ${LLVM_TOOLS_IMAGE} AS tools
+COPY scripts/build/android-api21/generic-atomics.sh /repo/scripts/build/android-api21/
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git openjdk-17-jdk-headless pkg-config libgl1 libegl1 libxkbcommon-x11-0 \
     libxcb-icccm4 libxcb-util1 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \

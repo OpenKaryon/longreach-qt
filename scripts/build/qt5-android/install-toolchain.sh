@@ -26,19 +26,16 @@ clang-21 "${arch[@]}" -fno-builtin \
 # adapter; compiler-driver wrapping redirects consumers without changing tests.
 clang-21 "${arch[@]}" \
     -c "$repo/scripts/build/qt4-android/tmpfile-donut.c" -o "$prefix/lib/tmpfile-android.o"
-atomic_objects=()
-if [[ "$abi" == x86 ]]; then
-    clang-21 "${arch[@]}" -O2 -D_LIBATOMIC_USE_PTHREAD -fvisibility=default \
-        -c /work/android-llvm/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c \
-        -o "$prefix/lib/atomic-android.o"
-    atomic_objects=("$prefix/lib/atomic-android.o")
-fi
+source "$repo/scripts/build/android-api21/generic-atomics.sh"
+build_android_generic_atomics /work/android-llvm/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c "$prefix/lib/atomic-android.o"
+check_android_atomic_builtins "$builtins" "$prefix/runtime-builtins-atomic-exports.txt"
 clang++-21 "${arch[@]}" \
     -fuse-ld=lld -shared -nostdlib -Wl,--hash-style=sysv,--no-undefined,--no-dependent-libraries,-soname,libc++_shared.so \
     "${atomic_objects[@]}" "$prefix/lib/crt-android.o" "$prefix/lib/android-compat.o" "$prefix/lib/tmpfile-android.o" -Wl,--whole-archive \
     "$runtime/lib/libc++.a" "$runtime/lib/libc++experimental.a" "$runtime/lib/libc++abi.a" \
     "$runtime/lib/libunwind.a" "$builtins" -Wl,--no-whole-archive \
     -L"$sysroot/usr/lib" -llog -ldl -lm -lc -o "$prefix/lib/libc++_shared.so"
+check_android_generic_atomic_exports "$prefix/lib/libc++_shared.so" "$prefix/runtime-atomic-exports.txt"
 
 { declare -p abi target ndk_triple builtins_arch arch_flags; } > "$prefix/target.sh"
 cp "$repo/scripts/build/qt5-android/clang-wrapper.sh" "$prefix/bin/cxx"

@@ -22,6 +22,7 @@ RUN --network=none \
     bash /tmp/build-compiler.sh /tmp/llvm.tar.xz
 
 FROM base AS tools
+COPY scripts/build/android-api21/generic-atomics.sh /repo/scripts/build/android-api21/
 COPY --from=compiler /opt/llvm-21 /opt/llvm-21
 RUN --network=none set -e; \
     for tool in clang clang++ ld.lld lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy \

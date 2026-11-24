@@ -46,14 +46,17 @@ manifest = {
     'libcxx_shared_sha256': sha256(prefix / 'lib/libc++_shared.so'),
     'sysroot_fixes': ['AHARDWAREBUFFER_USAGE_FRONT_BUFFER uses 1ULL << 32 (same as NDK r28)'],
 }
-if abi == 'x86':
-    atomic_source = Path('/work/api21/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c')
-    manifest['generic_atomic_provider'] = {
-        'implementation': 'upstream compiler-rt 21.1.8 atomic.c',
-        'source_sha256': sha256(atomic_source),
-        'shared_library': 'libc++_shared.so',
-        'lock_backend': 'pthread',
-    }
+atomic_source = Path('/work/api21/llvm-project-21.1.8.src/compiler-rt/lib/builtins/atomic.c')
+manifest['generic_atomic_provider'] = {
+    'implementation': 'upstream compiler-rt 21.1.8 atomic.c',
+    'source_sha256': sha256(atomic_source),
+    'shared_library': 'libc++_shared.so',
+    'lock_backend': 'pthread',
+    'recipe_sha256': sha256(Path('/repo/scripts/build/android-api21/generic-atomics.sh')),
+    'placement': 'shared-runtime',
+    'static_builtin_policy': 'exclude-generic-atomic-provider',
+    'runtime_behavior_verified': False,
+}
 destination = Path('/out/platform-input-provenance.json')
 destination.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
 print(f'Recorded {len(inputs)} platform/CPU-feature inputs and {len(headers)} effective headers')

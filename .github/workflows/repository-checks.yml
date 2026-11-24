@@ -24,11 +24,17 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p test_tooling.py
           python3 -m unittest discover -s scripts/tests -p test_android_artifacts.py
+          python3 -m unittest discover -s scripts/tests -p test_android_host_tools.py
+          python3 -m unittest discover -s scripts/tests -p test_android_sdk_reports.py
           python3 -m unittest discover -s scripts/tests -p test_android_baselines.py
           python3 -m unittest discover -s scripts/tests -p test_android_native_abi.py
+          python3 -m unittest discover -s scripts/tests -p test_android_elf.py
+          python3 -m unittest discover -s scripts/tests -p test_android_clang_wrapper.py
+          python3 -m unittest discover -s scripts/tests -p test_android_generic_atomics.py
           python3 -m unittest discover -s scripts/tests -p test_android_legacy_results.py
           python3 -m unittest discover -s scripts/tests -p test_qt4_android_cache.py
           python3 -m unittest discover -s scripts/tests -p test_android_make.py
+          python3 -m unittest discover -s scripts/tests -p test_android_selftest_profiles.py
       - name: Check Android phase routing
         shell: pwsh
         run: |
@@ -38,6 +44,8 @@ jobs:
           ./scripts/tests/test-qt6-android-modes.ps1
           ./scripts/tests/test-android-generation.ps1
           ./scripts/tests/test-android-artifact-lock.ps1
+          ./scripts/tests/test-android-api21-log.ps1
+          ./scripts/tests/test-android-wait-boot.ps1
           ./scripts/tests/test-android-package-policy.ps1
           ./scripts/tests/test-android-guest-awake.ps1
       - name: Check API coverage inventory

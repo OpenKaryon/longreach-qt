@@ -14,7 +14,7 @@
 +    // the first registered family (for example the digits-only Clockopia).
 +    QStringList families;
 +    if (styleHint == QFont::Times || styleHint == QFont::Serif)
-+        families << QLatin1String("Noto Serif");
++        families << QLatin1String("Noto Serif") << QLatin1String("Droid Serif");
 +    else if (styleHint == QFont::Courier || styleHint == QFont::Monospace)
 +        families << QLatin1String("Droid Sans Mono");
 +    families << QLatin1String("Roboto") << QLatin1String("Droid Sans");

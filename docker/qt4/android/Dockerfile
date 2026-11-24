@@ -90,15 +90,19 @@ RUN --network=none \
 
 FROM ${ANDROID_ABI}-runtime AS runtime
 
+# ANDROID_ABI is inherited from the selected runtime ENV, including cache IDs.
 FROM runtime AS qt-build
+COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
 ARG PARALLEL_JOBS=2
 ENV PARALLEL_JOBS=${PARALLEL_JOBS}
 COPY scripts/build/qt4-android/target-config.sh \
      scripts/build/qt4-android/cache-inputs.py \
+     scripts/build/qt4-android/prepare-source.py \
      scripts/build/qt4-android/build-qtcore.sh \
      scripts/build/qt4-android/patch-qtcore.py \
      scripts/build/qt4-android/build-api21-sdk.sh \
      scripts/build/qt4-android/sdk-provenance.py \
+     scripts/build/qt4-android/export-mkspecs.py \
      scripts/build/qt4-android/toolchain.cmake /repo/scripts/build/qt4-android/
 COPY patches/qt4/all/03-static-gui-animation-registration.patch \
      patches/qt4/all/04-script-tagged-frame-pointers.patch /repo/patches/qt4/all/
@@ -114,12 +118,12 @@ ARG ANDROID_ABI
 ENV ANDROID_ABI=${ANDROID_ABI}
 COPY --from=qt-build /opt/qt4-android-${ANDROID_ABI}-llvm /opt/qt4-android-${ANDROID_ABI}-llvm
 COPY scripts/build/qt4-android/toolchain.cmake /opt/qt4-android-${ANDROID_ABI}-llvm/toolchain.cmake
+COPY scripts/build/qt4-android/export-mkspecs.py /opt/qt4-android-${ANDROID_ABI}-llvm/libexec/longreach-export-mkspecs.py
 ENV PATH=/opt/qt4-android-${ANDROID_ABI}-llvm/bin:${PATH} \
     QMAKESPEC=/opt/qt4-android-${ANDROID_ABI}-llvm/mkspecs/android-longreach-clang
 LABEL org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
       org.openkaryon.longreach-qt.version="4.8.7"
 WORKDIR /work
-RUN --network=none test ! -d "/work/qt4-android-${ANDROID_ABI}"
 
 FROM sdk-base AS api21-sdk
 ENV ANDROID_API=21 ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
@@ -138,6 +142,10 @@ LABEL org.openkaryon.longreach-qt.platform="android-gingerbread-${ANDROID_ABI}" 
       org.openkaryon.longreach-qt.android-api="10"
 
 FROM ${ANDROID_ABI}-sdk AS sdk
+RUN --network=none runtime=/opt/longreach-android-api21 && \
+    if [ "$ANDROID_API" = 10 ]; then runtime=/opt/longreach-android; fi && \
+    python3 "/opt/qt4-android-${ANDROID_ABI}-llvm/libexec/longreach-export-mkspecs.py" verify \
+        --prefix "/opt/qt4-android-${ANDROID_ABI}-llvm" --runtime "$runtime"
 
 # Historical API4 and Qt5/6 bootstrap callers build only these host tools.
 FROM tools AS default

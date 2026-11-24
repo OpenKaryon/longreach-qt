@@ -42,6 +42,12 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p test_android_emulator_identity.py
           python3 -m unittest discover -s scripts/tests -p test_android_legacy_results.py
           python3 -m unittest discover -s scripts/tests -p test_qt4_android_cache.py
+          python3 -m unittest discover -s scripts/tests -p test_qt4_android_mkspecs.py
+          python3 -m unittest discover -s scripts/tests -p test_qt4_android_cache_owner.py
+          python3 -m unittest discover -s scripts/tests -p test_qt4_android_artifacts.py
+          python3 -m unittest discover -s scripts/tests -p test_android_donut_artifacts.py
+          python3 -m unittest discover -s scripts/tests -p test_android_donut_state.py
+          python3 -m unittest discover -s scripts/tests -p test_android_donut_media.py
           python3 -m unittest discover -s scripts/tests -p test_android_make.py
           python3 -m unittest discover -s scripts/tests -p test_android_result_state.py
           python3 -m unittest discover -s scripts/tests -p test_android_process_exit.py
@@ -51,6 +57,9 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/tests/test-qt4-android-modes.ps1
+          ./scripts/tests/test-android-donut-producer.ps1
+          ./scripts/tests/test-qt4-android-cache-owner.ps1
+          ./scripts/tests/test-qt4-android-signing-key.ps1
           ./scripts/tests/test-qt5-android-modes.ps1
           ./scripts/tests/test-qt5-android-legacy-suite.ps1
           ./scripts/tests/test-qt6-android-modes.ps1
@@ -65,6 +74,7 @@ jobs:
           ./scripts/tests/test-android-api10-case.ps1
           ./scripts/tests/test-android-sound-cache-series.ps1
           ./scripts/tests/test-android-api21-suite.ps1
+          ./scripts/tests/test-qt4-android-runner.ps1
           ./scripts/tests/test-android-api21-log.ps1
           ./scripts/tests/test-android-process-exit.ps1
           ./scripts/tests/test-android-exit-query.ps1

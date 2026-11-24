@@ -6,23 +6,28 @@ param(
     [Parameter(Mandatory)] [string] $NativeDirectory,
     [Parameter(Mandatory)] [string] $OutputDirectory,
     [Parameter(Mandatory)] [string] $AndroidSdk,
-    [Parameter(Mandatory)] [string] $AndroidJar
+    [Parameter(Mandatory)] [string] $AndroidJar,
+    $JavaTools
 )
 
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/host.ps1"
 $OutputDirectory = (New-Item -ItemType Directory -Force -Path $OutputDirectory).FullName
+. "$PSScriptRoot/../android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $OutputDirectory
+try {
+Clear-AndroidResultAggregates $OutputDirectory
 $NativeDirectory = (Resolve-Path -LiteralPath $NativeDirectory).Path
 $AndroidJar = (Get-Item -LiteralPath $AndroidJar).FullName
 $fixtures = (Resolve-Path "$PSScriptRoot/../../../tests/android-donut/java").Path
-$java = (Get-Command javac.exe).Source | Split-Path
+if (!$JavaTools) { $JavaTools = Get-AndroidPackagingJava }
 $tools = Join-Path $AndroidSdk 'build-tools/36.0.0'
 $library = (Get-Item -LiteralPath "$NativeDirectory/$Profile.so").FullName
 $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
 $nativeInputs=@($library)
 if ($Abi -ne 'armeabi') { $nativeInputs+="$NativeDirectory/libc++_shared.so" }
 Invoke-DonutCommand python (@("$repo/scripts/build/android-api21/native-abi.py",'--abi',$Abi) + $nativeInputs)
-$keyStore = Join-Path $OutputDirectory 'local-probe.jks'
+$keyStore = Initialize-DonutSigningKey $OutputDirectory (Split-Path $javaTools.javac)
 $apk = Join-Path $OutputDirectory "$Profile.apk"
 if (Test-Path -LiteralPath $apk) {
     $previousHash = (Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -62,7 +67,7 @@ try {
         [IO.File]::WriteAllText("$work/AndroidManifest.xml", $xml)
     }
 
-    Invoke-DonutCommand "$java/javac.exe" (@('--release', '8', '-classpath', $AndroidJar, '-d', "$work/classes") + $sources)
+    Invoke-DonutCommand $javaTools.javac (@('--release', '8', '-classpath', $AndroidJar, '-d', "$work/classes") + $sources)
     $classes = @(Get-ChildItem -LiteralPath "$work/classes" -Filter '*.class' -File -Recurse |
         Select-Object -ExpandProperty FullName)
     Invoke-DonutCommand "$tools/d8.bat" (@('--min-api', $minimum, '--lib', $AndroidJar, '--output', $work) + $classes)
@@ -73,11 +78,6 @@ try {
         $members = @('add', 'unsigned.apk', 'classes.dex', "lib/$Abi/libdonut_probe.so")
         if ($minimum -ne '4') { $members += "lib/$Abi/libc++_shared.so" }
         Invoke-DonutCommand "$tools/aapt.exe" $members
-        if (!(Test-Path -LiteralPath $keyStore)) {
-            Invoke-DonutCommand "$java/keytool.exe" @('-genkeypair', '-keystore', $keyStore,
-                '-storepass', 'donut-probe-local', '-keypass', 'donut-probe-local', '-alias', 'local-probe',
-                '-keyalg', 'RSA', '-keysize', '2048', '-dname', 'CN=Local Android Probe', '-validity', '365')
-        }
         Invoke-DonutCommand "$tools/zipalign.exe" @('-f', '4', 'unsigned.apk', 'aligned.apk')
         Invoke-DonutCommand "$tools/apksigner.bat" @('sign', '--ks', $keyStore, '--ks-key-alias', 'local-probe',
             '--ks-pass', 'pass:donut-probe-local', '--min-sdk-version', $minimum, '--v1-signing-enabled', 'true',
@@ -101,3 +101,5 @@ try {
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
 }
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

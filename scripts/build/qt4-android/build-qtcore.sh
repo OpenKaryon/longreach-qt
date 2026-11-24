@@ -32,10 +32,8 @@ case "$profile" in
 esac
 source_archive=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz
 
-if [[ ! -f "$tree/configure" ]]; then
-    mkdir -p "$tree"
-    tar -xzf "$source_archive" -C "$tree" --strip-components=1
-fi
+python3 /repo/scripts/build/qt4-android/prepare-source.py --repo /repo \
+    --archive "$source_archive" --tree "$tree" --profile "$profile" --api "$api"
 cd "$tree"
 
 mkdir -p /work/donut-bin mkspecs/linux-donut-llvm mkspecs/linux-donut-host
@@ -48,25 +46,6 @@ sed -e '/^#include <sys\/shm.h>/d' \
     mkspecs/linux-g++/qplatformdefs.h > /work/donut-bin/qplatformdefs.h
 cmp -s /work/donut-bin/qplatformdefs.h "$target_platformdefs" ||
     cp /work/donut-bin/qplatformdefs.h "$target_platformdefs"
-python3 /repo/scripts/build/qt4-android/patch-qtcore.py "$profile"
-if [[ "$profile" == quick && ! -f .donut-static-gui-animation ]]; then
-    patch -p1 --fuzz=0 < /repo/patches/qt4/all/03-static-gui-animation-registration.patch
-    touch .donut-static-gui-animation
-fi
-if [[ "$profile" == quick && ! -f .donut-script-frames ]]; then
-    patch -p1 --fuzz=0 < /repo/patches/qt4/all/04-script-tagged-frame-pointers.patch
-    touch .donut-script-frames
-fi
-
-if [[ "$api" != 4 && "$profile" == quick ]]; then
-    for compatibility_patch in /repo/patches/qt4/android/*.patch \
-            /repo/patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch; do
-        if ! patch -p1 --reverse --dry-run --fuzz=0 < "$compatibility_patch" >/dev/null 2>&1; then
-            patch -p1 --forward --fuzz=0 < "$compatibility_patch"
-        fi
-    done
-fi
-
 if [[ "$api" != 4 ]]; then
     cat >/work/donut-bin/donut-cxx <<'EOF'
 #!/bin/bash
@@ -140,7 +119,7 @@ configure_args=(-prefix "$prefix" -opensource -confirm-license -release -static 
     -nomake demos -nomake examples -nomake docs -nomake translations -nomake tests)
 configuration=$({
     printf '%s\0' "${configure_args[@]}"
-    sha256sum configure /work/donut-bin/donut-cxx /work/donut-bin/donut-cc
+    sha256sum configure .longreach-source-configuration /work/donut-bin/donut-cxx /work/donut-bin/donut-cc
     if [[ "$api" != 4 ]]; then
         python3 /repo/scripts/build/qt4-android/cache-inputs.py --runtime "$runtime" --mkspec "$PWD/mkspecs/linux-donut-llvm"
     fi

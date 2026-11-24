@@ -1,0 +1,172 @@
+{
+  "schema": 1,
+  "purpose": "Historical input for a new named coverage policy; not current runtime qualification",
+  "source_review_head": "75877d6",
+  "records": [
+    {
+      "target": "4/10/x86",
+      "case": "selftest",
+      "historical_stdout": "artifacts/qt4-android-gingerbread-x86/sdk-suite-2/selftest/files/suite.log",
+      "sha256": "69871383e2840395df2b971e4da0ea13a45c607b163859ffddc68ba598fea08a",
+      "counts": {
+        "pass": 114,
+        "fail": 0,
+        "skip": 120
+      }
+    },
+    {
+      "target": "4/21/x86_64",
+      "case": "selftest",
+      "historical_stdout": "artifacts/qt4-android-lollipop-x86_64/sdk-suite-4/selftest/files/suite.log",
+      "sha256": "69871383e2840395df2b971e4da0ea13a45c607b163859ffddc68ba598fea08a",
+      "counts": {
+        "pass": 114,
+        "fail": 0,
+        "skip": 120
+      }
+    },
+    {
+      "target": "4/21/arm64-v8a",
+      "case": "selftest",
+      "historical_stdout": "artifacts/qt4-android-lollipop-arm64-v8a/sdk-suite-1/selftest/files/suite.log",
+      "sha256": "69871383e2840395df2b971e4da0ea13a45c607b163859ffddc68ba598fea08a",
+      "counts": {
+        "pass": 114,
+        "fail": 0,
+        "skip": 120
+      }
+    },
+    {
+      "target": "4/10/x86",
+      "case": "widgets",
+      "historical_stdout": "artifacts/qt4-android-gingerbread-x86/sdk-suite-2/widgets/files/suite.log",
+      "sha256": "21a121cb82c9ff8b9bcf539100b48e46a8e960f651d1d1529778c19de9be4b5f",
+      "counts": {
+        "pass": 135,
+        "fail": 0,
+        "skip": 12
+      }
+    },
+    {
+      "target": "4/21/x86_64",
+      "case": "widgets",
+      "historical_stdout": "artifacts/qt4-android-lollipop-x86_64/sdk-suite-4/widgets/files/suite.log",
+      "sha256": "21a121cb82c9ff8b9bcf539100b48e46a8e960f651d1d1529778c19de9be4b5f",
+      "counts": {
+        "pass": 135,
+        "fail": 0,
+        "skip": 12
+      }
+    },
+    {
+      "target": "4/21/arm64-v8a",
+      "case": "widgets",
+      "historical_stdout": "artifacts/qt4-android-lollipop-arm64-v8a/sdk-suite-1/widgets/files/suite.log",
+      "sha256": "21a121cb82c9ff8b9bcf539100b48e46a8e960f651d1d1529778c19de9be4b5f",
+      "counts": {
+        "pass": 135,
+        "fail": 0,
+        "skip": 12
+      }
+    },
+    {
+      "target": "4/10/x86",
+      "case": "multimedia",
+      "historical_stdout": "artifacts/qt4-android-gingerbread-x86/sdk-suite-2/multimedia/files/suite.log",
+      "sha256": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+      "counts": {
+        "pass": 9,
+        "fail": 0,
+        "skip": 3
+      }
+    },
+    {
+      "target": "4/21/x86_64",
+      "case": "multimedia",
+      "historical_stdout": "artifacts/qt4-android-lollipop-x86_64/sdk-suite-4/multimedia/files/suite.log",
+      "sha256": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+      "counts": {
+        "pass": 9,
+        "fail": 0,
+        "skip": 3
+      }
+    },
+    {
+      "target": "4/21/arm64-v8a",
+      "case": "multimedia",
+      "historical_stdout": "artifacts/qt4-android-lollipop-arm64-v8a/sdk-suite-1/multimedia/files/suite.log",
+      "sha256": "f0c05f265cc66e88d8da9d6266bb1298ebd8150839f1edf199f48b3c44021bd8",
+      "counts": {
+        "pass": 9,
+        "fail": 0,
+        "skip": 3
+      }
+    },
+    {
+      "target": "4/10/x86",
+      "case": "network",
+      "historical_stdout": "artifacts/qt4-android-gingerbread-x86/sdk-suite-2/network/files/suite.log",
+      "sha256": "043107e27dfd09cbbf29d49936c9ff5f62b90d9d283255e7cbcbfe5c8bc9103b",
+      "counts": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 2
+      }
+    },
+    {
+      "target": "4/21/x86_64",
+      "case": "network",
+      "historical_stdout": "artifacts/qt4-android-lollipop-x86_64/sdk-suite-4/network/files/suite.log",
+      "sha256": "043107e27dfd09cbbf29d49936c9ff5f62b90d9d283255e7cbcbfe5c8bc9103b",
+      "counts": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 2
+      }
+    },
+    {
+      "target": "4/21/arm64-v8a",
+      "case": "network",
+      "historical_stdout": "artifacts/qt4-android-lollipop-arm64-v8a/sdk-suite-1/network/files/suite.log",
+      "sha256": "043107e27dfd09cbbf29d49936c9ff5f62b90d9d283255e7cbcbfe5c8bc9103b",
+      "counts": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 2
+      }
+    },
+    {
+      "target": "4/10/x86",
+      "case": "gl",
+      "historical_stdout": "artifacts/qt4-android-gingerbread-x86/sdk-suite-2/gl/files/suite.log",
+      "sha256": "4ddda1e57e891ac838d0e0c087e308307f973b2f540bfe7d6012c8fa98ecefa8",
+      "counts": {
+        "pass": 13,
+        "fail": 0,
+        "skip": 1
+      }
+    },
+    {
+      "target": "4/21/x86_64",
+      "case": "gl",
+      "historical_stdout": "artifacts/qt4-android-lollipop-x86_64/sdk-suite-4/gl/files/suite.log",
+      "sha256": "4ddda1e57e891ac838d0e0c087e308307f973b2f540bfe7d6012c8fa98ecefa8",
+      "counts": {
+        "pass": 13,
+        "fail": 0,
+        "skip": 1
+      }
+    },
+    {
+      "target": "4/21/arm64-v8a",
+      "case": "gl",
+      "historical_stdout": "artifacts/qt4-android-lollipop-arm64-v8a/sdk-suite-1/gl/files/suite.log",
+      "sha256": "4ddda1e57e891ac838d0e0c087e308307f973b2f540bfe7d6012c8fa98ecefa8",
+      "counts": {
+        "pass": 13,
+        "fail": 0,
+        "skip": 1
+      }
+    }
+  ]
+}

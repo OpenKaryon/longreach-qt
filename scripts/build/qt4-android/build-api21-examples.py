@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Build the shared Qt4 projects as JNI clients of an installed Android SDK."""
 import argparse
+import atexit
 import hashlib
 import importlib.util
 import json
@@ -22,6 +23,11 @@ repo = Path('/repo')
 runtime = Path('/opt/longreach-android' if os.environ['ANDROID_ABI'] == 'x86' else '/opt/longreach-android-api21')
 cxx = runtime / 'bin/cxx'
 work = Path('/work/qt4-android-' + os.environ['ANDROID_ABI']) / 'clients'
+lease_spec = importlib.util.spec_from_file_location('qt4_client_cache_lease', Path(__file__).with_name('client-cache-lock.py'))
+lease_module = importlib.util.module_from_spec(lease_spec)
+lease_spec.loader.exec_module(lease_module)
+client_lease = lease_module.CacheLease(Path('/work'))
+atexit.register(client_lease.close)
 args.output.mkdir(parents=True, exist_ok=True)
 work.mkdir(parents=True, exist_ok=True)
 qmake = prefix / 'bin/qmake'
@@ -36,11 +42,11 @@ for path in plugins:
     assert path.is_file(), path
 libs = ['-Wl,--start-group'] + list(map(str, plugins + qml_plugins + modules)) + ['-Wl,--end-group', '-lEGL', '-lGLESv2', '-ldl']
 records = []
-link_inputs = hashlib.sha256((prefix / 'longreach-reports/sdk-static-elf.json').read_bytes()).hexdigest()
 module = importlib.util.spec_from_file_location('qt4_cache', Path(__file__).with_name('cache-inputs.py'))
 cache = importlib.util.module_from_spec(module)
 module.loader.exec_module(cache)
 compile_inputs = cache.fingerprint(cache.client_compile_inputs(prefix, runtime))
+link_inputs = cache.fingerprint(cache.client_link_inputs(runtime, plugins + qml_plugins + modules, os.environ['ANDROID_ABI']))
 
 
 def write_if_changed(path, text):
@@ -48,7 +54,7 @@ def write_if_changed(path, text):
         path.write_text(text)
 
 def command(arguments, directory):
-    subprocess.run(list(map(str, arguments)), cwd=directory, check=True)
+    subprocess.run(list(map(str, arguments)), cwd=directory, check=True, env=client_lease.child_environment(), **client_lease.child_options())
 
 def build(profile, project, extra=(), definitions=()):
     directory = work / profile
@@ -61,20 +67,8 @@ def build(profile, project, extra=(), definitions=()):
         options.append('SOURCES+=' + ' '.join(map(str, extra)))
     if definitions:
         options.append('DEFINES+=' + ' '.join(definitions))
-    compile_key = cache.fingerprint([compile_inputs, options])
-    saved_compile = directory / '.longreach-sdk-compile-inputs'
-    if cache.needs_clean(saved_compile, compile_key) and (directory / 'Makefile').exists():
-        command(['make', 'clean'], directory)
-    command([qmake, '-spec', spec, project, '-after'] + options, directory)
-    saved_inputs = directory / '.longreach-sdk-link-inputs'
-    if not saved_inputs.exists() or saved_inputs.read_text().strip() != link_inputs:
-        # A retained client cache may have newer output timestamps than a new
-        # SDK's archives. Relink against their actual contents, retaining objects.
-        for output in directory.glob('lib' + profile + '.so*'):
-            output.unlink()
-    command(['make', f'-j{jobs}'], directory)
-    write_if_changed(saved_inputs, link_inputs + '\n')
-    write_if_changed(saved_compile, compile_key + '\n')
+    cache.build_client(directory, profile, [qmake, '-spec', spec, project, '-after'] + options,
+                       compile_inputs, link_inputs, jobs, command)
     source = directory / ('lib' + profile + '.so')
     target = args.output / (profile + '.so')
     shutil.copyfile(source, target)
@@ -130,7 +124,7 @@ for profile in profiles:
         build(profile, project, [bridge], ['main=longreachSuiteMain', 'LONGREACH_DONUT_JNI'])
 shutil.copyfile(runtime / 'lib/libc++_shared.so', args.output / 'libc++_shared.so')
 manifest = {'schema_version': 2, 'abi': os.environ['ANDROID_ABI'],
-            'api': 10 if os.environ['ANDROID_ABI'] == 'x86' else 21,
+            'api': int(os.environ['ANDROID_API']),
             'sdk_image_id': os.environ.get('LONGREACH_SDK_IMAGE_ID'),
             'runtime_sha256': hashlib.sha256((runtime / 'lib/libc++_shared.so').read_bytes()).hexdigest(),
             'clients': records}

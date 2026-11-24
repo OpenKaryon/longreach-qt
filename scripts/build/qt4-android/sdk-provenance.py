@@ -2,23 +2,33 @@
 """Record the installed static SDK's actual ABI, modules and source inputs."""
 import argparse
 import hashlib
+import importlib.util
 import json
-import os
 from pathlib import Path
-import struct
+import os
+import re
 import shutil
+import struct
+import uuid
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--prefix', type=Path, required=True)
-parser.add_argument('--source', type=Path, required=True)
-parser.add_argument('--output', type=Path, required=True)
-args = parser.parse_args()
-abi = os.environ['ANDROID_ABI']
-settings = {'x86': (10, 32, 3, '/opt/longreach-android'),
+SETTINGS = {'x86': (10, 32, 3, '/opt/longreach-android'),
             'x86_64': (21, 64, 62, '/opt/longreach-android-api21'),
             'arm64-v8a': (21, 64, 183, '/opt/longreach-android-api21')}
-api, bits, machine, runtime = settings[abi]
-repo = Path('/repo')
+HELPERS = ('target-config.sh', 'build-qtcore.sh', 'patch-qtcore.py', 'build-api21-sdk.sh',
+           'sdk-provenance.py', 'cache-inputs.py', 'prepare-source.py', 'export-mkspecs.py')
+REPORTS = ('sdk-modules.txt', 'sdk-static-elf.json', 'sdk-provenance.json')
+
+
+def load_helper(name):
+    spec = importlib.util.spec_from_file_location('qt4_provenance_' + name, Path(__file__).with_name(name + '.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+source_helper = load_helper('prepare-source')
+mkspec_helper = load_helper('export-mkspecs')
+
 
 def digest(path):
     value = hashlib.sha256()
@@ -27,7 +37,17 @@ def digest(path):
             value.update(block)
     return value.hexdigest()
 
-def archive_members(path):
+
+def write(path, text):
+    temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
+    try:
+        temporary.write_text(text, encoding='utf-8')
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def archive_members(path, bits, machine):
     blob = path.read_bytes()
     if not blob.startswith(b'!<arch>\n'):
         raise RuntimeError(f'Not a regular static archive: {path}')
@@ -54,38 +74,59 @@ def archive_members(path):
         raise RuntimeError(f'Empty or invalid archive: {path}')
     return members
 
-modules = sorted(path.name for path in (args.prefix / 'lib').glob('libQt*.a'))
-if len(modules) != 14:
-    raise RuntimeError(f'Expected fourteen selected Qt4 modules, got {modules}')
-archives = sorted(args.prefix.glob('lib/libQt*.a')) + sorted(args.prefix.glob('plugins/**/*.a')) + sorted(args.prefix.glob('imports/**/*.a'))
-records = [{'archive': str(path.relative_to(args.prefix)), 'objects': archive_members(path),
-            'elf_class': bits, 'machine': machine, 'sha256': digest(path)} for path in archives]
-patches = [repo / 'patches/qt4/all/03-static-gui-animation-registration.patch',
-           repo / 'patches/qt4/all/04-script-tagged-frame-pointers.patch',
-           repo / 'patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch']
-patches += sorted((repo / 'patches/qt4/android').glob('*.patch'))
-helpers = [repo / 'scripts/build/qt4-android' / name for name in
-           ('target-config.sh', 'build-qtcore.sh', 'patch-qtcore.py', 'build-api21-sdk.sh', 'sdk-provenance.py', 'cache-inputs.py')]
-inputs = {str(path.relative_to(repo)): digest(path) for path in patches + helpers}
-source_names = {'src/corelib/thread/qthread_unix.cpp', 'src/corelib/io/qfilesystemengine_unix.cpp',
-                'src/corelib/codecs/qtextcodec.cpp', 'src/gui/kernel/qwidget.cpp',
-                'src/plugins/platforms/minimal/minimal.pro', 'src/plugins/platforms/minimal/qminimalintegration.h'}
-for patch in patches:
-    for line in patch.read_text().splitlines():
-        if line.startswith('+++ b/'):
-            source_names.add(line[6:].split('\t')[0])
-actual_source = {name: digest(args.source / name) for name in sorted(source_names)}
-configurations = [(args.source / name).read_text().strip() for name in
-                  ('.longreach-configuration', '.longreach-object-configuration', '.longreach-plugin-configuration')]
-if len(set(configurations)) != 1 or len(configurations[0]) != 64:
-    raise RuntimeError('SDK module/plugin objects do not share their effective configuration')
-args.output.mkdir(parents=True, exist_ok=True)
-(args.output / 'sdk-modules.txt').write_text('\n'.join(modules) + '\n')
-(args.output / 'sdk-static-elf.json').write_text(json.dumps({'abi': abi, 'archives': records}, indent=2) + '\n')
-(args.output / 'sdk-provenance.json').write_text(json.dumps({
-    'qt': '4.8.7', 'llvm': '21.1.8', 'abi': abi, 'api': api,
-    'qt_archive_sha256': digest(Path('/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz')),
-    'runtime_sha256': digest(Path(runtime) / 'lib/libc++_shared.so'),
-    'compiler_executable_sha256': digest(Path(shutil.which('clang-21')).resolve()),
-    'configuration_fingerprint': configurations[0], 'recipe_inputs': inputs, 'patched_source': actual_source}, indent=2) + '\n')
-print(f'Validated {len(modules)} Qt4 modules and {len(records)} target archives, all ELF{bits}/machine{machine}')
+
+def produce(prefix, source, output, abi, *, repo=Path('/repo'),
+            archive=Path('/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz'),
+            runtime=None, compiler=None):
+    output.mkdir(parents=True, exist_ok=True)
+    # A failed check must not leave an earlier success available for sealing.
+    for name in REPORTS:
+        (output / name).unlink(missing_ok=True)
+    api, bits, machine, runtime_prefix = SETTINGS[abi]
+    installed_mkspecs = mkspec_helper.verify(prefix, runtime_prefix)
+    modules = sorted(path.name for path in (prefix / 'lib').glob('libQt*.a'))
+    if len(modules) != 14:
+        raise RuntimeError(f'Expected fourteen selected Qt4 modules, got {modules}')
+    archives = sorted(prefix.glob('lib/libQt*.a')) + sorted(prefix.glob('plugins/**/*.a')) + sorted(prefix.glob('imports/**/*.a'))
+    records = [{'archive': str(path.relative_to(prefix)), 'objects': archive_members(path, bits, machine),
+                'elf_class': bits, 'machine': machine, 'sha256': digest(path)} for path in archives]
+    patches = [repo / 'patches/qt4/all/03-static-gui-animation-registration.patch',
+               repo / 'patches/qt4/all/04-script-tagged-frame-pointers.patch',
+               repo / 'patches/qt4/linux-sarge-llvm/01-xmlpatterns-color-mask.patch']
+    patches += sorted((repo / 'patches/qt4/android').glob('*.patch'))
+    helpers = [repo / 'scripts/build/qt4-android' / name for name in HELPERS]
+    inputs = {path.relative_to(repo).as_posix(): digest(path) for path in patches + helpers}
+    prepared = source_helper.verify_prepared(repo, archive, source, 'quick', api)
+    configurations = [(source / name).read_text().strip() for name in
+                      ('.longreach-configuration', '.longreach-object-configuration', '.longreach-plugin-configuration')]
+    if len(set(configurations)) != 1 or not re.fullmatch(r'[0-9a-f]{64}', configurations[0]):
+        raise RuntimeError('SDK module/plugin objects do not share their effective configuration')
+    compiler = compiler or shutil.which('clang-21')
+    if not compiler:
+        raise RuntimeError('Missing compiler executable for SDK provenance')
+    record = {
+        'qt': '4.8.7', 'llvm': '21.1.8', 'abi': abi, 'api': api,
+        'qt_archive_sha256': digest(archive),
+        'runtime_sha256': digest(Path(runtime or runtime_prefix) / 'lib/libc++_shared.so'),
+        'compiler_executable_sha256': digest(Path(compiler).resolve()),
+        'prepared_source_recipe': prepared['recipe'],
+        'configuration_fingerprint': configurations[0], 'recipe_inputs': inputs,
+        'patched_source': prepared['modified_source'], 'installed_mkspecs': installed_mkspecs}
+    write(output / 'sdk-modules.txt', '\n'.join(modules) + '\n')
+    write(output / 'sdk-static-elf.json', json.dumps({'abi': abi, 'archives': records}, indent=2) + '\n')
+    write(output / 'sdk-provenance.json', json.dumps(record, indent=2) + '\n')
+    print(f'Validated {len(modules)} Qt4 modules and {len(records)} target archives, all ELF{bits}/machine{machine}')
+    return record
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--prefix', type=Path, required=True)
+    parser.add_argument('--source', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args(argv)
+    produce(args.prefix, args.source, args.output, os.environ['ANDROID_ABI'])
+
+
+if __name__ == '__main__':
+    main()

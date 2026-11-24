@@ -29,29 +29,9 @@ mkdir -p "$prefix/bin" /out/qt4-sdk
 for tool in qmake moc rcc uic; do
     if [[ -f "$tree/bin/$tool" ]]; then cp "$tree/bin/$tool" "$prefix/bin/"; fi
 done
-if [[ ! -d "$prefix/mkspecs" ]]; then cp -a "$tree/mkspecs" "$prefix/"; fi
-for metadata in qconfig.pri qmodule.pri; do
-    if [[ -f "$tree/mkspecs/$metadata" ]] && ! cmp -s "$tree/mkspecs/$metadata" "$prefix/mkspecs/$metadata"; then
-        cp -p "$tree/mkspecs/$metadata" "$prefix/mkspecs/$metadata"
-    fi
-done
-spec="$prefix/mkspecs/android-longreach-clang"
-mkdir -p "$spec"
-cp "$tree/mkspecs/linux-donut-llvm/qplatformdefs.h" "$spec/"
-cat > "$spec/qmake.conf" <<'EOF'
-include(../linux-g++/qmake.conf)
-QMAKE_CC = @RUNTIME@/bin/cc -fgnu89-inline
-QMAKE_CXX = @RUNTIME@/bin/cxx -DQT_NO_SHAREDMEMORY -DQT_NO_SYSTEMSEMAPHORE
-QMAKE_LINK = $$QMAKE_CXX
-QMAKE_LINK_SHLIB = $$QMAKE_CXX
-QMAKE_AR = llvm-ar-21 cqs
-QMAKE_RANLIB = llvm-ranlib-21
-QMAKE_LIBS_THREAD =
-QMAKE_CFLAGS_THREAD =
-QMAKE_CXXFLAGS_THREAD =
-DEFINES += QT_NO_LINUX_FUTEX
-EOF
-sed -i "s|@RUNTIME@|$runtime|g" "$spec/qmake.conf"
+# Export installed mkspecs independently of retained /work build wrappers.
+python3 /repo/scripts/build/qt4-android/export-mkspecs.py export \
+    --source "$tree" --prefix "$prefix" --runtime "$runtime"
 cat > "$prefix/longreach-target.cmake" <<EOF
 set(LONGREACH_ANDROID_API "$api")
 set(LONGREACH_ANDROID_ABI "$abi")
@@ -64,6 +44,7 @@ llvm-readobj-21 --file-headers "$prefix/lib/libQtCore.a" > /out/qt4-sdk/qtcore-$
 if [[ "$phase" == quick ]]; then
     python3 /repo/scripts/build/qt4-android/sdk-provenance.py --prefix "$prefix" --source "$tree" --output /out/qt4-sdk
     cp /repo/scripts/build/qt4-android/toolchain.cmake "$prefix/toolchain.cmake"
+    rm -rf -- "$prefix/longreach-reports"
     mkdir -p "$prefix/longreach-reports" "$prefix/licenses"
     for report in sdk-modules.txt sdk-static-elf.json sdk-provenance.json; do
         cp "/out/qt4-sdk/$report" "$prefix/longreach-reports/"
@@ -74,6 +55,10 @@ if [[ "$phase" == quick ]]; then
     if [[ "$api" == 10 ]]; then
         cp "$runtime/runtime-input-provenance.json" "$prefix/longreach-reports/"
     fi
+    llvm-readobj-21 --file-header --dynamic-table "$runtime/lib/libc++_shared.so" > "$prefix/longreach-reports/runtime-elf.txt"
+    source /repo/scripts/build/android-api21/generic-atomics.sh
+    check_android_generic_atomic_exports "$runtime/lib/libc++_shared.so" "$prefix/longreach-reports/runtime-atomic-exports.txt"
+    python3 /repo/scripts/build/android-api21/sdk-reports.py seal --source "$prefix/longreach-reports" --qt-major 4 --abi "$abi"
     cp "$tree"/LICENSE* "$tree/LGPL_EXCEPTION.txt" "$prefix/licenses/"
 fi
 echo "Qt4 $abi/API$api $phase SDK phase passed"

@@ -6,8 +6,8 @@ $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullNam
 $root=(New-Item -ItemType Directory (Join-Path $parent ('guest-awake-'+[guid]::NewGuid()))).FullName
 $script:confirmed=$true
 $script:calls=[Collections.Generic.List[string]]::new()
-function Fixture-Adb {
-    param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Arguments)
+function Invoke-AndroidAdb {
+    param([string]$Adb,[string[]]$Arguments,[int]$TimeoutMilliseconds,[switch]$AllowNonzero)
     $global:LASTEXITCODE=0
     $script:calls.Add($Arguments -join ' ')
     if($Arguments -contains 'dumpsys'){ if($script:confirmed){'mStayOnConditions=3'}else{'mStayOnConditions=1'} }

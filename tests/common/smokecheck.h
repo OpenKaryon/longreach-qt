@@ -87,6 +87,18 @@ public:
     // Call inside a check to mark it not-applicable on this platform/config.
     void skip(QString &detail, const QString &why) { m_currentSkipped = true; detail = why; }
 
+    // Keep behavioral observations in both stdout and an optional progress log.
+    // They are evidence alongside a named result, not another PASS/SKIP check.
+    void observe(const QString &name, const QString &detail)
+    {
+        std::printf("OBSERVE: %s - %s\n", qPrintable(name), qPrintable(detail));
+        std::fflush(stdout);
+        if (m_log) {
+            std::fprintf(m_log, "OBSERVE: %s - %s\n", qPrintable(name), qPrintable(detail));
+            std::fflush(m_log);
+        }
+    }
+
     int summary()
     {
         std::printf("---- %s: %d passed, %d failed, %d skipped ----\n",

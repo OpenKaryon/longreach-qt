@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "qt_version": "5.15.19",
+  "qt_archive_sha256": "173c2326dae138bbb0d98921e9d911e55c00163d93a6db29f294b5e19ff306ae",
+  "scope": "selected pristine text sources and applicable patch delivery, not an SDK or runtime qualification",
+  "pristine_files": [
+    {
+      "file": "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java",
+      "sha256": "bc1ac007bd1b2c76baa1677457982c0251a5700b907d9b850005242729b3b128"
+    },
+    {
+      "file": "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java",
+      "sha256": "e9e144196fbdd3fd7e513e0875e8a422221c64d8dcf536d2272b87efa459cdc1"
+    },
+    {
+      "file": "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java",
+      "sha256": "a9b4d83680ac07402c177f8b69398457111f0a834c4da27bdc943595cf00d8e1"
+    },
+    {
+      "file": "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivityLoader.java",
+      "sha256": "d098efc3c7500993e873b339e29c18f6792e8e2b27c708ee1fa358fb1ee64d7d"
+    },
+    {
+      "file": "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtLoader.java",
+      "sha256": "cff2d54fdd69f58e34126dbd0ceafdf8234603d7649d5679fe32465204e01c54"
+    },
+    {
+      "file": "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtServiceLoader.java",
+      "sha256": "f162c72dd76083618ae64d39300ef86b140b022b299cd7bc5f5437cd0b9b1ee8"
+    },
+    {
+      "file": "qtbase/src/plugins/platforms/android/androidjnimain.cpp",
+      "sha256": "542f49efe893abdbe90f500b0d73e2911822ff72e87ac3dd4cd0300cedaed546"
+    },
+    {
+      "file": "qtbase/src/plugins/platforms/android/qandroideventdispatcher.cpp",
+      "sha256": "ea070e9bd899077539bd6c04140859c14bf9a38d6f6f6017f11f259fc02df0e5"
+    },
+    {
+      "file": "qtbase/src/plugins/platforms/android/qandroideventdispatcher.h",
+      "sha256": "3c5bd45f0f7b761389fb6ae26763014acf34bd16f83d430715e5cf1a69b5c660"
+    },
+    {
+      "file": "qtbase/src/plugins/platforms/android/qandroidplatformintegration.cpp",
+      "sha256": "5135bd1c9cb6ecf7ecb2fe78f70ba42631ad36bd10ca5b339259cf50d371f830"
+    },
+    {
+      "file": "qtbase/src/plugins/platforms/android/qandroidplatformintegration.h",
+      "sha256": "061b4fb8b4a55285e4f83e2987ffaa90a872f4df96da8202f04c15609eefdf53"
+    },
+    {
+      "file": "qtmultimedia/src/multimedia/audio/qsamplecache_p.cpp",
+      "sha256": "bfe5092b20b7096af22b0cb37ea0b185d6a3f25b400034fb4d873f73b0e6a89a"
+    },
+    {
+      "file": "qtmultimedia/src/multimedia/audio/qsamplecache_p.h",
+      "sha256": "a529f8036d4c66806ed664edd338548a51ad63dfe61decedfec1fdd53b8838fe"
+    }
+  ],
+  "selected_patch_applications": [
+    {
+      "patch": "patches/qt5/android/02-api10-java.patch",
+      "selected_files": [
+        "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java",
+        "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java",
+        "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java",
+        "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivityLoader.java",
+        "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtLoader.java"
+      ],
+      "sha256": "c5a2ae457445a7b9cf400a129d4beeed088500781f2b845cae87b6502b8e2a17"
+    },
+    {
+      "patch": "patches/qt5/android/07-api10-screen.patch",
+      "selected_files": [
+        "qtbase/src/plugins/platforms/android/androidjnimain.cpp"
+      ],
+      "sha256": "95f9d1211418e9a83e05fdce6ca82f99eb96df5ee258b3550fae24fed20c137a"
+    },
+    {
+      "patch": "patches/qt5/android/19-api10-touch-events.patch",
+      "selected_files": [
+        "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java"
+      ],
+      "sha256": "62ee595eefb269f3f00f7f05f30ee1e89a23496edd5fda83e4f3870cc1ea2a66"
+    },
+    {
+      "patch": "patches/qt5/android/20-api10-options-menu.patch",
+      "selected_files": [
+        "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java"
+      ],
+      "sha256": "8aab3fecca94baaaccf8089ca8fda0fdc96ed5471c35727366d8454eb937bda4"
+    },
+    {
+      "patch": "patches/qt5/android/27-api10-activity-reflection.patch",
+      "selected_files": [
+        "qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java",
+        "qtbase/src/android/java/src/org/qtproject/qt5/android/bindings/QtActivity.java"
+      ],
+      "sha256": "f5b1f72ad66ef7fca85f3d18fe481778ceaffe0fdda57e9f42996b6828be6f50"
+    },
+    {
+      "patch": "patches/qt5/android/x86/02-sample-cache-shutdown.patch",
+      "selected_files": [
+        "qtmultimedia/src/multimedia/audio/qsamplecache_p.cpp"
+      ],
+      "sha256": "d90bf70233250a256c17743c251270b4ae06802e4a4f4d2d0b64688233124871"
+    }
+  ],
+  "sample_patch_reverse_reapply_exact": true,
+  "qt_compiled": false,
+  "java_compiled": false,
+  "guest_executed": false,
+  "crash_cause_established": false
+}

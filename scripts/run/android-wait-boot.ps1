@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+. "$PSScriptRoot/android-adb.ps1"
 
 function Wait-AndroidBoot {
     param(
@@ -6,6 +7,7 @@ function Wait-AndroidBoot {
         [string]$Serial='emulator-5582',
         [Parameter(Mandatory)][string]$RunDirectory,
         [Parameter(Mandatory)][int]$EmulatorPid,
+        [Diagnostics.Process]$EmulatorProcess,
         [ValidateRange(1,600)][int]$TimeoutSeconds=300,
         [ValidateRange(100,10000)][int]$QueryTimeoutMilliseconds=5000,
         [ValidateRange(1,5000)][int]$PollMilliseconds=2000
@@ -19,9 +21,13 @@ function Wait-AndroidBoot {
     $attempt=0
     $timeouts=0
     function Assert-BootGuest {
-        $owner=Get-Process -Id $EmulatorPid -ErrorAction SilentlyContinue
-        if(!$owner){throw 'Emulator exited during startup; see emulator.stdout'}
-        $owner.Dispose()
+        if ($EmulatorProcess) {
+            if ($EmulatorProcess.HasExited) { throw 'Owned emulator tree exited during startup; see emulator.stdout' }
+        } else {
+            $owner=Get-Process -Id $EmulatorPid -ErrorAction SilentlyContinue
+            if(!$owner){throw 'Emulator exited during startup; see emulator.stdout'}
+            $owner.Dispose()
+        }
         foreach($name in @('kernel-shell.log','emulator.stdout')) {
             $path=Join-Path $run $name
             if((Test-Path -LiteralPath $path) -and
@@ -35,7 +41,7 @@ function Wait-AndroidBoot {
         $attempt++
         $query=$null
         try {
-            $query=Start-Process -FilePath $Adb -ArgumentList @('-s',$Serial,'shell','getprop','sys.boot_completed') -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            $query=Start-Process -FilePath $Adb -ArgumentList @(Get-AndroidAdbArguments -Arguments @('-s',$Serial,'shell','getprop','sys.boot_completed') -Directory $run) -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
             if(!$query.WaitForExit($QueryTimeoutMilliseconds)) {
                 $timeouts++
                 Stop-Process -InputObject $query -ErrorAction SilentlyContinue
@@ -65,10 +71,8 @@ function Wait-AndroidBoot {
 function Set-AndroidGuestStayAwake {
     param([Parameter(Mandatory)][string]$Adb, [Parameter(Mandatory)][string]$Serial,
           [Parameter(Mandatory)][string]$RunDirectory)
-    & $Adb -s $Serial shell svc power stayon true | Out-Null
-    if ($LASTEXITCODE) { throw 'Could not keep the test guest awake' }
-    $state=@(& $Adb -s $Serial shell dumpsys power)
-    if ($LASTEXITCODE) { throw 'Could not read the guest power policy' }
+    Invoke-AndroidAdb -Adb $Adb -Arguments @('-s',$Serial,'shell','svc','power','stayon','true') | Out-Null
+    $state=@(Invoke-AndroidAdb -Adb $Adb -Arguments @('-s',$Serial,'shell','dumpsys','power'))
     $state | Set-Content -LiteralPath (Join-Path $RunDirectory 'power-before.txt')
     if (($state -join "`n") -notmatch '\bmStayOn(?:Conditions|Setting)=(?:3|7)\b') {
         throw 'The guest did not confirm stay-awake on all power sources'

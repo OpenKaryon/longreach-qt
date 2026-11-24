@@ -8,6 +8,7 @@
 #include <android/log.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 
 int longreachExampleMain(int argc, char **argv);
@@ -39,7 +40,23 @@ __attribute__((visibility("default"))) int main(int argc, char **argv)
     if (snapshot)
         std::fclose(snapshot);
 
+    // Standalone teardown diagnosis only: allow debuggerd to finish before
+    // Qt's Android entry point exits the process. Normal runs never wait here.
+    bool crashHold = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--android-crash-hold") == 0) {
+            crashHold = true;
+            for (int j = i; j < argc; ++j)
+                argv[j] = argv[j + 1];
+            --argc;
+            --i;
+        }
+    }
     const int result = longreachExampleMain(argc, argv);
+    if (crashHold) {
+        __android_log_write(ANDROID_LOG_INFO, "LongreachExamples", "Diagnostic post-main hold");
+        sleep(5);
+    }
     std::fflush(nullptr);
     std::FILE *report = std::fopen("selftest-result.txt", "w");
     if (!report) {

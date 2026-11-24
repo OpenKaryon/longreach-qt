@@ -45,50 +45,94 @@
 
 #if SMOKE_QT5
 namespace {
-bool timedSyncCheck(bool semaphore, bool timeout, QString &detail)
+bool timedSyncCheck(SmokeReporter &reporter, const char *name, bool semaphore,
+                    bool timeout, QString &detail)
 {
-    QMutex mutex;
-    QSemaphore available;
     class Peer : public QThread {
     public:
-        QMutex *mutex;
-        QSemaphore *available;
-        int delay;
-        QAtomicInt ready{0};
-        Peer(QMutex *m, QSemaphore *s, int ms) : mutex(m), available(s), delay(ms) {}
+        QMutex mutex;
+        QSemaphore available;
+        QAtomicInt ready{0}, begin{0}, armed{0}, released{0};
+        const bool semaphore;
+        const int delay;
+        Peer(bool useSemaphore, int milliseconds)
+            : semaphore(useSemaphore), delay(milliseconds) {}
         void run() override {
-            if (mutex) mutex->lock();
+            if (!semaphore) mutex.lock();
             ready.storeRelease(1);
-            msleep(delay);
-            if (mutex) mutex->unlock();
-            if (available) available->release();
+            // Start the release delay only after the caller has observed an
+            // unavailable resource. The flag is independent of the primitives
+            // under test; an overloaded caller cannot leave us waiting forever.
+            QElapsedTimer preparation;
+            preparation.start();
+            while (!begin.loadAcquire() && preparation.elapsed() < 5000)
+                QThread::yieldCurrentThread();
+            if (begin.loadAcquire()) {
+                armed.storeRelease(1);
+                msleep(delay);
+            }
+            released.storeRelease(1);
+            if (!semaphore) mutex.unlock();
+            else available.release();
         }
-    } peer(semaphore ? nullptr : &mutex, semaphore ? &available : nullptr,
-           timeout ? 1200 : 250);
-    peer.start();
-    QElapsedTimer preparation;
-    preparation.start();
-    while (!peer.ready.loadAcquire() && preparation.elapsed() < 5000)
-        QThread::yieldCurrentThread();
-    const bool ready = peer.ready.loadAcquire();
-    QElapsedTimer elapsed;
-    elapsed.start();
+    };
+    const int maximumAttempts = timeout ? 1 : 3;
+    for (int attempt = 1; attempt <= maximumAttempts; ++attempt) {
+        // Peer owns everything referenced by its worker. If joining fails, no
+        // pointer to this function's stack is left in the running thread.
+        QScopedPointer<Peer> peer(new Peer(semaphore, timeout ? 1200 : 250));
+        QObject::connect(peer.data(), SIGNAL(finished()), peer.data(), SLOT(deleteLater()));
+        peer->start();
+        QElapsedTimer preparation;
+        preparation.start();
+        while (!peer->ready.loadAcquire() && preparation.elapsed() < 5000)
+            QThread::yieldCurrentThread();
+        const bool ready = peer->ready.loadAcquire();
+        const bool probeAcquired = ready && (semaphore ? peer->available.tryAcquire(1)
+                                                       : peer->mutex.tryLock());
+        if (probeAcquired) {
+            if (semaphore) peer->available.release();
+            else peer->mutex.unlock();
+        }
+        const bool unavailable = ready && !probeAcquired;
+        peer->begin.storeRelease(1);
+        const bool releasedBeforeCall = peer->released.loadAcquire();
+        QElapsedTimer elapsed;
+        elapsed.start();
 #ifdef ETIMEDOUT
-    // Successful wakeups must ignore errno left by a preceding timeout.
-    errno = timeout ? 0 : ETIMEDOUT;
+        // Successful wakeups must ignore errno left by a preceding timeout.
+        errno = timeout ? 0 : ETIMEDOUT;
 #endif
-    const bool acquired = ready && (semaphore ? available.tryAcquire(1, timeout ? 200 : 5000)
-                                             : mutex.tryLock(timeout ? 200 : 5000));
-    const qint64 milliseconds = elapsed.elapsed();
-    if (acquired && !semaphore) mutex.unlock();
-    peer.wait();
-    detail = QStringLiteral("ready=%1 acquired=%2 elapsed=%3 ms")
-            .arg(ready).arg(acquired).arg(milliseconds);
-    return ready && (timeout ? !acquired && milliseconds >= 150
-                            : acquired && milliseconds < 4500);
+        const bool acquired = ready && (semaphore
+            ? peer->available.tryAcquire(1, timeout ? 200 : 5000)
+            : peer->mutex.tryLock(timeout ? 200 : 5000));
+        const qint64 milliseconds = elapsed.elapsed();
+        if (acquired && !semaphore) peer->mutex.unlock();
+        const bool joined = peer->wait(10000);
+        const bool armed = peer->armed.loadAcquire();
+        const bool setup = ready && unavailable && armed && !releasedBeforeCall;
+        const bool qualified = joined && setup && milliseconds < 4500
+            && (timeout ? !acquired && milliseconds >= 150
+                        : acquired && milliseconds >= 100);
+        // Retry only successful wakeups whose setup/timing did not establish
+        // waiting. A timeout/error from tryLock/tryAcquire is an immediate FAIL.
+        const bool retry = !timeout && !qualified && attempt < maximumAttempts
+            && joined && ready && acquired
+            && (!setup || milliseconds < 100);
+        const char *verdict = qualified ? "pass" : retry ? "retry" : "fail";
+        detail = QStringLiteral("attempt=%1 ready=%2 unavailable=%3 armed=%4 released_before_call=%5 acquired=%6 elapsed_ms=%7 joined=%8 verdict=%9")
+            .arg(attempt).arg(ready).arg(unavailable).arg(armed).arg(releasedBeforeCall)
+            .arg(acquired).arg(milliseconds).arg(joined).arg(QString::fromLatin1(verdict));
+        reporter.observe(QString::fromLatin1(name), detail);
+        if (!joined && peer->isRunning()) peer.take();
+        if (qualified) return true;
+        if (!retry) return false;
+    }
+    return false;
 }
 }
 #endif
+
 
 void checkConcurrency(SmokeReporter &r)
 {
@@ -135,10 +179,10 @@ void checkConcurrency(SmokeReporter &r)
         QMutex m; { QMutexLocker lock(&m); }
         return m.tryLock() ? (m.unlock(), true) : false;
     });
-    r.check("sync/mutex-timed-wakeup", [](QString &d) { return timedSyncCheck(false, false, d); });
-    r.check("sync/mutex-timed-timeout", [](QString &d) { return timedSyncCheck(false, true, d); });
-    r.check("sync/semaphore-timed-wakeup", [](QString &d) { return timedSyncCheck(true, false, d); });
-    r.check("sync/semaphore-timed-timeout", [](QString &d) { return timedSyncCheck(true, true, d); });
+    r.check("sync/mutex-timed-wakeup", [&r](QString &d) { return timedSyncCheck(r, "sync/mutex-timed-wakeup", false, false, d); });
+    r.check("sync/mutex-timed-timeout", [&r](QString &d) { return timedSyncCheck(r, "sync/mutex-timed-timeout", false, true, d); });
+    r.check("sync/semaphore-timed-wakeup", [&r](QString &d) { return timedSyncCheck(r, "sync/semaphore-timed-wakeup", true, false, d); });
+    r.check("sync/semaphore-timed-timeout", [&r](QString &d) { return timedSyncCheck(r, "sync/semaphore-timed-timeout", true, true, d); });
     r.check("sync/readwritelock", [&r](QString &d) {
         QReadWriteLock lock; { QReadLocker r0(&lock); }
         if (!lock.tryLockForWrite()) { d="write lock"; return false; }

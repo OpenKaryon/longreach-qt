@@ -142,9 +142,41 @@ void checkGuiValue(SmokeReporter &r)
 #else
         int w = fm.width("Hello");
 #endif
+#if !SMOKE_QT5 && defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ >= 10
+        // The pinned API10/API21 images provide a real serif family. A missing
+        // requested family must not resolve to the sans-serif fallback instead.
+        QFont serif(QStringLiteral("LongreachMissingSerifFamily"), 12);
+        serif.setStyleHint(QFont::Serif);
+        const QFontInfo serifInfo(serif);
+        const QStringList families = QFontDatabase().families();
+        const QString expected = families.contains(QStringLiteral("Noto Serif"))
+            ? QStringLiteral("Noto Serif") : QStringLiteral("Droid Serif");
+        if (!families.contains(expected) || serifInfo.family() != expected) {
+            d = QStringLiteral("serif fallback '%1', expected registered family '%2'")
+                .arg(serifInfo.family()).arg(expected);
+            return false;
+        }
+        const QFontMetrics serifMetrics(serif);
+        const QString serifGlyphs = QStringLiteral("AZaz09");
+        for (int i = 0; i < serifGlyphs.size(); ++i) {
+            if (!serifMetrics.inFont(serifGlyphs.at(i))) {
+                d = QStringLiteral("serif family '%1' has no glyph for '%2'")
+                    .arg(serifInfo.family()).arg(serifGlyphs.at(i));
+                return false;
+            }
+        }
+#endif
         return w>0 && fm.height()>0 && fi.pointSize()>0 && f.bold();
     });
-    r.check("font/default-ascii-glyphs", [](QString &d) {
+    r.check("font/default-ascii-glyphs", [&r](QString &d) {
+#if !defined(__ANDROID__)
+        // Match font/database on desktop hosts without installed fonts. Android
+        // images must provide real ASCII glyphs, even if their database is empty.
+        if (QFontDatabase().families().isEmpty()) {
+            r.skip(d, "no fonts installed");
+            return false;
+        }
+#endif
         const QFont font;
         const QFontInfo info(font);
         const QFontMetrics metrics(font);

@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "targets": {
     "4/10/x86": {
       "bootstrap": {
@@ -16,11 +16,11 @@
       },
       "selftest": {
         "min_pass": 114,
-        "max_skip": 120
+        "named_profile": "qt4-selftest"
       },
       "widgets": {
         "min_pass": 135,
-        "max_skip": 12
+        "named_profile": "qt4-widgets"
       },
       "graphics": {
         "min_pass": 32,
@@ -32,18 +32,18 @@
       },
       "multimedia": {
         "min_pass": 9,
-        "max_skip": 3
+        "named_profile": "qt4-multimedia"
       },
       "gl": {
         "min_pass": 13,
-        "max_skip": 1,
         "required_pass": [
           "qgl/widget-context",
           "qgl/vertex-buffer",
           "qgl/framebuffer-render-readback",
           "qgl/shader-program",
           "qgl/gallery-triangle-render"
-        ]
+        ],
+        "named_profile": "qt4-gl"
       },
       "qml": {
         "min_pass": 30,
@@ -51,7 +51,7 @@
       },
       "network": {
         "min_pass": 2,
-        "max_skip": 2
+        "named_profile": "qt4-network"
       },
       "quick": {
         "min_pass": 5,
@@ -73,11 +73,11 @@
       },
       "selftest": {
         "min_pass": 114,
-        "max_skip": 120
+        "named_profile": "qt4-selftest"
       },
       "widgets": {
         "min_pass": 135,
-        "max_skip": 12
+        "named_profile": "qt4-widgets"
       },
       "graphics": {
         "min_pass": 32,
@@ -89,18 +89,18 @@
       },
       "multimedia": {
         "min_pass": 9,
-        "max_skip": 3
+        "named_profile": "qt4-multimedia"
       },
       "gl": {
         "min_pass": 13,
-        "max_skip": 1,
         "required_pass": [
           "qgl/widget-context",
           "qgl/vertex-buffer",
           "qgl/framebuffer-render-readback",
           "qgl/shader-program",
           "qgl/gallery-triangle-render"
-        ]
+        ],
+        "named_profile": "qt4-gl"
       },
       "qml": {
         "min_pass": 30,
@@ -108,7 +108,7 @@
       },
       "network": {
         "min_pass": 2,
-        "max_skip": 2
+        "named_profile": "qt4-network"
       },
       "quick": {
         "min_pass": 5,
@@ -130,11 +130,11 @@
       },
       "selftest": {
         "min_pass": 114,
-        "max_skip": 120
+        "named_profile": "qt4-selftest"
       },
       "widgets": {
         "min_pass": 135,
-        "max_skip": 12
+        "named_profile": "qt4-widgets"
       },
       "graphics": {
         "min_pass": 32,
@@ -146,18 +146,18 @@
       },
       "multimedia": {
         "min_pass": 9,
-        "max_skip": 3
+        "named_profile": "qt4-multimedia"
       },
       "gl": {
         "min_pass": 13,
-        "max_skip": 1,
         "required_pass": [
           "qgl/widget-context",
           "qgl/vertex-buffer",
           "qgl/framebuffer-render-readback",
           "qgl/shader-program",
           "qgl/gallery-triangle-render"
-        ]
+        ],
+        "named_profile": "qt4-gl"
       },
       "qml": {
         "min_pass": 30,
@@ -165,7 +165,7 @@
       },
       "network": {
         "min_pass": 2,
-        "max_skip": 2
+        "named_profile": "qt4-network"
       },
       "quick": {
         "min_pass": 5,
@@ -178,8 +178,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 208,
-        "max_skip": 63
+        "min_pass": 212,
+        "max_skip": 63,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 90,
@@ -235,14 +242,32 @@
         "max_skip": 0
       }
     },
+    "5/21/x86": {
+      "qt-selftest-extended": {
+        "min_pass": 106,
+        "max_skip": 4,
+        "required_pass": [
+          "sensors/android-acceleration-input",
+          "sensors/android-queue-lifecycle",
+          "sensors/android-compass-queue-lifecycle"
+        ]
+      }
+    },
     "5/21/x86_64": {
       "strict-cxx23": {
         "min_pass": 25,
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 208,
-        "max_skip": 63
+        "min_pass": 212,
+        "max_skip": 63,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 90,
@@ -304,8 +329,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 292,
-        "max_skip": 43
+        "min_pass": 296,
+        "max_skip": 43,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 91,
@@ -359,8 +391,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 292,
-        "max_skip": 43
+        "min_pass": 296,
+        "max_skip": 43,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 91,
@@ -414,8 +453,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 293,
-        "max_skip": 43
+        "min_pass": 297,
+        "max_skip": 43,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 91,
@@ -469,8 +515,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 292,
-        "max_skip": 43
+        "min_pass": 296,
+        "max_skip": 43,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 91,
@@ -531,7 +584,8 @@
           "sync/mutex-timed-timeout",
           "sync/semaphore-timed-wakeup",
           "sync/semaphore-timed-timeout"
-        ]
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 90,
@@ -600,8 +654,15 @@
         "max_skip": 0
       },
       "qt-selftest": {
-        "min_pass": 209,
-        "max_skip": 63
+        "min_pass": 213,
+        "max_skip": 63,
+        "required_pass": [
+          "sync/mutex-timed-wakeup",
+          "sync/mutex-timed-timeout",
+          "sync/semaphore-timed-wakeup",
+          "sync/semaphore-timed-timeout"
+        ],
+        "require_timed_sync_evidence": true
       },
       "widgets-gallery": {
         "min_pass": 90,
@@ -676,6 +737,207 @@
         "min_pass": 25,
         "max_skip": 0
       }
+    }
+  },
+  "named_profiles": {
+    "qt4-selftest": {
+      "allowed_skip": [
+        "cbor/value-roundtrip",
+        "coap/client-replies-and-security",
+        "coap/request-message-and-options",
+        "collator/sort",
+        "connectivity/bluetooth-classic",
+        "connectivity/bluetooth-low-energy",
+        "connectivity/nfc",
+        "core/bindable-property-system",
+        "core/bytearrayview-recursivemutex-chronotimer",
+        "core/commandlineparser",
+        "core/container-metatypes",
+        "core/debug-message-helpers",
+        "core/event-dispatcher-v2",
+        "core/internal-callback-registry",
+        "core/mutable-container-iterators",
+        "core/property-binding-data-and-writing-systems",
+        "core/property-observer-and-binding-location",
+        "core/property-signal",
+        "core/regularexpression",
+        "core/variant-const-pointer-and-type-coercer",
+        "core/versionnumber",
+        "core5compat/regexp-codec-linkedlist",
+        "core5compat/sax-reader-and-handlers",
+        "dbus/argument-marshalling",
+        "dbus/connection-and-interfaces",
+        "dbus/pending-call-and-reply",
+        "dbus/value-types-and-message",
+        "gamepad/module",
+        "grpc/module-available",
+        "gui/abstract-undo-item",
+        "gui/accessibility-attribute-hyperlink-selection-interfaces",
+        "gui/child-window-event",
+        "gui/page-ranges-pdf-intent-and-pointer-events",
+        "gui/session-manager",
+        "httpserver/routing-without-listening",
+        "image/gif",
+        "image/ico",
+        "image/svg",
+        "image/webp",
+        "io/fileselector",
+        "io/lockfile",
+        "io/mimedatabase",
+        "io/savefile-atomic",
+        "io/standardpaths",
+        "io/storageinfo",
+        "json/roundtrip",
+        "location/module",
+        "location/service-chain",
+        "model/persistent-transpose",
+        "mqtt/client-configuration",
+        "mqtt/message-and-properties",
+        "mqtt/topic-name-and-filter",
+        "multimedia/abstract-audio-backend",
+        "multimedia/audio-selector-role-controls",
+        "multimedia/audio-value-types",
+        "multimedia/camera-control-suite",
+        "multimedia/camera-value-types",
+        "multimedia/capture-sources-and-frame-io",
+        "multimedia/format-metadata-and-camera-format",
+        "multimedia/playback-recording-controls",
+        "multimedia/player-playlist",
+        "multimedia/radio",
+        "multimedia/radio-control-suite",
+        "multimedia/service-provider-interfaces",
+        "multimedia/sound-effects",
+        "multimedia/value-types2",
+        "multimedia/video-control-suite",
+        "multimedia/video-surface-filter",
+        "net/diffie-hellman-parameters",
+        "net/handshake-options-nmea-satellites-oauth-uri",
+        "net/network-information-backend",
+        "net/rest-access-manager-and-ssl-server",
+        "net/tls-loopback-handshake",
+        "network/ssl-value-types",
+        "networkauth/module",
+        "opcua/application-and-security-descriptions",
+        "opcua/data-history-and-encoding",
+        "opcua/event-filter-operands",
+        "opcua/history-response-and-struct-handler",
+        "opcua/node-management-items",
+        "opcua/provider-client-and-node",
+        "opcua/read-write-and-browse-requests",
+        "opcua/scalar-value-types",
+        "opcua/x509-key-csr-and-gds",
+        "opengl/version-functions-factory",
+        "platform/animation-driver-ndef",
+        "platform/native-extras",
+        "platform/native-mime-and-application-interfaces",
+        "process/run",
+        "purchasing/in-app-store",
+        "qml/declarative-core",
+        "qml/managed-value",
+        "regex/match-and-iterator",
+        "remoteobjects/module",
+        "rhi/backend-init-params-and-native-handles",
+        "rhi/metal-native-frame",
+        "rhi/null-backend-resources",
+        "rhi/offscreen-frame-and-updates",
+        "rhi/pipeline-and-render-target",
+        "rhi/shader-value-types",
+        "rhi/vulkan-native-frame",
+        "script/engine-debugger",
+        "scxml/module",
+        "sensors/module",
+        "serialbus/canbus",
+        "serialbus/modbus",
+        "serialbus/modbus-pdu-types",
+        "serialbus/modbus-rtu-serial-endpoints",
+        "serialport/module",
+        "shadertools/bake-valid-and-invalid",
+        "spatialaudio/engine-listener-room-and-sounds",
+        "texttospeech/module",
+        "time/deadlinetimer",
+        "time/timezone",
+        "virtualkeyboard/input-context-engine-and-dictionaries",
+        "wayland/live-client-and-shells",
+        "wayland/module-available",
+        "wayland/shells-module-available",
+        "webchannel/module",
+        "websocket/module"
+      ],
+      "required_pass": [
+        "core/metaobject+enum+invoke",
+        "io/file+fileinfo",
+        "xml/stream-write-read",
+        "thread/qthread",
+        "thread/threadpool+runnable",
+        "sync/mutex-readwrite-semaphore",
+        "concurrent/run",
+        "sql/driver-available",
+        "sql/crud+prepared",
+        "script/engine-eval",
+        "xmlpatterns/xquery-eval"
+      ]
+    },
+    "qt4-widgets": {
+      "allowed_skip": [
+        "accessibility/not-built",
+        "events/qt6-touch-sequences",
+        "macextras/toolbar-and-pasteboard-mime",
+        "multimediawidgets/module-available",
+        "platform4/mac-native-embedding",
+        "platform4/windows-mime",
+        "platform4/windows-native-styles",
+        "platform4/x11-embedding",
+        "printing/printer-and-page-setup",
+        "qt4/accessibility-interfaces",
+        "widgets/system-tray",
+        "winextras/module-available"
+      ],
+      "required_pass": [
+        "widget/pushbutton-signal",
+        "itemview/view+model+delegate",
+        "layout/box-grid-form",
+        "graphics/scene-items",
+        "qt4/http-and-ftp",
+        "qt4/file-engine",
+        "qt4/input-context",
+        "qt4/atomics-and-locale",
+        "qt4/plugin-interfaces"
+      ]
+    },
+    "qt4-multimedia": {
+      "allowed_skip": [
+        "multimedia4/audio-device-info",
+        "multimedia4/audio-input-construct",
+        "multimedia4/audio-output-construct"
+      ],
+      "required_pass": [
+        "multimedia4/audio-format",
+        "multimedia4/video-frame",
+        "multimedia4/video-surface-present",
+        "multimedia4/page-contact-sheet"
+      ]
+    },
+    "qt4-network": {
+      "allowed_skip": [
+        "network/websocket-server-construct",
+        "ssl/supported"
+      ],
+      "required_pass": [
+        "network/tcp-server-construct",
+        "network/udp-bind-construct"
+      ]
+    },
+    "qt4-gl": {
+      "allowed_skip": [
+        "qgl/pixel-buffer"
+      ],
+      "required_pass": [
+        "qgl/widget-context",
+        "qgl/vertex-buffer",
+        "qgl/framebuffer-render-readback",
+        "qgl/shader-program",
+        "qgl/gallery-triangle-render"
+      ]
     }
   }
 }

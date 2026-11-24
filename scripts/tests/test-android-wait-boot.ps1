@@ -9,6 +9,26 @@ $oldMode=$env:LONGREACH_BOOT_STUB_MODE
 $oldPidFile=$env:LONGREACH_BOOT_STUB_PID
 $owner=$null
 $control=$null
+$global:AndroidBootFixturePwsh=(Get-Command pwsh).Source
+$global:AndroidBootFixtureStub=$null
+function Start-BootFixtureProcess([string]$Stdout,[string]$Stderr) {
+    $options=@{FilePath=$global:AndroidBootFixturePwsh;
+        ArgumentList=@('-NoProfile','-File',('"'+$global:AndroidBootFixtureStub+'"'));PassThru=$true}
+    if ($IsWindows) { $options.WindowStyle='Hidden' }
+    if ($Stdout) { $options.RedirectStandardOutput=$Stdout;$options.RedirectStandardError=$Stderr }
+    return Microsoft.PowerShell.Management\Start-Process @options
+}
+function Start-Process {
+    param($FilePath,[string[]]$ArgumentList,$WindowStyle,[switch]$PassThru,$RedirectStandardOutput,$RedirectStandardError)
+    if ($FilePath -cne $global:AndroidBootFixtureStub -or
+            ($ArgumentList -join '|') -cne '-s|emulator-5582|shell|getprop|sys.boot_completed') {
+        throw 'Unexpected boot-query invocation'
+    }
+    if ($WindowStyle -ne 'Hidden') { throw 'Boot query did not request a hidden process' }
+    # Adapt only the executable boundary. The production helper still owns a
+    # real process handle, waits for it, checks its exit status and terminates it.
+    return Start-BootFixtureProcess $RedirectStandardOutput $RedirectStandardError
+}
 function Assert-Ready([bool]$Condition,[string]$Message){if(!$Condition){throw $Message}}
 function Expect-ReadyFailure([scriptblock]$Body,[string]$Pattern) {
     try{& $Body}catch{if($_.Exception.Message -notmatch $Pattern){throw};return}
@@ -16,19 +36,22 @@ function Expect-ReadyFailure([scriptblock]$Body,[string]$Pattern) {
 }
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
-    $source='using System; using System.Diagnostics; using System.IO; using System.Threading; class BootStub { static int Main() { string p=Environment.GetEnvironmentVariable("LONGREACH_BOOT_STUB_PID"); if(!String.IsNullOrEmpty(p)) File.WriteAllText(p,Process.GetCurrentProcess().Id.ToString()); string m=Environment.GetEnvironmentVariable("LONGREACH_BOOT_STUB_MODE"); if(m=="ready" || m=="nonzero") { Console.WriteLine("1"); return m=="ready"?0:1; } Thread.Sleep(Timeout.Infinite); return 0; } }'
-    Set-Content -LiteralPath "$fixture/adb-stub.cs" -Value $source
-    $sourcePath=(Get-Item -LiteralPath "$fixture/adb-stub.cs").FullName
-    $stub=Join-Path $fixture 'adb-stub.exe'
-    Write-Output "Compiling local fixture: $sourcePath"
-    & "$env:WINDIR/Microsoft.NET/Framework64/v4.0.30319/csc.exe" /nologo /target:exe "/out:$stub" $sourcePath
-    if($LASTEXITCODE){throw 'Could not compile the local process fixture'}
-    $stub="$fixture/adb-stub.exe"
+    @'
+if ($env:LONGREACH_BOOT_STUB_PID) { [IO.File]::WriteAllText($env:LONGREACH_BOOT_STUB_PID,[string]$PID) }
+if ($env:LONGREACH_BOOT_STUB_MODE -in @('ready','nonzero')) {
+    [Console]::WriteLine('1')
+    if ($env:LONGREACH_BOOT_STUB_MODE -eq 'nonzero') { exit 1 }
+    exit 0
+}
+[Threading.Thread]::Sleep([Threading.Timeout]::Infinite)
+'@ | Set-Content -LiteralPath "$fixture/adb-stub.ps1" -Encoding utf8
+    $stub=(Get-Item -LiteralPath "$fixture/adb-stub.ps1").FullName
+    $global:AndroidBootFixtureStub=$stub
     $env:LONGREACH_BOOT_STUB_MODE='hold'
     $env:LONGREACH_BOOT_STUB_PID=''
-    $owner=Start-Process -FilePath $stub -WindowStyle Hidden -PassThru
-    $control=Start-Process -FilePath $stub -WindowStyle Hidden -PassThru
-    $options=@{Adb=$stub;EmulatorPid=$owner.Id;TimeoutSeconds=1;QueryTimeoutMilliseconds=100;PollMilliseconds=10}
+    $owner=Start-BootFixtureProcess
+    $control=Start-BootFixtureProcess
+    $options=@{Adb=$stub;EmulatorPid=$owner.Id;TimeoutSeconds=5;QueryTimeoutMilliseconds=2000;PollMilliseconds=10}
 
     $ready=(New-Item -ItemType Directory "$fixture/ready").FullName
     $env:LONGREACH_BOOT_STUB_MODE='ready'
@@ -45,7 +68,7 @@ try {
     $env:LONGREACH_BOOT_STUB_PID="$hung/client.pid"
     $timer=[Diagnostics.Stopwatch]::StartNew()
     Expect-ReadyFailure {Wait-AndroidBoot @options -RunDirectory $hung} 'did not boot within'
-    Assert-Ready ($timer.Elapsed.TotalSeconds -lt 5) 'Hung client was not bounded'
+    Assert-Ready ($timer.Elapsed.TotalSeconds -lt 9) 'Hung client was not bounded'
     $clientId=[int](Get-Content "$hung/client.pid")
     Assert-Ready (!(Get-Process -Id $clientId -ErrorAction SilentlyContinue)) 'Owned timed-out query survived'
     $control.Refresh()
@@ -73,6 +96,7 @@ try {
     }
     $env:LONGREACH_BOOT_STUB_MODE=$oldMode
     $env:LONGREACH_BOOT_STUB_PID=$oldPidFile
+    Remove-Variable AndroidBootFixturePwsh,AndroidBootFixtureStub -Scope Global -ErrorAction SilentlyContinue
     if(Test-Path -LiteralPath $fixture) {
         $resolved=(Resolve-Path -LiteralPath $fixture).Path
         if([IO.Path]::GetDirectoryName($resolved) -ne $parent -or [IO.Path]::GetFileName($resolved) -notlike 'android-ready-*'){throw 'Unexpected fixture cleanup path'}

@@ -36,11 +36,12 @@ if (!$OutputDirectory) {
     $OutputDirectory = Join-Path $repo "artifacts/qt5-android-gingerbread$suffix"
 }
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
+. "$repo/scripts/build/android-api21/artifact-lock.ps1"
+$artifactLock=Enter-AndroidArtifactLock $output
+try {
 # A failed new run must not leave an earlier batch advertised as complete.
-foreach ($name in @('final-results.json','final-results-table.md','apk-native-abi-check.json')) {
-    Remove-Item -LiteralPath (Join-Path $output $name) -Force -ErrorAction SilentlyContinue
-}
-& python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $output --qt-major 5 --abi $Abi
+Clear-AndroidResultAggregates $output
+& python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $output --qt-major 5 --abi $Abi --artifact-lease-held
 if ($LASTEXITCODE) { throw 'Refusing incomplete or mismatched APK generation' }
 $inputs = Join-Path $repo 'downloads/android-gingerbread'
 $media = (New-Item -ItemType Directory -Force -Path "$output/inputs").FullName
@@ -74,6 +75,24 @@ if ($Abi -eq 'x86') {
     }
 }
 $guest.SdkImageId=(Get-Content -LiteralPath "$output/sdk-image-id.txt" -Raw).Trim()
+$runRoot=(New-Item -ItemType Directory -Force -Path "$output/$RunName").FullName
+$batchPath=Join-Path $runRoot 'batch-receipt.json'
+if (Test-Path -LiteralPath $batchPath) {
+    $item=Get-Item -LiteralPath $batchPath
+    if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Invalid existing API10 batch receipt' }
+    Copy-Item -LiteralPath $batchPath -Destination (Join-Path $runRoot ('previous-batch-'+[guid]::NewGuid().ToString('N')+'.json'))
+}
+$batch=@{schema_version=1;batch_id=[guid]::NewGuid().ToString('N');run=$RunName;abi=$Abi;api=10;
+    sdk_image_id=$guest.SdkImageId;apk_manifest_sha256=(Get-FileHash "$output/apk-manifest.json").Hash.ToLowerInvariant();
+    emulator_sha256=(Get-FileHash -LiteralPath $guest.Emulator).Hash.ToLowerInvariant();started_utc=[DateTime]::UtcNow.ToString('o')}
+$temporary=$batchPath+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+try {
+    $batch | ConvertTo-Json | Set-Content -LiteralPath $temporary -Encoding utf8
+    # The artifact lease prevents another reader/runner from entering this root.
+    [IO.File]::Move($temporary,$batchPath,$true)
+} finally { [IO.File]::Delete($temporary) }
+$guest.BatchReceipt=$batchPath
+$guest.ArtifactRoot=$output
 $runner = "$PSScriptRoot/qt5-android-gingerbread.ps1"
 if ($Abi -eq 'x86') {
     & $runner @guest -CaseName atomic-cow -Apk "$output/apk/qt-selftest.apk" `
@@ -91,7 +110,9 @@ foreach ($app in $apps) {
 
 & $runner @guest -CaseName strict-cxx23-extended -Apk "$output/apk/extended/qt-selftest.apk" -StrictCxx23 `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/strict-cxx23-extended"
-& $runner @guest -CaseName qt-selftest-extended -Apk "$output/apk/extended/qt-selftest.apk" -ApplicationArguments '--selftest' `
+$sensorOptions=@{}
+if ($Abi -eq 'x86') { $sensorOptions.NativeSensorFixture=$true }
+& $runner @guest @sensorOptions -CaseName qt-selftest-extended -Apk "$output/apk/extended/qt-selftest.apk" -ApplicationArguments '--selftest' `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/qt-selftest-extended"
 
 foreach ($app in @('widgets-gallery', 'quick-qml-gallery')) {
@@ -99,4 +120,6 @@ foreach ($app in @('widgets-gallery', 'quick-qml-gallery')) {
         -Package ("org.longreachqt.examples." + $app.Replace('-', '')) -OutputDirectory "$output/$RunName/$app-render"
 }
 
-Invoke-AndroidSuiteTool python @("$repo/scripts/build/qt5-android/collect-legacy-results.py", '--root', $output, '--run', $RunName, '--abi', $Abi)
+Invoke-AndroidSuiteTool python @("$repo/scripts/build/qt5-android/collect-legacy-results.py", '--artifact-lease-held', '--root', $output, '--run', $RunName, '--abi', $Abi)
+
+} finally { if ($artifactLock) { $artifactLock.Dispose() } }

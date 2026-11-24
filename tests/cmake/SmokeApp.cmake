@@ -246,6 +246,13 @@ function(smoke_apply_platform_flags target)
                      LINK_FLAGS " -Wl,--allow-multiple-definition")
     endif()
 
+    # Retain addresses and local function names separately from stripped APK
+    # libraries, so legacy debuggerd PCs can be resolved after a process exits.
+    if(ANDROID)
+        set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS
+                     " -Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/${target}.map")
+    endif()
+
     # Strip release binaries where the linker accepts -s. Darwin uses
     # -dead_strip in tests/CMakeLists.txt, and ld64.lld rejects -s.
     if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT MSVC AND NOT APPLE)

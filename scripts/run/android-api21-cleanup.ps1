@@ -1,50 +1,28 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-param([Parameter(Mandatory)][string]$Adb, [string]$Serial='emulator-5582',
-      [Parameter(Mandatory)][string]$RunDirectory, [Parameter(Mandatory)][int]$EmulatorPid)
+param([Parameter(Mandatory)][string]$Adb,[string]$Serial='emulator-5582',
+      [Parameter(Mandatory)][string]$RunDirectory,[int]$EmulatorPid,
+      [ValidateRange(0,7000)][int]$GraceMilliseconds=7000,[switch]$RequireFinalLog)
 $ErrorActionPreference='Stop'
-$runPath = ([IO.Path]::GetFullPath($RunDirectory)).Replace('/','\')
-$children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$EmulatorPid" |
-    Where-Object { $_.CommandLine -and $_.CommandLine.Replace('/','\').Contains($runPath, [StringComparison]::OrdinalIgnoreCase) })
-function Stop-OwnedChildren {
-    foreach ($child in $children) {
-        $current = Get-CimInstance Win32_Process -Filter "ProcessId=$($child.ProcessId)"
-        if ($current -and $current.ParentProcessId -eq $EmulatorPid -and $current.CommandLine -and
-                $current.CommandLine.Replace('/','\').Contains($runPath, [StringComparison]::OrdinalIgnoreCase)) {
-            $ownedChild = Get-Process -Id $child.ProcessId -ErrorAction SilentlyContinue
-            if ($ownedChild) {
-                Stop-Process -InputObject $ownedChild -ErrorAction SilentlyContinue
-                if (!$ownedChild.WaitForExit(7000)) { throw 'Task-owned QEMU child did not stop.' }
+. "$PSScriptRoot/android-owned-process.ps1"
+. "$PSScriptRoot/android-process-exit.ps1"
+$owner=Get-AndroidOwnedProcess $RunDirectory
+if ($EmulatorPid -and $EmulatorPid -ne $owner.Owner.frontend_pid) { throw 'Refusing cleanup: frontend PID belongs to a different owned run' }
+$finalCaptured=$false
+try {
+    if ($owner.Process -and !$owner.Process.HasExited) {
+        try {
+            $lines=@(Invoke-AndroidExitQuery -Adb $Adb -Serial $Serial -Command @('logcat','-d','-v','brief') -Directory $RunDirectory -Name 'final-logcat' -TimeoutMilliseconds 5000 -AllowNonzero:(!$RequireFinalLog))
+            if ($RequireFinalLog -and !$lines.Count) { throw 'Required final Android log capture is empty' }
+            $lines | Set-Content -LiteralPath "$RunDirectory/final-logcat.log"
+            if ($RequireFinalLog) {
+                Write-AndroidOwnedProcessJson "$RunDirectory/final-logcat-capture.json" @{
+                    schema_version=1;serial=$Serial;captured=$true;
+                    host_process_owner_sha256=$owner.OwnerSha;host_process_request_sha256=$owner.RequestSha;
+                    logcat_sha256=(Get-FileHash "$RunDirectory/final-logcat.log").Hash.ToLowerInvariant()}
+                $finalCaptured=$true
             }
-        }
-    }
-}
-$owner = Get-CimInstance Win32_Process -Filter "ProcessId=$EmulatorPid"
-if ($owner -and (!$owner.CommandLine -or
-        !$owner.CommandLine.Replace('/','\').Contains($runPath, [StringComparison]::OrdinalIgnoreCase))) {
-    throw 'Refusing cleanup: emulator PID no longer belongs to this run.'
-}
-$owned=Get-Process -Id $EmulatorPid -ErrorAction SilentlyContinue
-if (!$owned) {
-    Stop-OwnedChildren
-    'Emulator exited before final log capture.' | Set-Content "$RunDirectory/final-logcat.log"
-    return
-}
-foreach ($request in @(
-    @{Arguments=@('-s',$Serial,'logcat','-d','-v','brief');Name='final-logcat'},
-    @{Arguments=@('-s',$Serial,'emu','kill');Name='emulator-stop'})) {
-    $client=Start-Process -FilePath $Adb -ArgumentList $request.Arguments -WindowStyle Hidden -PassThru `
-        -RedirectStandardOutput "$RunDirectory/$($request.Name).log" -RedirectStandardError "$RunDirectory/$($request.Name).stderr"
-    if (!$client.WaitForExit(5000)) {
-        Stop-Process -Id $client.Id -ErrorAction SilentlyContinue
-        $client.WaitForExit()
-        "Timed out waiting for $($request.Name)." | Add-Content "$RunDirectory/cleanup.log"
-    }
-}
-if (!$owned.WaitForExit(7000)) {
-    Stop-OwnedChildren
-    Stop-Process -Id $owned.Id -ErrorAction SilentlyContinue
-    $owned.WaitForExit()
-    'Stopped the task-owned emulator after console shutdown timed out.' | Add-Content "$RunDirectory/cleanup.log"
-}
-# The frontend can exit normally while its identified QEMU child remains.
-Stop-OwnedChildren
+        } catch { $_.Exception.Message | Add-Content -LiteralPath "$RunDirectory/cleanup.log" }
+    } else { 'Owned tree exited before final log capture.' | Set-Content -LiteralPath "$RunDirectory/final-logcat.log" }
+} finally { $proof=Stop-AndroidOwnedProcess $owner -GraceMilliseconds $GraceMilliseconds }
+if ($RequireFinalLog -and !$finalCaptured) { throw 'Required final Android log capture failed; owned tree was stopped' }
+$proof

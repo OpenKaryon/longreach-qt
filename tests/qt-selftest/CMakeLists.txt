@@ -55,6 +55,7 @@ smoke_add_app(qt-selftest
         checks_multimedia2.cpp
         ../common/smokecheck.h
         ../common/moderncpp_checks.h
+        ../android/sound-cache-teardown.h
         checks.h
 )
 

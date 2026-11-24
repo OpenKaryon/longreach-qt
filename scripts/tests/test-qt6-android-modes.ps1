@@ -13,7 +13,7 @@ $previousLog = $env:LONGREACH_MODE_TEST_LOG
 function Assert-Mode([bool]$Condition, [string]$Message) {
     if (!$Condition) { throw $Message }
 }
-function Reset-ModeCalls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG, '') }
+function Reset-ModeCalls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG, '') ; $global:Qt6PackagingPhases.Clear() }
 function Get-ModeCalls { @(Get-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG) }
 function docker {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
@@ -34,14 +34,45 @@ function docker {
         return $global:Qt6ModeTestImageId
     }
 }
+$global:Qt6PackagingPhases=[Collections.Generic.List[string]]::new()
+function Invoke-ModeKeytool {
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    $global:Qt6PackagingPhases.Add('keytool')
+    $key=$Arguments[[Array]::IndexOf($Arguments,'-keystore')+1]
+    [IO.File]::WriteAllText($key,'synthetic initial signing key')
+    $global:LASTEXITCODE=0
+}
 function python {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
     # File-integrity behavior is exercised by test_android_artifacts.py.
-    if ($Arguments[0] -like '*artifact-manifest.py') { $global:LASTEXITCODE=0; return }
+    if ($Arguments[0] -like '*host-tools.py') {
+        if (!(Test-Path -LiteralPath $Arguments[0] -PathType Leaf)) { throw 'Shared Java helper path was not resolved from its defining script' }
+        $global:Qt6PackagingPhases.Add('java-home')
+        $global:LASTEXITCODE=0
+        return '{"launcher":"recording-jdk/bin/javac.exe","home":"recording-jdk","javac":"recording-jdk/bin/javac.exe","keytool":"Invoke-ModeKeytool"}'
+    }
+    if ($Arguments[0] -like '*artifact-manifest.py') {
+        $global:Qt6PackagingPhases.Add($Arguments[1])
+        if ($Arguments[1] -eq 'begin-apks') {
+            $root=$Arguments[[Array]::IndexOf($Arguments,'--root')+1]
+            foreach ($relative in @('apk/local-examples.jks')) {
+                if (!(Test-Path -LiteralPath "$root/$relative" -PathType Leaf)) { throw 'begin-apks ran before all initial keys existed' }
+            }
+        }
+        $global:LASTEXITCODE=0
+        return
+    }
     Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value ('python|' + ($Arguments -join '|'))
     $global:LASTEXITCODE = 0
 }
-function Get-Process { param($Name,$ErrorAction) return $null }
+$global:Qt6ModeBusyProcess=''
+function Get-Process {
+    param($Name,$ErrorAction)
+    if ($global:Qt6ModeBusyProcess -and @($Name | Where-Object { $global:Qt6ModeBusyProcess -like $_ }).Count) {
+        return [pscustomobject]@{Name=$global:Qt6ModeBusyProcess}
+    }
+    return $null
+}
 function Invoke-WebRequest { throw 'Unexpected download in an offline routing test.' }
 function Invoke-Mode([hashtable]$Parameters) {
     & "$fixture/scripts/build/qt6-android.ps1" @Parameters | Out-Null
@@ -56,7 +87,7 @@ function Expect-ModeFailure([hashtable]$Parameters, [string]$Pattern) {
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $env:LONGREACH_MODE_TEST_LOG = Join-Path $fixture 'calls.log'
-    foreach ($relative in @('scripts/build/android-api21/build-options.ps1','scripts/build/android-api21/artifact-lock.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
+    foreach ($relative in @('scripts/run/android-adb-endpoint.ps1','scripts/run/android-emulator-state.ps1','scripts/build/android-api21/build-options.ps1','scripts/build/android-api21/artifact-lock.ps1','scripts/build/android-api21/host-tools.py','scripts/build/android-api21/sdk-reports.py','scripts/build/android-api21/sdk-reports.ps1','scripts/build/android-api21/packaging-host.ps1','scripts/build/qt6-android.ps1','scripts/build/qt6-android/package-suite.ps1',
             'scripts/fetch/qt6-android.ps1','tests/expected-apps.txt')) {
         $destination = Join-Path $fixture $relative
         New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null
@@ -70,11 +101,13 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "test|$RunName|$Gpu
 if ($DebugQtPlugins) { Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "debug-qt-plugins" }
 '@ | Set-Content "$fixture/scripts/run/qt6-android-suite.ps1"
     @'
-param($QtSdk,$NativeLibrary,$RuntimeLibrary,$OutputDirectory,$AndroidSdk,$Package,$DeploymentDirectory,$Abi)
+param($QtSdk,$NativeLibrary,$RuntimeLibrary,$OutputDirectory,$AndroidSdk,$Package,$DeploymentDirectory,$Abi,$JavaTools)
 $app = ([IO.Path]::GetFileName($NativeLibrary) -replace '^lib','' -replace ('_' + [regex]::Escape($Abi) + '\.so$'),'')
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 [IO.File]::WriteAllText((Join-Path $OutputDirectory "$app.apk"), $app)
 Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
+if (!$JavaTools -or $JavaTools.javac -cne 'recording-jdk/bin/javac.exe') { throw 'Suite did not freeze actual compiler selection' }
+$global:Qt6PackagingPhases.Add('package')
 '@ | Set-Content "$fixture/scripts/build/qt6-android/package.ps1"
     $output = Join-Path $fixture 'output with spaces'
     $entry = @{OutputDirectory=$output; AndroidSdk=''}
@@ -170,6 +203,11 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     $calls = @(Get-ModeCalls)
     Assert-Mode ($calls.Count -eq 8 -and @($calls | Where-Object { $_ -notlike 'package|*' }).Count -eq 0) 'Packaging entered another phase'
     Assert-Mode (@(Get-Content "$output/apk/packages.json" -Raw | ConvertFrom-Json).Count -eq 8) 'Incomplete APK manifest'
+        Assert-Mode (@($global:Qt6PackagingPhases | Where-Object { $_ -eq 'keytool' }).Count -eq 1) 'Qt6 initial development key was not created exactly once'
+        $phases=@($global:Qt6PackagingPhases | Where-Object { $_ -notin @('keytool','java-home') })
+        $expected=@('check-examples','begin-apks')+@((1..8) | ForEach-Object { 'package' })+@('record-apks')
+        Assert-Mode (($phases -join ',') -ceq ($expected -join ',')) ('Missing or reordered packaging manifest boundary: '+($phases -join ','))
+
     Remove-Item -LiteralPath "$output/deployment/network-gui/libs/armeabi-v7a/libnetwork-gui_armeabi-v7a.so"
     Reset-ModeCalls
     Expect-ModeFailure @{Mode='package';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk"} 'Missing deployment'
@@ -245,6 +283,19 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
     Reset-ModeCalls
     Invoke-Mode @{Mode='test';Abi='x86';OutputDirectory=$output;AndroidSdk="$fixture/android-sdk";RunName='x86-check'}
     Assert-Mode (@(Get-ModeCalls)[0] -like 'test|x86-check|*|x86') 'Test mode dropped 32-bit x86 ABI'
+    foreach ($busyName in @('qemu-system-armel-headless','qemu-system-aarch64-headless','qemu-system-mips64el')) {
+        $global:Qt6ModeBusyProcess=$busyName
+        foreach ($busyAbi in @('armeabi-v7a','arm64-v8a','x86','x86_64')) {
+            foreach ($busyMode in @('sdk','examples')) {
+                Reset-ModeCalls
+                $busyOptions=@{}+$entry
+                $busyOptions.Abi=$busyAbi;$busyOptions.Mode=$busyMode
+                Expect-ModeFailure $busyOptions 'Stop the Android emulator before compiling'
+                Assert-Mode (@(Get-ModeCalls).Count -eq 0) "Busy $busyName entered a tool phase for $busyAbi/$busyMode"
+            }
+        }
+    }
+    $global:Qt6ModeBusyProcess=''
     Write-Output 'PASS: four independent modes, ready-image reuse, no implicit builds, legacy alias, fetch scopes and packaging preflight'
 } finally {
     $env:LONGREACH_MODE_TEST_LOG = $previousLog
@@ -256,5 +307,5 @@ Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value "package|$app"
         }
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
-    Remove-Variable Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId,Qt6ModeTestAbi -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt6ModeBusyProcess,Qt6PackagingPhases,Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId,Qt6ModeTestAbi -Scope Global -ErrorAction SilentlyContinue
 }

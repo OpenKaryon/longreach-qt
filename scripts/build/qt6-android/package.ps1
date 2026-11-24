@@ -11,7 +11,8 @@ param(
     [string[]] $Modules = @('Core', 'Gui', 'Widgets'),
     [string[]] $Plugins,
     [string] $Package = 'org.longreachqt.examples.probe',
-    [string] $DeploymentDirectory
+    [string] $DeploymentDirectory,
+    $JavaTools
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,9 +27,10 @@ $RuntimeLibrary = (Get-Item -LiteralPath $RuntimeLibrary).FullName
 $OutputDirectory = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
 $tools = Join-Path $AndroidSdk 'build-tools/36.0.0'
 $androidJar = Join-Path $AndroidSdk "platforms/android-$CompileApi/android.jar"
-$java = Split-Path (Get-Command javac.exe).Source
+. "$PSScriptRoot/../android-api21/packaging-host.ps1"
+if (!$JavaTools) { $JavaTools = Get-AndroidPackagingJava }
 $work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("package-" + [guid]::NewGuid()))).FullName
-$keyStore = Join-Path $OutputDirectory 'local-examples.jks'
+$keyStore = Initialize-AndroidExamplesKey $OutputDirectory $javaTools
 $appName = [IO.Path]::GetFileNameWithoutExtension($NativeLibrary)
 if (!$appName.StartsWith('lib') -or !$appName.EndsWith("_$Abi")) {
     throw "Expected lib<application>_$Abi.so."
@@ -149,7 +151,7 @@ try {
     $jarDirectory = if ($DeploymentDirectory) { "$DeploymentDirectory/libs" } else { "$QtSdk/jar" }
     $jars = @(Get-ChildItem $jarDirectory -Filter '*.jar' -File | Select-Object -ExpandProperty FullName)
     $classpath = (@($androidJar) + $jars) -join ';'
-    Invoke-AndroidTool "$java/javac.exe" (@('--release', '8', '-classpath', $classpath, '-d', "$work/classes") + $javaSources)
+    Invoke-AndroidTool $javaTools.javac (@('--release', '8', '-classpath', $classpath, '-d', "$work/classes") + $javaSources)
     $classes = @(Get-ChildItem "$work/classes" -Recurse -Filter '*.class' -File | Select-Object -ExpandProperty FullName)
     Invoke-AndroidTool "$tools/d8.bat" (@('--min-api', '21', '--lib', $androidJar, '--output', $work) + $jars + $classes)
     $aaptArguments = @('package', '-M', "$work/AndroidManifest.xml", '-I', $androidJar,
@@ -160,11 +162,6 @@ try {
     try {
         $nativeFiles = @(Get-ChildItem "lib/$Abi" -File | ForEach-Object { "lib/$Abi/$($_.Name)" })
         Invoke-AndroidTool "$tools/aapt.exe" (@('add', 'unsigned.apk', 'classes.dex') + $nativeFiles)
-        if (!(Test-Path -LiteralPath $keyStore)) {
-            Invoke-AndroidTool "$java/keytool.exe" @('-genkeypair', '-keystore', $keyStore,
-                '-storepass', 'longreach-local', '-keypass', 'longreach-local', '-alias', 'examples',
-                '-keyalg', 'RSA', '-keysize', '2048', '-dname', 'CN=Local Longreach Examples', '-validity', '365')
-        }
         Invoke-AndroidTool "$tools/zipalign.exe" @('-f', '4', 'unsigned.apk', 'aligned.apk')
         Invoke-AndroidTool "$tools/apksigner.bat" @('sign', '--ks', $keyStore, '--ks-key-alias', 'examples',
             '--ks-pass', 'pass:longreach-local', '--min-sdk-version', '21', '--v1-signing-enabled', 'true',

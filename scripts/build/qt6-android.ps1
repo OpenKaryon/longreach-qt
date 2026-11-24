@@ -19,6 +19,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
+. "$repo/scripts/run/android-emulator-state.ps1"
 function Invoke-Qt6AndroidTool([string]$Program, [string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program exited with code $LASTEXITCODE" }
@@ -32,10 +33,7 @@ if ($SdkOnly) {
 $suffix = if ($Abi -eq 'armeabi-v7a') { '' } else { "-$Abi" }
 if (!$SdkImage) { $SdkImage = "longreach-qt6-android-lollipop${suffix}:llvm21" }
 if (!$OutputDirectory) { $OutputDirectory = "$repo/artifacts/qt6-android-lollipop$suffix" }
-if ($Mode -in @('sdk','examples') -and
-        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-i386,qemu-system-i386-headless -ErrorAction SilentlyContinue)) {
-    throw 'Stop the Android emulator before compiling.'
-}
+if ($Mode -in @('sdk','examples')) { Assert-AndroidNoEmulatorRunning -Message 'Stop the Android emulator before compiling.' }
 
  . "$repo/scripts/build/android-api21/artifact-lock.ps1"
 $artifactLock=Enter-AndroidArtifactLock $OutputDirectory
@@ -74,15 +72,15 @@ switch ($Mode) {
             throw "Image '$SdkImage' is not the Qt6.8.5 / LLVM21.1.8 Android API21 $Abi SDK."
         }
         $output = (New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
-        & python "$repo/scripts/build/android-api21/artifact-manifest.py" begin --root $output --qt-major 6 --abi $Abi --sdk-image-id $image.Id
+        & python "$repo/scripts/build/android-api21/artifact-manifest.py" begin --root $output --qt-major 6 --abi $Abi --sdk-image-id $image.Id --artifact-lease-held
         if ($LASTEXITCODE) { throw 'Cannot start an example generation' }
         # Pin this invocation to the inspected image even if its tag is retargeted.
         Invoke-Qt6AndroidTool docker @('run','--rm','--platform','linux/amd64','--cpus','2',
-            '--memory','3g','--network','none','--env',"PARALLEL_JOBS=$ParallelJobs",'--mount',"type=bind,source=$repo,target=/repo,readonly",
+            '--memory','3g','--network','none','--env',"PARALLEL_JOBS=$ParallelJobs",'--env',"LONGREACH_SDK_IMAGE_ID=$($image.Id)",'--mount',"type=bind,source=$repo,target=/repo,readonly",
             '--mount',"type=bind,source=$output,target=/out",$image.Id,
             'bash','/repo/scripts/build/qt6-android/build-examples.sh')
         $image.Id | Set-Content -LiteralPath "$output/examples-sdk-image-id.txt"
-        & python "$repo/scripts/build/android-api21/artifact-manifest.py" finish --root $output --qt-major 6 --abi $Abi --sdk-image-id $image.Id
+        & python "$repo/scripts/build/android-api21/artifact-manifest.py" finish --root $output --qt-major 6 --abi $Abi --sdk-image-id $image.Id --artifact-lease-held
         if ($LASTEXITCODE) { throw 'Incomplete example generation' }
     }
     'package' {

@@ -55,23 +55,28 @@ FROM openssl AS qt-build
 COPY patches/qt6/all /repo/patches/qt6/all
 COPY patches/qt6/android /repo/patches/qt6/android
 COPY scripts/build/qt6-android/build-sdk.sh \
-     scripts/build/qt6-android/apply-qt-patches.py \
-     scripts/build/qt6-android/finish-sdk.sh \
-     scripts/build/qt6-android/validate-api21-elf.py \
-     scripts/build/qt6-android/input-provenance.py /repo/scripts/build/qt6-android/
+     scripts/build/qt6-android/apply-qt-patches.py /repo/scripts/build/qt6-android/
 RUN --network=none \
     --mount=type=bind,source=downloads/qt-everywhere-src-6.8.5.tar.xz,target=/repo/downloads/qt-everywhere-src-6.8.5.tar.xz \
-    bash /repo/scripts/build/qt6-android/build-sdk.sh \
-    && bash /repo/scripts/build/qt6-android/finish-sdk.sh
+    bash /repo/scripts/build/qt6-android/build-sdk.sh
+
+# Report-only recipe updates reuse the completed native SDK layer.
+FROM qt-build AS validated
+COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
+COPY scripts/build/qt6-android/finish-sdk.sh \
+     scripts/build/qt6-android/validate-api21-elf.py \
+     scripts/build/qt6-android/input-provenance.py /repo/scripts/build/qt6-android/
+RUN --network=none bash /repo/scripts/build/qt6-android/finish-sdk.sh
 
 FROM tools AS sdk
 ARG ANDROID_ABI=armeabi-v7a
 ENV ANDROID_ABI=${ANDROID_ABI}
-COPY --from=qt-build /opt/longreach-android-api21 /opt/longreach-android-api21
-COPY --from=qt-build /opt/openssl-api21 /opt/openssl-api21
-COPY --from=qt-build /opt/qt6-android-${ANDROID_ABI}-llvm /opt/qt6-android-${ANDROID_ABI}-llvm
-COPY --from=qt-build /work/android-sdk /work/android-sdk
-COPY --from=qt-build /out /opt/longreach-reports
+COPY --from=validated /opt/longreach-android-api21 /opt/longreach-android-api21
+COPY --from=validated /opt/openssl-api21 /opt/openssl-api21
+COPY --from=validated /opt/qt6-android-${ANDROID_ABI}-llvm /opt/qt6-android-${ANDROID_ABI}-llvm
+COPY --from=validated /work/android-sdk /work/android-sdk
+COPY --from=validated /out/sdk-reports /opt/longreach-reports
+COPY --from=validated /out/sdk-packaging /opt/longreach-packaging
 ENV PATH=/opt/qt6-android-${ANDROID_ABI}-llvm/bin:${PATH} \
     ANDROID_NDK_ROOT=/opt/longreach-android-api21/ndk
 LABEL org.openkaryon.longreach-qt.platform="android-lollipop-${ANDROID_ABI}" \

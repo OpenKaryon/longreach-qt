@@ -34,6 +34,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p test_android_forward_symbols.py
           python3 -m unittest discover -s scripts/tests -p test_android_clang_wrapper.py
           python3 -m unittest discover -s scripts/tests -p test_android_generic_atomics.py
+          python3 -m unittest discover -s scripts/tests -p test_android_atomic_probe.py
           python3 -m unittest discover -s scripts/tests -p test_android_sound_cache.py
           python3 -m unittest discover -s scripts/tests -p test_android_sound_cache_series.py
           python3 -m unittest discover -s scripts/tests -p test_android_api21_sound_cache.py
@@ -86,6 +87,7 @@ jobs:
           ./scripts/tests/test-android-adb-endpoint.ps1
           ./scripts/tests/test-android-adb.ps1
           ./scripts/tests/test-android-shell-status.ps1
+          ./scripts/tests/test-android-probe.ps1
       - name: Check API coverage inventory
         run: python3 scripts/tests/check_coverage.py --gate
       - name: Check license matrix

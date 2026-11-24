@@ -15,7 +15,7 @@ case "$phase" in
     *) echo "Unknown Qt4 example phase: $phase" >&2; exit 1 ;;
 esac
 # Refuse stale/default build-tree specs before the first native command or copy.
-python3 /repo/scripts/build/qt4-android/export-mkspecs.py verify \
+python3 "$installed_prefix/libexec/longreach-export-mkspecs.py" verify \
     --prefix "$installed_prefix" --runtime "$runtime"
 cxx=$runtime/bin/cxx
 mkdir -p /out /work/qt4-android-$abi/clients

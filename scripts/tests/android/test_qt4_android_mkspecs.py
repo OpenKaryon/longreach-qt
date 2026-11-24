@@ -159,13 +159,13 @@ class Mkspecs(unittest.TestCase):
 
 @unittest.skipUnless(BASH, 'Bash needed for metadata-only producer fragments')
 class ShellMetadata(unittest.TestCase):
-    def invoke(self, root, fragment, variables):
+    def invoke(self, root, fragment, variables, helper_override=None):
         commands = root / 'metadata-bin'
         commands.mkdir(exist_ok=True)
         launcher = commands / 'python3'
         launcher.write_text('#!/bin/bash\nexec "$LONGREACH_METADATA_PYTHON" "$@"\n', encoding='utf-8', newline='\n')
         launcher.chmod(0o755)
-        helper = ROOT / 'scripts/build/qt4-android/export-mkspecs.py'
+        helper = helper_override or ROOT / 'scripts/build/qt4-android/export-mkspecs.py'
         fragment = fragment.replace('/repo/scripts/build/qt4-android/export-mkspecs.py', shlex.quote(helper.as_posix()))
         script = root / 'metadata only.sh'
         assignments = '\n'.join(name + '=' + shlex.quote(str(value)) for name, value in variables.items())
@@ -196,6 +196,8 @@ class ShellMetadata(unittest.TestCase):
                 source, prefix = seed_source(root)
                 runtime = '/opt/longreach-android-api21'
                 exporter.export(source, prefix, runtime)
+                (prefix / 'libexec').mkdir()
+                shutil.copyfile(ROOT / 'scripts/build/qt4-android/export-mkspecs.py', prefix / 'libexec/longreach-export-mkspecs.py')
                 other = root / 'unused prefix'
                 other.mkdir()
                 variables = dict(core_prefix=(prefix if phase == 'core' else other).as_posix(),
@@ -207,6 +209,25 @@ class ShellMetadata(unittest.TestCase):
                 result = self.invoke(root, selected, variables)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('mkspec bytes or file set changed', result.stderr)
+
+    def test_client_verifies_with_installed_exporter_after_a_worktree_comment_edit(self):
+        script = (ROOT / 'scripts/build/qt4-android/build-api21-examples.sh').read_text()
+        fragment = script[script.index('phase=${1:-core}'):script.index('cxx=$runtime/bin/cxx')]
+        for phase in ('core', 'all'):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                source, prefix = seed_source(root)
+                runtime = '/opt/longreach-android-api21'
+                exporter.export(source, prefix, runtime)
+                (prefix / 'libexec').mkdir()
+                original = ROOT / 'scripts/build/qt4-android/export-mkspecs.py'
+                shutil.copyfile(original, prefix / 'libexec/longreach-export-mkspecs.py')
+                changed = root / 'changed-worktree-exporter.py'
+                changed.write_text(original.read_text() + '\n# later worktree comment\n')
+                result = self.invoke(root, 'set -- ' + phase + '\n' + fragment,
+                    dict(core_prefix=prefix.as_posix(), quick_prefix=prefix.as_posix(), runtime=runtime),
+                    helper_override=changed)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_final_sdk_stage_verifies_real_installed_metadata_for_all_abis(self):
         text = (ROOT / 'docker/qt4/android/Dockerfile').read_text()

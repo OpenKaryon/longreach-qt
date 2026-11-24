@@ -92,6 +92,7 @@ FROM ${ANDROID_ABI}-runtime AS runtime
 
 # ANDROID_ABI is inherited from the selected runtime ENV, including cache IDs.
 FROM runtime AS qt-build
+ARG ANDROID_ABI
 COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
 ARG PARALLEL_JOBS=2
 ENV PARALLEL_JOBS=${PARALLEL_JOBS}

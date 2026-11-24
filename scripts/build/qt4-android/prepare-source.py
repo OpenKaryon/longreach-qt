@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import uuid
 
 STATE = '.longreach-prepared-source.json'
 
@@ -105,7 +106,7 @@ def prepare(repo, archive, tree, profile, api):
     if previous and previous['recipe'] == inputs and (tree / 'configure').is_file():
         return False
     tree.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='qt4-source-', dir=tree.parent) as directory:
+    with tempfile.TemporaryDirectory(prefix='qt4-source-') as directory:
         stage = Path(directory)
         extract_source(archive, stage)
         pristine = source_inventory(stage)
@@ -113,6 +114,16 @@ def prepare(repo, archive, tree, profile, api):
         current = source_inventory(stage)
         if 'configure' not in current:
             raise ValueError('Qt source archive does not contain configure')
+        legacy_archive = previous.get('legacy_archive') if previous else None
+        if previous is None and tree.exists() and any(tree.iterdir()):
+            # Unknown old patch additions cannot be distinguished from build
+            # outputs. Preserve the entire unmanifested tree before migrating.
+            parent = tree.parent.resolve()
+            history = parent / (tree.name + '.legacy-' + uuid.uuid4().hex)
+            if tree.is_symlink() or tree.resolve().parent != parent or history.exists():
+                raise ValueError('Cannot archive an ambiguous legacy Qt4 source tree')
+            tree.rename(history)
+            legacy_archive = str(history)
         tree.mkdir(parents=True, exist_ok=True)
         sync_sources(stage, tree, previous['source'] if previous else {}, current)
         removed = sorted(pristine.keys() - current.keys())
@@ -133,7 +144,7 @@ def prepare(repo, archive, tree, profile, api):
         modified = {name: sha for name, sha in current.items() if pristine.get(name) != sha}
         temporary.write_text(json.dumps({'recipe': inputs, 'source': current,
                                          'configuration': configuration, 'modified_source': modified,
-                                         'removed_source': removed}, sort_keys=True) + '\n')
+                                         'removed_source': removed, 'legacy_archive': legacy_archive}, sort_keys=True) + '\n')
         temporary.replace(state)
     return True
 

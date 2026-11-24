@@ -3,6 +3,7 @@
 """Compile-cache inputs must change independently from archive-only link inputs."""
 import importlib.util
 import io
+import json
 from pathlib import Path
 import shutil
 import tarfile
@@ -216,6 +217,21 @@ class SourceRefresh(unittest.TestCase):
             self.assertEqual((tree / 'Makefile').read_text(), 'generated Makefile')
             with patch.object(source, 'apply_recipe', side_effect=AssertionError('unchanged recipe re-applied')):
                 self.assertFalse(source.prepare(repo, archive, tree, 'core', 21))
+
+    def test_legacy_tree_is_preserved_before_clean_migration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo, tree, archive, script = self.setup_source(Path(temporary))
+            (tree / 'src').mkdir(parents=True)
+            (tree / 'src/obsolete-patch.cpp').write_text('old patch addition')
+            (tree / 'src/unit.o').write_bytes(b'old object')
+            self.assertTrue(source.prepare(repo, archive, tree, 'core', 21))
+            receipt = json.loads((tree / source.STATE).read_text())
+            history = Path(receipt['legacy_archive'])
+            self.assertEqual(history.parent, tree.parent)
+            self.assertEqual((history / 'src/obsolete-patch.cpp').read_text(), 'old patch addition')
+            self.assertEqual((history / 'src/unit.o').read_bytes(), b'old object')
+            self.assertFalse((tree / 'src/obsolete-patch.cpp').exists())
+            self.assertEqual((tree / 'src/unit.cpp').read_text(), 'patched-v1')
 
     def test_changed_archive_project_forces_reconfigure(self):
         with tempfile.TemporaryDirectory() as temporary:

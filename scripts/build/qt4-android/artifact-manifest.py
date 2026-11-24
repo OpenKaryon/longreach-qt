@@ -58,7 +58,12 @@ def native_files(root, selected):
 
 def begin(root, abi, sdk):
     pending = dict(identity(root, abi, sdk), schema_version=3, generation=uuid.uuid4().hex)
-    common.create_json(root / 'examples-in-progress.json', pending)
+    try:
+        common.create_json(root / 'examples-in-progress.json', pending)
+    except FileExistsError as error:
+        raise ValueError('Qt4 examples generation is incomplete or active. Stop its producer, '
+                         'archive examples-in-progress.json and the failed logs under a history directory, '
+                         'then rerun the complete examples phase; do not remove an active owner marker.') from error
     common.invalidate_results(root)
     for name in ('examples-manifest.json', 'apk-manifest.json', 'apk-packages.json'):
         (root / name).unlink(missing_ok=True)

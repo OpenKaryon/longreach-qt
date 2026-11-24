@@ -119,7 +119,7 @@ configure_args=(-prefix "$prefix" -opensource -confirm-license -release -static 
     -nomake demos -nomake examples -nomake docs -nomake translations -nomake tests)
 configuration=$({
     printf '%s\0' "${configure_args[@]}"
-    sha256sum configure .longreach-source-configuration /work/donut-bin/donut-cxx /work/donut-bin/donut-cc
+    sha256sum configure .longreach-source-configuration /work/donut-bin/donut-cxx /work/donut-bin/donut-cc "$host_platformdefs" mkspecs/linux-donut-host/qmake.conf
     if [[ "$api" != 4 ]]; then
         python3 /repo/scripts/build/qt4-android/cache-inputs.py --runtime "$runtime" --mkspec "$PWD/mkspecs/linux-donut-llvm"
     fi
@@ -127,7 +127,7 @@ configuration=$({
 configuration=${configuration%% *}
 reconfigure=false
 if [[ ! -f .donut-configured ]]; then reconfigure=true; fi
-if [[ "$api" != 4 && "$(cat .longreach-configuration 2>/dev/null || true)" != "$configuration" ]]; then
+if [[ "$(cat .longreach-configuration 2>/dev/null || true)" != "$configuration" ]]; then
     reconfigure=true
 fi
 if $reconfigure; then
@@ -136,7 +136,9 @@ if $reconfigure; then
     touch .donut-configured
 fi
 
-if [[ "$profile" == quick && ! -f .donut-host-clang ]]; then
+host_configuration=$(sha256sum mkspecs/linux-donut-host/qmake.conf "$host_platformdefs" | sha256sum)
+host_configuration=${host_configuration%% *}
+if [[ "$profile" == quick && "$(cat .donut-host-clang 2>/dev/null || true)" != "$host_configuration" ]]; then
     for tool in bootstrap moc rcc uic; do
         if [[ -f src/tools/$tool/Makefile ]]; then
             make -C "src/tools/$tool" clean
@@ -146,7 +148,7 @@ if [[ "$profile" == quick && ! -f .donut-host-clang ]]; then
     if [[ -d src/gui/.uic ]]; then
         find src/gui/.uic -name 'ui_*.h' -delete
     fi
-    touch .donut-host-clang
+    printf '%s\n' "$host_configuration" > .donut-host-clang
 fi
 
 if [[ "$api" != 4 && "$(cat .longreach-object-configuration 2>/dev/null || true)" != "$configuration" ]]; then

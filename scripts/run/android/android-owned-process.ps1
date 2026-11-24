@@ -124,6 +124,30 @@ function Start-AndroidOwnedProcess {
         throw $failure
     }
 }
+function Start-AndroidOwnedLogCapture([string]$Directory,[string]$Adb,[string]$Serial,[string]$RemoteFile) {
+    $control=Get-AndroidOwnedProcess $Directory
+    if(!$control.Process -or $control.Process.HasExited){throw 'Owned emulator must be running before log capture'}
+    $requestPath=Join-Path $Directory 'host-logcat-request.json'
+    $ownerPath=Join-Path $Directory 'host-logcat-owner.json'
+    if((Test-Path -LiteralPath $requestPath) -or (Test-Path -LiteralPath $ownerPath)){throw 'Owned log capture already exists'}
+    $program=(Get-Item -LiteralPath $Adb).FullName
+    $request=@{schema_version=1;run_id=$control.Request.run_id;request_sha256=$control.RequestSha;
+        program=$program;program_sha256=(Get-FileHash -LiteralPath $program).Hash.ToLowerInvariant();
+        serial=$Serial;remote_file=$RemoteFile;
+        arguments=@(Get-AndroidAdbArguments -Arguments @('-s',$Serial,'shell','logcat','-v','brief','-f',$RemoteFile) -Directory $Directory)}
+    Write-AndroidOwnedProcessJson $requestPath $request
+    $sha=(Get-FileHash -LiteralPath $requestPath).Hash.ToLowerInvariant()
+    $timer=[Diagnostics.Stopwatch]::StartNew()
+    while(!(Test-Path -LiteralPath $ownerPath)) {
+        if($control.Process.HasExited -or $timer.ElapsedMilliseconds -ge 10000){throw 'Owned log capture startup failed'}
+        Start-Sleep -Milliseconds 20
+    }
+    $owner=Get-Content -LiteralPath $ownerPath -Raw | ConvertFrom-Json
+    if($owner.capture_request_sha256 -cne $sha -or $owner.request_sha256 -cne $control.RequestSha -or
+        $owner.run_id -cne $control.Request.run_id -or !$owner.contained_before_start -or $owner.client_pid -le 0){throw 'Log capture ownership handshake changed'}
+    return @{log_capture_request_sha256=$sha;log_capture_owner_sha256=(Get-FileHash -LiteralPath $ownerPath).Hash.ToLowerInvariant()}
+}
+
 function Get-AndroidOwnedProcess([string]$Directory) {
     $directoryKey=Get-AndroidOwnedProcessKey $Directory
     Initialize-AndroidOwnedProcessRegistry

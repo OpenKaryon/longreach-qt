@@ -2,8 +2,14 @@
 # Copyright (C) 2026 OpenKaryon
 """Recheck observed app termination; a native return marker is not process exit."""
 import hashlib
+import importlib.util
 import json
+from pathlib import Path
 import re
+
+_spec = importlib.util.spec_from_file_location('exit_log_capture_owner', Path(__file__).with_name('android-owned-process.py'))
+_owned = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_owned)
 
 FATAL = re.compile(r'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting|\*\*\*\s+\*\*\*\s+\*\*\*', re.I)
 AM = r'^[VDIWEF]/ActivityManager\s*\(\s*\d+\):\s*'
@@ -72,6 +78,37 @@ def scoped(raw, marker):
     return raw[indices[0] + 1:]
 
 
+def require_capture(case, record, raw_path, name, capture_sha):
+    """Bind a fresh full-file snapshot when a legacy case uses guest logging."""
+    bound = record.get('log_capture_sha256')
+    if not bound:
+        return
+    path = case / 'logcat-capture.json'
+    capture = json.loads(path.read_text(encoding='utf-8-sig'))
+    remote = re.fullmatch(r'/data/local/longreach-log-([0-9a-f]{32})\.log', capture.get('remote_file', ''))
+    if (digest(path) != bound or capture.get('schema_version') != 1 or capture.get('serial') != 'emulator-5580'
+            or not remote or capture.get('ready_marker') != 'READY-' + remote[1]
+            or capture.get('ready_log_sha256') != digest(case / 'logcat-capture-ready.log')):
+        raise ValueError('Missing or mismatched guest log capture')
+    _owned.validate_log_capture(case, capture)
+    snapshot = case / (name + '.stdout')
+    observation_path = case / (name + '-file-capture.json')
+    observation = json.loads(observation_path.read_text(encoding='utf-8-sig'))
+    raw = raw_path.read_text(encoding='utf-8-sig').splitlines()
+    if (digest(observation_path) != capture_sha or observation.get('schema_version') != 1
+            or observation.get('serial') != capture['serial'] or observation.get('log_capture_sha256') != bound
+            or observation.get('snapshot_sha256') != digest(snapshot)
+            or snapshot.read_text(encoding='utf-8-sig').splitlines() != raw
+            or not re.fullmatch(r'CAPTURE-[0-9a-f]{32}', observation.get('fence_marker', ''))):
+        raise ValueError('Missing or mismatched fresh guest log snapshot')
+    def contains(lines, marker):
+        pattern = r'^[VDIWEF]/LongreachCapture\s*\(\s*\d+\):\s*' + re.escape(marker) + r'\s*$'
+        return sum(bool(re.fullmatch(pattern, line)) for line in lines) == 1
+    if (not contains(raw, capture['ready_marker']) or not contains(raw, observation['fence_marker'])
+            or not contains((case / 'logcat-capture-ready.log').read_text(encoding='utf-8-sig').splitlines(), capture['ready_marker'])):
+        raise ValueError('Guest log snapshot lost readiness or freshness boundary')
+
+
 def require_exit(case, package, record):
     proof_path = case / 'process-exit.json'
     proof = json.loads(proof_path.read_text(encoding='utf-8-sig'))
@@ -91,6 +128,7 @@ def require_exit(case, package, record):
         if proof.get(key) != digest(path):
             raise ValueError('Process-exit evidence changed: ' + path.name)
     raw = raw_path.read_text(encoding='utf-8-sig').splitlines()
+    require_capture(case, record, raw_path, 'process-exit-logcat-query', proof.get('log_capture_observation_sha256'))
     log = log_path.read_text(encoding='utf-8-sig').splitlines()
     if (case / 'log-marker.txt').read_text(encoding='utf-8-sig').strip() != marker or scoped(raw, marker) != log:
         raise ValueError('Process-exit log differs from its launch boundary')

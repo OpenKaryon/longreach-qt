@@ -107,6 +107,7 @@ def _collect(root, run_name, abi):
         final = case / 'final-logcat.log'
         if digest(final) != receipt.get('final_logcat_sha256'):
             raise ValueError('Final cleanup log changed: ' + name)
+        process_exit.require_capture(case, receipt, final, 'final-logcat', receipt.get('log_capture_final_sha256'))
         final_state = process_exit.lifecycle(process_exit.scoped(final.read_text(encoding='utf-8-sig').splitlines(), receipt['log_marker']), package)
         if not final_state or final_state != {key: exit_proof[key] for key in ('process_id', 'start_line', 'death_line')}:
             raise ValueError('Final cleanup log lost its application exit evidence: ' + name)
@@ -130,6 +131,9 @@ def _collect(root, run_name, abi):
                   'evidence': case.relative_to(root).as_posix()}
         record.update(cpu_evidence)
         record.update(host_evidence)
+        if receipt.get('log_capture_sha256'):
+            record.update(log_capture_sha256=receipt['log_capture_sha256'],
+                          log_capture_final_sha256=receipt['log_capture_final_sha256'])
         records.append(record)
         proof.append({'case': name, 'apk': relative, 'sha256': sha, 'abi': abi,
                       'native_libraries': len(libs), 'runtime_sha256': runtime})

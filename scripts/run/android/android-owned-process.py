@@ -25,6 +25,8 @@ OWNER = 'host-process-owner.json'
 EXIT = 'host-process-exit.json'
 STOP = 'host-process-stop.json'
 FAILED = 'host-process-failed.json'
+LOG_REQUEST = 'host-logcat-request.json'
+LOG_OWNER = 'host-logcat-owner.json'
 
 _endpoint_spec = importlib.util.spec_from_file_location('owned_adb_endpoint', Path(__file__).with_name('android-adb-endpoint.py'))
 endpoint = importlib.util.module_from_spec(_endpoint_spec)
@@ -88,6 +90,48 @@ def request(directory):
                 directory == Path(lease['root']).resolve() or not directory.is_relative_to(Path(lease['root']).resolve())):
             raise ValueError('Invalid owned-process artifact lease')
     return value, sha
+
+
+def log_capture_request(directory, spec, request_sha):
+    value, sha = read(Path(directory) / LOG_REQUEST)
+    if not isinstance(value, dict):
+        raise ValueError('Invalid owned log capture request')
+    remote = value.get('remote_file', '')
+    if (value.get('schema_version') != 1 or value.get('run_id') != spec['run_id']
+            or value.get('request_sha256') != request_sha or 'adb_endpoint' not in spec
+            or not token(r'/data/local/longreach-log-[0-9a-f]{32}\.log', remote)
+            or value.get('serial') != 'emulator-5580'
+            or not isinstance(value.get('program'), str) or not Path(value['program']).is_absolute()
+            or Path(value['program']).name.lower() != 'adb.exe'
+            or not token('[0-9a-f]{64}', value.get('program_sha256', ''))):
+        raise ValueError('Invalid owned log capture request')
+    expected = ['-H', 'localhost', '-P', str(spec['adb_endpoint']['port']), '-s', value['serial'],
+                'shell', 'logcat', '-v', 'brief', '-f', remote]
+    if value.get('arguments') != expected:
+        raise ValueError('Log capture differs from the frozen ADB endpoint or command')
+    return value, sha
+
+
+def validate_log_capture(directory, bindings=None):
+    directory = Path(directory)
+    validate(directory)
+    spec, request_sha = request(directory)
+    capture, capture_sha = log_capture_request(directory, spec, request_sha)
+    owner, owner_sha = read(directory / LOG_OWNER)
+    proof, _ = read(directory / EXIT)
+    if (not isinstance(owner, dict) or owner.get('schema_version') != 1 or owner.get('run_id') != spec['run_id']
+            or owner.get('request_sha256') != request_sha or owner.get('capture_request_sha256') != capture_sha
+            or owner.get('contained_before_start') is not True or not integer(owner.get('client_pid'), 1)
+            or not token('[1-9][0-9]*', owner.get('client_creation_filetime', ''))
+            or proof.get('log_capture_request_sha256') != capture_sha
+            or proof.get('log_capture_owner_sha256') != owner_sha or proof['total_processes'] < 2
+            or any(proof.get('log_capture_' + kind + '_sha256') != digest(directory / ('logcat-client.' + kind))
+                   for kind in ('stdout', 'stderr'))):
+        raise ValueError('Log capture was not bound to the completed owned job')
+    result = {'log_capture_request_sha256': capture_sha, 'log_capture_owner_sha256': owner_sha}
+    if bindings is not None and any(bindings.get(key) != value for key, value in result.items()):
+        raise ValueError('Guest log capture belongs to another owned job')
+    return result
 
 
 def validate(directory, bindings=None):
@@ -443,12 +487,31 @@ def supervise(directory, expected_request_sha256):
             write(directory / OWNER, owner)
             owner_sha = digest(directory / OWNER)
             reason, forced = 'natural', False
+            capture_sha = capture_owner_sha = None
             frontend_exited_before_stop = True
             while job.counts()[0]:
                 if wait_handle(parent, 0) == 0:
                     reason, forced = 'owner-exited', True
                     job.terminate()
                     break
+                if (directory / LOG_REQUEST).exists() and capture_sha is None:
+                    capture, capture_sha = log_capture_request(directory, spec, request_sha)
+                    if digest(capture['program']) != capture['program_sha256']:
+                        raise ValueError('Log capture program changed before launch')
+                    frontend = job.frontend
+                    try:
+                        client_pid = job.launch(directory, dict(capture, cwd=spec['cwd'], adb_endpoint=spec['adb_endpoint'],
+                            stdout='logcat-client.stdout', stderr='logcat-client.stderr'))
+                        client_creation = creation_time(job.frontend)
+                    finally:
+                        if job.frontend != frontend:
+                            close_handle(job.frontend)
+                            job.frontend = frontend
+                    capture_owner = dict(schema_version=1, run_id=spec['run_id'], request_sha256=request_sha,
+                        capture_request_sha256=capture_sha, client_pid=client_pid,
+                        client_creation_filetime=client_creation, contained_before_start=True)
+                    write(directory / LOG_OWNER, capture_owner)
+                    capture_owner_sha = digest(directory / LOG_OWNER)
                 if (directory / STOP).exists():
                     stop, _ = read(directory / STOP)
                     if stop.get('run_id') != spec['run_id'] or stop.get('request_sha256') != request_sha or not integer(stop.get('grace_ms')) or stop['grace_ms'] > 7000:
@@ -481,6 +544,12 @@ def supervise(directory, expected_request_sha256):
                          stdout_sha256=completed_log_digest(directory / spec['stdout']),
                          stderr_sha256=completed_log_digest(directory / spec['stderr']))
             proof['host_slot_held_until_tree_exit'] = True
+            if capture_sha is not None:
+                if digest(directory / LOG_REQUEST) != capture_sha or digest(directory / LOG_OWNER) != capture_owner_sha:
+                    raise ValueError('Owned log capture records changed during execution')
+                proof.update(log_capture_request_sha256=capture_sha, log_capture_owner_sha256=capture_owner_sha,
+                    log_capture_stdout_sha256=completed_log_digest(directory / 'logcat-client.stdout'),
+                    log_capture_stderr_sha256=completed_log_digest(directory / 'logcat-client.stderr'))
             # All job members exited and both output handles closed before this
             # release. Parent-side ADB endpoint isolation is a separate contract.
             completed_host_handle, host_handle = host_handle, None

@@ -185,6 +185,8 @@ try {
     $install = Invoke-AndroidTool $adb @('-s', $serial, 'shell', 'pm', 'install', '/data/local/longreach-example.apk')
     Assert-AndroidApi10ApkBinding $roots.Root $Apk $binding
     if (!($install -match '^\s*Success\s*$')) { throw "APK install failed: $install" }
+    $receipt.log_capture_sha256=Start-AndroidCaseLogCapture -Adb $adb -Serial $serial -Directory $output
+    Write-AndroidCaseReceipt $output $receipt
     $logMarker='BEGIN-'+[guid]::NewGuid().ToString('N')
     $logMarker | Set-Content -LiteralPath "$output/log-marker.txt"
     Invoke-AndroidTool $adb @('-s',$serial,'shell','log','-p','i','-t','LongreachCase',$logMarker)
@@ -210,7 +212,7 @@ try {
         if ($process.HasExited) { break }
         $result = @(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('shell','cat',"/data/data/$Package/files/$completionName") -Directory $output -Name 'native-result' -TimeoutMilliseconds 5000 -AllowNonzero)
         if ($result -match '^\s*[0-9]+\s*$') { $complete = $true; break }
-        $logs = @(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('logcat','-d','-v','brief') -Directory $output -Name 'native-progress' -TimeoutMilliseconds 5000)
+        $logs = @(Get-AndroidCaseRawLog -Adb $adb -Serial $serial -Directory $output -Name 'native-progress' -TimeoutMilliseconds 5000)
         $current=@(Get-AndroidApi21CaseLog -RawLog $logs -Marker $logMarker)
         $lifecycle=Get-AndroidApplicationLifecycle $current $Package
         if ($lifecycle -and $lifecycle.death_line) { break }
@@ -252,7 +254,7 @@ try {
         throw 'APK changed while the guest was running'
     }
     if ($RuntimeProbe) {
-        $raw=@(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('logcat','-d','-v','brief') -Directory $output -Name 'probe-logcat' -TimeoutMilliseconds 5000)
+        $raw=@(Get-AndroidCaseRawLog -Adb $adb -Serial $serial -Directory $output -Name 'probe-logcat' -TimeoutMilliseconds 5000)
         $raw | Set-Content -LiteralPath "$output/logcat-raw.log"
         $logs=@(Get-AndroidApi21CaseLog -RawLog $raw -Marker $logMarker)
         $logs | Set-Content -LiteralPath "$output/logcat.log"
@@ -260,7 +262,7 @@ try {
     if ($logs -match 'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting') { throw 'Fatal cleanup error; see logcat.log' }
 } finally {
     try {
-        $finalLog=@(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('logcat','-d','-v','brief') -Directory $output -Name 'final-logcat' -TimeoutMilliseconds 5000)
+        $finalLog=@(Get-AndroidCaseRawLog -Adb $adb -Serial $serial -Directory $output -Name 'final-logcat' -TimeoutMilliseconds 5000)
         $finalLog | Set-Content -LiteralPath "$output/final-logcat.log" -Encoding utf8
         if ($logMarker) {
             $late=@(Get-AndroidApi21CaseLog -RawLog $finalLog -Marker $logMarker)
@@ -275,6 +277,7 @@ if ($receipt.host_process_owner_sha256 -cne $hostTree.host_process_owner_sha256 
 foreach ($field in $hostTree.PSObject.Properties) { $receipt[$field.Name]=$field.Value }
 $receipt.emulator_exit_confirmed=$true
 $receipt.final_logcat_sha256=(Get-FileHash "$output/final-logcat.log").Hash.ToLowerInvariant()
+$receipt.log_capture_final_sha256=(Get-FileHash "$output/final-logcat-file-capture.json").Hash.ToLowerInvariant()
 if ($BatchReceipt -and (Get-FileHash -LiteralPath $BatchReceipt).Hash.ToLowerInvariant() -cne $batchSha) {
     throw 'API10 batch changed while the guest was running'
 }

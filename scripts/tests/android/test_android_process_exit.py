@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import android_result_fixtures as fixtures
 
@@ -25,6 +26,45 @@ def refresh(case, record):
 
 
 class ProcessExit(unittest.TestCase):
+    def test_guest_file_capture_binds_full_snapshot_readiness_and_fresh_fence(self):
+        for changed in (None, 'fence', 'snapshot', 'ready'):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory, patch.object(exits._owned, 'validate_log_capture'):
+                case = Path(directory)
+                record = fixtures.exit_evidence(case, PACKAGE, MARKER)
+                identity = 'a' * 32
+                ready = 'READY-' + identity
+                fence = 'CAPTURE-' + 'b' * 32
+                ready_line = f'I/LongreachCapture( 321): {ready}\n'
+                (case / 'logcat-capture-ready.log').write_text(ready_line)
+                capture = {'schema_version': 1, 'serial': 'emulator-5580', 'guest_pid': 321,
+                           'remote_file': '/data/local/longreach-log-' + identity + '.log',
+                           'ready_marker': ready, 'ready_log_sha256': fixtures.digest(case / 'logcat-capture-ready.log')}
+                (case / 'logcat-capture.json').write_text(json.dumps(capture))
+                record['log_capture_sha256'] = fixtures.digest(case / 'logcat-capture.json')
+                raw = ready_line + (case / 'logcat-raw.log').read_text() + f'I/LongreachCapture( 321): {fence}\n'
+                if changed == 'ready':
+                    raw = raw.replace(ready_line, '')
+                (case / 'logcat-raw.log').write_text(raw)
+                (case / 'logcat.log').write_text('\n'.join(exits.scoped(raw.splitlines(), MARKER)) + '\n')
+                query = 'process-exit-logcat-query'
+                (case / (query + '.stdout')).write_text(raw + ('changed\n' if changed == 'snapshot' else ''))
+                observation = {'schema_version': 1, 'serial': 'emulator-5580',
+                               'fence_marker': 'CAPTURE-' + 'c' * 32 if changed == 'fence' else fence,
+                               'log_capture_sha256': record['log_capture_sha256'],
+                               'snapshot_sha256': fixtures.digest(case / (query + '.stdout'))}
+                observation_path = case / (query + '-file-capture.json')
+                observation_path.write_text(json.dumps(observation))
+                proof_path = case / 'process-exit.json'
+                proof = json.loads(proof_path.read_text())
+                proof['log_capture_observation_sha256'] = fixtures.digest(observation_path)
+                proof_path.write_text(json.dumps(proof))
+                refresh(case, record)
+                if changed:
+                    with self.assertRaisesRegex(ValueError, 'snapshot'):
+                        exits.require_exit(case, PACKAGE, record)
+                else:
+                    self.assertEqual(exits.require_exit(case, PACKAGE, record)['process_id'], 1234)
+
     def test_pid_pair_and_absent_process_are_required_for_both_log_formats(self):
         with tempfile.TemporaryDirectory() as directory:
             case = Path(directory)

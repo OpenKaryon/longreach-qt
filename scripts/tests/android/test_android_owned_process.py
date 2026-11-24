@@ -50,6 +50,47 @@ def synthetic(directory):
 
 
 class Receipt(unittest.TestCase):
+    def test_log_capture_shares_the_frozen_endpoint_and_completed_job(self):
+        for changed in (None, 'endpoint', 'owner', 'count', 'log'):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                spec, owner, proof = synthetic(root)
+                spec['adb_endpoint'] = {'schema_version': 1, 'host': 'localhost', 'port': 5061, 'socket': 'tcp:localhost:5061'}
+                owned.write(root / owned.REQUEST, spec)
+                owner.update(request_sha256=owned.digest(root / owned.REQUEST), adb_endpoint_applied_before_start=True)
+                owned.write(root / owned.OWNER, owner)
+                proof.update(request_sha256=owner['request_sha256'], owner_sha256=owned.digest(root / owned.OWNER))
+                adb = root / 'adb.exe'
+                adb.write_text('metadata only, never executed')
+                remote = '/data/local/longreach-log-' + 'a' * 32 + '.log'
+                capture = dict(schema_version=1, run_id=spec['run_id'], request_sha256=owner['request_sha256'],
+                               serial='emulator-5580', remote_file=remote, program=str(adb), program_sha256=owned.digest(adb),
+                               arguments=['-H', 'localhost', '-P', '5061', '-s', 'emulator-5580', 'shell', 'logcat', '-v', 'brief', '-f', remote])
+                if changed == 'endpoint':
+                    capture['arguments'][3] = '5037'
+                owned.write(root / owned.LOG_REQUEST, capture)
+                child = dict(schema_version=1, run_id=spec['run_id'], request_sha256=owner['request_sha256'],
+                             capture_request_sha256=owned.digest(root / owned.LOG_REQUEST), client_pid=789,
+                             client_creation_filetime='789', contained_before_start=True)
+                if changed == 'owner':
+                    child['capture_request_sha256'] = '0' * 64
+                owned.write(root / owned.LOG_OWNER, child)
+                for kind in ('stdout', 'stderr'):
+                    (root / ('logcat-client.' + kind)).write_text('retained capture output')
+                    proof['log_capture_' + kind + '_sha256'] = owned.digest(root / ('logcat-client.' + kind))
+                proof.update(log_capture_request_sha256=owned.digest(root / owned.LOG_REQUEST),
+                             log_capture_owner_sha256=owned.digest(root / owned.LOG_OWNER))
+                if changed == 'count':
+                    proof['total_processes'] = 1
+                owned.write(root / owned.EXIT, proof)
+                if changed == 'log':
+                    (root / 'logcat-client.stderr').write_text('replaced capture output')
+                if changed:
+                    with self.assertRaisesRegex(ValueError, 'Log capture'):
+                        owned.validate_log_capture(root)
+                else:
+                    self.assertEqual(owned.validate_log_capture(root)['log_capture_owner_sha256'], proof['log_capture_owner_sha256'])
+
     def test_exact_request_owner_exit_and_both_logs_are_bound(self):
         for changed in (owned.REQUEST, owned.OWNER, 'emulator.stdout', 'emulator.stderr'):
             with self.subTest(changed=changed), tempfile.TemporaryDirectory() as folder:

@@ -121,6 +121,13 @@ absence. Restarts, debuggerd crashes, fatal errors or forced app termination
 fail the case. `process-exit.json` binds the observed logs/PID; collectors
 recheck it. This is observed termination, not an OS exit-status capture.
 
+API10 starts a file-backed logcat capture before the case marker and Activity
+launch. Its ADB client joins the emulator's existing Windows job. A readiness
+marker and a fresh fence for every snapshot preserve and bind records beyond
+the kernel ring's retention. Capture ownership and snapshot hashes are checked
+again after the whole job exits; missing markers, stalled capture and late
+fatal records still fail qualification.
+
 API21 additionally retains post-release raw/scoped logs per case before the
 next log reset, plus an owner-bound `final-logcat-capture.json`. Selected and
 WAV runs use the same final-capture checks. API10 completes its receipt only

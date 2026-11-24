@@ -147,6 +147,20 @@ function Set-AndroidGuestStayAwake { param($Adb,$Serial,$RunDirectory); [IO.File
 '@ | Set-Content "$fixture/scripts/run/android/android-wait-boot.ps1"
     @'
 . "$global:Api10FixtureRepo/scripts/run/android/android-process-exit.ps1"
+# Guest capture transport has its own recording fixture. Keep this runner
+# fixture's application/lifecycle mutations at the same ADB log boundary.
+function Start-AndroidCaseLogCapture {
+    param($Adb,$Serial,$Directory)
+    '{}' | Set-Content "$Directory/logcat-capture.json"
+    return (Get-FileHash "$Directory/logcat-capture.json").Hash.ToLowerInvariant()
+}
+function Get-AndroidCaseRawLog {
+    param($Adb,$Serial,$Directory,$Name,$TimeoutMilliseconds)
+    $lines=@(Invoke-AndroidExitQuery $Adb $Serial @('logcat','-d','-v','brief') $Directory $Name $TimeoutMilliseconds)
+    $lines | Set-Content "$Directory/$Name.stdout"
+    '{}' | Set-Content "$Directory/$Name-file-capture.json"
+    return $lines
+}
 function Invoke-AndroidExitQuery {
     param($Adb,$Serial,[string[]]$Command,$Directory,$Name,$TimeoutMilliseconds,[switch]$AllowNonzero)
     if ($Command[0] -eq 'emu') { $global:Api10SerialEmulatorStops++;throw 'Fixture: serial-based emulator termination must not run' }

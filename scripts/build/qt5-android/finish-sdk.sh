@@ -31,4 +31,17 @@ llvm-readobj-21 --file-header --dynamic-table /opt/longreach-android/lib/libc++_
 source /repo/scripts/build/android-api21/generic-atomics.sh
 check_android_generic_atomic_exports /opt/longreach-android/lib/libc++_shared.so "$report/runtime-atomic-exports.txt"
 python3 /repo/scripts/build/android-api21/sdk-reports.py seal --source "$report" --qt-major 5 --abi "$abi"
+# Host behavior supplements producer metadata; guest qualification stays separate.
+host_checks=/out/host-regressions
+mkdir -p "$host_checks"
+python3 /repo/scripts/tests/android/qt5-android-condition-clock.py \
+    /work/qt5-sdk-src/qtbase/src/corelib/thread/qwaitcondition_unix.cpp "$host_checks/clock"
+python3 /repo/scripts/tests/android/qt5-android-sensor-callback.py \
+    /work/qt5-sdk-src/qtsensors/src/plugins/sensors/android/sensoreventqueue.h "$host_checks/sensors" \
+    --manager /work/qt5-sdk-src/qtsensors/src/plugins/sensors/android/sensormanager.cpp
+if [[ "$abi" == x86 && "$api" == 10 ]]; then
+    python3 /repo/scripts/tests/android/qt5-android-futex.py \
+        /repo/patches/qt5/android/x86/01-api10-futex-stub.patch "$host_checks/futex"
+    bash /repo/scripts/tests/android/test-qt5-api10-x86-compat.sh "$host_checks/wait4"
+fi
 echo "Qt5 $abi API$api installed SDK checks passed"

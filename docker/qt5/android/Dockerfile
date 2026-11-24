@@ -109,6 +109,11 @@ RUN --network=none \
     bash /repo/scripts/build/qt5-android/build-qt.sh all
 
 FROM qt-build AS validated
+COPY scripts/tests/android/qt5-android-condition-clock.py \
+     scripts/tests/android/qt5-android-sensor-callback.py \
+     scripts/tests/android/qt5-android-futex.py \
+     scripts/tests/android/test-qt5-api10-x86-compat.sh \
+     scripts/tests/android/qt5-api10-x86-wait4.c /repo/scripts/tests/android/
 COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
 COPY scripts/build/android-api21/check-api10-api21-symbols.py /repo/scripts/build/android-api21/
 COPY scripts/build/qt5-android/finish-sdk.sh /repo/scripts/build/qt5-android/

@@ -172,7 +172,9 @@ as API21 export metadata here, not as the API10 compiler/runtime.
 The [sensor lifecycle result](../results/qt5-api10-sensor-queue-lifecycle-20261123.md)
 records a fresh Qt5 x86 SDK, the 14/14 API10 batch and API21 compatibility runs.
 API10 qualifies acceleration and compass teardown; actual compass headings
-were measured on API21. These results do not qualify ARMv7 or other Qt majors.
+were measured on API21. These results do not qualify ARMv7 or other Qt majors. ARMv7 API10 has not
+been rerun with clock/sensor patches28/29, all-ABI atomics, observed timed waits
+and the current process-exit gate. Its earlier reports remain historical.
 The [earlier sound-cache result](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
 retains its [exit-evidence correction](../results/qt5-android-api10-exit-evidence-20261123.md).
 

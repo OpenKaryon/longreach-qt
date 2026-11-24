@@ -6,6 +6,7 @@ $ErrorActionPreference='Stop'
 $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullName
 $fixture=Join-Path $parent ('android-ready-'+[guid]::NewGuid())
 $oldMode=$env:LONGREACH_BOOT_STUB_MODE
+$oldEndpointContext=$global:LongreachAndroidAdbContext
 $oldPidFile=$env:LONGREACH_BOOT_STUB_PID
 $owner=$null
 $control=$null
@@ -21,7 +22,7 @@ function Start-BootFixtureProcess([string]$Stdout,[string]$Stderr) {
 function Start-Process {
     param($FilePath,[string[]]$ArgumentList,$WindowStyle,[switch]$PassThru,$RedirectStandardOutput,$RedirectStandardError)
     if ($FilePath -cne $global:AndroidBootFixtureStub -or
-            ($ArgumentList -join '|') -cne '-s|emulator-5582|shell|getprop|sys.boot_completed') {
+            ($ArgumentList -join '|') -cne '-H|localhost|-P|5037|-s|emulator-5582|shell|getprop|sys.boot_completed') {
         throw 'Unexpected boot-query invocation'
     }
     if ($WindowStyle -ne 'Hidden') { throw 'Boot query did not request a hidden process' }
@@ -36,6 +37,7 @@ function Expect-ReadyFailure([scriptblock]$Body,[string]$Pattern) {
 }
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
+    Set-AndroidAdbEndpointContext -Directory $fixture -Endpoint (Get-AndroidAdbEndpoint -Environment @{})
     @'
 if ($env:LONGREACH_BOOT_STUB_PID) { [IO.File]::WriteAllText($env:LONGREACH_BOOT_STUB_PID,[string]$PID) }
 if ($env:LONGREACH_BOOT_STUB_MODE -in @('ready','nonzero')) {
@@ -95,6 +97,8 @@ if ($env:LONGREACH_BOOT_STUB_MODE -in @('ready','nonzero')) {
         }
     }
     $env:LONGREACH_BOOT_STUB_MODE=$oldMode
+    Clear-AndroidAdbEndpointContext $fixture
+    if ($oldEndpointContext) { $global:LongreachAndroidAdbContext=$oldEndpointContext }
     $env:LONGREACH_BOOT_STUB_PID=$oldPidFile
     Remove-Variable AndroidBootFixturePwsh,AndroidBootFixtureStub -Scope Global -ErrorAction SilentlyContinue
     if(Test-Path -LiteralPath $fixture) {

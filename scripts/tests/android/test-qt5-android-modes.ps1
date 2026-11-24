@@ -25,7 +25,7 @@ function Assert-SdkAbi([string]$Abi,[string[]]$RecordedCalls=(Calls)) {
     })
     Assert-Mode ($abiArguments.Count -eq 1 -and $abiArguments[0] -ceq "ANDROID_ABI=$Abi") "Missing, duplicate or wrong SDK ABI for $Abi"
 }
-function Reset-Calls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG,'') ; $global:Qt5PackagingPhases.Clear() }
+function Reset-Calls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG,'') ; $global:Qt5PackagingPhases.Clear() ; $global:Qt5ModeJobSecrets.Clear() }
 $global:Qt5ModeBusyProcess=''
 function Get-Process {
     param($Name,$ErrorAction)
@@ -34,8 +34,17 @@ function Get-Process {
     }
     return $null
 }
+$global:Qt5ModeJobSecrets=[Collections.Generic.List[object]]::new()
 function docker {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    if ($Arguments[0] -eq 'build') {
+        $index=[Array]::IndexOf($Arguments,'--secret')
+        if ($index -lt 0 -or $index+1 -ge $Arguments.Count) { throw 'SDK build omitted its jobs secret' }
+        $secret=[regex]::Match($Arguments[$index+1],'^id=longreach-jobs,src=(.+)$')
+        if (!$secret.Success) { throw 'SDK build changed its jobs secret binding' }
+        $path=$secret.Groups[1].Value
+        $global:Qt5ModeJobSecrets.Add(@{Path=$path;Value=[IO.File]::ReadAllText($path)})
+    }
     Add-Content $env:LONGREACH_MODE_TEST_LOG ('docker|'+($Arguments -join '|'))
     $global:LASTEXITCODE=0
     if ($Arguments[0] -eq 'image' -and $Arguments[1] -eq 'inspect') {
@@ -175,7 +184,8 @@ $global:Qt5PackagingPhases.Add('package')
     Assert-SdkAbi 'x86_64'
     Assert-Mode (@((Calls) | Where-Object { $_ -eq 'fetch|x86_64|sdk' }).Count -eq 1) 'Wrong x86_64 SDK fetch scope'
     foreach ($call in @((Calls) | Where-Object { $_ -like 'docker|build|*' })) {
-        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|--secret|id=longreach-jobs,src=*|*' -and $call -notlike '*PARALLEL_JOBS=*') 'SDK build controls were lost'
+        Assert-Mode ($global:Qt5ModeJobSecrets.Count -gt 0 -and @($global:Qt5ModeJobSecrets | Where-Object { $_.Value -cne '3' -or (Test-Path -LiteralPath $_.Path) }).Count -eq 0) 'SDK jobs secret payload or cleanup changed'
     }
     Reset-Calls
     Invoke-Mode ($entry+@{Mode='sdk';Abi='arm64-v8a'})
@@ -282,5 +292,5 @@ $global:Qt5PackagingPhases.Add('package')
             catch { if ($attempt -eq 2) { throw }; Start-Sleep -Milliseconds 100 }
         }
     }
-    Remove-Variable Qt5ModeBusyProcess,Qt5ReportPython,Qt5PackagingPhases,Qt5ModeAbi,Qt5ModeMissing,Qt5ModeReportsMissing,Qt5ModeId -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt5ModeJobSecrets,Qt5ModeBusyProcess,Qt5ReportPython,Qt5PackagingPhases,Qt5ModeAbi,Qt5ModeMissing,Qt5ModeReportsMissing,Qt5ModeId -Scope Global -ErrorAction SilentlyContinue
 }

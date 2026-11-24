@@ -23,7 +23,7 @@ function python {
 }
 function Assert-Mode([bool]$Condition,[string]$Message) { if (!$Condition) { throw $Message } }
 function Calls { @(Get-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG) }
-function Reset-Calls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG,'') }
+function Reset-Calls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG,'') ; $global:Qt4ModeJobSecrets.Clear() }
 $global:Qt4ModeBusyProcess=''
 function Get-Process {
     param($Name,$ErrorAction)
@@ -32,8 +32,17 @@ function Get-Process {
     }
     return $null
 }
+$global:Qt4ModeJobSecrets=[Collections.Generic.List[object]]::new()
 function docker {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    if ($Arguments[0] -eq 'build') {
+        $index=[Array]::IndexOf($Arguments,'--secret')
+        if ($index -lt 0 -or $index+1 -ge $Arguments.Count) { throw 'SDK build omitted its jobs secret' }
+        $secret=[regex]::Match($Arguments[$index+1],'^id=longreach-jobs,src=(.+)$')
+        if (!$secret.Success) { throw 'SDK build changed its jobs secret binding' }
+        $path=$secret.Groups[1].Value
+        $global:Qt4ModeJobSecrets.Add(@{Path=$path;Value=[IO.File]::ReadAllText($path)})
+    }
     Add-Content $env:LONGREACH_MODE_TEST_LOG ('docker|'+($Arguments -join '|'))
     $global:LASTEXITCODE=0
     if ($Arguments[0] -eq 'image') {
@@ -186,7 +195,8 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     Assert-Mode (@(Calls)[0] -eq 'fetch|x86_64|sdk') 'SDK fetch scope changed'
     Assert-Mode (@((Calls) | Where-Object { $_ -like 'docker|build|*|--target|sdk|*' }).Count -eq 1) 'SDK did not request its explicit stage'
     foreach ($call in @((Calls) | Where-Object { $_ -like 'docker|build|*' })) {
-        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|--secret|id=longreach-jobs,src=*|*' -and $call -notlike '*PARALLEL_JOBS=*') 'SDK build controls were lost'
+        Assert-Mode ($global:Qt4ModeJobSecrets.Count -gt 0 -and @($global:Qt4ModeJobSecrets | Where-Object { $_.Value -cne '3' -or (Test-Path -LiteralPath $_.Path) }).Count -eq 0) 'SDK jobs secret payload or cleanup changed'
     }
     $profiles=@('bootstrap','strict','core','selftest','widgets','graphics','painting','multimedia','gl','qml','network','quick')
     $built=foreach ($profile in $profiles) {
@@ -320,5 +330,5 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
         if ([IO.Path]::GetDirectoryName($resolved) -ne $parent -or [IO.Path]::GetFileName($resolved) -notlike 'qt4-android-modes-*') { throw 'Unexpected fixture cleanup path' }
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
-    Remove-Variable Qt4ModeBusyProcess,Qt4ModeAbi,Qt4ModeId,Qt4ModeMissing,Qt4ModeFailPackage,Qt4ModePython,Qt4ModeCacheBusy -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt4ModeJobSecrets,Qt4ModeBusyProcess,Qt4ModeAbi,Qt4ModeId,Qt4ModeMissing,Qt4ModeFailPackage,Qt4ModePython,Qt4ModeCacheBusy -Scope Global -ErrorAction SilentlyContinue
 }

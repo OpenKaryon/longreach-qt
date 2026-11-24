@@ -13,10 +13,19 @@ $previousLog = $env:LONGREACH_MODE_TEST_LOG
 function Assert-Mode([bool]$Condition, [string]$Message) {
     if (!$Condition) { throw $Message }
 }
-function Reset-ModeCalls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG, '') ; $global:Qt6PackagingPhases.Clear() }
+function Reset-ModeCalls { [IO.File]::WriteAllText($env:LONGREACH_MODE_TEST_LOG, '') ; $global:Qt6PackagingPhases.Clear() ; $global:Qt6ModeJobSecrets.Clear() }
 function Get-ModeCalls { @(Get-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG) }
+$global:Qt6ModeJobSecrets=[Collections.Generic.List[object]]::new()
 function docker {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    if ($Arguments[0] -eq 'build') {
+        $index=[Array]::IndexOf($Arguments,'--secret')
+        if ($index -lt 0 -or $index+1 -ge $Arguments.Count) { throw 'SDK build omitted its jobs secret' }
+        $secret=[regex]::Match($Arguments[$index+1],'^id=longreach-jobs,src=(.+)$')
+        if (!$secret.Success) { throw 'SDK build changed its jobs secret binding' }
+        $path=$secret.Groups[1].Value
+        $global:Qt6ModeJobSecrets.Add(@{Path=$path;Value=[IO.File]::ReadAllText($path)})
+    }
     Add-Content -LiteralPath $env:LONGREACH_MODE_TEST_LOG -Value ('docker|' + ($Arguments -join '|'))
     $global:LASTEXITCODE = 0
     if ($Arguments[0] -eq 'image' -and $Arguments[1] -eq 'inspect') {
@@ -156,7 +165,8 @@ $global:Qt6PackagingPhases.Add('package')
     $calls = @(Get-ModeCalls)
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|build|*' }).Count -eq 2) 'SDK mode must refresh tools and build its SDK'
     foreach ($call in @($calls | Where-Object { $_ -like 'docker|build|*' })) {
-        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|PARALLEL_JOBS=3|*') 'SDK build controls were lost'
+        Assert-Mode ($call -like '*|--no-cache|*' -and $call -like '*|--pull|*' -and $call -like '*|--secret|id=longreach-jobs,src=*|*' -and $call -notlike '*PARALLEL_JOBS=*') 'SDK build controls were lost'
+        Assert-Mode ($global:Qt6ModeJobSecrets.Count -gt 0 -and @($global:Qt6ModeJobSecrets | Where-Object { $_.Value -cne '3' -or (Test-Path -LiteralPath $_.Path) }).Count -eq 0) 'SDK jobs secret payload or cleanup changed'
     }
     Assert-Mode (@($calls | Where-Object { $_ -like 'docker|run|*' -or $_ -like 'package|*' -or $_ -like 'test|*' }).Count -eq 0) 'SDK mode entered another phase'
     Assert-Mode (@($calls | Where-Object { $_ -like 'python|*llvm-fixture*' }).Count -eq 1) 'SDK source fetch was omitted'
@@ -307,5 +317,5 @@ $global:Qt6PackagingPhases.Add('package')
         }
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
-    Remove-Variable Qt6ModeBusyProcess,Qt6PackagingPhases,Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId,Qt6ModeTestAbi -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Qt6ModeJobSecrets,Qt6ModeBusyProcess,Qt6PackagingPhases,Qt6ModeTestMissingImage,Qt6ModeTestWrongImage,Qt6ModeTestImageId,Qt6ModeTestAbi -Scope Global -ErrorAction SilentlyContinue
 }

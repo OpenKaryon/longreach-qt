@@ -7,6 +7,7 @@ $ErrorActionPreference='Stop'
 $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullName
 $fixture=Join-Path $parent ('android-exit-query-'+[guid]::NewGuid())
 $oldMode=$env:LONGREACH_EXIT_QUERY_MODE
+$oldEndpointContext=$global:LongreachAndroidAdbContext
 $control=$null
 $global:AndroidExitQueryPwsh=(Get-Command pwsh).Source
 $global:AndroidExitQueryStub=$null
@@ -17,8 +18,8 @@ function Start-Process {
     param($FilePath,[string[]]$ArgumentList,$WindowStyle,[switch]$PassThru,$RedirectStandardOutput,$RedirectStandardError)
     if ($FilePath -cne $global:AndroidExitQueryStub -or $WindowStyle -ne 'Hidden') { throw 'Unexpected query process' }
     $kind=switch ($ArgumentList -join '|') {
-        '-s|emulator-5580|logcat|-d|-v|brief' { 'logcat' }
-        '-s|emulator-5580|shell|ps' { 'ps' }
+        '-H|localhost|-P|5037|-s|emulator-5580|logcat|-d|-v|brief' { 'logcat' }
+        '-H|localhost|-P|5037|-s|emulator-5580|shell|ps' { 'ps' }
         default { throw 'Unexpected query arguments' }
     }
     $global:AndroidExitQueryCalls.Add($kind)
@@ -37,6 +38,7 @@ function Expect-QueryFailure([scriptblock]$Body,[string]$Reason) {
 }
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
+    Set-AndroidAdbEndpointContext -Directory $fixture -Endpoint (Get-AndroidAdbEndpoint -Environment @{})
     @'
 param([string]$Kind)
 if ($env:LONGREACH_EXIT_QUERY_MODE -eq 'hold') { [Threading.Thread]::Sleep([Threading.Timeout]::Infinite) }
@@ -79,6 +81,8 @@ if ($env:LONGREACH_EXIT_QUERY_MODE -eq 'nonzero') { [Console]::WriteLine('0');ex
         $control.Dispose()
     }
     $env:LONGREACH_EXIT_QUERY_MODE=$oldMode
+    Clear-AndroidAdbEndpointContext $fixture
+    if ($oldEndpointContext) { $global:LongreachAndroidAdbContext=$oldEndpointContext }
     Remove-Variable AndroidExitQueryPwsh,AndroidExitQueryStub,AndroidExitQueryChildId,AndroidExitQueryChildTicks,AndroidExitQueryCalls -Scope Global -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $fixture) {
         $resolved=(Resolve-Path -LiteralPath $fixture).Path

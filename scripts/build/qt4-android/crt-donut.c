@@ -4,9 +4,10 @@
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 extern void __cxa_finalize(void *);
 
-#if defined(__i386__)
-/* The legacy x86 Bionic exports __cxa_atexit, but supplies atexit through
- * crtbegin rather than libc. Each shared object must register its own handle. */
+#if defined(__i386__) || defined(__arm__)
+/* Keep atexit local to each legacy DSO, as in Android's crtbegin. ARM's old
+ * libc export is unavailable in the API21 NDK; x86 already needs this on
+ * API10. Both register through __cxa_atexit using this object's own handle. */
 extern int __cxa_atexit(void (*)(void *), void *, void *);
 __attribute__((visibility("hidden"))) int atexit(void (*callback)(void))
 {

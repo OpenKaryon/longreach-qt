@@ -129,7 +129,7 @@ recipe does not accept SDK build overrides.
 
 ## Tooling checks
 
-`scripts/tests/test_android_make.py` checks the two-target contract, absence
+`scripts/tests/android/test_android_make.py` checks the two-target contract, absence
 of aliases, unchanged SDK identities, batch ordering, host prerequisites,
 argument preservation, native-to-APK ordering and failure propagation.
 It uses read-only make queries and disposable PowerShell recording fixtures.

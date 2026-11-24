@@ -58,12 +58,12 @@ COPY scripts/build/qt6-android/target-config.sh \
      scripts/build/qt6-android/install-toolchain.sh \
      scripts/build/qt6-android/clang-wrapper.sh \
      scripts/build/qt6-android/toolchain.cmake /repo/scripts/build/qt6-android/
-COPY scripts/tests/android-api21-driver.sh /repo/scripts/tests/
+COPY scripts/tests/android/android-api21-driver.sh /repo/scripts/tests/android/
 RUN --network=none \
     --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/repo/downloads/llvm-project-21.1.8.src.tar.xz \
     bash /repo/scripts/build/qt6-android/build-runtime.sh \
     && bash /repo/scripts/build/qt6-android/install-toolchain.sh \
-    && bash /repo/scripts/tests/android-api21-driver.sh
+    && bash /repo/scripts/tests/android/android-api21-driver.sh
 
 FROM api21-runtime AS x86_64-runtime
 

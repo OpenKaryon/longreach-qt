@@ -2,8 +2,8 @@
 param([ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi = 'armeabi-v7a', [Parameter(Mandatory)][string]$OutputDirectory, [Parameter(Mandatory)][string]$Emulator,
       [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',[switch]$PassThru)
 $ErrorActionPreference='Stop'
-. "$PSScriptRoot/android-emulator-state.ps1"
-. "$PSScriptRoot/android-owned-process.ps1"
+. "$PSScriptRoot/android/android-emulator-state.ps1"
+. "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/../build/android-api21/artifact-lock.ps1"
 $Gpu=$Gpu.ToLowerInvariant()
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
@@ -61,7 +61,7 @@ if ($Abi -in @('x86','x86_64')) { $arguments += @('-qemu','-cpu',$cpuModel) }
 # Save the unquoted argv used to construct this process invocation.
 @{schema_version=2;abi=$Abi;emulator=$Emulator;gpu_requested=$Gpu;gpu_effective=$gpuMode;arguments=@($arguments)} |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$run/emulator-launch.json" -Encoding utf8
-& python "$PSScriptRoot/android-api21-identity.py" capture --root $root --run $run --abi $Abi
+& python "$PSScriptRoot/android/android-api21-identity.py" capture --root $root --run $run --abi $Abi
 if ($LASTEXITCODE) { throw 'Cannot bind API21 launch to prepared emulator/media' }
 $previousPath = $env:PATH
 $previousAvdHome = $env:ANDROID_AVD_HOME

@@ -13,7 +13,7 @@ function Expand-DonutInput([string] $Archive, [string] $Hash, [string] $Destinat
     if ([IO.Path]::GetFileName($Destination) -cne 'inputs') { throw 'API4 media destination must be the artifact root inputs directory' }
     $mediaArtifactRoot=[IO.Path]::GetDirectoryName($Destination)
     . "$PSScriptRoot/../android-api21/artifact-lock.ps1"
-    . "$PSScriptRoot/../../run/android-owned-process.ps1"
+    . "$PSScriptRoot/../../run/android/android-owned-process.ps1"
     Assert-AndroidOwnedArtifactRootAvailable $mediaArtifactRoot
     $mediaLease=Enter-AndroidArtifactLock $mediaArtifactRoot
     try {

@@ -3,13 +3,13 @@ param([ValidateSet('x86','x86_64','arm64-v8a')][string]$Abi='x86_64',
       [ValidateSet('bootstrap','strict','core','quick','selftest','graphics','network','painting','widgets','multimedia','gl','qml')][string[]]$Profiles,
       [string]$RunName='sdk-suite', [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
-. "$PSScriptRoot/android-emulator-state.ps1"
+. "$PSScriptRoot/android/android-emulator-state.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
-. "$PSScriptRoot/android-api21-log.ps1"
-. "$PSScriptRoot/android-api21-adb.ps1"
-. "$PSScriptRoot/android-wait-boot.ps1"
-. "$PSScriptRoot/android-cpu.ps1"
-. "$PSScriptRoot/android-owned-process.ps1"
+. "$PSScriptRoot/android/android-api21-log.ps1"
+. "$PSScriptRoot/android/android-api21-adb.ps1"
+. "$PSScriptRoot/android/android-wait-boot.ps1"
+. "$PSScriptRoot/android/android-cpu.ps1"
+. "$PSScriptRoot/android/android-owned-process.ps1"
 $api=if ($Abi -eq 'x86') { 10 } else { 21 }
 $platform=if ($api -eq 10) { 'gingerbread' } else { 'lollipop' }
 $release=if ($api -eq 10) { '2.3.7' } else { '5.0.2' }
@@ -205,7 +205,7 @@ try {
             $skipped=[int]$Matches[2]
         }
         if ($labels.ContainsKey($profile)) {
-            & python "$repo/scripts/run/android-baselines.py" --qt 4 --api $api --abi $Abi --case $profile --report "$case/files/suite.log"
+            & python "$repo/scripts/run/android/android-baselines.py" --qt 4 --api $api --abi $Abi --case $profile --report "$case/files/suite.log"
             if ($LASTEXITCODE) { throw "Coverage regression: $profile" }
         }
         if ($profile -eq 'quick') {
@@ -229,7 +229,7 @@ try {
         [IO.File]::WriteAllLines("$case/logcat-after-cleanup-raw.log",[string[]]$cleanupRaw,[Text.UTF8Encoding]::new($false))
         $cleanupScoped=@(Get-AndroidApi21CaseLog -RawLog $cleanupRaw -Marker $marker)
         [IO.File]::WriteAllLines("$case/logcat-after-cleanup.log",[string[]]$cleanupScoped,[Text.UTF8Encoding]::new($false))
-        $cleanupJson=@(& python "$PSScriptRoot/android-final-log.py" case-cleanup --root $root --case $case --marker $marker --artifact-lease-held)
+        $cleanupJson=@(& python "$PSScriptRoot/android/android-final-log.py" case-cleanup --root $root --case $case --marker $marker --artifact-lease-held)
         if ($LASTEXITCODE) { throw 'Incomplete Qt4 case cleanup log evidence' }
         $caseCleanup=($cleanupJson -join [Environment]::NewLine) | ConvertFrom-Json
         Get-AndroidVerifiedHash $apk $installedApkSha | Out-Null
@@ -245,7 +245,7 @@ try {
     }
 } finally {
     try {
-        $hostTree=& "$PSScriptRoot/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
+        $hostTree=& "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
     } finally {
         if ($emulatorOwner.Process -and !$hostTree) { $hostTree=Stop-AndroidOwnedProcess $emulatorOwner }
     }
@@ -263,10 +263,10 @@ if ($LASTEXITCODE) { throw 'Qt4 APK/native generation changed during the suite' 
 if ($api -eq 21) {
     Get-AndroidVerifiedHash "$run/emulator-identity.json" $emulatorIdentitySha | Out-Null
     Get-AndroidVerifiedHash "$run/emulator-media.json" $emulatorMediaSha | Out-Null
-    & python "$PSScriptRoot/android-api21-identity.py" verify --root $root --run $run --abi $Abi
+    & python "$PSScriptRoot/android/android-api21-identity.py" verify --root $root --run $run --abi $Abi
     if ($LASTEXITCODE) { throw 'API21 emulator/media changed during the Qt4 suite' }
 }
-$finalCaptureJson=@(& python "$PSScriptRoot/android-final-log.py" capture --root $root --directory $run --serial $serial --case (Join-Path $run $outcomes[-1].profile) --artifact-lease-held)
+$finalCaptureJson=@(& python "$PSScriptRoot/android/android-final-log.py" capture --root $root --directory $run --serial $serial --case (Join-Path $run $outcomes[-1].profile) --artifact-lease-held)
 if ($LASTEXITCODE) { throw 'Incomplete Qt4 final log capture evidence' }
 $finalCapture=($finalCaptureJson -join [Environment]::NewLine) | ConvertFrom-Json
 foreach ($outcome in $outcomes) {

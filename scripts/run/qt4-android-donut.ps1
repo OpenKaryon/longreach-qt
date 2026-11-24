@@ -8,10 +8,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-. "$PSScriptRoot/android-emulator-state.ps1"
+. "$PSScriptRoot/android/android-emulator-state.ps1"
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 . "$repo/scripts/build/qt4-android/host.ps1"
-. "$PSScriptRoot/android-adb.ps1"
+. "$PSScriptRoot/android/android-adb.ps1"
 if (!$InputDirectory) { $InputDirectory = Join-Path $repo 'downloads/android-donut' }
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'artifacts/qt4-android-donut' }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
@@ -22,7 +22,7 @@ $Profiles=@($Profiles | ForEach-Object { $_.ToLowerInvariant() })
 if (!$Profiles.Count) { throw 'At least one API4 profile is required' }
 if (@($Profiles | Sort-Object -Unique).Count -ne $Profiles.Count) { throw 'Duplicate API4 profile selection' }
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
-. "$repo/scripts/run/android-owned-process.ps1"
+. "$repo/scripts/run/android/android-owned-process.ps1"
 Assert-AndroidOwnedArtifactRootAvailable $output
 $artifactLock=Enter-AndroidArtifactLock $output
 try {
@@ -119,7 +119,7 @@ function Invoke-DonutRun([string] $Profile) {
         '-memory', '128', '-gpu', 'off', '-port', '5580', '-no-boot-anim', '-verbose')
     @{schema_version=1;abi='armeabi';emulator=$emulator;arguments=@($arguments)} |
         ConvertTo-Json -Depth 4 | Set-Content -LiteralPath "$run/emulator-launch.json" -Encoding utf8
-    Invoke-DonutCommand python @("$PSScriptRoot/android-donut-state.py",'capture','--root',$output,'--run',$run,'--artifact-lease-held')
+    Invoke-DonutCommand python @("$PSScriptRoot/android/android-donut-state.py",'capture','--root',$output,'--run',$run,'--artifact-lease-held')
     $runReceipt.emulator_launch_sha256=(Get-FileHash "$run/emulator-launch.json").Hash.ToLowerInvariant()
     $runReceipt.emulator_media_sha256=(Get-FileHash "$run/emulator-media.json").Hash.ToLowerInvariant()
     Write-DonutRunReceipt $run $runReceipt
@@ -192,7 +192,7 @@ function Invoke-DonutRun([string] $Profile) {
             $report = Invoke-DonutAdb @('-s', $serial, 'shell', 'cat',
                 '/data/data/org.longreachqt.donut/files/suite.log')
             $report | Set-Content -Encoding utf8 -LiteralPath "$run/$suite-guest.stdout"
-            Invoke-DonutCommand python @("$repo/scripts/run/android-baselines.py", '--qt', '4', '--api', '4', '--abi', 'armeabi', '--case', $Profile, '--report', "$run/$suite-guest.stdout")
+            Invoke-DonutCommand python @("$repo/scripts/run/android/android-baselines.py", '--qt', '4', '--api', '4', '--abi', 'armeabi', '--case', $Profile, '--report', "$run/$suite-guest.stdout")
             $report | Write-Output
             $summary = '^---- ' + [regex]::Escape($suite) + ': [1-9][0-9]* passed, 0 failed, \d+ skipped ----\s*$'
             if (!($complete -match 'Native probe returned 0\s*$') -or !($report -match $summary)) {
@@ -229,7 +229,7 @@ function Invoke-DonutRun([string] $Profile) {
         Write-DonutRunReceipt $run $runReceipt
     } finally {
         try {
-            $hostTree=& "$PSScriptRoot/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $owner.Owner.frontend_pid -RequireFinalLog
+            $hostTree=& "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $owner.Owner.frontend_pid -RequireFinalLog
         } finally {
             # Always stop the retained tree, including a failed common receipt lookup.
             if ($owner.Process -and !$hostTree) { $hostTree=Stop-AndroidOwnedProcess $owner }
@@ -241,7 +241,7 @@ function Invoke-DonutRun([string] $Profile) {
     }
     $runReceipt.host_process_exit_sha256=$hostTree.host_process_exit_sha256
     Write-DonutRunReceipt $run $runReceipt
-    Invoke-DonutCommand python @("$PSScriptRoot/android-donut-state.py",'complete','--root',$output,'--run',$run,'--artifact-lease-held')
+    Invoke-DonutCommand python @("$PSScriptRoot/android/android-donut-state.py",'complete','--root',$output,'--run',$run,'--artifact-lease-held')
 }
 
 foreach ($profile in $Profiles) { Invoke-DonutRun $profile }

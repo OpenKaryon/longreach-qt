@@ -4,10 +4,14 @@ The [make and build-all interface](../android-build.md) provides SDK and ready-A
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.
 
+Emulator test mode requires a Windows 10+ host, PowerShell 7 and Python 3.11+.
+The [host ownership and completion contract](android-artifacts.md#host-process-ownership-and-completion-receipts)
+applies to new qualification; older runs without those receipts stay historical.
+
 These profiles select `arm64-v8a` or `x86_64` on Android 5/API 21 with upstream
 LLVM 21.1.8.
 The original ARMv7 [API 10 profile](qt5-android-gingerbread.md) remains the default.
-For both ABIs, the standalone probe and both installed-SDK C++23 profiles
+Historical reports for both ABIs record that the standalone probe and both installed-SDK C++23 profiles
 passed 25/25 with no SKIP. The full SDK, eight applications and all thirteen
 emulator cases passed. See the recorded evidence for
 [ARM64](../results/qt5-android-lollipop-arm64-v8a-llvm21-20261119.md) and
@@ -90,11 +94,20 @@ coverage remains the previously documented gap. Passing these cases does not
 claim exhaustive Qt/C++23 conformance or validation on Android 5.0.0.
 
 
-See [Android artifact generations and coverage](android-artifacts.md) for phase
-ownership, packaging receipts, ABI preflight, per-target coverage limits and
-the private ADB environment used in local reproduction.
+See [Android artifacts and coverage](android-artifacts.md) for the current
+generation, producer-report, timed-wait, launch-classification and process-exit
+requirements. Historical runs above do not qualify the changed source or
+receipt format; a native refresh is required for changed native observations.
 
+Console selftests retain `android.app.background_running=true` as a historical
+suspension workaround; this does not qualify normal Activity pause/resume.
+GUI examples retain normal lifecycle handling.
 
-Qt 5 console selftest packages use the standard
-`android.app.background_running=true` metadata for synchronous checks without
-an outer app.exec(). Other GUI example APKs retain their normal lifecycle.
+## Focused sound-cache diagnostic
+
+`scripts/run/android-api21-suite.ps1 -QtMajor 5 -SoundCacheTeardown` requires
+an explicit ready `-OutputDirectory` and selects its extended selftest APK.
+It writes a separate diagnostic with `qualification=false`. ARMv7/x86 use
+their API10 APKs on API21; 64-bit profiles use API21 APKs. The four-ABI source
+route has recording coverage; real WAV guest behavior remains unqualified.
+See the [common diagnostic contract](android-artifacts.md#focused-diagnostics-and-script-layout).

@@ -17,7 +17,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-. "$repo/scripts/run/android-emulator-state.ps1"
+. "$repo/scripts/run/android/android-emulator-state.ps1"
 . "$PSScriptRoot/qt4-android/host.ps1"
 
 if ($Abi -ne 'armeabi') {
@@ -39,7 +39,7 @@ $AndroidSdk = (Resolve-Path -LiteralPath $AndroidSdk).Path
 $inputs = (Resolve-Path -LiteralPath $InputDirectory).Path
 $output = (New-Item -ItemType Directory -Force -Path $OutputDirectory).FullName
 . "$PSScriptRoot/android-api21/artifact-lock.ps1"
-. "$repo/scripts/run/android-owned-process.ps1"
+. "$repo/scripts/run/android/android-owned-process.ps1"
 Assert-AndroidOwnedArtifactRootAvailable $output
 $artifactLock=Enter-AndroidArtifactLock $output
 try {

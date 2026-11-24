@@ -4,14 +4,31 @@ The [make and build-all interface](../android-build.md) provides SDK and ready-A
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.
 
+Emulator test mode requires a Windows 10+ host, PowerShell 7 and Python 3.11+.
+The [host ownership and completion contract](android-artifacts.md#host-process-ownership-and-completion-receipts)
+applies to new qualification; older runs without those receipts stay historical.
+
 This experimental recipe selects ARMv7 `armeabi-v7a`, ARM64 `arm64-v8a`
 or `x86`/`x86_64` from Android 5/API21. ARMv7 remains the default. All four profiles have
-SDK and example runtime evidence, including strict C++23 25/25 without SKIP.
+retained SDK and example runtime evidence, including strict C++23 25/25 without
+SKIP. Those reports are historical; they do not qualify the current source,
+generation/report inventories, observed timed-sync policy or process-exit gates.
 The [ARM64 report](../results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md)
 records all eleven installed-SDK cases. The [x86_64 report](../results/qt6-android-lollipop-x86_64-llvm21-20261120.md)
 records all eleven installed-SDK cases, both gallery GUI captures and strict
 C++23 25/25 without SKIP. The [x86 report](../results/qt6-android-lollipop-x86-llvm21-20261120.md)
-records all eleven cases, CPU evidence without SSE4/AVX and the single-core guest workaround.
+records all eleven cases, CPU evidence without SSE4/AVX and the single-core
+guest workaround. The original ARMv7 evidence verified ten Android patches;
+the current recipe includes eleven, so that report does not qualify the added
+library-path change or a refreshed SDK by implication.
+
+Commit `9493a97` introduced stronger generation/consumer checks after those runs.
+Current qualification additionally requires the four named timed-sync checks
+with observed waiting, expected selftest floors of 296 (x86=297), verified report
+inventories and real process-exit evidence. Select or refresh a compatible SDK
+explicitly, then rebuild native examples, package and test when authorized.
+Old schema1 receipts are not silently adopted, and repackaging alone cannot
+add the changed native checks. No current guest rerun is claimed here.
 Qt and applications use upstream LLVM 21.1.8 and one shared libc++ built
 from the matching LLVM sources. NDK r27 supplies platform headers, CRT,
 link stubs and Android helper sources; its compiler and libc++ are not used.
@@ -84,7 +101,7 @@ Its recorded image ID identifies the SDK used for those example binaries.
 For lightweight orchestration regression checks:
 
 ```powershell
-./scripts/tests/test-qt6-android-modes.ps1
+./scripts/tests/android/test-qt6-android-modes.ps1
 ```
 
 These checks use disposable fixtures and recording stubs for Docker,
@@ -178,33 +195,9 @@ These producer inputs describe the current recipe. Earlier result reports
 identify the SDKs actually tested; changing the compiler recipe does not
 retroactively qualify an older image as a fresh build from the new producer.
 
-## Completed example generations
-
-Examples mode marks the output incomplete before changing any deployment,
-Java input or runtime. Only a successful complete build writes
-`examples-manifest.json`, recording the selected immutable SDK ID, ABI and
-hashes of every packaging input. Packaging checks those files before changing
-any APK and writes `apk-manifest.json` only after all APKs finish. Test mode
-requires the completed APK generation and verifies its hashes before booting.
-Qt 5 includes both core and extended selftest deployments.
-
-A failed rebuild leaves earlier APKs on disk for inspection, but they cannot
-be packaged or tested as the new generation. Complete examples mode, then
-package mode, before starting the new test run. Existing outputs without
-these manifests need that explicit refresh; the scripts do not silently adopt
-them or rebuild the SDK. Saved APK test mode needs the manifests and image-ID
-files, but it does not require the SDK or deployment directories.
-
-PowerShell 7 is required for the Windows entry points. Ordinary artifact
-regressions are `scripts/tests/test_android_artifacts.py` and
-`scripts/tests/test-android-generation.ps1`; they need no SDK build or guest.
-
-The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
-records the current generation checks and installed-APK consumer validation,
-with exact SDK identities and retained failures. Native SDK provenance stays
-separate from consumer refreshes.
-
-
-See [Android artifact generations and coverage](android-artifacts.md) for phase
-ownership, packaging receipts, ABI preflight, per-target coverage limits and
-the private ADB environment used in local reproduction.
+See [Android artifacts and coverage](android-artifacts.md) for completed
+generations, packaging receipts, ABI/CPU and producer reports, timed-wait
+coverage, process termination and ADB/host ownership. API21 diagnostic launch
+options retain their [separate classification](android-artifacts.md#api21-launch-classification).
+Android fixtures and shared implementations are grouped under
+`scripts/tests/android/` and `scripts/run/android/` respectively.

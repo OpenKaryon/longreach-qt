@@ -129,7 +129,7 @@ boot failure; other ABI core counts remain unchanged. The old kernel's
 underlying SMP/emulation defect was not fully isolated. The shared readiness
 helper bounds each boot query to five seconds and total readiness to 300
 seconds, detects a recorded kernel panic or exited guest, and stops only its
-own timed-out client. The `scripts/tests/test-android-wait-boot.ps1` real-child fixture passed
+own timed-out client. The `scripts/tests/android/test-android-wait-boot.ps1` real-child fixture passed
 successful readiness,
 nonzero refusal, hung-client termination/deadline, panic detection, exited
 guest handling and preservation of an unrelated control process.

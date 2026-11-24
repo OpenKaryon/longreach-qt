@@ -16,10 +16,10 @@ the default of the original build entry point.
 
 ## Inputs
 
-On Windows, use Docker Desktop with Linux containers, PowerShell 7, a JDK
+On Windows 10 or later, use Docker Desktop with Linux containers, PowerShell 7, a JDK
 with `javac` and `keytool`, and the Android SDK with Build Tools 36.0.0 and
-Platform Tools. The emulator runner also needs Python 3 for the shared
-C++23 result validator.
+Platform Tools. The build/runner metadata and shared C++23 result validator require Python 3.11
+or later. This legacy recipe does not require an Android 35 platform JAR.
 
 Stage the Qt and LLVM source archives in `downloads/` using their existing
 fetch rules:
@@ -69,7 +69,12 @@ local signing key and v1 APK signing for API 4.
 | `painting.apk` | Painting Lab `--selftest`, including raster, fonts, SVG and print preview |
 
 The runner boots one emulator per APK, verifies the guest's release, API
-and ABI, and saves the guest reports and logcat under `run/<profile>/`.
+and ABI, and saves each attempt under a fresh `run/<profile>-<run-id>/`
+directory. Its `run-inputs.json` binds the selected APK, JNI library and the
+completed native/APK manifests. These remain resident-JNI diagnostics with
+`qualification: false`. A completed diagnostic requires a verified owned
+host-tree shutdown, unchanged inputs/reports and successful final log capture.
+It does not claim normal Android application-process termination.
 Use `-Profiles quick` to rerun both gallery checks. Native libraries,
 QtCore's static archive and ELF reports are under `native/`. Qt Quick
 Gallery and Widgets Gallery each appear in the Android launcher after
@@ -95,3 +100,73 @@ retroactively qualify an older image as a fresh build from the new producer.
 See [Android artifact generations and coverage](android-artifacts.md) for phase
 ownership, packaging receipts, ABI preflight, per-target coverage limits and
 the private ADB environment used in local reproduction.
+
+
+## Combined-recipe generations
+
+The producer and runner acquire the same artifact-root OS lease as other Android
+targets. A busy root fails before metadata/tool operations; same-process attempts
+also refuse an active owned emulator using that root. Native work reserves
+`donut-native-in-progress.json`, records the pinned Qt/LLVM/API4 archives and
+recipe sources, and writes to a fresh `native-build-<id>` directory. The container
+uses its inspected immutable tool-image ID. Completion requires all eight
+ARMv5 JNI libraries, ELF reports and the QtCore archive. Promotion retains the
+previous native files and completed receipts in `native-history/<id>/`; it does
+not fill missing fresh outputs from an old generation or purge history.
+
+`donut-native-manifest.json` describes this combined recipe and its static
+runtime, rather than an installed Qt SDK. Packaging initializes/reuses the local
+key and resolves one Java toolchain before reserving
+`donut-apk-in-progress.json`. `donut-apk-manifest.json` binds the native manifest,
+all eight APKs and their exact packaged JNI bytes, API4/armeabi badging, packaging
+sources, key bytes and host tools/JDK snapshot. The selected platform JAR must
+match the member of the pinned API4 archive; API35 is not substituted.
+
+An interrupted generation remains pending and cannot be tested. Retain its
+files, diagnose the failure and explicitly recover before rerunning the combined
+recipe. Existing APKs without these receipts remain historical; the runner
+refuses them, and no manifest is inferred or backfilled from old output files.
+A fresh native build requires separate authorization in the current review.
+
+The runner now uses the shared bounded ADB client, retained Windows job
+supervisor and artifact-lease transfer. Quick instrumentation has a 55-second
+client budget; final cleanup always stops the owned tree and requires successful
+nonempty final log capture. Actual unquoted argv and the current complete
+SDK/tool inventory are saved as emulator-launch.json and emulator-media.json.
+
+The android-donut-state.py complete/verify commands independently check native/
+APK/JNI generation, argv/media, frozen reports, required behaviors, late fatal
+logs, final-capture proof and host-tree completion. They take --root and --run,
+acquire the root lease and never launch a guest. Qualification remains false.
+
+Ordinary recording checks cover all eight synthetic profiles, focused/retry
+paths and 25 injected failures, with no actual device, Docker, JVM or native
+program. The producer and runner now prepare both archived inputs through
+verified extraction receipts, rather than accepting the original marker files.
+Actual native/guest qualification and installed-SDK parity remain unclaimed.
+
+## Prepared API4 media
+
+The PowerShell archive wrapper delegates to prepare-media.py under the same
+artifact-root lease. It accepts only the pinned API4 SDK and SDK Tools archives,
+checks the archive hash and required layout, and reuses the shared staged ZIP
+extractor. A warm tree must match its extraction recipe, exact file inventory
+and recorded SHA256s. Missing receipts, old markers and changed/extra files
+require staged restoration. The replaced tree and incomplete staging remain
+available for diagnosis; no automatic history purge is performed.
+
+Diagnostic media receipts now bind both archive identities, extraction receipt
+hashes, extractor/preparer source hashes and the complete current input files.
+Completion/reverification require that prepared cache as well as the per-run
+snapshot. Native files, APKs, other cache roots and per-attempt writable userdata
+are preserved. An active emulator on any supported ABI refuses API4 preparation;
+the runner checks this before expanding media.
+
+Six ordinary cache methods exercise tiny ZIPs, warm reuse without extraction,
+old-marker recovery, drift repair/history, interrupted staging, wrong/incomplete
+archives and standalone lease refusal. The complete producer/runner recording
+uses the actual PowerShell archive function and extractor with fixture pins;
+all described binaries remain inert data. Real archived media was only inspected
+for layout, with no extraction, replacement or execution during this review.
+Older diagnostic receipts missing this prepared-cache chain remain historical;
+do not backfill them or claim a fresh Android result.

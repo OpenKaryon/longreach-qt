@@ -19,7 +19,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
-. "$repo/scripts/run/android-emulator-state.ps1"
+. "$repo/scripts/run/android/android-emulator-state.ps1"
 function Invoke-Qt6AndroidTool([string]$Program, [string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program exited with code $LASTEXITCODE" }

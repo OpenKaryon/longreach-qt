@@ -4,6 +4,10 @@ The [make and build-all interface](../android-build.md) provides SDK and ready-A
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.
 
+Emulator test mode requires a Windows 10+ host, PowerShell 7 and Python 3.11+.
+The [host ownership and completion contract](android-artifacts.md#host-process-ownership-and-completion-receipts)
+applies to new qualification; older runs without those receipts stay historical.
+
 This additional profile uses upstream LLVM 21.1.8 and libc++ for Android
 2.3/API 10, x86. The original [Android 1.6/armeabi](qt4-android-donut.md)
 profile remains the default. The shared [API 21 guide](qt4-android-lollipop.md)
@@ -70,3 +74,11 @@ The shared Qt 4 SDK/client cache rules are described in the
 [API21 guide](qt4-android-lollipop.md#runtime-and-modules). API10 uses its own
 ABI-specific BuildKit cache and per-output client volume; archive-only changes
 relink without recompiling unchanged client objects.
+
+
+The JNI case remains resident until explicit package release. The runner now
+saves and checks logcat after each force-stop/uninstall, before clearing it for
+the next profile. A successful host-bound final-log capture and unchanged case
+hashes are also required by full and selected runs. See
+[resident Qt4 cleanup evidence](android-artifacts.md#resident-qt4-case-release-and-final-capture).
+These source/fixture changes do not requalify the historical target results.

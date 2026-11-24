@@ -12,7 +12,7 @@ import sys
 import zipfile
 
 
-_spec = importlib.util.spec_from_file_location('android_baselines', Path(__file__).resolve().parents[2] / 'run/android-baselines.py')
+_spec = importlib.util.spec_from_file_location('android_baselines', Path(__file__).resolve().parents[2] / 'run/android/android-baselines.py')
 _baselines = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_baselines)
 
@@ -24,20 +24,20 @@ _spec = importlib.util.spec_from_file_location('qt4_artifacts', Path(__file__).w
 _qt4_artifacts = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_qt4_artifacts)
 
-_spec = importlib.util.spec_from_file_location('android_emulator_identity', Path(__file__).resolve().parents[2] / 'run/android-api21-identity.py')
+_spec = importlib.util.spec_from_file_location('android_emulator_identity', Path(__file__).resolve().parents[2] / 'run/android/android-api21-identity.py')
 _identity = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_identity)
 
-_spec = importlib.util.spec_from_file_location('android_guest_cpu', Path(__file__).resolve().parents[2] / 'run/android-cpu.py')
+_spec = importlib.util.spec_from_file_location('android_guest_cpu', Path(__file__).resolve().parents[2] / 'run/android/android-cpu.py')
 _cpu = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_cpu)
 
-_spec = importlib.util.spec_from_file_location('android_owned_process', Path(__file__).resolve().parents[2] / 'run/android-owned-process.py')
+_spec = importlib.util.spec_from_file_location('android_owned_process', Path(__file__).resolve().parents[2] / 'run/android/android-owned-process.py')
 _owned = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_owned)
 
 
-_spec = importlib.util.spec_from_file_location('qt4_final_log', Path(__file__).resolve().parents[2] / 'run/android-final-log.py')
+_spec = importlib.util.spec_from_file_location('qt4_final_log', Path(__file__).resolve().parents[2] / 'run/android/android-final-log.py')
 _final = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_final)
 

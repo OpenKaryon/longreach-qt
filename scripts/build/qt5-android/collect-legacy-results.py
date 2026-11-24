@@ -20,12 +20,12 @@ def module(name, path):
     return result
 
 
-coverage = module('android_baselines', REPO / 'scripts/run/android-baselines.py')
+coverage = module('android_baselines', REPO / 'scripts/run/android/android-baselines.py')
 artifacts = module('android_artifacts', REPO / 'scripts/build/android-api21/artifact-manifest.py')
 native = module('android_native_abi', REPO / 'scripts/build/android-api21/native-abi.py')
-process_exit = module('android_process_exit', REPO / 'scripts/run/android-process-exit.py')
-cpu = module('android_guest_cpu', REPO / 'scripts/run/android-cpu.py')
-owned = module('android_owned_process', REPO / 'scripts/run/android-owned-process.py')
+process_exit = module('android_process_exit', REPO / 'scripts/run/android/android-process-exit.py')
+cpu = module('android_guest_cpu', REPO / 'scripts/run/android/android-cpu.py')
+owned = module('android_owned_process', REPO / 'scripts/run/android/android-owned-process.py')
 
 
 def digest(path):

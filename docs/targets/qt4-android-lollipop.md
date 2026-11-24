@@ -4,6 +4,10 @@ The [make and build-all interface](../android-build.md) provides SDK and ready-A
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.
 
+Emulator test mode requires a Windows 10+ host, PowerShell 7 and Python 3.11+.
+The [host ownership and completion contract](android-artifacts.md#host-process-ownership-and-completion-receipts)
+applies to new qualification; older runs without those receipts stay historical.
+
 This profile builds a static Qt 4 SDK and JNI APK clients for Android 5/API 21,
 `x86_64` or `arm64-v8a`, with upstream LLVM 21.1.8 and libc++. The original
 [Android 1.6/armeabi profile](qt4-android-donut.md) remains the default.
@@ -38,15 +42,26 @@ image ID. A missing or incompatible image fails before compilation; it never
 starts an implicit SDK build. It exports the installed producer reports and
 builds twelve JNI libraries, including all eight common applications, in C++23.
 They use their existing qmake projects and shared JNI adapters. Retained native
-clients relink when the installed archive manifest changes, even when copied
-cache timestamps are newer than those archives; compilation objects remain reusable.
+clients relink when actual installed archives, CRT/builtins, runtime libraries,
+platform link inputs or the linker change, even when cache timestamps are newer
+than those inputs; unchanged compilation objects remain reusable.
 
 `package` requires matching SDK/example IDs and all twelve recorded native
 hashes before replacing any APK. It uses host Java/Android tools, the pinned
 platform 35 jar, manifest minimum/target API 21, and local development v1 signing.
-Previous APKs are retained by hash under the ignored output directory.
+The native generation is reserved before compilation and sealed only after
+all twelve recorded libraries match. Packaging captures its Java/tool inputs
+and an already-created signing key, then compares the embedded JNI/runtime
+bytes in every APK against that completed generation. Failed or partial phases
+have no accepted completion receipt. Previous APKs are retained by hash under
+the ignored output directory.
 `test` only fetches pinned emulator media and runs saved APKs. It never compiles
-or packages. Each `-RunName` must be a new directory.
+or packages. Both the test-mode wrapper and standalone runner reject APKs
+bound to an older native generation, including rebuilds with the same SDK ID.
+The collector binds each case to the completed native/package receipts.
+Each `-RunName` must be a new directory. Older unbound output directories need
+a complete examples/package refresh before a new run; historical evidence is
+not rewritten.
 
 The image is `longreach-qt4-android-lollipop-x86_64:llvm21`, prefix
 `/opt/qt4-android-x86_64-llvm`; outputs default to
@@ -78,13 +93,25 @@ actual compiler binary/version, runtime wrappers/target settings, mkspec and
 runtime/platform headers. A change invalidates affected target module/plugin
 objects. Source-only corrections retain incremental objects; repeating an
 unchanged SDK configuration does not rerun configure or target compilation.
-Installed qconfig metadata is refreshed when configuration changes. Introducing
-this expanded fingerprint may invalidate an older unrecorded cache once.
+Prepared-source receipts bind the source archive, source helper and selected
+patch bytes. A changed recipe is applied to a pristine temporary tree before
+changed source files are synchronized into the retained tree. Removed patches
+are reverted; unchanged generated files and objects stay in place. Failed patch
+application leaves the live tree intact, and interrupted synchronization is
+retried before a new receipt is accepted. Unrecorded older trees reconfigure
+once. Configuration/project/mkspec inputs also participate in the SDK key.
+Installed mkspecs, features and qconfig metadata are refreshed. Producer reports
+reject a source recipe or patched file that differs from its prepared receipt.
 
 Public examples mode retains a named client `/work` volume per ABI and output
 root. Its compile key also includes installed Qt headers and host qmake/moc/rcc/uic.
-Compiler/header/option changes clean affected clients. Archive-manifest changes
-only relink clients and retain their compilation objects. Cache storage lives
+After qmake evaluates the project, its effective compiler commands, defines,
+C/C++ flags and include paths participate in the object key. A changed compile
+key cleans the affected client after qmake. Separate link keys include actual
+Qt/plugin archive bytes, runtime/CRT/builtins, selected API platform stubs,
+linker bytes and effective link flags/libraries. Link-only changes relink while
+retaining compilation objects. Failed builds do not publish successful cache
+keys; the core SDK probe uses the same retained-client rules. Cache storage lives
 outside the final SDK image; clearing Docker build cache or that client volume
 naturally removes the corresponding incremental state.
 
@@ -128,3 +155,11 @@ records its independent qualification.
 See [Android artifact generations and coverage](android-artifacts.md) for phase
 ownership, packaging receipts, ABI preflight, per-target coverage limits and
 the private ADB environment used in local reproduction.
+
+
+The JNI case remains resident until explicit package release. The runner now
+saves and checks logcat after each force-stop/uninstall, before clearing it for
+the next profile. A successful host-bound final-log capture and unchanged case
+hashes are also required by full and selected runs. See
+[resident Qt4 cleanup evidence](android-artifacts.md#resident-qt4-case-release-and-final-capture).
+These source/fixture changes do not requalify the historical target results.

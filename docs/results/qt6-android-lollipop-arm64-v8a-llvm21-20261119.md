@@ -86,7 +86,7 @@ Two actual ARM64 issues were corrected before SDK compilation:
 2. The old driver always linked a shared library. Qt CMake's `-fPIE` pthread
    check requires a PIE executable on AArch64. The driver now selects the
    correct link kind, CRT objects and Android dynamic linker. Both PIE and
-   shared pthread links pass `scripts/tests/android-api21-driver.sh` in the
+   shared pthread links pass `scripts/tests/android/android-api21-driver.sh` in the
    Docker runtime stage, without forcing `Threads_FOUND`.
 
 The independent sdk/examples/package/test modes remain separate. Lightweight

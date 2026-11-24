@@ -26,8 +26,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-. "$PSScriptRoot/android-emulator-state.ps1"
-. "$PSScriptRoot/android-shell.ps1"
+. "$PSScriptRoot/android/android-emulator-state.ps1"
+. "$PSScriptRoot/android/android-shell.ps1"
 $Abi=$Abi.ToLowerInvariant()
 $QtQuickBackend=$QtQuickBackend.ToLowerInvariant()
 $crashHoldDiagnostic=$ApplicationArguments -match '(^|\s)--android-crash-hold(\s|$)'
@@ -53,12 +53,12 @@ $completionName=if ($RuntimeProbe) { 'probe-result.txt' } else { 'selftest-resul
 $stdoutName=if ($RuntimeProbe) { 'strict-cxx23.log' } else { 'selftest.stdout' }
 $activity=if ($RuntimeProbe) { 'org.longreachqt.donut.ProbeActivity' } else { 'org.longreachqt.examples.SmokeActivity' }
 
-. "$PSScriptRoot/android-wait-boot.ps1"
-. "$PSScriptRoot/android-cpu.ps1"
-. "$PSScriptRoot/android-owned-process.ps1"
-. "$PSScriptRoot/android-process-exit.ps1"
+. "$PSScriptRoot/android/android-wait-boot.ps1"
+. "$PSScriptRoot/android/android-cpu.ps1"
+. "$PSScriptRoot/android/android-owned-process.ps1"
+. "$PSScriptRoot/android/android-process-exit.ps1"
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
-. "$PSScriptRoot/android-case-state.ps1"
+. "$PSScriptRoot/android/android-case-state.ps1"
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
 $apkInput=(Get-Item -LiteralPath $Apk).FullName
 $roots=Get-AndroidApi10CaseRoots -Apk $apkInput -Directory $OutputDirectory -ArtifactRoot $ArtifactRoot -BatchReceipt $BatchReceipt -CaseName $CaseName
@@ -161,7 +161,7 @@ try {
     if ($NativeSensorFixture) {
         $process.Refresh()
         if ($process.HasExited) { throw 'The owned emulator stopped before sensor inputs' }
-        Invoke-AndroidTool python @("$PSScriptRoot/android-sensor-inputs.py",'--directory',$output,
+        Invoke-AndroidTool python @("$PSScriptRoot/android/android-sensor-inputs.py",'--directory',$output,
             '--request-sha256',$emulatorOwner.RequestSha)
         $receipt.native_sensor_fixture='nonparallel-compass-v1'
         $receipt.native_sensor_fixture_sha256=(Get-FileHash -LiteralPath "$output/native-sensor-inputs.json").Hash.ToLowerInvariant()
@@ -225,7 +225,7 @@ try {
     }
     if ($soundCacheTeardown) {
         $soundStdoutHash=(Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant()
-        Invoke-AndroidTool python @("$repo/scripts/tests/require-android-sound-cache.py", "$output/files/$stdoutName")
+        Invoke-AndroidTool python @("$repo/scripts/tests/android/require-android-sound-cache.py", "$output/files/$stdoutName")
         if ((Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant() -cne $soundStdoutHash) {
             throw 'Sound-cache stdout changed during validation'
         }
@@ -244,7 +244,7 @@ try {
         }
     }
     if ($CaseName) {
-        Invoke-AndroidTool python @("$repo/scripts/run/android-baselines.py", '--qt', '5', '--api', '10', '--abi', $Abi, '--case', $CaseName, '--report', "$output/files/$stdoutName")
+        Invoke-AndroidTool python @("$repo/scripts/run/android/android-baselines.py", '--qt', '5', '--api', '10', '--abi', $Abi, '--case', $CaseName, '--report', "$output/files/$stdoutName")
     }
     Assert-AndroidGuestCpuBinding $output $guestCpu
     Assert-AndroidApi10ApkBinding $roots.Root $Apk $binding

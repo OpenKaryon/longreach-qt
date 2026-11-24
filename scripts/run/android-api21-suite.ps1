@@ -16,15 +16,15 @@ if ($SoundCacheTeardown) {
     if (!$PSBoundParameters.ContainsKey('RunName')) { $RunName='sound-cache-'+[guid]::NewGuid().ToString('N') }
     if ($RunName -cnotmatch '^[a-z0-9][a-z0-9-]{0,63}$') { throw 'Invalid sound diagnostic run name' }
 }
-. "$PSScriptRoot/android-emulator-state.ps1"
+. "$PSScriptRoot/android/android-emulator-state.ps1"
 $Gpu=$Gpu.ToLowerInvariant()
 $QtQuickBackend=$QtQuickBackend.ToLowerInvariant()
-. "$PSScriptRoot/android-api21-log.ps1"
-. "$PSScriptRoot/android-api21-adb.ps1"
-. "$PSScriptRoot/android-wait-boot.ps1"
-. "$PSScriptRoot/android-cpu.ps1"
-. "$PSScriptRoot/android-owned-process.ps1"
-. "$PSScriptRoot/android-process-exit.ps1"
+. "$PSScriptRoot/android/android-api21-log.ps1"
+. "$PSScriptRoot/android/android-api21-adb.ps1"
+. "$PSScriptRoot/android/android-wait-boot.ps1"
+. "$PSScriptRoot/android/android-cpu.ps1"
+. "$PSScriptRoot/android/android-owned-process.ps1"
+. "$PSScriptRoot/android/android-process-exit.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
@@ -76,7 +76,7 @@ if ($SoundCacheTeardown) {
 }
 if ($Api10Compatibility) {
     $forwardCoverage=@{source_api=10;guest_api=21;coverage_api=10;coverage_case='qt-selftest';
-        coverage_policy_sha256=(Get-FileHash -LiteralPath "$repo/scripts/run/android-baselines.json" -Algorithm SHA256).Hash.ToLowerInvariant()}
+        coverage_policy_sha256=(Get-FileHash -LiteralPath "$repo/scripts/run/android/android-baselines.json" -Algorithm SHA256).Hash.ToLowerInvariant()}
 }
 foreach ($app in $apps) {
     if (!(Test-Path -LiteralPath "$root/apk/$app.apk")) { throw "Missing APK: $app" }
@@ -177,7 +177,7 @@ try {
         $report = Get-Content -LiteralPath $stdout
         if ($SoundCacheTeardown) {
             $soundStdoutHash=$stdoutSha
-            & python "$repo/scripts/tests/require-android-sound-cache.py" $stdout
+            & python "$repo/scripts/tests/android/require-android-sound-cache.py" $stdout
             if ($LASTEXITCODE) { throw 'Sound-cache pre-exit protocol failed' }
             Get-AndroidVerifiedHash $stdout $soundStdoutHash | Out-Null
         } elseif ($case.Strict) {
@@ -190,11 +190,11 @@ try {
             $coverageApi=21; $coverageCase=$case.Name
             if ($Api10Compatibility) {
                 $coverageApi=10; $coverageCase='qt-selftest'
-                Get-AndroidVerifiedHash "$repo/scripts/run/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null
+                Get-AndroidVerifiedHash "$repo/scripts/run/android/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null
             }
-            & python "$repo/scripts/run/android-baselines.py" --qt $QtMajor --api $coverageApi --abi $Abi --case $coverageCase --report $stdout
+            & python "$repo/scripts/run/android/android-baselines.py" --qt $QtMajor --api $coverageApi --abi $Abi --case $coverageCase --report $stdout
             if ($LASTEXITCODE) { throw "Coverage regression: $($case.Name)" }
-            if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
+            if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
         }
         $summary = @($report | Where-Object { $_ -match 'passed,.*failed,.*skipped' })
         Get-AndroidVerifiedHash $apk $installedApkSha | Out-Null
@@ -234,7 +234,7 @@ try {
         Write-Output "$($case.Name): $($summary -join ' ')"
     }
 } finally {
-    $hostTree=& "$PSScriptRoot/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
+    $hostTree=& "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid -RequireFinalLog
 }
 
 # A filtered run has no final collector, so verify the tested inputs here too.
@@ -251,7 +251,7 @@ foreach ($outcome in $outcomes) {
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-apks --root $root --qt-major $QtMajor --abi $Abi --artifact-lease-held
 if ($LASTEXITCODE) { throw 'APK generation changed during the API21 suite' }
 
-& python "$PSScriptRoot/android-api21-identity.py" verify --root $root --run $run --abi $Abi
+& python "$PSScriptRoot/android/android-api21-identity.py" verify --root $root --run $run --abi $Abi
 if ($LASTEXITCODE) { throw 'API21 emulator/media changed during the suite' }
 foreach ($outcome in $outcomes) {
     if ($outcome.host_process_owner_sha256 -cne $hostTree.host_process_owner_sha256 -or
@@ -265,15 +265,15 @@ foreach ($outcome in $outcomes) {
         final_logcat_capture_sha256=(Get-FileHash "$run/final-logcat-capture.json" -Algorithm SHA256).Hash.ToLowerInvariant()}
     if ($SoundCacheTeardown -or $Api10Compatibility) { $outcome | Add-Member -NotePropertyName completed -NotePropertyValue $true }
 }
-if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
+if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
 Write-AndroidOwnedProcessJson "$run/results.json" $outcomes
-& python "$PSScriptRoot/android-api21-exit.py" --root $root --run $RunName --qt-major $QtMajor --abi $Abi --artifact-lease-held
+& python "$PSScriptRoot/android/android-api21-exit.py" --root $root --run $RunName --qt-major $QtMajor --abi $Abi --artifact-lease-held
 if ($LASTEXITCODE) { throw 'API21 post-cleanup termination evidence is incomplete' }
 if ($SoundCacheTeardown) {
-    & python "$PSScriptRoot/android-api21-sound-cache.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
+    & python "$PSScriptRoot/android/android-api21-sound-cache.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 sound diagnostic evidence is incomplete' }
 } elseif ($Api10Compatibility) {
-    & python "$PSScriptRoot/android-api21-forward.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
+    & python "$PSScriptRoot/android/android-api21-forward.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 forward diagnostic evidence is incomplete' }
 } elseif (!$CaseNames) {
     & python "$repo/scripts/build/android-api21/collect-results.py" --root $root --run $RunName --abi $Abi --qt-major $QtMajor --artifact-lease-held

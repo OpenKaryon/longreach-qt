@@ -1,5 +1,10 @@
 # Qt 5 API10 x86: sound-cache shutdown correction, 2026-11-22
 
+> Evidence correction, 2026-11-23: [exit-evidence follow-up](qt5-android-api10-exit-evidence-20261123.md)
+> supersedes the clean-shutdown assertions below. Fourteen cases were accepted
+> by the original gate; retained crash evidence prevents treating those results
+> as proof of clean extended-selftest teardown. The original JSON is unchanged.
+
 The corrected SDK passed all fourteen required installed-APK cases in one
 sequential batch, including clean application teardown. The existing corrected
 emulator was reused byte for byte. Only one QtMultimedia source object was

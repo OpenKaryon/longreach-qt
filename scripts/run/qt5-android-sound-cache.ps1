@@ -15,7 +15,7 @@ $ErrorActionPreference='Stop'
 $Abi=$Abi.ToLowerInvariant()
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
-. "$PSScriptRoot/android-adb-endpoint.ps1"
+. "$PSScriptRoot/android/android-adb-endpoint.ps1"
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 $root=(Resolve-Path -LiteralPath $ArtifactRoot).Path
 $SystemDirectory=(Resolve-Path -LiteralPath $SystemDirectory).Path
@@ -38,7 +38,7 @@ $started=$false
 $index=0
 $phase='begin'
 function Invoke-SoundSeriesTool([string[]]$Arguments) {
-    & python "$PSScriptRoot/android-sound-cache-series.py" @Arguments
+    & python "$PSScriptRoot/android/android-sound-cache-series.py" @Arguments
     if ($LASTEXITCODE) { throw "Sound series metadata $($Arguments[0]) failed" }
 }
 try {

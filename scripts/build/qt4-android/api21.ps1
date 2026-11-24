@@ -9,7 +9,7 @@ param([ValidateSet('x86','x86_64','arm64-v8a')][string]$Abi='x86_64',
 $ErrorActionPreference='Stop'
 $Abi=$Abi.ToLowerInvariant()
 $repo=(Resolve-Path "$PSScriptRoot/../../..").Path
-. "$repo/scripts/run/android-emulator-state.ps1"
+. "$repo/scripts/run/android/android-emulator-state.ps1"
 . "$PSScriptRoot/host.ps1"
 function Invoke-Qt4Artifact([string[]]$Arguments) {
     $message=@(& python "$PSScriptRoot/artifact-manifest.py" @Arguments 2>&1)

@@ -4,6 +4,10 @@ The [make and build-all interface](../android-build.md) provides SDK and ready-A
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.
 
+Emulator test mode requires a Windows 10+ host, PowerShell 7 and Python 3.11+.
+The [host ownership and completion contract](android-artifacts.md#host-process-ownership-and-completion-receipts)
+applies to new qualification; older runs without those receipts stay historical.
+
 This SDK targets Android API 10 with ARMv7 `armeabi-v7a` or `x86`, using
 upstream LLVM/Clang/LLD 21.1.8. The ARMv7 guest is Android 2.3.3; the official
 x86 revision5 image actually runs Android 2.3.7. It builds shared Qt libraries and the actual QtActivity
@@ -13,7 +17,7 @@ QtActivity subclass.
 
 ## Inputs and tools
 
-Use Docker Desktop with Linux containers, PowerShell 7, Python 3, a JDK with
+Use Docker Desktop with Linux containers, PowerShell 7, Python 3.11+, a JDK with
 `javac` and `keytool`, and an Android SDK containing platform 35, Build Tools
 36.0.0 and Platform Tools. Set `ANDROID_HOME` or pass `-AndroidSdk`.
 
@@ -56,8 +60,12 @@ floor remains the default for ARMv7. Select `-Abi x86` for the 32-bit Intel
 API10 profile; all four modes support it. Its output is
 `artifacts/qt5-android-gingerbread-x86/` and its default image is
 `longreach-qt5-android-gingerbread-x86:llvm21`. The fetcher selects the matching
-NDKr7 native archive and official x86 image, and the legacy emulator runs
-headlessly with software acceleration disabled and the `core2duo` CPU model.
+NDKr7 native archive and official x86 image. The stock legacy path runs
+headlessly without acceleration using `core2duo`. Supplying an already-built
+corrected classic emulator with `-Mode test -Abi x86 -Emulator /absolute/path/to/emulator-x86.exe`
+selects the classic arguments, `-disable-hax` and `-cpu qemu32`, for every case.
+The affected stock emulator is expected to fail the mandatory COW preflight;
+test mode does not build or patch an emulator.
 The x86 runtime targets i686/SSSE3 without SSE4 or AVX. Its DWARF unwinder uses
 the old Bionic program-header iterator with frame-header caching disabled;
 concurrent library unloading during unwinding has not been qualified.
@@ -65,8 +73,9 @@ The Docker recipe contains host tools, runtime, OpenSSL, QtBase, complete Qt
 and installed SDK stages. Native source builds run offline against verified
 archives with two jobs. Example builds run one application at a time in a
 container limited to two CPUs and 3 GiB RAM. Stop the emulator before building.
-The suite boots one emulator per APK, first for the mandatory C++23 profile
-and then for the eight normal example selftests. Qt-selftest additionally
+The suite boots a fresh guest per case. On x86, `atomic-cow` runs first and
+must pass before strict C++23 or the normal applications. ARMv7 starts with
+strict C++23. Both then run the eight normal example selftests. Qt-selftest additionally
 runs an extended APK built from the same sources: stock Bionic allows only
 96 DSOs per process, including the Android framework. The core and extended
 profiles partition all 74 Qt check groups without deleting checks. Each
@@ -130,74 +139,58 @@ reflection path. The shared APK Activity checks the expected bridge on API 10
 and the eight retained callback signatures on API 11 and later; native startup
 and example tests remain necessary to verify the full Java/native path.
 
-## Lightweight mode checks
+## Shared build and result contract
 
-`./scripts/tests/test-qt5-android-modes.ps1` verifies ready-image reuse, ABI
-rejection, phase isolation, SDK-only compatibility, all nine deployment inputs
-(core plus extended selftest) and test argument forwarding. It uses recording
-stubs and temporary fixtures, without building Qt or starting a guest.
+See [Android artifacts and coverage](android-artifacts.md) for generation
+receipts, packaging tools/keys, producer report inventories, CPU/ABI checks,
+coverage, deadlines, ADB endpoint selection and observed process termination.
+Shared host tools use the digest-pinned Ubuntu 22.04 image, dated apt snapshot
+and pinned LLVM21.1.8 sources. A changed recipe needs an explicit fresh SDK;
+an existing image tag does not establish source freshness.
 
+Android fixtures are grouped under `scripts/tests/android/`; for example,
+`test-qt5-android-modes.ps1` checks phase forwarding with recording stubs.
+Shared runner implementations are under `scripts/run/android/`.
 
-## Shared compiler inputs
+## Implementation notes and current evidence
 
-Android host tools build from the digest-pinned Ubuntu 22.04 image and the
-project's dated apt snapshot. Clang/LLD 21.1.8 come from the SHA256-pinned
-upstream LLVM source archive, with X86, ARM and AArch64 backends. The host
-compiler builds with two jobs and one link job. The shared image is refreshed
-through Docker's cache whenever SDK mode is requested; a pre-existing tag is
-not a freshness check. Build its Dockerfile with the repository root as context.
+The API10 QML gallery selects GIF/JPEG/SVG image plugins (PNG is built into
+QtGui) to stay below Bionic's 96-DSO limit. Other APKs retain normal deployer
+selection; the SDK's module set and strict C++23 checks are unchanged.
+Console selftests retain `android.app.background_running=true`, a workaround
+for historical suspension stalls. It disables dispatcher suspension and does
+not qualify Activity pause/resume or establish the cause of those stalls.
+GUI examples keep normal lifecycle handling.
 
-These producer inputs describe the current recipe. Earlier result reports
-identify the SDKs actually tested; changing the compiler recipe does not
-retroactively qualify an older image as a fresh build from the new producer.
+The x86 futex stub uses a kernel WAIT/WAKE trap with libc error semantics.
+Patch28 uses the condition variable's matching clock. Patch29 retains sensor
+queues through looper dispatch and stops polling before application teardown;
+compass shares that queue ownership. SDK checks reject undefined x86 `futex`
+imports and bind the API21 forward-symbol report. Pinned NDKr27 is used only
+as API21 export metadata here, not as the API10 compiler/runtime.
 
-## Completed example generations
+The [sensor lifecycle result](../results/qt5-api10-sensor-queue-lifecycle-20261123.md)
+records a fresh Qt5 x86 SDK, the 14/14 API10 batch and API21 compatibility runs.
+API10 qualifies acceleration and compass teardown; actual compass headings
+were measured on API21. These results do not qualify ARMv7 or other Qt majors.
+The [earlier sound-cache result](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
+retains its [exit-evidence correction](../results/qt5-android-api10-exit-evidence-20261123.md).
 
-Examples mode marks the output incomplete before changing any deployment,
-Java input or runtime. Only a successful complete build writes
-`examples-manifest.json`, recording the selected immutable SDK ID, ABI and
-hashes of every packaging input. Packaging checks those files before changing
-any APK and writes `apk-manifest.json` only after all APKs finish. Test mode
-requires the completed APK generation and verifies its hashes before booting.
-Qt 5 includes both core and extended selftest deployments.
+## Diagnose an API10 APK on API21
 
-A failed rebuild leaves earlier APKs on disk for inspection, but they cannot
-be packaged or tested as the new generation. Complete examples mode, then
-package mode, before starting the new test run. Existing outputs without
-these manifests need that explicit refresh; the scripts do not silently adopt
-them or rebuild the SDK. Saved APK test mode needs the manifests and image-ID
-files, but it does not require the SDK or deployment directories.
+With a complete matching API10 SDK/examples/APK generation:
 
-PowerShell 7 is required for the Windows entry points. Ordinary artifact
-regressions are `scripts/tests/test_android_artifacts.py` and
-`scripts/tests/test-android-generation.ps1`; they need no SDK build or guest.
+```powershell
+./scripts/run/android-api21-suite.ps1 -QtMajor 5 -Abi x86 -Api10Compatibility -AndroidSdk $env:ANDROID_HOME
+```
 
-The [Android audit follow-up](../results/android-audit-fixes-20261120.md)
-records the current generation checks and installed-APK consumer validation,
-with exact SDK identities and retained failures. Native SDK provenance stays
-separate from consumer refreshes.
+Use `armeabi-v7a` for the other API10 ABI. `-OutputDirectory` selects a custom
+complete generation. Use a fresh `-RunName`; this route runs one core selftest
+with its source API10 policy and writes a separate compatibility diagnostic.
+It cannot be combined with `-CaseNames` or the WAV mode. See the
+[shared diagnostic contract](android-artifacts.md#focused-diagnostics-and-script-layout).
 
-
-See [Android artifact generations and coverage](android-artifacts.md) for phase
-ownership, packaging receipts, ABI preflight, per-target coverage limits and
-the private ADB environment used in local reproduction.
-
-
-The API10 QML gallery APK limits optional image plugins to GIF/JPEG/SVG from
-Qt's deployer selection (PNG is built into QtGui) to leave room below Bionic's 96-DSO loader limit. It does not
-package unused desktop image handlers. Other example APKs retain the normal
-Qt deployer selection. This packaging limit does not remove modules from the
-SDK or relax any QML/strict-C++23 checks.
-
-
-The console `qt-selftest` APK uses Qt's `android.app.background_running=true`
-metadata so its synchronous checks, which have no outer app.exec(), can finish
-independently of Activity suspension. GUI examples retain normal lifecycle
-handling. The API10 runner also verifies stay-awake for the disposable guest
-and retains the power-policy receipt; it does not change host power settings.
-
-
-The [2026-11-22 x86 sound-cache shutdown qualification](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
-records the narrow QtMultimedia cleanup correction and all fourteen successful
-cases on the unchanged corrected emulator, including COW and both strict C++23
-profiles. This result does not qualify the affected stock emulator or another ABI.
+The separate `scripts/run/qt5-android-sound-cache.ps1` driver records twenty
+API10 WAV teardown attempts. Its source/recording coverage does not establish
+real WAV teardown behavior or fix qualification. It has no Make alias and
+requires ready APK/media inputs; no emulator build is performed.

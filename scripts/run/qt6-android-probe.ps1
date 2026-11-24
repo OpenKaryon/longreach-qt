@@ -3,10 +3,10 @@ param([ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi='armea
       [string]$AndroidSdk=$env:ANDROID_HOME, [Parameter(Mandatory)][string]$OutputDirectory,
       [string]$RunName='cxx23-probe')
 $ErrorActionPreference='Stop'
-. "$PSScriptRoot/android-wait-boot.ps1"
-. "$PSScriptRoot/android-api21-adb.ps1"
-. "$PSScriptRoot/android-shell-status.ps1"
-. "$PSScriptRoot/android-owned-process.ps1"
+. "$PSScriptRoot/android/android-wait-boot.ps1"
+. "$PSScriptRoot/android/android-api21-adb.ps1"
+. "$PSScriptRoot/android/android-shell-status.ps1"
+. "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/../build/android-api21/artifact-lock.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
@@ -63,12 +63,12 @@ try {
     $exitCode=$LASTEXITCODE
     Get-Content -LiteralPath "$run/atomic.stdout"
     if ($exitCode -ne 0) { throw 'Generic atomic ADB client failed' }
-    & python "$repo/scripts/tests/require-android-atomic.py" "$run/atomic.stdout"
+    & python "$repo/scripts/tests/android/require-android-atomic.py" "$run/atomic.stdout"
     if ($LASTEXITCODE) { throw 'Generic cross-DSO atomic runtime behavior failed' }
 
 } finally {
     try {
-        & "$PSScriptRoot/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid | Out-Null
+        & "$PSScriptRoot/android/android-api21-cleanup.ps1" -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Owner.frontend_pid | Out-Null
     } finally {
         # Keep the retained owner usable even if receipt lookup in common cleanup fails.
         if ($emulatorOwner.Process) { Stop-AndroidOwnedProcess $emulatorOwner | Out-Null }

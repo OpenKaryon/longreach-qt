@@ -17,6 +17,16 @@ if ($Abi -notin @('armeabi-v7a','x86')) {
     & "$PSScriptRoot/qt6-android.ps1" -Abi $Abi -Scope $Scope -PlatformOnly -AndroidSdk $AndroidSdk
     if ($Scope -eq 'test') { return }
 }
+# API10 SDKs must also check forward symbol availability against pinned API21.
+# Fetch only the shared platform archive; do not fetch an emulator or Qt6 SDK.
+if ($Abi -in @('armeabi-v7a','x86') -and $Scope -ne 'test') {
+    $forwardLock = Get-Content -LiteralPath "$PSScriptRoot/locks/qt6-android-api21-inputs.json" -Raw | ConvertFrom-Json
+    $forwardInputs = @($forwardLock.sources | Where-Object { $_.file -ceq 'android-ndk-r27-linux.zip' })
+    if ($forwardInputs.Count -ne 1) { throw 'Expected one pinned NDK API21 symbol input.' }
+    $forwardInput = $forwardInputs[0]
+    & python "$PSScriptRoot/fetch.py" $forwardInput.url "$repo/downloads/android-lollipop/$($forwardInput.file)" $forwardInput.sha256
+    if ($LASTEXITCODE) { throw 'Could not fetch the API21 forward-symbol platform input.' }
+}
 $testInputs = @('android-2.3.3_r02-linux.zip','kernel-qemu-armv7','tools_r24.4.1-windows.zip','x86-10_r05.zip')
 foreach ($source in $lock.sources) {
     if ($Abi -notin @('armeabi-v7a','x86') -and $source.file -ne 'android-35.jar') { continue }

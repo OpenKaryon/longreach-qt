@@ -44,6 +44,14 @@ def main():
         shutil.copytree(args.sdk / "src/android/templates", destination)
         marker.write_text(app + "\n")
         native = args.build / f"android-build/libs/{args.abi}" / f"lib{app}_{args.abi}.so"
+        # Keep the linker map outside assets/res/libs: it is generation-bound
+        # diagnostic data and must not be packaged into the application.
+        link_map = args.build / app / f"{app}.map"
+        if not link_map.is_file():
+            raise FileNotFoundError(link_map)
+        symbols = destination / "symbols"
+        symbols.mkdir()
+        shutil.copy2(link_map, symbols / link_map.name)
         libraries = destination / f"libs/{args.abi}"
         libraries.mkdir(parents=True)
         shutil.copy2(native, libraries / native.name)

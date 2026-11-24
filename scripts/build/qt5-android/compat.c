@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 // Copyright (C) 2026 OpenKaryon
 
+#include <errno.h>
 #include <float.h>
 #include <math.h>
 #include <sys/resource.h>
@@ -44,9 +45,20 @@ pid_t wait4(pid_t process, int *status, int options, struct rusage *usage)
 {
 #if defined(__i386__)
     // Gingerbread x86 syscall.S restores the incoming EAX after the kernel
-    // call, losing the result. Bionic's exported wait stub preserves it.
-    extern pid_t __wait4(pid_t, int *, int, struct rusage *);
-    return __wait4(process, status, options, usage);
+    // call, losing the result. Its private __wait4 stub is absent from API21.
+    // Exchange EBX with EDI around the kernel call to retain the PIC base.
+    pid_t result;
+    __asm__ volatile("xchgl %%ebx, %1\n\t"
+                     "int $0x80\n\t"
+                     "xchgl %%ebx, %1"
+                     : "=a"(result), "+D"(process)
+                     : "0"(__NR_wait4), "c"(status), "d"(options), "S"(usage)
+                     : "cc", "memory");
+    if (result < 0 && result >= -4095) {
+        errno = -result;
+        return -1;
+    }
+    return result;
 #else
     return syscall(__NR_wait4, process, status, options, usage);
 #endif

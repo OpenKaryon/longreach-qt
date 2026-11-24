@@ -3,6 +3,7 @@
 set -euo pipefail
 source /repo/scripts/build/qt5-android/target-config.sh
 report=/out/qt5-sdk
+rm -rf -- "$report"
 mkdir -p "$report"
 cp "$sdk_prefix/qt-config.summary" "$report/qt-sdk-config.summary"
 cp /work/qt5-sdk-src/.longreach-patches.json "$report/qt-patch-state.json"
@@ -19,5 +20,15 @@ if [[ "$api" == 21 ]]; then
     cp /out/platform-input-provenance.json "$report/"
 else
     cp /opt/longreach-android/runtime-input-provenance.json "$report/"
+    python3 /repo/scripts/build/qt6-android/check-api10-api21-symbols.py "$sdk_prefix" \
+        --abi "$abi" --archive /inputs/android-ndk-r27-linux.zip \
+        --lock /repo/scripts/fetch/locks/qt6-android-api21-inputs.json \
+        --qt-wait-source /work/qt5-sdk-src/qtbase/src/corelib/thread/qwaitcondition_unix.cpp \
+        --openssl-rand-source /tmp/openssl-build/providers/implementations/rands/seeding/rand_unix.c \
+        --report "$report/sdk-api21-forward-symbols.json"
 fi
+llvm-readobj-21 --file-header --dynamic-table /opt/longreach-android/lib/libc++_shared.so > "$report/runtime-elf.txt"
+source /repo/scripts/build/android-api21/generic-atomics.sh
+check_android_generic_atomic_exports /opt/longreach-android/lib/libc++_shared.so "$report/runtime-atomic-exports.txt"
+python3 /repo/scripts/build/android-api21/sdk-reports.py seal --source "$report" --qt-major 5 --abi "$abi"
 echo "Qt5 $abi API$api installed SDK checks passed"

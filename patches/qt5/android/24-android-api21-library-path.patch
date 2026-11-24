@@ -8,8 +8,8 @@
  
              hnd = dlopen(QFile::encodeName(attempt), dlFlags);
  #ifdef Q_OS_ANDROID
-+            // The LP64 API21/22 linker limits the input name to 127 bytes.
-+            // Keep long bundled QML plugins in the application's search path.
++            // API21/22 LP64 rejects long full paths; LP32 normally uses basenames.
++            // Retain the basename retry across ABIs for existing bundled plugins.
 +            if (!hnd && QtAndroidPrivate::androidSdkVersion() <= 22
 +                    && attempt.startsWith(QLatin1Char('/'))
 +                    && QFile::encodeName(attempt).size() >= 128 && QFile::exists(attempt)) {

@@ -103,10 +103,15 @@ RUN --network=none \
     bash /repo/scripts/build/qt5-android/build-qt.sh all
 
 FROM qt-build AS validated
+COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
 COPY scripts/build/qt5-android/finish-sdk.sh /repo/scripts/build/qt5-android/
 COPY scripts/build/qt6-android/validate-api21-elf.py \
+     scripts/build/qt6-android/check-api10-api21-symbols.py \
      scripts/build/qt6-android/input-provenance.py /repo/scripts/build/qt6-android/
-RUN --network=none bash /repo/scripts/build/qt5-android/finish-sdk.sh
+COPY scripts/fetch/locks/qt6-android-api21-inputs.json /repo/scripts/fetch/locks/
+RUN --network=none \
+    --mount=type=bind,source=downloads/android-lollipop/android-ndk-r27-linux.zip,target=/inputs/android-ndk-r27-linux.zip \
+    bash /repo/scripts/build/qt5-android/finish-sdk.sh
 
 FROM tools AS sdk-base
 ARG ANDROID_ABI

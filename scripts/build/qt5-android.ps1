@@ -19,6 +19,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
+. "$repo/scripts/run/android-emulator-state.ps1"
 function Invoke-AndroidBuildTool([string]$Program,[string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program exited with code $LASTEXITCODE." }
@@ -33,10 +34,7 @@ $platform=if ($api -eq '10') { "android-gingerbread-$Abi" } else { "android-loll
 $profile=if ($Abi -eq 'armeabi-v7a') { 'gingerbread' } elseif ($api -eq '10') { "gingerbread-$Abi" } else { "lollipop-$Abi" }
 if (!$SdkImage) { $SdkImage="longreach-qt5-android-${profile}:llvm21" }
 if (!$OutputDirectory) { $OutputDirectory="$repo/artifacts/qt5-android-$profile" }
-if ($Mode -in @('sdk','examples') -and
-        (Get-Process -Name emulator-arm,emulator,emulator-ranchu-arm64,emulator64-ranchu-arm64,qemu-system-armel,qemu-system-aarch64,emulator-x86,emulator64-x86,qemu-system-x86_64,qemu-system-x86_64-headless,qemu-system-i386,qemu-system-i386-headless -ErrorAction SilentlyContinue)) {
-    throw 'Stop the Android emulator before compiling.'
-}
+if ($Mode -in @('sdk','examples')) { Assert-AndroidNoEmulatorRunning -Message 'Stop the Android emulator before compiling.' }
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk.' }
 $AndroidSdk=(Resolve-Path -LiteralPath $AndroidSdk).Path
  . "$repo/scripts/build/android-api21/artifact-lock.ps1"
@@ -69,7 +67,7 @@ switch ($Mode) {
             throw "Image '$SdkImage' is not the Qt5.15.19 / LLVM21.1.8 API$api $Abi SDK."
         }
         $output=(New-Item -ItemType Directory -Path $OutputDirectory -Force).FullName
-        & python "$repo/scripts/build/android-api21/artifact-manifest.py" begin --root $output --qt-major 5 --abi $Abi --sdk-image-id $image.Id
+        & python "$repo/scripts/build/android-api21/artifact-manifest.py" begin --root $output --qt-major 5 --abi $Abi --sdk-image-id $image.Id --artifact-lease-held
         if ($LASTEXITCODE) { throw 'Cannot start an example generation' }
         $sdk=Join-Path $output 'sdk'
         if (Test-Path -LiteralPath $sdk) {
@@ -87,8 +85,8 @@ switch ($Mode) {
         try {
             Invoke-AndroidBuildTool docker @('cp',"${container}:/opt/qt5-android-$Abi-llvm/.",$sdk)
             Invoke-AndroidBuildTool docker @('cp',"${container}:/opt/longreach-android/lib/libc++_shared.so","$native/libc++_shared.so")
-            & docker cp "${container}:/opt/longreach-reports/." $output 2>$null
-            if ($LASTEXITCODE -ne 0 -and ($api -eq '21' -or $Abi -eq 'x86')) { throw "Missing API$api SDK producer reports" }
+            . "$repo/scripts/build/android-api21/sdk-reports.ps1"
+            Import-AndroidSdkReports -Container $container -ProducerDirectory /opt/longreach-reports -OutputDirectory $output -QtMajor 5 -Api $api -Abi $Abi -SdkImageId $image.Id
         } finally { Invoke-AndroidBuildTool docker @('rm',$container) | Out-Null }
         $image.Id | Set-Content "$output/sdk-image-id.txt"
         Invoke-AndroidBuildTool docker @('run','--rm','--platform','linux/amd64','--cpus','2','--memory','3g','--network','none','--env',"PARALLEL_JOBS=$ParallelJobs",
@@ -96,7 +94,7 @@ switch ($Mode) {
             '--mount',"type=bind,source=$AndroidSdk,target=/android-sdk,readonly",'--env','ANDROID_SDK_ROOT=/android-sdk',
             $image.Id,'bash','/repo/scripts/build/qt5-android/build-examples.sh')
         $image.Id | Set-Content "$output/examples-sdk-image-id.txt"
-        & python "$repo/scripts/build/android-api21/artifact-manifest.py" finish --root $output --qt-major 5 --abi $Abi --sdk-image-id $image.Id
+        & python "$repo/scripts/build/android-api21/artifact-manifest.py" finish --root $output --qt-major 5 --abi $Abi --sdk-image-id $image.Id --artifact-lease-held
         if ($LASTEXITCODE) { throw 'Incomplete example generation' }
     }
     'package' {

@@ -14,8 +14,9 @@ function Select-AndroidImageFormats([string]$Directory, [string]$Abi, [string[]]
 
 
 function Get-AndroidExampleMetadata([string]$App) {
-    # This console selftest runs synchronously without app.exec(). Android may
-    # suspend its Activity while startup/lifecycle events are still pending.
+    # Retain the package workaround for historical selftest suspension stalls.
+    # It disables Qt dispatcher suspension; it does not qualify normal Activity
+    # pause/resume behavior. The synchronous main alone does not establish cause.
     if ($App -eq 'qt-selftest') {
         return '<meta-data android:name="android.app.background_running" android:value="true"/>'
     }

@@ -43,6 +43,8 @@ def main():
 
     patches = sorted((repo / "patches/qt5/all").glob("*.patch"))
     patches += sorted((repo / "patches/qt5/android").glob("*.patch"))
+    # Retain the historical x86 scope of the sound-cache candidate. Its source
+    # is shared across ABIs, but crash causality and teardown remain unqualified.
     if os.environ.get("ANDROID_ABI", "armeabi-v7a") == "x86":
         patches += sorted((repo / "patches/qt5/android/x86").glob("*.patch"))
     # Shared LLVM fix: inspect host-call tags before treating frames as objects.

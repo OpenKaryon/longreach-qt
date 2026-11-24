@@ -1,10 +1,23 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
 # Retain language-based voices for early Lollipop engines without the voice API.
+# Keep voice identifier semantics stable for each initialized engine instance.
 
 --- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
 +++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
-@@ -238,45 +238,57 @@
+@@ -62,7 +62,10 @@
+ 
+     private TextToSpeech mTts;
+     private final long mId;
+-    private boolean mInitialized = false;
++    private volatile boolean mInitialized = false;
++    // A QVoice must keep the same identifier semantics for this engine instance.
++    private boolean mVoiceModeKnown = false;
++    private boolean mLegacyVoices = false;
+     private float mPitch = 1.0f;
+     private float mRate = 1.0f;
+     private float mVolume = 1.0f;
+@@ -238,45 +241,69 @@
      public List<Object> getAvailableVoices()
      {
          if (mInitialized && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
@@ -22,9 +35,21 @@
          return new ArrayList<Object>();
      }
  
-+    public boolean usesLegacyVoices()
++    public synchronized boolean usesLegacyVoices()
 +    {
-+        return getAvailableVoices().isEmpty();
++        if (Build.VERSION.SDK_INT < 21)
++            return true;
++        if (!mVoiceModeKnown && mInitialized && mTts != null) {
++            // Decide once, after initialization. An empty/null/throwing first
++            // enumeration selects language-based voices for this instance.
++            // Later enumeration failures must not reinterpret a voice name as
++            // a locale (or switch language-based voices to named voices).
++            mLegacyVoices = getAvailableVoices().isEmpty();
++            mVoiceModeKnown = true;
++        }
++        // Before initialization no API21 voices have been published; do not
++        // freeze the mode from an unavailable engine. Recreate to choose again.
++        return mLegacyVoices;
 +    }
 +
      public List<Locale> getAvailableLocales()
@@ -95,7 +120,7 @@
      }
  
      public Locale getLocale()
-@@ -309,7 +321,8 @@
+@@ -309,7 +336,8 @@
          if (!mInitialized)
              return false;
          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {

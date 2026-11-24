@@ -1,28 +1,45 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 # Copyright (C) 2026 OpenKaryon
-# API10 i386: use the exported six-argument Bionic stub for Qt futex results.
+# API10 i386: bypass the broken variadic syscall() without importing libc futex.
+# Preserve PIC registers and libc error semantics for Qt's WAIT/WAKE operations.
+# QSemaphore's six-argument WAKE_OP path is disabled when QT_POINTER_SIZE == 4.
+# Checked against Qt 5.15.19 qfutex_p.h/qsemaphore.cpp and Bionic 2.3.7 x86 ABI.
 
 --- a/qtbase/src/corelib/thread/qfutex_p.h
 +++ b/qtbase/src/corelib/thread/qfutex_p.h
-@@ -76,6 +76,11 @@
- #  include <unistd.h>
- #  include <asm/unistd.h>
- #  include <linux/futex.h>
-+#  if defined(Q_OS_ANDROID) && defined(__i386__) && __ANDROID_API__ < 21
-+// Gingerbread's variadic syscall() restores EAX instead of returning its result.
-+// The exported Bionic futex stub preserves the kernel result and errno.
-+extern "C" int futex(void *, int, int, void *, void *, int);
-+#  endif
- #  define QT_ALWAYS_USE_FUTEX
- 
- // if not defined in linux/futex.h
-@@ -113,7 +118,12 @@
+@@ -113,7 +113,38 @@
  
          // we use __NR_futex because some libcs (like Android's bionic) don't
          // provide SYS_futex etc.
 +#  if defined(Q_OS_ANDROID) && defined(__i386__) && __ANDROID_API__ < 21
-+        int result = ::futex(addr, op | FUTEX_PRIVATE_FLAG, val,
-+                             reinterpret_cast<void *>(val2), addr2, val3);
++        // Only WAIT/WAKE reach this 32-bit path. QSemaphore uses WAKE_OP only
++        // when QT_POINTER_SIZE > 4; reject extra arguments instead of passing
++        // the PIC register/frame pointer as the fifth/sixth syscall argument.
++        const bool supported = !addr2 && !val3 && (op == FUTEX_WAIT || op == FUTEX_WAKE);
++        Q_ASSERT_X(supported, "QtLinuxFutex::_q_futex", "unexpected legacy x86 futex operation");
++        int result;
++        if (Q_UNLIKELY(!supported)) {
++            errno = ENOSYS;
++            result = -1;
++        } else {
++            // Gingerbread's variadic syscall() loses EAX. Its libc futex()
++            // stub disappears on newer Android, so issue the kernel call
++            // directly. Swap EBX with EDI around the trap to preserve PIC;
++            // ESI supplies the fourth argument without touching EBP or ESP.
++            asm volatile("xchgl %%ebx, %%edi\n\t"
++                         "int $0x80\n\t"
++                         "xchgl %%ebx, %%edi"
++                         : "=a"(result)
++                         : "0"(__NR_futex), "D"(addr), "c"(op | FUTEX_PRIVATE_FLAG),
++                           "d"(val), "S"(val2)
++                         : "memory", "cc");
++            // Match libc's -1/errno contract. On success leave errno alone;
++            // a preceding timeout must not turn a successful wakeup into one.
++            if (uint(result) > uint(-4096)) {
++                errno = -result;
++                result = -1;
++            }
++        }
 +#  else
          int result = syscall(__NR_futex, addr, op | FUTEX_PRIVATE_FLAG, val, val2, addr2, val3);
 +#  endif

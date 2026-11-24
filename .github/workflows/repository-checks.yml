@@ -31,6 +31,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p test_android_cpu.py
           python3 -m unittest discover -s scripts/tests -p test_android_native_abi.py
           python3 -m unittest discover -s scripts/tests -p test_android_elf.py
+          python3 -m unittest discover -s scripts/tests -p test_android_forward_symbols.py
           python3 -m unittest discover -s scripts/tests -p test_android_clang_wrapper.py
           python3 -m unittest discover -s scripts/tests -p test_android_generic_atomics.py
           python3 -m unittest discover -s scripts/tests -p test_android_sound_cache.py
@@ -61,6 +62,7 @@ jobs:
           ./scripts/tests/test-qt4-android-cache-owner.ps1
           ./scripts/tests/test-qt4-android-signing-key.ps1
           ./scripts/tests/test-qt5-android-modes.ps1
+          ./scripts/tests/test-android-forward-symbol-fetch.ps1
           ./scripts/tests/test-qt5-android-legacy-suite.ps1
           ./scripts/tests/test-qt6-android-modes.ps1
           ./scripts/tests/test-android-generation.ps1

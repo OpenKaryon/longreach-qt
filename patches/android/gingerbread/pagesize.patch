@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
+--- a/usr/include/unistd.h
++++ b/usr/include/unistd.h
+@@ -168,9 +168,12 @@
+ 
+ extern int  acct(const char*  filepath);
+ 
++extern int sysconf(int  name);
++
+ static __inline__ int getpagesize(void) {
+-  extern unsigned int __page_size;
+-  return __page_size;
++  /* Keep consumers off Bionic's private __page_size data symbol, which is
++   * not part of the public API21 interface. */
++  return sysconf(_SC_PAGESIZE);
+ }
+ static __inline__ int __getpageshift(void) {
+   extern unsigned int __page_shift;
+@@ -177,8 +180,6 @@
+   return __page_shift;
+ }
+ 
+-extern int sysconf(int  name);
+-
+ extern int daemon(int, int);
+ 
+ /* A special syscall that is only available on the ARM, not x86 function. */

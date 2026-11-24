@@ -16,13 +16,26 @@ from test_android_elf import library
 import android_sdk_report_fixtures as report_fixtures
 
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = importlib.util.spec_from_file_location('forward_symbols', ROOT / 'scripts/build/qt6-android/check-api10-api21-symbols.py')
+SPEC = importlib.util.spec_from_file_location('forward_symbols', ROOT / 'scripts/build/android-api21/check-api10-api21-symbols.py')
 check = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(check)
 
 
 def binary(abi='x86', symbols=(), needed='libc.so', hidden=(), versions=None):
-    data = library(abi=abi, symbols=symbols, needed=needed)
+    names = (needed,) if isinstance(needed, str) else tuple(needed)
+    data = library(abi=abi, symbols=symbols, needed=names[0])
+    cursor = 0x200
+    while struct.unpack_from('<I', data, cursor)[0]:
+        cursor += 8
+    string_offset = 0x680
+    for name in names[1:]:
+        raw = name.encode() + b'\0'
+        data[string_offset:string_offset + len(raw)] = raw
+        struct.pack_into('<II', data, cursor, 1, string_offset - 0x500)
+        cursor += 8
+        string_offset += len(raw)
+    struct.pack_into('<II', data, cursor, 0, 0)
+    struct.pack_into('<II', data, 52 + 32 + 16, cursor + 8 - 0x200, cursor + 8 - 0x200)
     count = len(symbols) + 1
     struct.pack_into('<I', data, 32, 0xd00)
     struct.pack_into('<HH', data, 46, 40, 4 if versions is not None else 3)
@@ -45,7 +58,7 @@ class ForwardSymbols(unittest.TestCase):
         runtime = root / 'libc++_shared.so'
         for directory in ('lib', 'plugins', 'qml'):
             (prefix / directory).mkdir(parents=True)
-        (prefix / 'lib/libQt5Core.so').write_bytes(binary(abi, [('puts', False, 1), ('shared_atomic', False, 1)], 'libdependency.so'))
+        (prefix / 'lib/libQt5Core.so').write_bytes(binary(abi, [('puts', False, 1), ('shared_atomic', False, 1)], ('libdependency.so', 'libc++_shared.so', 'libc.so')))
         (prefix / 'plugins/libdependency.so').write_bytes(binary(abi, [('dependency', True, 1)], 'libc++_shared.so'))
         runtime.write_bytes(binary(abi, [('shared_atomic', True, 1), ('malloc', False, 1)]))
         archive = root / check.ARCHIVE
@@ -75,8 +88,40 @@ class ForwardSymbols(unittest.TestCase):
                 self.assertFalse(report['runtime_loading_verified'])
                 self.assertFalse(report['unresolved_weak_imports_ignored'])
                 core = next(item for item in report['libraries'] if item['path'] == 'lib/libQt5Core.so')
-                self.assertEqual(core['needed_closure'], ['libc++_shared.so', 'libc.so', 'libdependency.so'])
+                self.assertEqual(core['direct_needed'], ['libc++_shared.so', 'libc.so', 'libdependency.so'])
                 self.assertEqual(core['checked_import_names'], ['puts', 'shared_atomic'])
+
+    def test_application_deployments_use_the_sealed_platform_export_context(self):
+        for abi in check.TRIPLES:
+            with self.subTest(abi=abi), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                args = self.fixture(root, abi)
+                context = check.validate(*args)
+                (root / 'sdk-api21-forward-symbols.json').write_text(json.dumps(context))
+                (root / 'native').mkdir()
+                (root / 'native/libc++_shared.so').write_bytes(args[1].read_bytes())
+                apps = [name.strip() for name in (ROOT / 'tests/expected-apps.txt').read_text().splitlines()
+                        if name.strip() and not name.startswith('#') and name.strip() != 'smoke-runner']
+                directories = [(root / 'deployment' / app, app) for app in apps]
+                directories.append((root / 'deployment-extended/qt-selftest', 'qt-selftest'))
+                for deployment, app in directories:
+                    libs = deployment / 'libs' / abi
+                    libs.mkdir(parents=True)
+                    (libs / f'lib{app}_{abi}.so').write_bytes(binary(abi,
+                        [('puts', False, 1), ('shared_atomic', False, 1)], ('libc.so', 'libc++_shared.so')))
+                report = check.validate_deployments(root, abi)
+                self.assertEqual(len(report['libraries']), 18)
+                self.assertEqual(len({item['deployment'] for item in report['libraries']}), 9)
+                self.assertEqual(report['producer_report_sha256'], check.digest(root / 'sdk-api21-forward-symbols.json'))
+                self.assertFalse(report['runtime_loading_verified'])
+
+    def test_transitive_exports_do_not_replace_direct_dependencies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.fixture(Path(directory))
+            (args[0] / 'lib/libQt5Core.so').write_bytes(binary('x86',
+                [('shared_atomic', False, 1)], 'libdependency.so'))
+            with self.assertRaisesRegex(ValueError, 'API21 symbol names unavailable.*shared_atomic'):
+                check.validate(*args)
 
     def test_removed_strong_or_weak_import_is_not_excused_by_unrelated_plugin(self):
         for abi in check.TRIPLES:

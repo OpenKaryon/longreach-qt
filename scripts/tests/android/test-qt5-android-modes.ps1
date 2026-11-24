@@ -81,6 +81,7 @@ function Invoke-ModeKeytool {
 }
 function python {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    if ($Arguments[0] -like '*check-api10-api21-symbols.py') { $global:LASTEXITCODE=0; return }
     if ($Arguments[0] -like '*sdk-reports.py') {
         & $global:Qt5ReportPython @Arguments
         return

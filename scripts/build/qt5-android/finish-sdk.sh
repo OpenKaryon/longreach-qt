@@ -20,7 +20,7 @@ if [[ "$api" == 21 ]]; then
     cp /out/platform-input-provenance.json "$report/"
 else
     cp /opt/longreach-android/runtime-input-provenance.json "$report/"
-    python3 /repo/scripts/build/qt6-android/check-api10-api21-symbols.py "$sdk_prefix" \
+    python3 /repo/scripts/build/android-api21/check-api10-api21-symbols.py "$sdk_prefix" \
         --abi "$abi" --archive /inputs/android-ndk-r27-linux.zip \
         --lock /repo/scripts/fetch/locks/qt6-android-api21-inputs.json \
         --qt-wait-source /work/qt5-sdk-src/qtbase/src/corelib/thread/qwaitcondition_unix.cpp \

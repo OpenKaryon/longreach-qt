@@ -226,6 +226,12 @@ and raw lab protocols live in the private test lab, as for other targets.
 Historical result reports identify their tested SDKs and never qualify changed
 producer recipes, current source or other ABIs by implication.
 
+API10 packaging additionally checks all nine native application deployments
+against direct DT_NEEDED providers and the sealed API21 platform export context.
+This requires a new SDK report format and an explicit SDK/examples refresh;
+packaging does not download an NDK or implicitly rebuild a historical SDK.
+The checker's reusable implementation is under `scripts/build/android-api21/`.
+
 The owned-host `frontend_signaled` field means a signaled Windows process handle
 after wait, not a delivered shutdown signal; the receipt states its passive
 grace/Job-termination policy explicitly.

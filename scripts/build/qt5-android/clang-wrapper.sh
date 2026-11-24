@@ -15,6 +15,10 @@ flags=(--target="$target" --sysroot="$prefix/sysroot"
     -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -DSIZE_MAX=__SIZE_MAX__
     -D_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE -Wno-unused-command-line-argument)
 for argument in "$@"; do
+    # A partial link must not acquire shared-library/startup/runtime inputs.
+    if [[ "$argument" == -r || "$argument" == -Wl,-r || "$argument" == -Wl,--relocatable ]]; then
+        exec "$compiler" "${flags[@]}" "${include[@]}" -fuse-ld=lld -nostdlib "$@"
+    fi
     case "$argument" in
         -c|-E|-S|-M|-MM|--version|-dumpmachine|-dumpversion|-print-*|--print-*)
             exec "$compiler" "${flags[@]}" "${include[@]}" "$@"

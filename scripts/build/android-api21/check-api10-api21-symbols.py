@@ -138,7 +138,7 @@ def validate(prefix, runtime, abi, archive, lock_path, guard_sources=None):
     records = [record for record in lock['sources'] if record.get('file') == ARCHIVE]
     if len(records) != 1 or digest(archive) != records[0]['sha256']:
         raise ValueError('Pinned API21 NDK archive SHA256 mismatch')
-    source = Path(__file__).with_name('validate-api21-elf.py')
+    source = Path(__file__).resolve().parents[1] / 'qt6-android/validate-api21-elf.py'
     spec = importlib.util.spec_from_file_location('forward_sdk_metadata', source)
     metadata = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(metadata)
@@ -194,7 +194,6 @@ def validate(prefix, runtime, abi, archive, lock_path, guard_sources=None):
             elif name in by_name:
                 target = by_name[name][0]
                 available.update(table[target]['defined'])
-                pending.extend(dependencies[target])
             else:
                 raise ValueError(f'Missing API21 dependency for {key}: {name}')
         missing = table[key]['undefined'] - available
@@ -203,11 +202,11 @@ def validate(prefix, runtime, abi, archive, lock_path, guard_sources=None):
         if missing:
             raise ValueError(f'API21 symbol names unavailable for {key}: ' + ', '.join(missing))
         results.append({'path': key, 'sha256': inputs[key],
-                        'needed_closure': sorted(seen),
+                        'direct_needed': sorted(seen), 'exported_names': sorted(table[key]['defined']),
                         'checked_import_names': sorted(table[key]['undefined']),
                         'guarded_optional_weak_imports': optional})
-    return {'schema_version': 1, 'abi': abi, 'source_api': 10, 'platform_api': 21,
-            'validation_scope': 'dependency-symbol-name-availability-with-source-bound-optional-weak-v2',
+    return {'schema_version': 2, 'abi': abi, 'source_api': 10, 'platform_api': 21,
+            'validation_scope': 'direct-needed-symbol-name-availability-with-source-bound-optional-weak-v3',
             'symbol_resolution_verified': False, 'runtime_loading_verified': False,
             'unresolved_weak_imports_ignored': any(item['guarded_optional_weak_imports'] for item in results),
             'blanket_weak_import_exemption': False,
@@ -215,7 +214,94 @@ def validate(prefix, runtime, abi, archive, lock_path, guard_sources=None):
             'platform_lock_sha256': digest(lock_path),
             'platform_archive_sha256': records[0]['sha256'],
             'platform_stub_sha256': platform_hashes,
+            'lookup_policy': 'android-api21-direct-needed-v1',
+            'platform_exports': {name: sorted(exports) for name, exports in platform.items()},
             'excluded_platform_linker_scripts_sha256': linker_scripts, 'libraries': results}
+
+
+
+def validate_deployments(root, abi):
+    """Check the actual deployment closure using a sealed producer export context.
+
+    Packaging needs neither the NDK archive nor compiler source trees. The
+    caller verifies the examples generation, which binds this producer report.
+    """
+    report_path = root / 'sdk-api21-forward-symbols.json'
+    context = json.loads(report_path.read_text(encoding='utf-8-sig'))
+    if (context.get('schema_version') != 2 or context.get('abi') != abi
+            or context.get('lookup_policy') != 'android-api21-direct-needed-v1'
+            or not isinstance(context.get('platform_exports'), dict)):
+        raise ValueError('API10 deployment checks need a current SDK export context; '
+                         'refresh SDK/examples explicitly before packaging')
+    platform = {name: set(exports) for name, exports in context['platform_exports'].items()}
+    if not REQUIRED_PLATFORM <= platform.keys():
+        raise ValueError('Producer export context lacks required API21 platform stubs')
+    policy_path = Path(__file__).resolve().parents[1] / 'qt6-android/validate-api21-elf.py'
+    spec = importlib.util.spec_from_file_location('deployment_forward_metadata', policy_path)
+    metadata = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(metadata)
+    runtime = root / 'native/libc++_shared.so'
+    apps = [name.strip() for name in (Path(__file__).resolve().parents[3] / 'tests/expected-apps.txt').read_text().splitlines()
+            if name.strip() and not name.startswith('#') and name.strip() != 'smoke-runner']
+    deployments = [(root / 'deployment' / app, app) for app in apps]
+    deployments.append((root / 'deployment-extended/qt-selftest', 'qt-selftest-extended'))
+    checked = []
+    for directory, label in deployments:
+        files = list((directory / 'libs' / abi).glob('*.so')) + [runtime]
+        app = 'qt-selftest' if label == 'qt-selftest-extended' else label
+        if not (directory / 'libs' / abi / f'lib{app}_{abi}.so').is_file():
+            raise ValueError('Missing native application deployment: ' + label)
+        tables, dependencies, by_name, hashes = {}, {}, {}, {}
+        for path in files:
+            key = path.relative_to(root).as_posix()
+            hashes[key] = digest(path)
+            tables[key] = symbols(path, abi)
+            dependencies[key] = metadata.inspect(path, abi, 10)['needed']
+            by_name.setdefault(path.name, []).append(key)
+        for name, keys in by_name.items():
+            if name in platform or len({hashes[key] for key in keys}) != 1:
+                raise ValueError('Ambiguous deployment dependency: ' + name)
+        for key, table in tables.items():
+            available = set(table['defined'])
+            for name in dependencies[key]:
+                if name in platform:
+                    available.update(platform[name])
+                elif name in by_name:
+                    available.update(tables[by_name[name][0]]['defined'])
+                else:
+                    raise ValueError(f'Missing packaged API21 dependency for {key}: {name}')
+            missing = table['undefined'] - available
+            # Optional weak calls are accepted only for the exact SDK bytes
+            # whose source guards were already qualified by the producer.
+            optional = set()
+            for record in context['libraries']:
+                if record['sha256'] == hashes[key]:
+                    optional.update(entry['name'] for entry in record.get('guarded_optional_weak_imports', []))
+            missing -= optional & table['undefined_weak'] - table['undefined_strong']
+            if missing:
+                raise ValueError(f'API21 deployment imports unavailable for {key}: ' + ', '.join(sorted(missing)))
+            checked.append({'deployment': label, 'path': key, 'sha256': hashes[key],
+                            'direct_needed': sorted(set(dependencies[key]))})
+    return {'schema_version': 1, 'abi': abi, 'scope': 'api10-deployments-on-api21',
+            'lookup_policy': context['lookup_policy'], 'producer_report_sha256': digest(report_path),
+            'checker_sha256': digest(Path(__file__)), 'runtime_loading_verified': False, 'libraries': checked}
+
+
+def deployments_main(argv):
+    parser = argparse.ArgumentParser(description='Check API10 application deployment imports before APK packaging')
+    parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--abi', choices=tuple(TRIPLES), required=True)
+    args = parser.parse_args(argv)
+    report = args.root / 'deployment-api21-forward-symbols.json'
+    report.unlink(missing_ok=True)
+    result = validate_deployments(args.root, args.abi)
+    temporary = report.with_suffix('.json.tmp')
+    try:
+        temporary.write_text(json.dumps(result, sort_keys=True, indent=2) + '\n', encoding='utf-8')
+        temporary.replace(report)
+    finally:
+        temporary.unlink(missing_ok=True)
+    print(f'API10 {args.abi}: checked {len(result["libraries"])} deployed library instances')
 
 
 def main(argv=None):
@@ -243,4 +329,8 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    if sys.argv[1:2] == ['deployments']:
+        deployments_main(sys.argv[2:])
+    else:
+        main()

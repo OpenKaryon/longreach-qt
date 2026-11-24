@@ -257,7 +257,7 @@ def packaging_inputs(qt, android_sdk, javac=None):
         sources += [REPO / 'scripts/build/qt4-android' / name
                     for name in ('host.ps1', 'api21.ps1', 'artifact-manifest.py')]
     sources += [p for p in (REPO / 'scripts/build/android-api21').glob('artifact-*') if p.is_file()]
-    sources += [REPO / 'scripts/build/android-api21' / name for name in ('host-tools.py', 'packaging-host.ps1', 'sdk-reports.py', 'sdk-reports.ps1')
+    sources += [REPO / 'scripts/build/android-api21' / name for name in ('host-tools.py', 'packaging-host.ps1', 'sdk-reports.py', 'sdk-reports.ps1', 'check-api10-api21-symbols.py')
                 if (REPO / 'scripts/build/android-api21' / name).is_file()]
     snapshot = _host_tools.snapshot(android_sdk, javac)
     if qt != 4:

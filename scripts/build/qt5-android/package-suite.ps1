@@ -23,6 +23,11 @@ foreach ($item in $deployments) {
 }
 & python "$repo/scripts/build/android-api21/artifact-manifest.py" check-examples --root $root --qt-major 5 --abi $Abi --artifact-lease-held
 if ($LASTEXITCODE) { throw 'Packaging requires a complete, unchanged example generation' }
+if ($Abi -in @('armeabi-v7a','x86')) {
+    & python "$repo/scripts/build/android-api21/check-api10-api21-symbols.py" deployments --root $root --abi $Abi
+    if ($LASTEXITCODE) { throw 'API10 native deployments are not compatible with API21 symbol availability' }
+}
+
 . "$repo/scripts/build/android-api21/packaging-host.ps1"
 $javaTools=Get-AndroidPackagingJava
 $javac=$javaTools.launcher

@@ -104,9 +104,9 @@ RUN --network=none \
 
 FROM qt-build AS validated
 COPY scripts/build/android-api21/sdk-reports.py /repo/scripts/build/android-api21/
+COPY scripts/build/android-api21/check-api10-api21-symbols.py /repo/scripts/build/android-api21/
 COPY scripts/build/qt5-android/finish-sdk.sh /repo/scripts/build/qt5-android/
 COPY scripts/build/qt6-android/validate-api21-elf.py \
-     scripts/build/qt6-android/check-api10-api21-symbols.py \
      scripts/build/qt6-android/input-provenance.py /repo/scripts/build/qt6-android/
 COPY scripts/fetch/locks/qt6-android-api21-inputs.json /repo/scripts/fetch/locks/
 RUN --network=none \

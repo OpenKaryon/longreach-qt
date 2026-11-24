@@ -57,7 +57,7 @@ function Invoke-LaunchContender([string]$Root,[string]$Emulator) {
 try {
     New-Item -ItemType Directory -Force "$fixture/scripts/build/android-api21" | Out-Null
     Copy-Item -LiteralPath "$RepoRoot/scripts/build/android-api21/artifact-lock.ps1" -Destination "$fixture/scripts/build/android-api21/artifact-lock.ps1"
-    New-Item -ItemType Directory -Force "$fixture/scripts/run" | Out-Null
+    New-Item -ItemType Directory -Force "$fixture/scripts/run/android" | Out-Null
     Copy-Item -LiteralPath "$RepoRoot/scripts/run/qt6-android-start.ps1" -Destination "$fixture/scripts/run/qt6-android-start.ps1"
     Copy-Item -LiteralPath "$RepoRoot/scripts/run/android/android-emulator-state.ps1" -Destination "$fixture/scripts/run/android/android-emulator-state.ps1"
     Copy-Item -LiteralPath "$RepoRoot/scripts/run/android/android-adb-endpoint.ps1" -Destination "$fixture/scripts/run/android/android-adb-endpoint.ps1"

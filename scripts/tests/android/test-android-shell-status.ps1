@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 . "$RepoRoot/scripts/run/android/android-shell-status.ps1"
 $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullName
 $fixture=Join-Path $parent ('shell-status-'+[guid]::NewGuid())
-$bash=if ($IsWindows) { 'C:/Program Files/Git/bin/bash.exe' } else { (Get-Command bash -CommandType Application -ErrorAction Stop).Source }
+$bash=if ($IsWindows) { 'C:/Program Files/Git/bin/bash.exe' } else { (Get-Command bash -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source }
 if (!(Test-Path -LiteralPath $bash)) { throw 'Bash required for ordinary shell-status fixtures' }
 $savedLastExit=$global:LASTEXITCODE
 $global:AndroidShellFixture=@{Mode='';Bash=$bash;LastMarker='';Markers=[Collections.Generic.HashSet[string]]::new();ActualExit=$null;Wrapped='';Calls=0}
@@ -103,7 +103,7 @@ try {
         $context.Mode='real-shell';$context.ActualExit=$null
         $errorText='';$output=@()
         try { $output=@(Invoke-StatusFixture $case.Command) } catch { $errorText=$_.Exception.Message }
-        Assert-ShellStatus ($context.ActualExit -eq $case.Exit) "Shell source did not preserve exit status: $($case.Command)"
+        Assert-ShellStatus ($context.ActualExit -eq $case.Exit) "Shell source did not preserve exit status: $($case.Command); actual=$($context.ActualExit); error=$errorText"
         if ($case.Exit) { Assert-ShellStatus ($errorText -match "Remote Android setup fixture failed with status $($case.Exit)") 'Remote failure became success through legacy host status' }
         else {
             Assert-ShellStatus (!$errorText) "Successful host shell was refused: $errorText"

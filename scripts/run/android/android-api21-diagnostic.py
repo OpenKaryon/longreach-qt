@@ -21,8 +21,12 @@ def module(name, path):
 
 base = module('diagnostic_api21_base', REPO / 'scripts/build/android-api21/collect-results.py')
 protocol = module('sound_api21_protocol', REPO / 'scripts/tests/android/require-android-sound-cache.py')
+tts_protocol = module('tts_api21_protocol', REPO / 'scripts/tests/android/require-android-tts.py')
 _identity = base._identity
 SPECS = {
+    'tts': {'name': 'tts-behavior', 'app': 'multimedia-lab', 'apk': 'apk/multimedia-lab.apk',
+            'arguments': '--tts-behavior', 'diagnostic': 'qt5-tts-behavior',
+            'output': 'tts-behavior-result.json', 'history': 'tts-behavior-previous-'},
     'sound': {'name': 'sound-cache-teardown', 'apk': 'apk/extended/qt-selftest.apk',
               'arguments': '--sound-cache-teardown', 'diagnostic': 'qt5-sound-cache-teardown',
               'output': 'sound-cache-result.json', 'history': 'sound-cache-previous-'},
@@ -67,10 +71,10 @@ def validate(root, name, abi, kind):
     if len(records) != 1:
         raise ValueError('API21 diagnostic requires exactly one case')
     record = records[0]
-    required = {'name': spec['name'], 'app': 'qt-selftest', 'arguments': spec['arguments'],
+    required = {'name': spec['name'], 'app': spec.get('app', 'qt-selftest'), 'arguments': spec['arguments'],
                 'apk_relative': spec['apk'], 'result': 0, 'scope': 'single-case', 'completed': True,
                 'diagnostic': spec['diagnostic'], 'qualification': False}
-    required.update({'summary': []} if kind == 'sound' else coverage)
+    required.update(coverage if kind == 'forward' else {'summary': []})
     if any(type(record.get(key)) is not type(value) or record[key] != value for key, value in required.items()):
         raise ValueError('Unexpected API21 diagnostic case/qualification')
     launch = base._launch.validate(run, 5, abi, records)
@@ -97,6 +101,8 @@ def validate(root, name, abi, kind):
     text = stdout.read_text(encoding='utf-8-sig')
     if kind == 'sound':
         protocol.validate(text)
+    elif kind == 'tts':
+        tts_protocol.validate(text)
     else:
         base._baselines.require(5, 10, abi, 'qt-selftest', text)
         summaries = [line for line in text.splitlines() if re.fullmatch(r'---- [^\n:]+: \d+ passed, \d+ failed, \d+ skipped ----\s*', line)]

@@ -248,5 +248,5 @@ host regressions separately exercise stale queued delivery and engine lifetime.
 Synthesis volume is zero. Successful states do not establish audible output.
 Source/recording tests or cross-compiled component objects do not qualify an
 actual Android TTS engine; fresh completed guest receipts are still required.
-API21 compilation of the application is supported, but its dedicated runner
-route remains a separate follow-up.
+The [API21 diagnostic route](qt5-android-lollipop.md#explicit-tts-behavior-diagnostic)
+uses the same observations with the API21 engine callback path.

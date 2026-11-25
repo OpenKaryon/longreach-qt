@@ -123,3 +123,26 @@ It writes a separate diagnostic with `qualification=false`. ARMv7/x86 use
 their API10 APKs on API21; 64-bit profiles use API21 APKs. The four-ABI source
 route has recording coverage; real WAV guest behavior remains unqualified.
 See the [common diagnostic contract](android-artifacts.md#focused-diagnostics-and-script-layout).
+
+## Explicit TTS behavior diagnostic
+
+With a complete matching SDK/examples/APK generation carrying patch30 and the
+new multimedia client:
+
+```powershell
+./scripts/run/android-api21-suite.ps1 -QtMajor 5 -Abi arm64-v8a `
+  -SpeechBehavior -OutputDirectory $root -AndroidSdk $env:ANDROID_HOME
+```
+
+The API21 route runs only `multimedia-lab --tts-behavior`, validates eight
+state observations, and writes `tts-behavior-result.json` inside its unique
+run directory. Existing run names are rejected. It cannot be mixed with
+`-CaseNames`, WAV mode or API10 forward mode. The collector checks source/SDK/APK
+binding, native process exit, fatal cleanup logs, final capture and owned host
+tree separately from the TTS transcript; it never publishes a full-suite result.
+
+The [API10 description](qt5-android-gingerbread.md#explicit-android-tts-behavior-diagnostic)
+defines the same bounded state, muted synthesis and resume-restart scope. Use
+the appropriate ABI and complete artifact root for another target. A successful
+diagnostic remains `qualification=false`; it does not establish audible output
+or replace the ordinary full suite. Source/fixture tests are not a guest result.

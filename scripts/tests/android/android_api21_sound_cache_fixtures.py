@@ -16,7 +16,11 @@ PHASES = ('SOUND_CACHE: protocol=1', 'SOUND_CACHE: wav=pcm-s16le-8000-mono',
           'SOUND_CACHE: ready=1', 'SOUND_CACHE: playing=1', 'SOUND_CACHE: destroyed=1', 'SOUND_CACHE: return=0')
 
 
-def prepare(root, abi='x86_64', name='fixture-run'):
+def prepare(root, abi='x86_64', name='fixture-run', *, kind='sound'):
+    selected = sound._shared.SPECS[kind]
+    profile = selected['name']
+    app = selected.get('app', 'qt-selftest')
+    package = 'org.longreachqt.examples.' + app.replace('-', '')
     root = Path(root)
     data.packaged(root, 5, sound.base._artifacts, abi)
     identity = data.media_fixtures.launch(root, abi, name)
@@ -25,19 +29,23 @@ def prepare(root, abi='x86_64', name='fixture-run'):
     host = data.host_fixtures.capture(run, launch['emulator'], launch['arguments'], artifact_root=root)
     cpu_fields = cpu.capture(run, abi)
     options = {'schema_version': 1, 'qt_major': 5, 'abi': abi, 'gpu_requested': 'on',
-               'debug_qt_plugins': False, 'qt_quick_backend': 'default', 'diagnostic': 'qt5-sound-cache-teardown'}
+               'debug_qt_plugins': False, 'qt_quick_backend': 'default', 'diagnostic': selected['diagnostic']}
     (run / 'run-options.json').write_text(json.dumps(options))
     (run / 'guest-properties.txt').write_text('[ro.build.version.release]: [5.0.2]\n[ro.build.version.sdk]: [21]\n[ro.product.cpu.abi]: [' + abi + ']\n')
-    case = run / 'sound-cache-teardown'
+    case = run / profile
     case.mkdir()
     (case / 'files').mkdir()
-    (case / 'files/selftest.stdout').write_text('\n'.join(PHASES) + '\n')
+    text = '\n'.join(PHASES) + '\n'
+    if kind == 'tts':
+        from test_android_tts_protocol import fixture
+        text = fixture()
+    (case / 'files/selftest.stdout').write_text(text)
     (case / 'files/selftest-result.txt').write_text('0\n')
-    process = data.exit_evidence(case, 'org.longreachqt.examples.qtselftest', 'BEGIN-' + uuid.uuid4().hex)
-    record = {'name': 'sound-cache-teardown', 'app': 'qt-selftest', 'arguments': '--sound-cache-teardown',
-              'apk_relative': 'apk/extended/qt-selftest.apk', 'result': 0, 'summary': [], 'scope': 'single-case',
-              'diagnostic': 'qt5-sound-cache-teardown', 'qualification': False, 'completed': True,
-              'apk_sha256': data.digest(root / 'apk/extended/qt-selftest.apk'),
+    process = data.exit_evidence(case, package, 'BEGIN-' + uuid.uuid4().hex)
+    record = {'name': profile, 'app': app, 'arguments': selected['arguments'],
+              'apk_relative': selected['apk'], 'result': 0, 'summary': [], 'scope': 'single-case',
+              'diagnostic': selected['diagnostic'], 'qualification': False, 'completed': True,
+              'apk_sha256': data.digest(root / selected['apk']),
               'apk_manifest_sha256': data.digest(root / 'apk-manifest.json'),
               'stdout_sha256': data.digest(case / 'files/selftest.stdout'),
               'diagnostic_stdout_sha256': data.digest(case / 'files/selftest.stdout'),
@@ -46,8 +54,8 @@ def prepare(root, abi='x86_64', name='fixture-run'):
               'emulator_identity_sha256': identity['emulator_identity_sha256'],
               'emulator_media_sha256': identity['emulator_media_sha256'],
               'launch_arguments': ['shell', 'am', 'start', '-n',
-                  'org.longreachqt.examples.qtselftest/org.longreachqt.examples.SmokeActivity',
-                  '--es', 'applicationArguments', '--sound-cache-teardown'], **host, **cpu_fields, **process}
+                  package + '/org.longreachqt.examples.SmokeActivity',
+                  '--es', 'applicationArguments', selected['arguments']], **host, **cpu_fields, **process}
     data.api21_cleanup_evidence(root, [record], run=name)
     rebind_final(run, record)
     save(run, record)
@@ -59,7 +67,7 @@ def save(run, record):
 
 
 def rebind_stdout(run, record):
-    record['stdout_sha256'] = record['diagnostic_stdout_sha256'] = data.digest(Path(run) / 'sound-cache-teardown/files/selftest.stdout')
+    record['stdout_sha256'] = record['diagnostic_stdout_sha256'] = data.digest(Path(run) / record['name'] / 'files/selftest.stdout')
 
 
 def rebind_final(run, record, **changed):

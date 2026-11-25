@@ -289,6 +289,11 @@ function Start-AndroidOwnedProcess {
     $context.CurrentRun=$Directory;$context.CurrentProfile=([IO.Path]::GetFileName($Directory) -split '-')[0]
     if (!$ArtifactLease -or !$ArtifactLease.CanRead -or $ArtifactRoot -cne $context.Root) { throw 'API4 launch lost its live root lease' }
     $context.Owner=& $global:DonutBaseStart -Program $Program -Arguments $Arguments -Directory $Directory -ArtifactRoot $ArtifactRoot -ArtifactLease $ArtifactLease
+    # Reproduce the stock frontend's observed output in its actual -sysdir.
+    $systemDirectory=$Arguments[[Array]::IndexOf($Arguments,'-sysdir')+1]
+    'frontend-generated hardware configuration' | Set-Content "$systemDirectory/hardware-qemu.ini"
+    New-Item -ItemType Directory -Force "$systemDirectory/hardware-qemu.ini.lock" | Out-Null
+    '9123' | Set-Content "$systemDirectory/hardware-qemu.ini.lock/pid"
     return $context.Owner
 }
 function Get-AndroidOwnedProcess($Directory) {
@@ -392,6 +397,7 @@ function Invoke-AndroidExitQuery {
         'late-debuggerd' { return '*** *** ***' }
         'report-replace' { 'replaced after case' | Set-Content "$Directory/case-logcat.log" }
         'media-change' { Add-Content "$($context.Root)/inputs/tools/emulator-arm.exe" 'changed dependency' }
+        'working-media-change' { Add-Content "$($context.CurrentRun)/system/system.img" 'changed working input' }
         'launch-change' {
             $path="$Directory/emulator-launch.json";$value=Get-Content $path -Raw | ConvertFrom-Json
             $value.arguments[[Array]::IndexOf($value.arguments,'-memory')+1]='64'
@@ -413,7 +419,7 @@ function Invoke-AndroidExitQuery {
     function Start-Sleep { param($Seconds,$Milliseconds) }
     $faults=@('boot-timeout','worker-dead','worker-missing','guest-api','push-timeout','install-timeout','install-no-success',
         'apk-after-install','manifest-after-install','case-nonzero','quick-timeout','quick-missing','quick-duplicate',
-        'strict-missing','strict-nonzero','late-debuggerd','report-replace','media-change','launch-change','owner-rewrite',
+        'strict-missing','strict-nonzero','late-debuggerd','report-replace','media-change','working-media-change','launch-change','owner-rewrite',
         'host-active','cleanup-lookup','unused-native','server-timeout','final-query-failed','final-query-empty')
     foreach ($mode in @('full-ready','focused-ready','boot-nonzero')+$faults) {
         $context.Mode=$mode;$context.StopCalls=0;$context.CurrentRun='';$context.DevicePolls=0;$context.Calls.Clear()

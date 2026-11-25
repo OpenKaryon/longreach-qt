@@ -223,6 +223,15 @@ Actual native/guest qualification and installed-SDK parity remain unclaimed.
 
 ## Prepared API4 media
 
+Each new attempt uses verified copies of `kernel-qemu`, `ramdisk.img`,
+`system.img` and initial `userdata.img` under its own `run/<profile-id>/system`.
+The stock frontend writes `hardware-qemu.ini` and lock files beside `-system`;
+these generated outputs stay in that attempt. The prepared extraction cache
+retains its exact pinned inventory. The four working input hashes are bound
+back to the archive pins before launch and on completion; writable
+`userdata-qemu.img` remains separate from those inputs.
+
+
 The PowerShell archive wrapper delegates to prepare-media.py under the same
 artifact-root lease. It accepts only the pinned API4 SDK and SDK Tools archives,
 checks the archive hash and required layout, and reuses the shared staged ZIP

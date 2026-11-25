@@ -71,6 +71,10 @@ class DonutState(unittest.TestCase):
                       apk_manifest_sha256=state.common.digest(self.root / state.artifacts.APK_MANIFEST),
                       completed=False, qualification=False, host_tree_exit_verified=False, evidence_scope='api4-jni-resident-diagnostic')
         self.save(run, record)
+        system = run / 'system'
+        system.mkdir()
+        for name in ('kernel-qemu', 'ramdisk.img', 'system.img', 'userdata.img'):
+            (system / name).write_bytes((self.root / 'inputs/android-1.6_r03-linux/images' / name).read_bytes())
         program = self.root / 'inputs/tools/emulator-arm.exe'
         arguments = state.arguments(self.root, run)
         state.common.write_json(run / 'emulator-launch.json', {'schema_version': 1, 'abi': 'armeabi', 'emulator': str(program), 'arguments': arguments})
@@ -167,6 +171,27 @@ class DonutState(unittest.TestCase):
         extra.write_text('extra dependency')
         with self.assertRaisesRegex(ValueError, 'emulator/media changed'):
             state.verify(self.root, run)
+
+    def test_generated_hardware_stays_in_attempt_but_copied_images_remain_bound(self):
+        run, _ = self.attempt()
+        system = run / 'system'
+        (system / 'hardware-qemu.ini').write_text('stock frontend output')
+        lock = system / 'hardware-qemu.ini.lock'
+        lock.mkdir()
+        (lock / 'pid').write_text('9123')
+        result = state.verify(self.root, run, completing=True)
+        self.assertTrue(result['completed'])
+        self.assertFalse((self.root / 'inputs/android-1.6_r03-linux/images/hardware-qemu.ini').exists())
+        snapshot = state.common.read_json(run / 'emulator-media.json')
+        for name in ('kernel-qemu', 'ramdisk.img', 'system.img', 'userdata.img'):
+            path = system / name
+            self.assertEqual(snapshot['files'][path.relative_to(self.root).as_posix()],
+                             snapshot['files']['inputs/android-1.6_r03-linux/images/' + name])
+            previous = path.read_bytes()
+            path.write_text('changed working input after guest execution')
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'working image'):
+                state.verify(self.root, run)
+            path.write_bytes(previous)
 
     def test_modified_argv_is_rejected_even_when_the_launch_digest_is_rebound(self):
         run, record = self.attempt()

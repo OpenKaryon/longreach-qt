@@ -32,7 +32,7 @@ FATAL = re.compile(r'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminat
 
 
 def arguments(root, run):
-    base = root / 'inputs/android-1.6_r03-linux/images'
+    base = run / 'system'
     return ['-sysdir', str(base), '-datadir', str(run), '-system', str(base / 'system.img'),
             '-kernel', str(base / 'kernel-qemu'), '-ramdisk', str(base / 'ramdisk.img'),
             '-data', str(run / 'userdata-qemu.img'), '-initdata', str(base / 'userdata.img'),
@@ -40,11 +40,21 @@ def arguments(root, run):
             '-memory', '128', '-gpu', 'off', '-port', '5580', '-no-boot-anim', '-verbose']
 
 
-def media(root):
+def media(root, run):
     try:
-        return prepared.verify(root / 'inputs')
+        snapshot = prepared.verify(root / 'inputs')
     except (OSError, ValueError) as error:
         raise ValueError('API4 emulator/media changed or is unprepared: ' + str(error)) from error
+    # The stock frontend emits hardware-qemu.ini beside -system. Keep that
+    # output in this attempt, while binding every copied input to the pins.
+    directory = artifacts.safe(run / 'system')
+    for name in ('kernel-qemu', 'ramdisk.img', 'system.img', 'userdata.img'):
+        path = artifacts.safe(directory / name)
+        expected = snapshot['files']['inputs/android-1.6_r03-linux/images/' + name]
+        if not path.is_file() or common.digest(path) != expected:
+            raise ValueError('API4 working image differs from pinned stock media: ' + name)
+        snapshot['files'][path.relative_to(root).as_posix()] = expected
+    return snapshot
 
 
 def selected(root, run):
@@ -79,7 +89,7 @@ def launch(root, run):
 def capture(root, run):
     selected(root, run)
     launch(root, run)
-    snapshot = media(root)
+    snapshot = media(root, run)
     native = artifacts.check_native(root)
     if snapshot['files']['inputs/android-1.6_r03-linux/android.jar'] != native['inputs']['android_jar_sha256']:
         raise ValueError('API4 run platform JAR differs from the pinned native input')
@@ -139,7 +149,7 @@ def verify(root, run, completing=False):
     value = launch(root, run)
     if (record.get('emulator_launch_sha256') != common.digest(run / 'emulator-launch.json') or
             record.get('emulator_media_sha256') != common.digest(run / 'emulator-media.json') or
-            common.read_json(run / 'emulator-media.json') != media(root)):
+            common.read_json(run / 'emulator-media.json') != media(root, run)):
         raise ValueError('API4 emulator/media changed during the attempt')
     owned.validate_emulator(run, launch=value, bindings=record, artifact_root=root)
     check_outputs(run, record)

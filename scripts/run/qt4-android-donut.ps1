@@ -108,15 +108,25 @@ function Invoke-DonutRun([string] $Profile) {
         native_manifest_sha256=$nativeManifestSha;apk_manifest_sha256=$apkManifestSha;
         completed=$false;qualification=$false;evidence_scope='api4-jni-resident-diagnostic';host_tree_exit_verified=$false}
     Write-DonutRunReceipt $run $runReceipt
+    # The stock frontend writes hardware-qemu.ini/locks into -sysdir.
+    # Own those outputs in the attempt, never in the sealed extraction cache.
+    $runSystem=(New-Item -ItemType Directory -Path (Join-Path $run 'system')).FullName
+    foreach ($imageName in @('kernel-qemu','ramdisk.img','system.img','userdata.img')) {
+        $stockImage=Join-Path $system $imageName
+        $workingImage=Join-Path $runSystem $imageName
+        $expectedImageSha=(Get-FileHash -LiteralPath $stockImage -Algorithm SHA256).Hash.ToLowerInvariant()
+        Copy-Item -LiteralPath $stockImage -Destination $workingImage
+        Get-AndroidVerifiedHash $workingImage $expectedImageSha | Out-Null
+    }
     $data = Join-Path $run 'userdata-qemu.img'
-    Copy-Item -LiteralPath "$system/userdata.img" -Destination $data -Force
+    Copy-Item -LiteralPath "$runSystem/userdata.img" -Destination $data
     $adbEndpoint=Get-AndroidAdbEndpoint
     Invoke-DonutAdb @('start-server') -Endpoint $adbEndpoint
 
-    $arguments = @('-sysdir', $system, '-datadir', $run,
-        '-system', (Join-Path $system 'system.img'), '-kernel', (Join-Path $system 'kernel-qemu'),
-        '-ramdisk', (Join-Path $system 'ramdisk.img'), '-data', $data,
-        '-initdata', (Join-Path $system 'userdata.img'), '-no-window', '-no-audio',
+    $arguments = @('-sysdir', $runSystem, '-datadir', $run,
+        '-system', (Join-Path $runSystem 'system.img'), '-kernel', (Join-Path $runSystem 'kernel-qemu'),
+        '-ramdisk', (Join-Path $runSystem 'ramdisk.img'), '-data', $data,
+        '-initdata', (Join-Path $runSystem 'userdata.img'), '-no-window', '-no-audio',
         '-no-snapshot', '-no-snapstorage', '-no-skin', '-skin', '320x480',
         '-memory', '128', '-gpu', 'off', '-port', '5580', '-no-boot-anim', '-verbose')
     @{schema_version=1;abi='armeabi';emulator=$emulator;arguments=@($arguments)} |

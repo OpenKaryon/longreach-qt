@@ -134,6 +134,13 @@ client budget; final cleanup always stops the owned tree and requires successful
 nonempty final log capture. Actual unquoted argv and the current complete
 SDK/tool inventory are saved as emulator-launch.json and emulator-media.json.
 
+Selftest and network reports use named coverage policies as well as count
+floors. A new SKIP, duplicated outcome or missing required behavior cannot be
+hidden by compensating PASS counts. API4 shares the Qt4 lists, with only
+`xmlpatterns/xquery-eval` and `xmlpatterns/extras` added for its disabled
+QtXmlPatterns module. API10/API21 retain required XQuery coverage. This policy
+does not turn an API4 diagnostic into full-suite qualification.
+
 The android-donut-state.py complete/verify commands independently check native/
 APK/JNI generation, argv/media, frozen reports, required behaviors, late fatal
 logs, final-capture proof and host-tree completion. They take --root and --run,

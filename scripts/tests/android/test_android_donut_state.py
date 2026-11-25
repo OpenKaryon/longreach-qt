@@ -170,13 +170,39 @@ class DonutState(unittest.TestCase):
                 ('quick', 'quick-smoke-guest.txt', 'PASS: qrc and first frame\n', 'required behavior'),
                 ('quick', 'quick-smoke-guest.txt', '\n'.join('PASS: ' + name for name in state.QUICK) + '\nSKIP: ' + state.QUICK[0] + '\n', 'required behavior'),
                 ('strict', 'strict-cxx23-guest.stdout', '__cplusplus: 202302\nSUMMARY: 0 passed, 0 failed, 0 skipped\n', 'must PASS'),
-                ('network', 'network-gui-guest.stdout', 'FAIL: observed failure\n---- network-gui: 2 passed, 0 failed, 0 skipped ----\n', 'failed named')):
+                ('network', 'network-gui-guest.stdout', 'FAIL: observed failure\n---- network-gui: 2 passed, 0 failed, 0 skipped ----\n', 'named outcomes|failed named')):
             run, record = self.attempt(profile)
             (run / name).write_text(text)
             record['case_outputs'][name] = state.common.digest(run / name)
             self.save(run, record)
             with self.subTest(profile=profile), self.assertRaisesRegex((ValueError, RuntimeError), error):
                 state.verify(self.root, run, completing=True)
+
+    def test_same_count_undeclared_skip_or_missing_required_behavior_cannot_complete(self):
+        for profile in ('selftest', 'network'):
+            for fault in ('unknown-skip', 'missing-required-pass'):
+                run, record = self.attempt(profile)
+                policy = state.baselines.policy(4, 4, 'armeabi', profile)
+                path = run / (state.REPORTS[profile] + '-guest.stdout')
+                text = path.read_text()
+                summary = text.splitlines()[-1]
+                text = text.removesuffix(summary + '\n')
+                text += '\n'.join('SKIP: ' + name for name in policy['allowed_skip']) + '\n'
+                text += summary.replace('0 skipped', str(len(policy['allowed_skip'])) + ' skipped') + '\n'
+                if fault == 'unknown-skip':
+                    text = text.replace('SKIP: ' + policy['allowed_skip'][0] + '\n',
+                                        'SKIP: fixture/lost-capability\n')
+                    reason = 'unexpected SKIP'
+                else:
+                    text = text.replace('PASS: ' + policy['required_pass'][0] + '\n',
+                                        'PASS: fixture/replacement\n')
+                    reason = 'missing required PASS'
+                path.write_text(text)
+                record['case_outputs'][path.name] = state.common.digest(path)
+                self.save(run, record)
+                with self.subTest(profile=profile, fault=fault), self.assertRaisesRegex(ValueError, reason):
+                    state.verify(self.root, run, completing=True)
+                self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
 
     def test_missing_or_empty_final_capture_cannot_complete_a_diagnostic(self):
         for fault in ('missing', 'empty', 'wrong-owner'):

@@ -146,6 +146,73 @@ class CoverageTests(unittest.TestCase):
             with patch.object(gate, 'BASELINES', path), self.assertRaisesRegex(ValueError, 'Invalid named'):
                 gate.policy(4, 21, 'x86_64', 'network')
 
+    def test_donut_named_profiles_accept_only_declared_limits_and_fewer_skips(self):
+        target = (4, 4, 'armeabi')
+        for case in ('selftest', 'network'):
+            for with_skips in (True, False):
+                for newline in ('\n', '\r\n'):
+                    text = self.qt4_report(target, case, with_skips).replace('\n', newline)
+                    with self.subTest(case=case, skips=with_skips, newline=newline):
+                        self.assertEqual(gate.require(*target, case, text)[1], 0)
+        policy = gate.policy(*target, 'selftest')
+        self.assertEqual(policy['min_pass'], 102)
+        self.assertEqual(policy['max_skip'], 122)
+        self.assertIn('xmlpatterns/xquery-eval', policy['allowed_skip'])
+        self.assertIn('xmlpatterns/extras', policy['allowed_skip'])
+        self.assertIn('script/engine-eval', policy['required_pass'])
+        self.assertNotIn('xmlpatterns/xquery-eval', policy['required_pass'])
+        for case in ('graphics', 'painting', 'strict'):
+            self.assertEqual(gate.policy(*target, case)['max_skip'], 0)
+
+    def test_donut_same_counters_cannot_hide_replaced_skip_or_required_pass(self):
+        target = (4, 4, 'armeabi')
+        for case in ('selftest', 'network'):
+            policy = gate.policy(*target, case)
+            text = self.qt4_report(target, case)
+            allowed = policy['allowed_skip'][0]
+            changed = text.replace('SKIP: ' + allowed + ' - expected module/platform limitation',
+                                   'SKIP: fixture/lost-capability - unexpected')
+            with self.subTest(case=case), self.assertRaisesRegex(ValueError, 'unexpected SKIP'):
+                gate.require(*target, case, changed)
+            required = policy['required_pass'][0]
+            changed = text.replace('PASS: ' + required + '\n', 'PASS: fixture/replacement\n')
+            with self.subTest(case=case), self.assertRaisesRegex(ValueError, 'missing required PASS'):
+                gate.require(*target, case, changed)
+
+    def test_donut_duplicate_missing_or_falsely_summarized_checks_fail(self):
+        target = (4, 4, 'armeabi')
+        text = self.qt4_report(target, 'network')
+        first = 'SKIP: network/websocket-server-construct - expected module/platform limitation'
+        second = 'SKIP: ssl/supported - expected module/platform limitation'
+        for changed in (text.replace(second, ''), text.replace(second, first),
+                        text.replace(second, 'FAIL: ssl/supported - hidden failure')):
+            with self.subTest(text=changed), self.assertRaisesRegex(ValueError, 'named outcomes|duplicate named'):
+                gate.require(*target, 'network', changed)
+
+    def test_donut_extension_does_not_allow_xmlpatterns_skips_on_installed_abis(self):
+        for target in ((4, 10, 'x86'), (4, 21, 'x86_64'), (4, 21, 'arm64-v8a')):
+            policy = gate.policy(*target, 'selftest')
+            self.assertEqual(policy['min_pass'], 114)
+            self.assertEqual(policy['max_skip'], 120)
+            self.assertIn('xmlpatterns/xquery-eval', policy['required_pass'])
+            self.assertNotIn('xmlpatterns/xquery-eval', policy['allowed_skip'])
+            text = self.qt4_report(target, 'selftest')
+            text = text.replace('PASS: xmlpatterns/xquery-eval', 'PASS: fixture/replacement')
+            with self.subTest(target=target), self.assertRaisesRegex(ValueError, 'missing required PASS'):
+                gate.require(*target, 'selftest', text)
+
+    def test_named_profile_extensions_reject_duplicates_and_required_pass_conflicts(self):
+        catalog = json.loads(gate.BASELINES.read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'baselines.json'
+            for extra in ('process/run', 'script/engine-eval'):
+                changed = json.loads(json.dumps(catalog))
+                changed['targets']['4/4/armeabi']['selftest']['allowed_skip'].append(extra)
+                path.write_text(json.dumps(changed))
+                with self.subTest(extra=extra), patch.object(gate, 'BASELINES', path):
+                    with self.assertRaisesRegex(ValueError, 'Invalid named'):
+                        gate.policy(4, 4, 'armeabi', 'selftest')
+
 
 if __name__ == '__main__':
     unittest.main()

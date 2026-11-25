@@ -16,7 +16,10 @@
       },
       "selftest": {
         "min_pass": 114,
-        "named_profile": "qt4-selftest"
+        "named_profile": "qt4-selftest",
+        "required_pass": [
+          "xmlpatterns/xquery-eval"
+        ]
       },
       "widgets": {
         "min_pass": 135,
@@ -73,7 +76,10 @@
       },
       "selftest": {
         "min_pass": 114,
-        "named_profile": "qt4-selftest"
+        "named_profile": "qt4-selftest",
+        "required_pass": [
+          "xmlpatterns/xquery-eval"
+        ]
       },
       "widgets": {
         "min_pass": 135,
@@ -130,7 +136,10 @@
       },
       "selftest": {
         "min_pass": 114,
-        "named_profile": "qt4-selftest"
+        "named_profile": "qt4-selftest",
+        "required_pass": [
+          "xmlpatterns/xquery-eval"
+        ]
       },
       "widgets": {
         "min_pass": 135,
@@ -720,7 +729,11 @@
     "4/4/armeabi": {
       "selftest": {
         "min_pass": 102,
-        "max_skip": 122
+        "named_profile": "qt4-selftest",
+        "allowed_skip": [
+          "xmlpatterns/xquery-eval",
+          "xmlpatterns/extras"
+        ]
       },
       "graphics": {
         "min_pass": 32,
@@ -732,7 +745,7 @@
       },
       "network": {
         "min_pass": 2,
-        "max_skip": 2
+        "named_profile": "qt4-network"
       },
       "strict": {
         "min_pass": 25,
@@ -874,8 +887,7 @@
         "concurrent/run",
         "sql/driver-available",
         "sql/crud+prepared",
-        "script/engine-eval",
-        "xmlpatterns/xquery-eval"
+        "script/engine-eval"
       ]
     },
     "qt4-widgets": {

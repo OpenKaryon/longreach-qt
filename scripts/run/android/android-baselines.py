@@ -25,7 +25,8 @@ def policy(qt, api, abi, case):
     profile = baseline.pop('named_profile', None)
     if profile is not None:
         names = catalog['named_profiles'][profile]
-        allowed = names['allowed_skip']
+        # Per-target omissions extend the shared profile; required checks still conflict.
+        allowed = baseline.get('allowed_skip', []) + names['allowed_skip']
         required = list(dict.fromkeys(baseline.get('required_pass', []) + names['required_pass']))
         if (not all(isinstance(name, str) and name for name in allowed + required)
                 or len(allowed) != len(set(allowed)) or set(allowed) & set(required)):

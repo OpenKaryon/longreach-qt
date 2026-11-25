@@ -208,17 +208,18 @@ function Invoke-DonutRun([string] $Profile) {
                 $logs = @(Read-DonutLog $run)
                 if ($logs -match 'LongreachDonut.*Native probe returned -?\d+\s*$') { break }
             }
-            if (!($logs -match [regex]::Escape($expected[$Profile]))) { throw "Expected $Profile probe result was absent." }
             $logs | Where-Object { $_ -match 'LongreachDonut' }
             if ($Profile -eq 'core' -and !($logs -match 'QtCore 4\.8\.7 PASS')) { throw 'QtCore result was absent.' }
             if ($Profile -eq 'strict') {
-                if (!($logs -match 'Classic locale check passed')) { throw 'Classic locale result was absent.' }
                 $report = Invoke-DonutAdb @('-s', $serial, 'shell', 'cat',
                     '/data/data/org.longreachqt.donut/files/strict-cxx23.log')
                 $report | Set-Content -Encoding utf8 -LiteralPath "$run/strict-cxx23-guest.stdout"
+                # Preserve the strict report even when JNI reports a failure.
+                if (!($logs -match 'Classic locale check passed')) { throw 'Classic locale result was absent.' }
                 Invoke-DonutCommand python @("$repo/scripts/tests/require-modern-cpp.py", "$run/strict-cxx23-guest.stdout")
             }
         }
+        if ($expected.ContainsKey($Profile) -and !($logs -match [regex]::Escape($expected[$Profile]))) { throw "Expected $Profile probe result was absent." }
         if ($Profile -eq 'quick') { Read-DonutLog $run | Out-Null }
         $outputNames=@('case-logcat.log')
         if ($suites.ContainsKey($Profile)) { $outputNames+="$($suites[$Profile])-guest.stdout" }

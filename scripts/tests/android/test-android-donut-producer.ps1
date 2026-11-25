@@ -314,7 +314,7 @@ function Stop-AndroidOwnedProcess($Control,$GraceMilliseconds) {
 function Get-DonutRecordedLog {
     $profile=$global:DonutProducerFixture.CurrentProfile
     $code=if ($profile -eq 'bootstrap') { '42' } else { '0' }
-    if ($global:DonutProducerFixture.Mode -eq 'case-nonzero') { $code='1' }
+    if ($global:DonutProducerFixture.Mode -in @('case-nonzero','strict-nonzero')) { $code='1' }
     if ($profile -eq 'quick') { return 'I/Quick( 123): recorded rendering' }
     "I/LongreachDonut( 123): Native probe returned $code"
     if ($profile -eq 'core') { 'I/LongreachDonut( 123): QtCore 4.8.7 PASS' }
@@ -413,7 +413,7 @@ function Invoke-AndroidExitQuery {
     function Start-Sleep { param($Seconds,$Milliseconds) }
     $faults=@('boot-timeout','worker-dead','worker-missing','guest-api','push-timeout','install-timeout','install-no-success',
         'apk-after-install','manifest-after-install','case-nonzero','quick-timeout','quick-missing','quick-duplicate',
-        'strict-missing','late-debuggerd','report-replace','media-change','launch-change','owner-rewrite',
+        'strict-missing','strict-nonzero','late-debuggerd','report-replace','media-change','launch-change','owner-rewrite',
         'host-active','cleanup-lookup','unused-native','server-timeout','final-query-failed','final-query-empty')
     foreach ($mode in @('full-ready','focused-ready','boot-nonzero')+$faults) {
         $context.Mode=$mode;$context.StopCalls=0;$context.CurrentRun='';$context.DevicePolls=0;$context.Calls.Clear()
@@ -422,7 +422,7 @@ function Invoke-AndroidExitQuery {
         foreach ($name in @('final-results.json','final-results-table.md','apk-native-abi-check.json','apk-architecture-final.json','screenshots.json')) {
             'old full PASS' | Set-Content (Join-Path $root $name)
         }
-        $selection=if ($mode -like 'quick-*') { @('quick') } elseif ($mode -eq 'strict-missing') { @('strict') } else { @('core') }
+        $selection=if ($mode -like 'quick-*') { @('quick') } elseif ($mode -like 'strict-*') { @('strict') } else { @('core') }
         $options=@{InputDirectory="$fixture/inputs";OutputDirectory=$root;AndroidSdk="$fixture/sdk"}
         if ($mode -ne 'full-ready') { $options.Profiles=$selection }
         $message=$null
@@ -447,12 +447,17 @@ function Invoke-AndroidExitQuery {
                 'boot-timeout' { 'boot query timeout' };'worker-dead' { 'tree exited|Required final Android log capture' };'worker-missing' { 'tree exited|Required final Android log capture' };'guest-api' { 'Unexpected guest' }
                 'push-timeout' { 'push timeout' };'install-timeout' { 'install timeout' };'install-no-success' { 'APK install failed' }
                 'apk-after-install' { 'Artifact bytes differ' };'manifest-after-install' { 'Artifact bytes differ' }
-                'case-nonzero' { 'probe result was absent' };'quick-timeout' { 'instrumentation timeout' };'quick-missing' { 'Missing Quick' }
+                'case-nonzero' { 'probe result was absent' };'strict-nonzero' { 'probe result was absent' };'quick-timeout' { 'instrumentation timeout' };'quick-missing' { 'Missing Quick' }
                 'owner-rewrite' { 'host launch identity changed' };'final-query-failed' { 'Required final Android log capture' };'final-query-empty' { 'Required final Android log capture' };'cleanup-lookup' { 'cleanup lookup failure' };'server-timeout' { 'server timeout' }
                 default { 'generation validator refused' }
             }
             Assert-DonutProducer ($message -match $expected) "Unexpected full runner $mode outcome: $message"
             Assert-DonutProducer ($newRuns.Count -eq $before+1) 'Failed attempt overwrote history or created extra runs'
+            if ($mode -eq 'strict-nonzero') {
+                $saved=Join-Path $context.CurrentRun 'strict-cxx23-guest.stdout'
+                Assert-DonutProducer ((Test-Path -LiteralPath $saved) -and
+                    ((Get-Content -LiteralPath $saved -Raw) -match '25 passed')) 'Failed strict JNI return lost its fetched stdout'
+            }
             if ($context.CurrentRun) {
                 Assert-DonutProducer ($context.StopCalls -eq 1) 'Failed case did not stop its retained tree exactly once'
                 $record=Get-Content "$($context.CurrentRun)/run-inputs.json" -Raw | ConvertFrom-Json

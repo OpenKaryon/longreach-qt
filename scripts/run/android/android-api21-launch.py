@@ -50,7 +50,10 @@ def application_arguments(qt, case, options):
         raise ValueError('Unexpected API21 APK for case: ' + name)
     package = ('org.longreachqt.examples.qt6.' + app.replace('-', '_') if qt == 6
                else 'org.longreachqt.examples.' + app.replace('-', ''))
-    result = ['shell', 'am', 'start', '-n', package + '/org.longreachqt.examples.SmokeActivity',
+    helper = (['CLASSPATH=/system/framework/am.jar', '/system/bin/app_process32',
+               '/system/bin', 'com.android.commands.am.Am']
+              if options.get('activity_manager_abi', 'default') == 'x86' else ['am'])
+    result = ['shell', *helper, 'start', '-n', package + '/org.longreachqt.examples.SmokeActivity',
               '--es', 'applicationArguments', arguments]
     if options['debug_qt_plugins']:
         result += ['--ez', 'debugQtPlugins', 'true']
@@ -68,6 +71,17 @@ def validate(run, qt, abi, records):
             type(options.get('debug_qt_plugins')) is not bool or
             options.get('qt_quick_backend') not in ('default', 'software')):
         raise ValueError('Missing or invalid API21 run launch options')
+    activity_manager = options.get('activity_manager_abi', 'default')
+    if activity_manager not in ('default', 'x86') or (activity_manager == 'x86' and abi != 'x86_64'):
+        raise ValueError('Invalid Activity Manager helper ABI')
+    if activity_manager == 'x86':
+        helper_path = run / 'activity-manager-helper.elf'
+        helper = helper_path.read_bytes()
+        if (len(helper) < 52 or helper[:7] != b'\x7fELF\x01\x01\x01' or helper[18:20] != b'\x03\x00' or
+                options.get('activity_manager_helper_sha256') != digest(helper_path)):
+            raise ValueError('Activity Manager helper bytes or ABI differ from the run')
+    elif 'activity_manager_helper_sha256' in options:
+        raise ValueError('Default Activity Manager cannot claim an explicit helper witness')
     diagnostic = options.get('diagnostic', 'none')
     if diagnostic not in ('none', 'qt5-sound-cache-teardown', 'qt5-api10-on-api21', 'qt5-tts-behavior', 'qt5-android-extras'):
         raise ValueError('Invalid API21 diagnostic mode')

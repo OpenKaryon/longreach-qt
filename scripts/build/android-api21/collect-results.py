@@ -151,7 +151,7 @@ def _collect(args):
     report['all_host_process_trees_exited'] = True
     report['apk_manifest_sha256'] = apk_manifest_sha256
     report['examples_manifest_sha256'] = _artifacts.digest(root / 'examples-manifest.json')
-    status = ('Qualification: true (default launch options)' if report['qualification']
+    status = ('Qualification: true (validated launch options)' if report['qualification']
               else 'Qualification: false (diagnostic launch): ' + '; '.join(report['diagnostic_reasons']))
     table = [status, ''] + table
     _artifacts.write_text_atomic(root / 'final-results-table.md', '\n'.join(table) + '\n')

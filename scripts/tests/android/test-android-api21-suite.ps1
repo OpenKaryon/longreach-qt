@@ -136,6 +136,12 @@ function Invoke-AndroidApi21Adb {
     if ($Parameters[0] -in @('start-server','reconnect')) { return }
     if ($Parameters[0] -eq 'logcat') { return @(Get-FixtureExitLog | Select-Object -First 2) }
     if ($Parameters[0] -eq 'pull') {
+        if ($Parameters[1] -eq '/system/bin/app_process32') {
+            $helper=[byte[]]::new(52);$helper[0]=127;$helper[1]=69;$helper[2]=76;$helper[3]=70;$helper[4]=1;$helper[5]=1;$helper[6]=1;$helper[18]=3
+            if ($global:Api21FixtureMutation -eq 'am-helper-wrong-abi') { $helper[4]=2 }
+            [IO.File]::WriteAllBytes($Parameters[-1],$helper)
+            return 'helper pulled'
+        }
         if ($global:Api21FixtureMutation -in @('pull-failure','native-return-pull-failure')) { throw 'ADB report pull failed: fixture' }
         $target=$Parameters[-1]
         New-Item -ItemType Directory -Force $target | Out-Null
@@ -176,6 +182,10 @@ function Invoke-AndroidApi21Adb {
             if ($global:Api21FixtureMutation -eq 'manifest-after-marker') { [IO.File]::AppendAllText("$global:Api21FixtureRoot/apk-manifest.json","`n") }
         }
         return "${status}:0"
+    }
+    if ($Parameters.Count -gt 5 -and $Parameters[0] -eq 'shell' -and $Parameters[1] -eq 'CLASSPATH=/system/framework/am.jar') {
+        if (($Parameters[1..4] -join ' ') -cne 'CLASSPATH=/system/framework/am.jar /system/bin/app_process32 /system/bin com.android.commands.am.Am') { throw 'Unexpected AM helper launch' }
+        $Parameters=@('shell','am')+@($Parameters | Select-Object -Skip 5)
     }
     if ($Parameters[0] -eq 'shell') {
         switch ($Parameters[1]) {
@@ -327,6 +337,19 @@ $proof
         Assert-Suite ($global:Api21FixtureStopped -and $null -ne $final) 'Full synthetic suite skipped cleanup/publication'
         Assert-Suite ($final.all_required_passed -and $final.all_process_exits_confirmed -and $final.qualification -and $final.required_cases -eq $results.Count) 'Synthetic full report lost its required coverage/default classification'
         Assert-Suite (@($results | Where-Object { !$_.process_exit_confirmed -or !$_.apk_manifest_sha256 }).Count -eq 0) 'Real runner lost exit/APK identity'
+        $global:Api21FixtureCalls.Clear()
+        $entry.RunName='full-am32';$entry.ActivityManagerAbi='x86'
+        & $runner @entry | Out-Null
+        $amReport=Get-Content "$root/final-results.json" -Raw | ConvertFrom-Json
+        Assert-Suite ($amReport.qualification -and $amReport.required_cases -eq $results.Count -and
+            $amReport.launch_options.activity_manager_abi -ceq 'x86') 'Explicit helper lost full coverage or launch receipt'
+        Assert-Suite (@($global:Api21FixtureCalls | Where-Object { $_ -like 'shell am *' }).Count -eq 0 -and
+            @($global:Api21FixtureCalls | Where-Object { $_ -like 'shell CLASSPATH=*com.android.commands.am.Am start *' }).Count -eq $results.Count -and
+            @($global:Api21FixtureCalls | Where-Object { $_ -like 'shell (*CLASSPATH=*com.android.commands.am.Am force-stop*' }).Count -eq (2*$results.Count)) 'Runner mixed native and explicit helper calls'
+        $global:Api21FixtureMutation='am-helper-wrong-abi';$entry.RunName='am32-wrong-abi'
+        Expect-SuiteFailure { & $runner @entry | Out-Null } 'not an ELF32 x86 executable'
+        Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/final-results.json")) 'Invalid helper bypassed cleanup or retained success'
+        $global:Api21FixtureMutation='';$entry.Remove('ActivityManagerAbi')
         $apk="$root/apk/network-gui.apk"
         $other="$root/apk/graphics-gallery.apk"
         $apkBytes=[IO.File]::ReadAllBytes($apk)

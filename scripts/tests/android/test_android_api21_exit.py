@@ -48,6 +48,66 @@ def collect(root, qt, abi='x86_64'):
 
 
 class Api21Exit(unittest.TestCase):
+    def test_explicit_x86_helper_cannot_relabel_an_arm64_guest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            records = fixture.api21(root, 6, collector._artifacts, 'arm64-v8a')
+            options_path = root / 'fixture-run/run-options.json'
+            options = json.loads(options_path.read_text())
+            options['activity_manager_abi'] = 'x86'
+            options_path.write_text(json.dumps(options))
+            with self.assertRaisesRegex(ValueError, 'Invalid Activity Manager helper ABI'):
+                collect(root, 6, 'arm64-v8a')
+            self.assertFalse((root / 'final-results.json').exists())
+
+    def test_explicit_x86_am_helper_keeps_full_coverage_and_fatal_gate(self):
+        for fault in ('none', 'missing', 'wrong-abi', 'changed-bytes', 'native-launch', 'late-helper-fatal'):
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                records = fixture.api21(root, 6, collector._artifacts)
+                run = root / 'fixture-run'
+                helper = bytearray(52)
+                helper[:7] = b'\x7fELF\x01\x01\x01'
+                helper[18] = 3
+                (run / 'activity-manager-helper.elf').write_bytes(helper)
+                options = json.loads((run / 'run-options.json').read_text())
+                options.update(activity_manager_abi='x86',
+                               activity_manager_helper_sha256=fixture.digest(run / 'activity-manager-helper.elf'))
+                (run / 'run-options.json').write_text(json.dumps(options))
+                prefix = ['shell', 'CLASSPATH=/system/framework/am.jar',
+                          '/system/bin/app_process32', '/system/bin', 'com.android.commands.am.Am']
+                for record in records:
+                    record['launch_arguments'] = prefix + record['launch_arguments'][2:]
+                    record['run_options_sha256'] = fixture.digest(run / 'run-options.json')
+                (run / 'results.json').write_text(json.dumps(records))
+                if fault == 'missing':
+                    (run / 'activity-manager-helper.elf').unlink()
+                elif fault == 'wrong-abi':
+                    helper[4] = 2
+                    (run / 'activity-manager-helper.elf').write_bytes(helper)
+                    options['activity_manager_helper_sha256'] = fixture.digest(run / 'activity-manager-helper.elf')
+                    (run / 'run-options.json').write_text(json.dumps(options))
+                    for record in records:
+                        record['run_options_sha256'] = fixture.digest(run / 'run-options.json')
+                    (run / 'results.json').write_text(json.dumps(records))
+                elif fault == 'changed-bytes':
+                    (run / 'activity-manager-helper.elf').write_bytes(bytes(helper) + b'changed')
+                elif fault == 'native-launch':
+                    records[0]['launch_arguments'] = ['shell', 'am'] + records[0]['launch_arguments'][6:]
+                    (run / 'results.json').write_text(json.dumps(records))
+                elif fault == 'late-helper-fatal':
+                    text = (run / 'final-logcat.log').read_text()
+                    final_capture(root, records, text + '\nF/libc(9999): Fatal signal 11 (SIGSEGV), tid 9998 (Binder_2)\n')
+                if fault == 'none':
+                    report = collect(root, 6)
+                    self.assertTrue(report['qualification'])
+                    self.assertEqual(report['required_cases'], 11)
+                    self.assertEqual(report['launch_options']['activity_manager_abi'], 'x86')
+                else:
+                    with self.assertRaises((OSError, ValueError, RuntimeError)):
+                        collect(root, 6)
+                    self.assertFalse((root / 'final-results.json').exists())
+
     def test_full_collector_refuses_late_own_pid_debuggerd_with_rebound_capture(self):
         for qt in (5, 6):
             with self.subTest(qt=qt), tempfile.TemporaryDirectory() as temporary:

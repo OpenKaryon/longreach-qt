@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
       [string[]]$CaseNames, [switch]$SoundCacheTeardown, [switch]$SpeechBehavior, [switch]$AndroidExtrasBehavior, [switch]$Api10Compatibility, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
-      [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
+      [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory, [ValidateSet('default','x86')][string]$ActivityManagerAbi='default')
 $ErrorActionPreference='Stop'
+if ($ActivityManagerAbi -eq 'x86' -and $Abi -ne 'x86_64') { throw 'The x86 Activity Manager helper requires an x86_64 guest' }
 if ($AndroidExtrasBehavior) {
     if ($QtMajor -ne 5 -or $SoundCacheTeardown -or $SpeechBehavior -or $Api10Compatibility -or $PSBoundParameters.ContainsKey('CaseNames')) {
         throw 'AndroidExtras requires an exclusive QtMajor5 diagnostic without CaseNames'
@@ -71,10 +72,16 @@ function Invoke-Adb {
     param([string[]]$Parameters,[switch]$AllowNonzero)
     Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters $Parameters -AllowNonzero:$AllowNonzero
 }
+function Get-ActivityManagerArguments([string[]]$Arguments) {
+    if ($ActivityManagerAbi -eq 'x86' -and $Arguments[0] -eq 'am') {
+        return @('CLASSPATH=/system/framework/am.jar','/system/bin/app_process32','/system/bin','com.android.commands.am.Am') + @($Arguments | Select-Object -Skip 1)
+    }
+    return $Arguments
+}
 function Invoke-CheckedAndroidShell {
     param([string]$Step,[string[]]$Arguments,[string]$OutputPath)
-    $command=($Arguments | ForEach-Object { ConvertTo-AndroidShellArgument $_ }) -join ' '
     $budget=if ($Arguments[0] -eq 'am') { 30000 } else { 15000 }
+    $command=((Get-ActivityManagerArguments $Arguments) | ForEach-Object { ConvertTo-AndroidShellArgument $_ }) -join ' '
     Invoke-AndroidSetupCommand -Adb $adb -Serial $serial -Step $Step -Command $command -OutputPath $OutputPath -TimeoutMilliseconds $budget | Out-Null
 }
 $apps = @(Get-Content -LiteralPath "$repo/tests/expected-apps.txt" | Where-Object { $_ -match '^[a-z]' -and $_ -ne 'smoke-runner' })
@@ -135,8 +142,6 @@ try {
     if ($SpeechBehavior) { $runOptions.diagnostic='qt5-tts-behavior' }
     if ($AndroidExtrasBehavior) { $runOptions.diagnostic='qt5-android-extras' }
     if ($Api10Compatibility) { $runOptions.diagnostic='qt5-api10-on-api21'; $runOptions += $forwardCoverage }
-    $runOptions | ConvertTo-Json | Set-Content -LiteralPath "$run/run-options.json" -Encoding utf8
-    $runOptionsSha=(Get-FileHash -LiteralPath "$run/run-options.json" -Algorithm SHA256).Hash.ToLowerInvariant()
     Invoke-AndroidApi21Adb -Adb $adb -Parameters @('start-server') | Out-Null
     # Do not reset offline transports belonging to other ADB clients.
     Wait-AndroidBoot -Adb $adb -Serial $serial -RunDirectory $run -EmulatorPid $emulatorOwner.Process.Id -EmulatorProcess $emulatorOwner.Process
@@ -146,6 +151,16 @@ try {
         if ($value -ne $expected[$property]) { throw "Unexpected $property=$value" }
     }
     Invoke-Adb @('shell','getprop') | Set-Content -LiteralPath "$run/guest-properties.txt"
+    if ($ActivityManagerAbi -eq 'x86') {
+        Invoke-Adb @('pull','/system/bin/app_process32',"$run/activity-manager-helper.elf") | Set-Content "$run/activity-manager-helper-pull.log"
+        $helper=[IO.File]::ReadAllBytes("$run/activity-manager-helper.elf")
+        if ($helper.Length -lt 52 -or [BitConverter]::ToString($helper[0..6]) -cne '7F-45-4C-46-01-01-01' -or
+                $helper[18] -ne 3 -or $helper[19] -ne 0) { throw 'Activity Manager helper is not an ELF32 x86 executable' }
+        $runOptions.activity_manager_abi='x86'
+        $runOptions.activity_manager_helper_sha256=(Get-FileHash "$run/activity-manager-helper.elf").Hash.ToLowerInvariant()
+    }
+    $runOptions | ConvertTo-Json | Set-Content -LiteralPath "$run/run-options.json" -Encoding utf8
+    $runOptionsSha=(Get-FileHash -LiteralPath "$run/run-options.json" -Algorithm SHA256).Hash.ToLowerInvariant()
     Invoke-Adb @('shell','cat','/proc/cpuinfo') | Set-Content -LiteralPath "$run/guest-cpuinfo.txt"
     $guestCpu=Save-AndroidGuestCpuBaseline $run $Abi
     Invoke-CheckedAndroidShell -Step unlock -Arguments @('input','keyevent','82') -OutputPath "$run/setup-unlock.stdout"
@@ -171,7 +186,7 @@ try {
         $logMarker = 'BEGIN-' + [guid]::NewGuid().ToString('N')
         $logMarker | Set-Content "$destination/log-marker.txt"
         Invoke-CheckedAndroidShell -Step launch-marker -Arguments @('log','-p','i','-t','LongreachCase',$logMarker) -OutputPath "$destination/launch-marker.stdout"
-        $launchArguments = @('shell','am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments)
+        $launchArguments = @('shell') + @(Get-ActivityManagerArguments @('am','start','-n',"$package/org.longreachqt.examples.SmokeActivity",'--es','applicationArguments',$case.Arguments))
         if ($DebugQtPlugins) { $launchArguments += @('--ez','debugQtPlugins','true') }
         if ($QtQuickBackend -ne 'default') {
             $launchArguments += @('--es','qtQuickBackend',$QtQuickBackend)

@@ -201,3 +201,18 @@ coverage, process termination and ADB/host ownership. API21 diagnostic launch
 options retain their [separate classification](android-artifacts.md#api21-launch-classification).
 Android fixtures and shared implementations are grouped under
 `scripts/tests/android/` and `scripts/run/android/` respectively.
+
+### Stock x86_64 Activity Manager helper
+
+For API21 x86_64, `scripts/run/android-api21-suite.ps1` accepts
+`-ActivityManagerAbi x86`. This runs the stock `com.android.commands.am.Am`
+through `/system/bin/app_process32` for activity launches and force-stop setup.
+The guest, Qt libraries and APK ABI remain x86_64. The runner copies the helper,
+checks its ELF32/x86 identity, and binds its SHA256 and actual launch arguments
+to the result. The option is rejected for other guest ABIs.
+
+This provides an explicit environment choice when the stock 64-bit AM helper
+crashes. It does not repair or qualify that helper. All application exit,
+scoped fatal-log, final-capture and owned process-tree checks still apply;
+partial or failed runs cannot qualify the full suite. Without the option the
+runner uses the guest's default `am` command.

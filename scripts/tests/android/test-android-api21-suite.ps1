@@ -111,7 +111,7 @@ else:
 '@ | Set-Content "$fixture/data.py"
     @'
 function Invoke-AndroidApi21Adb {
-    param($Adb,$Serial,[string[]]$Parameters,[switch]$AllowNonzero)
+    param($Adb,$Serial,[string[]]$Parameters,[switch]$AllowNonzero,[int]$TimeoutMilliseconds=0)
     if ($Parameters -contains 'reconnect') { throw 'Fixture: suite must not reset global ADB transports' }
     $global:Api21FixtureCalls.Add($Parameters -join ' ')
     if ($Parameters[0] -eq 'install') {
@@ -126,7 +126,7 @@ function Invoke-AndroidApi21Adb {
     if ($Parameters[0] -in @('start-server','reconnect')) { return }
     if ($Parameters[0] -eq 'logcat') { return @(Get-FixtureExitLog | Select-Object -First 2) }
     if ($Parameters[0] -eq 'pull') {
-        if ($global:Api21FixtureMutation -eq 'pull-failure') { throw 'ADB report pull failed: fixture' }
+        if ($global:Api21FixtureMutation -in @('pull-failure','native-return-pull-failure')) { throw 'ADB report pull failed: fixture' }
         $target=$Parameters[-1]
         New-Item -ItemType Directory -Force $target | Out-Null
         if ($global:Api21FixtureCase -eq 'sound-cache-teardown') {
@@ -150,7 +150,7 @@ function Invoke-AndroidApi21Adb {
                 [IO.File]::WriteAllText("$target/selftest.stdout",$text)
             }
         }
-        [IO.File]::WriteAllText("$target/selftest-result.txt",'0')
+        [IO.File]::WriteAllText("$target/selftest-result.txt",$(if($global:Api21FixtureMutation -like 'native-return*'){'1'}else{'0'}))
         return 'files pulled'
     }
     if ($Parameters.Count -eq 2 -and $Parameters[0] -eq 'shell' -and $Parameters[1] -match 'LONGREACH_SHELL_[a-f0-9]{32}') {
@@ -176,6 +176,7 @@ function Invoke-AndroidApi21Adb {
                 }
                 $global:Api21FixturePolls++
                 if ($global:Api21FixturePolls -eq 1) { return } # exercise incomplete poll/log branch
+                if ($global:Api21FixtureMutation -like 'native-return*') { return '1' }
                 return '0'
             }
             'input' { return }
@@ -329,6 +330,19 @@ $proof
             [IO.File]::WriteAllBytes($apk,$apkBytes)
             [IO.File]::WriteAllBytes($other,$otherBytes)
             [IO.File]::WriteAllBytes("$root/apk-manifest.json",$manifestBytes)
+        }
+        foreach ($mutation in @('native-return-failure','native-return-pull-failure')) {
+            $global:Api21FixtureMutation=$mutation;$global:Api21FixtureStopped=$false
+            $entry.RunName=$mutation;$entry.CaseNames=@('network-gui')
+            Expect-SuiteFailure { & $runner @entry | Out-Null } 'did not complete with zero: 1'
+            Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/final-results.json")) 'Nonzero result bypassed cleanup or retained success'
+            Assert-Suite (Test-Path "$root/$mutation/network-gui/failure-pull.log") 'Nonzero result lost failure-pull receipt'
+            if ($mutation -eq 'native-return-failure') {
+                Assert-Suite ((Test-Path "$root/$mutation/network-gui/files/selftest.stdout") -and
+                    [IO.File]::ReadAllText("$root/$mutation/network-gui/files/selftest-result.txt") -ceq '1') 'Nonzero result reports were not copied before shutdown'
+            } else {
+                Assert-Suite ([IO.File]::ReadAllText("$root/$mutation/network-gui/failure-pull.log") -match 'ADB report pull failed') 'Failed report pull replaced the native failure or lost diagnostics'
+            }
         }
         $global:Api21FixtureMutation=''
         $entry.RunName='focused'

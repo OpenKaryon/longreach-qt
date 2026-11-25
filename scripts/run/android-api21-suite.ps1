@@ -175,7 +175,17 @@ try {
                 }
             }
         }
-        if (!$complete -or !($nativeResult -match '^\s*0\s*$')) { throw "$($case.Name) did not complete with zero: $nativeResult" }
+        if (!$complete -or !($nativeResult -match '^\s*0\s*$')) {
+            # Copy failure reports before owned cleanup powers down the guest.
+            # A failed pull must preserve the original native-result failure.
+            try {
+                Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters @('pull',"/data/data/$package/files","$destination/files") `
+                    -AllowNonzero -TimeoutMilliseconds 15000 | Set-Content -LiteralPath "$destination/failure-pull.log"
+            } catch {
+                $_ | Out-String | Set-Content -LiteralPath "$destination/failure-pull.log"
+            }
+            throw "$($case.Name) did not complete with zero: $nativeResult"
+        }
         $exitProof=Wait-AndroidApplicationExit -Adb $adb -Serial $serial -Directory $destination -Package $package -Marker $logMarker
         $log=@(Get-Content -LiteralPath "$destination/logcat.log")
         Invoke-Adb @('pull',"/data/data/$package/files","$destination/files") | Set-Content -LiteralPath "$destination/pull.log"

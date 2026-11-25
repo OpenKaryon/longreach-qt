@@ -152,6 +152,7 @@ RUN --network=none runtime=/opt/longreach-android-api21 && \
 # source trees and JNI checks stay in this stage, never in the installed image.
 FROM tools AS api4-built
 ENV ANDROID_ABI=armeabi ANDROID_API=4
+WORKDIR /work
 COPY scripts/build/qt4-android/build-native.sh \
      scripts/build/qt4-android/build-qtcore.sh \
      scripts/build/qt4-android/target-config.sh \

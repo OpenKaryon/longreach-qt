@@ -77,7 +77,10 @@ def require(qt, api, abi, case, stdout):
     if baseline.get('require_timed_sync_evidence'):
         TIMED_SYNC.require(stdout)
     if baseline.get('require_native_sensor_inventory'):
-        native_sensor_evidence(stdout)
+        sensor = native_sensor_evidence(stdout)
+        native_passes = len(NATIVE_SENSOR_CHECKS) if sensor['native_sensor_count'] else 0
+        if counts[0] - native_passes < baseline['min_pass']:
+            raise ValueError('Native sensor PASS cannot replace the ordinary coverage floor')
     if case in ('strict', 'strict-cxx23', 'strict-cxx23-extended') and counts != (25, 0, 0):
         raise ValueError('C++23 must pass exactly25 without SKIP')
     return counts

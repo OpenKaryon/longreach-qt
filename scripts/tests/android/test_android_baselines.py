@@ -17,9 +17,9 @@ class CoverageTests(unittest.TestCase):
     def sensor_report(self, count):
         baseline = gate.policy(5, 10, 'armeabi-v7a', 'qt-selftest-extended')
         passed = baseline['required_pass'][:]
+        passed += [f'fixture/check-{i}' for i in range(baseline['min_pass'] - len(passed))]
         if count:
             passed += list(gate.NATIVE_SENSOR_CHECKS)
-        passed += [f'fixture/check-{i}' for i in range(baseline['min_pass'] - len(passed))]
         skipped = [name for name in baseline['allowed_skip'] if name not in passed]
         lines = ['PASS: ' + name for name in passed] + ['SKIP: ' + name + ' - native capability limit' for name in skipped]
         lines += [f'OBSERVE: sensors/android-native-inventory - count={count}',
@@ -28,7 +28,7 @@ class CoverageTests(unittest.TestCase):
 
     def test_arm_native_sensor_skips_require_zero_os_inventory(self):
         self.assertEqual(gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', self.sensor_report(0)), (106, 0, 7))
-        self.assertEqual(gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', self.sensor_report(4)), (106, 0, 4))
+        self.assertEqual(gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', self.sensor_report(4)), (109, 0, 4))
         report = self.sensor_report(0)
         for changed in (report.replace('count=0', 'count=4'),
                         report.replace('count=0', 'count=-1'),
@@ -42,6 +42,14 @@ class CoverageTests(unittest.TestCase):
         report = self.sensor_report(0).replace('PASS: fixture/check-0', 'SKIP: fixture/check-0')
         report = report.replace('SKIP: sensors/android-queue-lifecycle', 'PASS: sensors/android-queue-lifecycle')
         with self.assertRaisesRegex(ValueError, 'unexpected SKIP: fixture/check-0'):
+            gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', report)
+
+    def test_native_passes_cannot_compensate_for_missing_ordinary_coverage(self):
+        report = self.sensor_report(4)
+        for i in range(3):
+            report = report.replace(f'PASS: fixture/check-{i}\n', '')
+        report = report.replace('109 passed', '106 passed')
+        with self.assertRaisesRegex(ValueError, 'Native sensor PASS cannot replace'):
             gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', report)
 
     def report(self, passed=13, skipped=1):

@@ -84,6 +84,12 @@ a baseline; extra passing checks do not replace a required capability.
 API4 retains its smaller matrix and intentional multimedia/OpenGL omissions.
 Strict C++23 independently requires all 25 named checks, exactly 25 PASS,
 zero FAIL and zero SKIP. Ordinary device/platform SKIPs remain explicit.
+The Qt5 API10 ARMv7 extended policy binds its three native sensor outcomes
+to an independent Android C API inventory. A nonzero inventory requires all
+three PASS results. Only an observed `count=0` permits their named SKIPs;
+missing, negative or ambiguous inventory evidence fails. Those SKIPs do not
+qualify native sensor queues. Other SKIP names and the 106 ordinary PASS floor
+remain enforced, and the collector records native sensor coverage separately.
 Qt5/6 also require the four timed mutex/semaphore results and observations:
 wakeups wait at least 100ms, timeouts at least 150ms, each below 4500ms, with
 an unavailable resource before arming and a joined worker. At most three

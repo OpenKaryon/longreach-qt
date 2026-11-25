@@ -56,6 +56,8 @@ class LegacyResultsTests(unittest.TestCase):
                     report = legacy.collect(root, 'run', 'armeabi-v7a')
                     record = next(value for value in report['cases'] if value['name'] == 'qt-selftest-extended')
                     self.assertEqual(record['native_sensor_fixture_sha256'], receipt['native_sensor_fixture_sha256'])
+                    self.assertEqual(record['native_sensor_count'], 0)
+                    self.assertEqual(record['native_sensor_coverage'], 'unavailable')
 
     def test_host_tree_and_invocation_are_required_for_both_api10_abis(self):
         for abi in ('x86','armeabi-v7a'):
@@ -184,10 +186,17 @@ class LegacyResultsTests(unittest.TestCase):
         batch_path.write_text(json.dumps(batch))
         for index, (name, baseline) in enumerate(targets.items()):
             name = {'widgets-gui': 'widgets-gallery-render', 'qml-gui': 'quick-qml-gallery-render'}.get(name, name)
+            baseline = legacy.coverage.policy(5, 10, abi, name)
             case = root / 'run' / name
             (case / 'files').mkdir(parents=True)
             cpu_evidence = cpu_fixtures.capture(case, abi)
             stdout = '\n'.join('PASS: ' + check for check in baseline.get('required_pass', []))
+            if 'allowed_skip' in baseline:
+                passed = baseline['required_pass'] + [f'fixture/check-{i}' for i in range(baseline['min_pass'] - len(baseline['required_pass']))]
+                stdout = '\n'.join(['PASS: ' + check for check in passed] +
+                                   ['SKIP: ' + check + ' - expected capability limit' for check in baseline['allowed_skip']])
+            if baseline.get('require_native_sensor_inventory'):
+                stdout += '\nOBSERVE: sensors/android-native-inventory - count=0'
             if baseline.get('require_timed_sync_evidence'):
                 for check in legacy.coverage.TIMED_SYNC.CHECKS:
                     acquired, elapsed = (0, 200) if check.endswith('-timeout') else (1, 250)

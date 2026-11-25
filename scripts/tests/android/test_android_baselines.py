@@ -14,6 +14,36 @@ spec.loader.exec_module(gate)
 
 
 class CoverageTests(unittest.TestCase):
+    def sensor_report(self, count):
+        baseline = gate.policy(5, 10, 'armeabi-v7a', 'qt-selftest-extended')
+        passed = baseline['required_pass'][:]
+        if count:
+            passed += list(gate.NATIVE_SENSOR_CHECKS)
+        passed += [f'fixture/check-{i}' for i in range(baseline['min_pass'] - len(passed))]
+        skipped = [name for name in baseline['allowed_skip'] if name not in passed]
+        lines = ['PASS: ' + name for name in passed] + ['SKIP: ' + name + ' - native capability limit' for name in skipped]
+        lines += [f'OBSERVE: sensors/android-native-inventory - count={count}',
+                  f'---- fixture: {len(passed)} passed, 0 failed, {len(skipped)} skipped ----']
+        return '\n'.join(lines) + '\n'
+
+    def test_arm_native_sensor_skips_require_zero_os_inventory(self):
+        self.assertEqual(gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', self.sensor_report(0)), (106, 0, 7))
+        self.assertEqual(gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', self.sensor_report(4)), (106, 0, 4))
+        report = self.sensor_report(0)
+        for changed in (report.replace('count=0', 'count=4'),
+                        report.replace('count=0', 'count=-1'),
+                        report.replace('OBSERVE: sensors/android-native-inventory - count=0', ''),
+                        report + 'OBSERVE: sensors/android-native-inventory - count=0\n',
+                        self.sensor_report(4).replace('count=4', 'count=0')):
+            with self.subTest(report=changed), self.assertRaisesRegex(ValueError, 'native Android sensor|Native Android sensor'):
+                gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', changed)
+
+    def test_arm_sensor_allowance_cannot_hide_another_missing_check(self):
+        report = self.sensor_report(0).replace('PASS: fixture/check-0', 'SKIP: fixture/check-0')
+        report = report.replace('SKIP: sensors/android-queue-lifecycle', 'PASS: sensors/android-queue-lifecycle')
+        with self.assertRaisesRegex(ValueError, 'unexpected SKIP: fixture/check-0'):
+            gate.require(5, 10, 'armeabi-v7a', 'qt-selftest-extended', report)
+
     def report(self, passed=13, skipped=1):
         checks = ['qgl/widget-context', 'qgl/vertex-buffer', 'qgl/framebuffer-render-readback',
                   'qgl/shader-program', 'qgl/gallery-triangle-render']

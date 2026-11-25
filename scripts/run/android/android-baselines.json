@@ -705,7 +705,8 @@
       },
       "qt-selftest-extended": {
         "min_pass": 106,
-        "max_skip": 4
+        "named_profile": "qt5-api10-armv7-extended",
+        "require_native_sensor_inventory": true
       },
       "widgets-gui": {
         "min_pass": 16,
@@ -937,6 +938,25 @@
         "qgl/framebuffer-render-readback",
         "qgl/shader-program",
         "qgl/gallery-triangle-render"
+      ]
+    },
+    "qt5-api10-armv7-extended": {
+      "allowed_skip": [
+        "multimedia/capture-sources-and-frame-io",
+        "multimedia/format-metadata-and-camera-format",
+        "sensors/android-acceleration-input",
+        "sensors/android-compass-queue-lifecycle",
+        "sensors/android-queue-lifecycle",
+        "spatialaudio/engine-listener-room-and-sounds",
+        "speech/texttospeech-and-voice"
+      ],
+      "required_pass": [
+        "sensors/motion-group",
+        "sensors/environment-group",
+        "sensors/proximity-device-group",
+        "sensors/gesture-manager",
+        "sensors/real-backend-produces-reading",
+        "sensors/gesture-recognizer-and-plugin-interfaces"
       ]
     }
   }

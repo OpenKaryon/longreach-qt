@@ -135,6 +135,8 @@ def _collect(root, run_name, abi):
         if not final_state or final_state != {key: exit_proof[key] for key in ('process_id', 'start_line', 'death_line')}:
             raise ValueError('Final cleanup log lost its application exit evidence: ' + name)
         counts = coverage.require(5, 10, abi, name, stdout)
+        if coverage.policy(5, 10, abi, name).get('require_native_sensor_inventory'):
+            sensor_binding.update(coverage.native_sensor_evidence(stdout))
         if name.startswith('strict-cxx23'):
             subprocess.run([sys.executable, str(REPO / 'scripts/tests/require-modern-cpp.py'), str(stdout_path)], check=True)
         with zipfile.ZipFile(apk) as archive:

@@ -28,6 +28,10 @@ void checkSensors(SmokeReporter &r)
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QThread>
+#if QT_VERSION_MAJOR == 5
+#include <QLibrary>
+#include <android/sensor.h>
+#endif
 #endif
 #if QT_VERSION_MAJOR < 6
 #include <QAltimeter>
@@ -296,8 +300,27 @@ void checkSensors(SmokeReporter &r)
 #endif
     });
 #if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+    // A legacy guest may ship a Sensors HAL that cannot open its poll device.
+    // Query the Android C API independently of Qt's backend registry so an
+    // absent OS capability is distinct from a broken Qt backend registration.
+    int nativeSensorCount = -1;
+    {
+        QLibrary library(QStringLiteral("libandroid.so"));
+        const auto managerFunction = reinterpret_cast<decltype(&ASensorManager_getInstance)>(library.resolve("ASensorManager_getInstance"));
+        const auto listFunction = reinterpret_cast<decltype(&ASensorManager_getSensorList)>(library.resolve("ASensorManager_getSensorList"));
+        if (managerFunction && listFunction) {
+            ASensorList sensors = nullptr;
+            if (ASensorManager *manager = managerFunction())
+                nativeSensorCount = listFunction(manager, &sensors);
+        }
+    }
+    r.observe(QStringLiteral("sensors/android-native-inventory"), QStringLiteral("count=%1").arg(nativeSensorCount));
     bool nativeMagneticReadingsAvailable = false;
     r.check("sensors/android-acceleration-input", [&](QString &d) {
+        if (nativeSensorCount == 0) {
+            r.skip(d, QStringLiteral("Android native sensor API exposes no sensors (count=0)"));
+            return false;
+        }
         QAccelerometer accel;
         QMagnetometer magnetic;
         accel.setIdentifier(QByteArray("1"));
@@ -333,13 +356,23 @@ void checkSensors(SmokeReporter &r)
     });
     // Select the actual platform backends before the fixed backend below
     // changes the default. Both native queue owners must survive teardown.
-    checkAndroidQueueLifecycle<QAccelerometer>(r, QByteArray("1"),
-                                               QStringLiteral("sensors/android-queue-lifecycle"));
-    if (nativeMagneticReadingsAvailable)
-        checkAndroidQueueLifecycle<QCompass>(r, QByteArray("android.synthetic.compass"),
-                                            QStringLiteral("sensors/android-compass-queue-lifecycle"), 5000);
-    else
-        checkAndroidCompassTeardown(r);
+    if (nativeSensorCount == 0) {
+        for (const QString &name : {QStringLiteral("sensors/android-queue-lifecycle"),
+                                    QStringLiteral("sensors/android-compass-queue-lifecycle")}) {
+            r.check(name, [&](QString &d) {
+                r.skip(d, QStringLiteral("Android native sensor API exposes no sensors (count=0)"));
+                return false;
+            });
+        }
+    } else {
+        checkAndroidQueueLifecycle<QAccelerometer>(r, QByteArray("1"),
+                                                   QStringLiteral("sensors/android-queue-lifecycle"));
+        if (nativeMagneticReadingsAvailable)
+            checkAndroidQueueLifecycle<QCompass>(r, QByteArray("android.synthetic.compass"),
+                                                QStringLiteral("sensors/android-compass-queue-lifecycle"), 5000);
+        else
+            checkAndroidCompassTeardown(r);
+    }
 #endif
     r.check("sensors/real-backend-produces-reading", [&](QString &d) {
         // Registering a real backend and making it the default is what lets

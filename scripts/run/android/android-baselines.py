@@ -9,6 +9,8 @@ import sys
 
 BASELINES = Path(__file__).with_suffix('.json')
 ALIASES = {'widgets-gallery-render': 'widgets-gui', 'quick-qml-gallery-render': 'qml-gui'}
+NATIVE_SENSOR_CHECKS = ('sensors/android-acceleration-input', 'sensors/android-queue-lifecycle',
+                        'sensors/android-compass-queue-lifecycle')
 _spec = importlib.util.spec_from_file_location('android_timed_sync', Path(__file__).with_name('android-timed-sync.py'))
 TIMED_SYNC = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(TIMED_SYNC)
@@ -30,6 +32,20 @@ def policy(qt, api, abi, case):
             raise ValueError('Invalid named Android coverage policy: ' + profile)
         baseline.update(allowed_skip=allowed, required_pass=required, max_skip=len(allowed))
     return baseline
+
+
+def native_sensor_evidence(stdout):
+    inventories = re.findall(r'^OBSERVE: sensors/android-native-inventory - count=(-?\d+)\s*$', stdout, re.M)
+    if len(inventories) != 1 or int(inventories[0]) < 0:
+        raise ValueError('Missing, ambiguous or failed native Android sensor inventory')
+    count = int(inventories[0])
+    expected = 'PASS' if count else 'SKIP'
+    for name in NATIVE_SENSOR_CHECKS:
+        states = re.findall(r'^(PASS|FAIL|SKIP): ' + re.escape(name) + r'(?: - .*|)\s*$', stdout, re.M)
+        if states != [expected]:
+            raise ValueError('Native Android sensor inventory requires ' + expected + ': ' + name)
+    return {'native_sensor_count': count,
+            'native_sensor_coverage': 'native-queues-exercised' if count else 'unavailable'}
 
 
 def require(qt, api, abi, case, stdout):
@@ -60,6 +76,8 @@ def require(qt, api, abi, case, stdout):
             raise ValueError(f'{key}/{case}: missing required PASS: {check}')
     if baseline.get('require_timed_sync_evidence'):
         TIMED_SYNC.require(stdout)
+    if baseline.get('require_native_sensor_inventory'):
+        native_sensor_evidence(stdout)
     if case in ('strict', 'strict-cxx23', 'strict-cxx23-extended') and counts != (25, 0, 0):
         raise ValueError('C++23 must pass exactly25 without SKIP')
     return counts

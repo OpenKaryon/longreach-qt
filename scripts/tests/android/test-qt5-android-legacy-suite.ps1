@@ -51,11 +51,11 @@ $global:Qt5LegacyCalls.Add(@{kind='fetch'})
     @'
 param($Abi,$AndroidSdk,$SystemDirectory,$Emulator,$Kernel,$Ramdisk,$QtQuickBackend,
       $SdkImageId,$CaseName,$Apk,$ApplicationArguments,$Package,$OutputDirectory,$BatchReceipt,$ArtifactRoot,
-      [switch]$StrictCxx23,[switch]$ClassicEmulator)
+      [switch]$StrictCxx23,[switch]$ClassicEmulator,[switch]$NativeSensorFixture)
 if (!(Test-Path -LiteralPath $ArtifactRoot)) { throw 'Missing explicit raw runner artifact root' }
 $batch=Get-Content -LiteralPath $BatchReceipt -Raw | ConvertFrom-Json
 $global:Qt5LegacyCalls.Add(@{kind='guest';case=$CaseName;emulator=$Emulator;
-    classic=[bool]$ClassicEmulator;arguments=$ApplicationArguments;batch=$batch.batch_id;
+    classic=[bool]$ClassicEmulator;sensors=[bool]$NativeSensorFixture;arguments=$ApplicationArguments;batch=$batch.batch_id;
     batchSha=(Get-FileHash -LiteralPath $BatchReceipt).Hash.ToLowerInvariant();abi=$Abi})
 if($CaseName -eq 'atomic-cow' -and $global:Qt5LegacyFailCow){throw 'fixture COW failure'}
 '@ | Set-Content "$fixture/scripts/run/qt5-android-gingerbread.ps1"
@@ -63,6 +63,7 @@ if($CaseName -eq 'atomic-cow' -and $global:Qt5LegacyFailCow){throw 'fixture COW 
     & "$fixture/scripts/run/qt5-android-suite.ps1" @entry -Emulator $emulator
     $guests=@($global:Qt5LegacyCalls | Where-Object { $_.kind -eq 'guest' })
     Assert-Legacy ($guests.Count -eq 14 -and $guests[0].case -eq 'atomic-cow' -and $guests[0].arguments -eq '--atomic-cow') 'Missing first COW preflight or incomplete case set'
+    Assert-Legacy (@($guests | Where-Object {$_.sensors}).Count -eq 1 -and @($guests | Where-Object {$_.case -eq 'qt-selftest-extended' -and $_.sensors}).Count -eq 1) 'Missing x86 native sensor inputs'
     Assert-Legacy (@($guests | Where-Object { $_.emulator -ne $emulator -or !$_.classic }).Count -eq 0) 'Explicit classic emulator was not retained for every case'
     Assert-Legacy (@($global:Qt5LegacyCalls | Where-Object { $_.kind -eq 'extract' -and $_.archive -like 'tools_*' }).Count -eq 0) 'SDK tools overwrote the supplied emulator'
     Assert-Legacy ($global:Qt5LegacyCalls[-1].kind -eq 'collect') 'Full suite did not finalize results'
@@ -83,6 +84,7 @@ if($CaseName -eq 'atomic-cow' -and $global:Qt5LegacyFailCow){throw 'fixture COW 
     $guests=@($global:Qt5LegacyCalls | Where-Object { $_.kind -eq 'guest' })
     $armBatch=Get-Content -LiteralPath "$fixture/output/fixture/batch-receipt.json" -Raw | ConvertFrom-Json
     Assert-Legacy ($guests.Count -eq 13 -and $guests[0].case -eq 'strict-cxx23') 'ARM case count or order changed'
+    Assert-Legacy (@($guests | Where-Object {$_.sensors}).Count -eq 1 -and @($guests | Where-Object {$_.case -eq 'qt-selftest-extended' -and $_.sensors}).Count -eq 1) 'Missing ARM native sensor inputs'
     Assert-Legacy ($armBatch.abi -ceq 'armeabi-v7a' -and $armBatch.emulator_sha256 -ceq (Get-FileHash -LiteralPath $guests[0].emulator).Hash.ToLowerInvariant()) 'ARM batch did not bind the emulator'
     Assert-Legacy (@($guests | Where-Object { $_.batch -cne $armBatch.batch_id -or $_.abi -cne 'armeabi-v7a' }).Count -eq 0) 'ARM cases mixed batch identities'
     foreach($name in @('final-results.json','final-results-table.md','apk-native-abi-check.json')){

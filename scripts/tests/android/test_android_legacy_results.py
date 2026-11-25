@@ -24,6 +24,39 @@ def sha(data):
 
 
 class LegacyResultsTests(unittest.TestCase):
+    def test_recorded_sensor_inputs_are_bound_to_the_extended_case_and_owned_launch(self):
+        for changed in (None, 'rounding', 'request', 'values', 'bytes'):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as tmp, patch.object(legacy.artifacts, 'check_apks'), patch.object(legacy.subprocess, 'run'), patch('builtins.print'):
+                root = Path(tmp)
+                self.fixture(root, 'armeabi-v7a')
+                case = root / 'run/qt-selftest-extended'
+                receipt_path = case / 'input-receipt.json'
+                receipt = json.loads(receipt_path.read_text())
+                sensor = {'schema_version': 1, 'fixture': 'nonparallel-compass-v1',
+                          'status': 'applied-and-readback-verified',
+                          'host_process_request_sha256': receipt['host_process_request_sha256'],
+                          'settings': [{'sensor': kind, 'chosen': vector, 'after': vector}
+                                       for kind, vector in [('acceleration', [0.0, 0.0, 9.81]), ('magnetic-field', [-20.0, 20.0, -40.0])]]}
+                if changed == 'request':
+                    sensor['host_process_request_sha256'] = '0' * 64
+                if changed == 'values':
+                    sensor['settings'][1]['after'] = [0, 0, 0]
+                if changed == 'rounding':
+                    sensor['settings'][0]['after'] = [0, 0, 9.8101]
+                path = case / 'native-sensor-inputs.json'
+                path.write_text(json.dumps(sensor))
+                receipt.update(native_sensor_fixture=sensor['fixture'], native_sensor_fixture_sha256=legacy.digest(path))
+                receipt_path.write_text(json.dumps(receipt))
+                if changed == 'bytes':
+                    path.write_text(path.read_text() + '\n')
+                if changed and changed != 'rounding':
+                    with self.assertRaisesRegex(ValueError, 'Native sensor input'):
+                        legacy.collect(root, 'run', 'armeabi-v7a')
+                else:
+                    report = legacy.collect(root, 'run', 'armeabi-v7a')
+                    record = next(value for value in report['cases'] if value['name'] == 'qt-selftest-extended')
+                    self.assertEqual(record['native_sensor_fixture_sha256'], receipt['native_sensor_fixture_sha256'])
+
     def test_host_tree_and_invocation_are_required_for_both_api10_abis(self):
         for abi in ('x86','armeabi-v7a'):
             for mutation in ('missing','active','case-binding','arguments','lease-missing','lease-root','lease-proof'):

@@ -110,8 +110,7 @@ foreach ($app in $apps) {
 
 & $runner @guest -CaseName strict-cxx23-extended -Apk "$output/apk/extended/qt-selftest.apk" -StrictCxx23 `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/strict-cxx23-extended"
-$sensorOptions=@{}
-if ($Abi -eq 'x86') { $sensorOptions.NativeSensorFixture=$true }
+$sensorOptions=@{NativeSensorFixture=$true}
 & $runner @guest @sensorOptions -CaseName qt-selftest-extended -Apk "$output/apk/extended/qt-selftest.apk" -ApplicationArguments '--selftest' `
     -Package org.longreachqt.examples.qtselftest -OutputDirectory "$output/$RunName/qt-selftest-extended"
 

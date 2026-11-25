@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -30,6 +31,12 @@ owned = module('android_owned_process', REPO / 'scripts/run/android/android-owne
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def sensor_vector_matches(value, expected):
+    return (isinstance(value, list) and len(value) == 3 and
+            all(type(actual) in (int, float) and math.isfinite(actual) and abs(actual - wanted) <= 0.001
+                for actual, wanted in zip(value, expected)))
 
 
 def _collect(root, run_name, abi):
@@ -85,6 +92,22 @@ def _collect(root, run_name, abi):
         if digest(power) != receipt.get('guest_power_sha256') or not re.search(r'\bmStayOn(?:Conditions|Setting)=(?:3|7)\b', power.read_text(encoding='utf-8-sig')):
             raise ValueError('Missing verified guest power policy: ' + name)
         cpu_evidence = cpu.validate(case, abi, receipt)
+        sensor_binding = {}
+        if receipt.get('native_sensor_fixture'):
+            sensor_path = case / 'native-sensor-inputs.json'
+            sensor = json.loads(sensor_path.read_text(encoding='utf-8-sig'))
+            settings = sensor.get('settings', [])
+            expected = [('acceleration', [0.0, 0.0, 9.81]), ('magnetic-field', [-20.0, 20.0, -40.0])]
+            if (name != 'qt-selftest-extended' or receipt['native_sensor_fixture'] != 'nonparallel-compass-v1'
+                    or digest(sensor_path) != receipt.get('native_sensor_fixture_sha256')
+                    or sensor.get('schema_version') != 1 or sensor.get('fixture') != receipt['native_sensor_fixture']
+                    or sensor.get('status') != 'applied-and-readback-verified'
+                    or sensor.get('host_process_request_sha256') != receipt['host_process_request_sha256']
+                    or len(settings) != 2 or any(row.get('sensor') != kind or row.get('chosen') != vector or not sensor_vector_matches(row.get('after'), vector)
+                        for row, (kind, vector) in zip(settings, expected))):
+                raise ValueError('Native sensor input evidence changed or belongs to another launch: ' + name)
+            sensor_binding = {'native_sensor_fixture': receipt['native_sensor_fixture'],
+                              'native_sensor_fixture_sha256': receipt['native_sensor_fixture_sha256']}
         guest = (case / 'guest.txt').read_text(encoding='utf-8-sig')
         for key, value in [('ro.build.version.sdk', '10'), ('ro.product.cpu.abi', abi),
                            ('ro.build.version.release', '2.3.7' if abi == 'x86' else '2.3.3')]:
@@ -131,6 +154,7 @@ def _collect(root, run_name, abi):
                   'evidence': case.relative_to(root).as_posix()}
         record.update(cpu_evidence)
         record.update(host_evidence)
+        record.update(sensor_binding)
         if receipt.get('log_capture_sha256'):
             record.update(log_capture_sha256=receipt['log_capture_sha256'],
                           log_capture_final_sha256=receipt['log_capture_final_sha256'])

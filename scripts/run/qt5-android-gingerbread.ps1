@@ -45,9 +45,9 @@ if ($RuntimeProbe) {
     $StrictCxx23=$true
     if (!$PSBoundParameters.ContainsKey('Package')) { $Package='org.longreachqt.donut' }
 }
-if ($NativeSensorFixture -and ($Abi -ne 'x86' -or $StrictCxx23 -or $RuntimeProbe -or
+if ($NativeSensorFixture -and ($StrictCxx23 -or $RuntimeProbe -or
         $ApplicationArguments -cne '--selftest' -or $Package -cne 'org.longreachqt.examples.qtselftest')) {
-    throw 'Native sensor inputs require an ordinary x86 Qt5 selftest'
+    throw 'Native sensor inputs require an ordinary API10 Qt5 selftest'
 }
 $completionName=if ($RuntimeProbe) { 'probe-result.txt' } else { 'selftest-result.txt' }
 $stdoutName=if ($RuntimeProbe) { 'strict-cxx23.log' } else { 'selftest.stdout' }
@@ -163,6 +163,7 @@ try {
         if ($process.HasExited) { throw 'The owned emulator stopped before sensor inputs' }
         Invoke-AndroidTool python @("$PSScriptRoot/android/android-sensor-inputs.py",'--directory',$output,
             '--request-sha256',$emulatorOwner.RequestSha)
+        Invoke-AndroidTool $adb @('-s',$serial,'shell','dumpsys','sensorservice') | Set-Content -LiteralPath "$output/native-sensor-service.txt"
         $receipt.native_sensor_fixture='nonparallel-compass-v1'
         $receipt.native_sensor_fixture_sha256=(Get-FileHash -LiteralPath "$output/native-sensor-inputs.json").Hash.ToLowerInvariant()
     }

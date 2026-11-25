@@ -167,19 +167,34 @@ class Api4Sdk(unittest.TestCase):
                 sdk.check_source_binding(result, changed)
 
     def test_metadata_relocation_preserves_sealed_mkspecs_and_changes_only_link_paths(self):
-        path = self.prefix / 'lib/QtCore.prl'
-        path.write_text('QMAKE_PRL_BUILD_DIR = /work/qt4-donut-quick/src/corelib\n'
-                        'QMAKE_PRL_LIBS = -L/work/qtquick-donut-sdk/lib -L/work/runtime-build/lib\n')
+        # The producer's real module, platform and QML .prl files use its
+        # source-tree lib directory, rather than the configured install prefix.
+        names = ('lib/QtCore.prl', 'plugins/platforms/libqminimal.prl',
+                 'imports/Qt/labs/particles/libqmlparticlesplugin.prl')
+        for name in names:
+            path = self.prefix / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('QMAKE_PRL_BUILD_DIR = /work/qt4-donut-quick/src/corelib\n'
+                            'QMAKE_PRL_LIBS = -L/work/qt4-donut-quick/lib -lQtCore '
+                            '-L/work/qtquick-donut-sdk/lib -L/work/runtime-build/lib\n')
         specs = sdk.provenance.mkspec_helper.verify(self.prefix, sdk.RUNTIME)
         sdk.normalize_metadata(self.prefix, Path(sdk.RUNTIME))
         self.assertEqual(specs, sdk.provenance.mkspec_helper.verify(self.prefix, sdk.RUNTIME))
-        self.assertIn('-L' + sdk.SDK + '/lib', path.read_text())
-        self.assertIn('-L' + sdk.RUNTIME + '/lib', path.read_text())
-        self.assertIn('QMAKE_PRL_BUILD_DIR = /work/qt4-donut-quick', path.read_text())
+        for name in names:
+            text = (self.prefix / name).read_text()
+            self.assertIn('-L' + sdk.SDK + '/lib', text)
+            self.assertIn('-L' + sdk.RUNTIME + '/lib', text)
+            link = next(line for line in text.splitlines() if line.startswith('QMAKE_PRL_LIBS'))
+            self.assertNotIn('/work/', link)
+            self.assertIn('QMAKE_PRL_BUILD_DIR = /work/qt4-donut-quick', text)
+        path = self.prefix / names[0]
         before = path.read_bytes()
         with self.assertRaisesRegex(ValueError, 'declared installed runtime'):
             sdk.normalize_metadata(self.prefix, self.runtime)
         self.assertEqual(path.read_bytes(), before)
+        path.write_text('QMAKE_PRL_LIBS = -L/work/unexported-component/lib\n')
+        with self.assertRaisesRegex(ValueError, 'build-tree link input'):
+            sdk.normalize_metadata(self.prefix, Path(sdk.RUNTIME))
 
     def test_installed_verifier_closure_is_read_only(self):
         installed = self.prefix / 'libexec/api4-sdk'

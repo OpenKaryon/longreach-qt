@@ -107,7 +107,8 @@ def payload(prefix, runtime):
 def normalize_metadata(prefix, runtime):
     if runtime.as_posix() != RUNTIME:
         raise ValueError('Metadata relocation requires the declared installed runtime prefix')
-    replacements = {'/work/qtquick-donut-sdk': SDK, '/work/sysroot-api4': RUNTIME + '/sysroot',
+    replacements = {'/work/qtquick-donut-sdk': SDK, '/work/qt4-donut-quick/lib': SDK + '/lib',
+                    '/work/sysroot-api4': RUNTIME + '/sysroot',
                     '/work/runtime-build': RUNTIME,
                     '/work/builtins-build/compiler-rt/lib/linux': RUNTIME + '/lib'}
     for path in prefix.rglob('*'):

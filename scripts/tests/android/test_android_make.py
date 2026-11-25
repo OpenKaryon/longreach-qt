@@ -41,6 +41,7 @@ def payload(args):
 class MatrixTests(unittest.TestCase):
     def test_exact_sdk_matrix_and_existing_locations(self):
         expected = {
+            'qt4-android-arm': ('armeabi', 4, 'donut-armeabi'),
             'qt4-android-i386': ('x86', 10, 'gingerbread-x86'),
             'qt4-android-amd64': ('x86_64', 21, 'lollipop-x86_64'),
             'qt4-android-arm64': ('arm64-v8a', 21, 'lollipop-arm64-v8a'),
@@ -61,7 +62,8 @@ class MatrixTests(unittest.TestCase):
                 self.assertEqual(batch.image_of(target, 'gpl-enabled'),
                                  f'longreach-qt{info.qt}-android-{profile}:llvm21')
                 self.assertEqual(batch.output_of(target, 'gpl-enabled'),
-                                 f'artifacts/qt{info.qt}-android-{profile}')
+                                 ('artifacts/qt4-android-donut-sdk' if target == 'qt4-android-arm'
+                                  else f'artifacts/qt{info.qt}-android-{profile}'))
 
     def test_abi_spellings_do_not_add_make_or_batch_targets(self):
         for info in matrix.ANDROID_TARGETS.values():
@@ -69,7 +71,7 @@ class MatrixTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 android.command_for(options(name))
             self.assertFalse(any(batch.matches(t, [name]) for t in batch.TARGETS))
-        self.assertEqual(sum(batch.matches(t, ['*-android-*']) for t in batch.TARGETS), 11)
+        self.assertEqual(sum(batch.matches(t, ['*-android-*']) for t in batch.TARGETS), 12)
         self.assertNotIn(matrix.LEGACY_TARGET, batch.TARGETS)
 
     def test_all_profiles_offer_sdk_and_ready_apk_examples(self):
@@ -82,6 +84,19 @@ class MatrixTests(unittest.TestCase):
 
 
 class ArgumentTests(unittest.TestCase):
+    def test_api4_installed_sdk_preserves_its_input_directory_and_sdk_choice(self):
+        for mode in ('sdk', 'examples'):
+            with self.subTest(mode=mode):
+                result = payload(options('qt4-android-arm', mode,
+                                         '--input-directory', 'C:/API4 inputs $literal',
+                                         '--sdk-image', 'ready-api4-sdk'))
+                self.assertEqual(result['Abi'], 'armeabi')
+                self.assertEqual(result['Mode'], mode)
+                self.assertEqual(result['InputDirectory'], 'C:/API4 inputs $literal')
+                self.assertEqual(result['SdkImage'], 'ready-api4-sdk')
+                self.assertEqual(batch.output_of('qt4-android-arm', 'gpl-enabled'),
+                                 'artifacts/qt4-android-donut-sdk')
+
     def test_literal_paths_and_sdk_controls(self):
         args = options('qt6-android-arm64', 'sdk', '--android-sdk', 'C:/SDK with spaces',
                        '--output-directory', 'C:/outputs/тест $literal', '--host-image', 'ready-host',
@@ -132,7 +147,7 @@ class ArgumentTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 with patch.object(sys, 'argv', ['build-all.py', '--list', '--only', '*-android-*']):
                     self.assertEqual(batch.main(), 0)
-                self.assertEqual(out.getvalue().count('[Windows host]'), 11)
+                self.assertEqual(out.getvalue().count('[Windows host]'), 12)
                 self.assertNotIn('artifacts/tests-', out.getvalue())
 
 
@@ -240,7 +255,7 @@ class PowerShellAdapterTests(unittest.TestCase):
             receipt = fixture / 'receipt.jsonl'
             entry = fixture / f'qt{qt}-android.ps1'
             entry.write_text(
-                'param($Abi,$Mode,$OutputDirectory,$SdkImage,$ParallelJobs,'
+                'param($Abi,$Mode,$OutputDirectory,$SdkImage,$ParallelJobs,$InputDirectory,'
                 '[switch]$NoCache,$DockerBuildFlagsJson)\n'
                 '$record=@{}+$PSBoundParameters\n'
                 'if($record.ContainsKey("NoCache")) { $record.NoCache=[bool]$NoCache }\n'
@@ -263,6 +278,16 @@ class PowerShellAdapterTests(unittest.TestCase):
                 self.assertEqual(records[0], value)
                 self.assertEqual(records[1], {k: v for k, v in {**value, 'Mode': 'package'}.items()
                                               if k not in ('SdkImage', 'ParallelJobs')})
+
+    def test_api4_examples_keep_inputs_through_the_real_phase_adapter(self):
+        result, records, value = self.run_fixture(4, 'examples', extra={
+            'Abi': 'armeabi', 'InputDirectory': 'C:/API4 inputs $literal',
+            'SdkImage': 'ready-api4-sdk', 'ParallelJobs': 2})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([r['Mode'] for r in records], ['examples', 'package'])
+        self.assertEqual(records[0], value)
+        self.assertEqual(records[1], {key: val for key, val in {**value, 'Mode': 'package'}.items()
+                                      if key not in ('SdkImage', 'ParallelJobs')})
 
     def test_sdk_never_packages(self):
         result, records, value = self.run_fixture(5, 'sdk', extra={'NoCache': True, 'ParallelJobs': 3})

@@ -3,8 +3,8 @@
 """Android SDK names and existing artifact locations.
 
 Kept separate from execution so make help and build-all --list need no SDK,
-PowerShell, Docker or network. API4 ARM is a legacy combined recipe, not an
-installed SDK, and deliberately does not enter the SDK matrix.
+PowerShell, Docker or network. API4 ARM exposes its configured static/raster
+installed SDK; its original combined recipe remains a separate legacy target.
 """
 from typing import NamedTuple
 
@@ -21,10 +21,13 @@ class AndroidTarget(NamedTuple):
 
     @property
     def artifacts(self) -> str:
+        if self.qt == 4 and self.api == 4:
+            return 'artifacts/qt4-android-donut-sdk'
         return f'artifacts/qt{self.qt}-android-{self.profile}'
 
 
 ANDROID_TARGETS = {
+    'qt4-android-arm': AndroidTarget(4, 'armeabi', 4, 'donut-armeabi'),
     'qt4-android-i386': AndroidTarget(4, 'x86', 10, 'gingerbread-x86'),
     'qt4-android-amd64': AndroidTarget(4, 'x86_64', 21, 'lollipop-x86_64'),
     'qt4-android-arm64': AndroidTarget(4, 'arm64-v8a', 21, 'lollipop-arm64-v8a'),

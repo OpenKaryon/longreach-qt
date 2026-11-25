@@ -19,7 +19,7 @@ its inputs changed (or always, with --force or --no-cache), then the test
 applications are built against it into artifacts/tests-<image>/ on this
 machine. Make prepares the required LLVM compiler and target toolchain
 images. qt6-host is prepared first for Qt 6 targets that still use it.
-Android uses eleven installed-SDK profiles on Windows, preserving their
+Android uses twelve installed-SDK profiles on Windows, preserving their
 existing image tags and output directories. It runs alone even with --jobs N;
 its examples route explicitly schedules SDK then applications. Direct Android
 make -examples never builds an SDK; it compiles applications and packages APKs.

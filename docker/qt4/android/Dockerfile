@@ -166,6 +166,7 @@ COPY patches/qt4/all/03-static-gui-animation-registration.patch \
      patches/qt4/all/04-script-tagged-frame-pointers.patch /repo/patches/qt4/all/
 COPY scripts/tests/qt6-llvm-probes /repo/scripts/tests/qt6-llvm-probes
 COPY tests/common /repo/tests/common
+COPY tests/android /repo/tests/android
 COPY tests/android-donut /repo/tests/android-donut
 COPY tests/qt-selftest /repo/tests/qt-selftest
 COPY tests/quick-qml-gallery /repo/tests/quick-qml-gallery

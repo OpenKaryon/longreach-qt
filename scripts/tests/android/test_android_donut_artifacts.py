@@ -121,6 +121,25 @@ class DonutArtifacts(unittest.TestCase):
         (self.root / 'sdk-image-id.txt').write_text(IMAGE + '\n')
         return name
 
+    def test_shared_android_header_change_or_removal_invalidates_native_promotion(self):
+        relative = 'tests/android/atomic-cow.h'
+        header = self.repo / relative
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text('shared Android header before native compile')
+        pending = self.start_native()
+        self.assertEqual(pending['inputs']['sources'][relative], donut.common.digest(header))
+        stage = self.stage_native()
+        for contents in ('changed during native compile', None):
+            if contents is None:
+                header.unlink()
+            else:
+                header.write_text(contents)
+            with self.subTest(contents=contents), self.assertRaisesRegex(ValueError, 'inputs changed during'):
+                donut.finish_native(self.root, self.repo, self.inputs, stage, IMAGE)
+            self.assertTrue((self.root / donut.NATIVE_PENDING).exists())
+            self.assertTrue(stage.is_dir())
+            self.assertFalse((self.root / 'native').exists())
+
     def test_installed_sdk_requires_both_qmake_client_receipts_before_promotion(self):
         self.seed_installed_sdk()
         donut.begin(self.root, self.repo, self.inputs, IMAGE)

@@ -23,7 +23,7 @@ ARCHIVES = {
 JAR_MEMBER = 'android-1.6_r03-linux/android.jar'
 SOURCE_TREES = ('docker/qt4/android', 'scripts/build/qt4-android', 'scripts/build/android-api21', 'scripts/build/qt6-llvm-probes',
                 'scripts/tests/qt6-llvm-probes', 'patches/android/donut', 'patches/qt4',
-                'tests/android-donut', 'tests/common', 'tests/qt-selftest', 'tests/quick-qml-gallery',
+                'tests/android', 'tests/android-donut', 'tests/common', 'tests/qt-selftest', 'tests/quick-qml-gallery',
                 'tests/widgets-gallery', 'tests/graphics-gallery', 'tests/network-gui', 'tests/painting-lab')
 SOURCE_FILES = ('scripts/build/qt4-android.ps1', 'scripts/build/apt-snapshot.sh', 'scripts/build/qt6-android/prepare-emulator.py')
 NATIVE_PENDING = 'donut-native-in-progress.json'

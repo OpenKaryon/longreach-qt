@@ -15,6 +15,7 @@ $global:Api10FixturePackage='org.longreachqt.examples.qtselftest'
 $global:Api10FixtureProcess=$null
 $global:Api10FixtureRun=0
 $global:Api10SoundReport=$null
+$global:Api10SpeechReport=$null
 $global:AndroidOwnedFixture=@{Repo=$RepoRoot;Python=$global:Api10FixturePython;RecordStart=$true}
 $rootLock=$null
 $caseLock=$null
@@ -90,6 +91,7 @@ function Invoke-AndroidTool([string]$Program,[string[]]$Arguments) {
         $relative=[IO.Path]::GetRelativePath($global:Api10FixtureHome,$Arguments[0])
         $actual=Join-Path $global:Api10FixtureRepo $relative
         if ([IO.Path]::GetFileName($actual) -eq 'require-android-sound-cache.py') { $global:Api10FixtureCalls.Add('sound-output-validator') }
+        if ([IO.Path]::GetFileName($actual) -eq 'require-android-tts.py') { $global:Api10FixtureCalls.Add('tts-output-validator') }
         & $global:Api10FixturePython $actual @($Arguments | Select-Object -Skip 1)
         if ($LASTEXITCODE) { throw 'Actual metadata validator failed' }
         return
@@ -118,6 +120,10 @@ function Invoke-AndroidTool([string]$Program,[string[]]$Arguments) {
             $index=[Array]::IndexOf($Arguments,'applicationArguments')
             Assert-Runner ($index -ge 0 -and $Arguments[$index+1] -ceq '--sound-cache-teardown') 'Sound diagnostic argv changed'
         }
+        if ($null -ne $global:Api10SpeechReport) {
+            $index=[Array]::IndexOf($Arguments,'applicationArguments')
+            Assert-Runner ($index -ge 0 -and $Arguments[$index+1] -ceq '--tts-behavior') 'TTS diagnostic argv changed'
+        }
         $component=$Arguments[[Array]::IndexOf($Arguments,'-n')+1]
         $global:Api10FixturePackage=$component.Split('/')[0]
         return "Starting: Intent { cmp=$component (has extras) }"
@@ -128,6 +134,7 @@ function Invoke-AndroidTool([string]$Program,[string[]]$Arguments) {
         $names=@(Get-Content "$global:Api10FixtureRepo/tests/common/moderncpp-required.txt" | Where-Object { $_ -and !$_.StartsWith('#') })
         $lines=@('__cplusplus: 202302')+@($names | ForEach-Object { 'PASS: '+$_ })+@('---- qt-selftest: 25 passed, 0 failed, 0 skipped ----')
         if ($null -ne $global:Api10SoundReport) { $lines=$global:Api10SoundReport }
+        if ($null -ne $global:Api10SpeechReport) { $lines=$global:Api10SpeechReport }
         $lines | Set-Content "$destination/selftest.stdout"
         $lines | Set-Content "$destination/strict-cxx23.log"
         [IO.File]::WriteAllText("$destination/selftest-result.txt",'0')
@@ -346,8 +353,60 @@ function Invoke-AndroidExitQuery {
         Assert-Runner (!(Test-Path "$($unbound.OutputDirectory)/input-receipt.json")) 'Unbound sound APK advertised a receipt'
     } finally { [IO.File]::WriteAllBytes($manifestPath,$manifestSaved) }
     $global:Api10SoundReport=$null
+    # Run the actual TTS protocol through the real API10 case runner, with
+    # recorded engine output and ADB/process boundaries only.
+    @'
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts/tests/android'))
+from test_android_tts_protocol import fixture
+Path(sys.argv[2]).write_text(fixture(), encoding='utf-8')
+'@ | Set-Content "$fixture/tts-template.py"
+    & $global:Api10FixturePython "$fixture/tts-template.py" $RepoRoot "$fixture/tts-template.txt"
+    if ($LASTEXITCODE) { throw 'Could not prepare the synthetic TTS transcript' }
+    $ttsLines=@(Get-Content "$fixture/tts-template.txt")
+    $speech=@{}+$sound
+    $speech.Apk="$assets/apk/multimedia-lab.apk"
+    $speech.Package='org.longreachqt.examples.multimedialab'
+    $speech.ApplicationArguments='--tts-behavior'
+    $speech.OutputDirectory=Join-Path $assets 'tts-diagnostic'
+    $global:Api10SpeechReport=$ttsLines
+    & $runner @speech | Out-Null
+    $diagnostic=Get-Content "$($speech.OutputDirectory)/input-receipt.json" -Raw | ConvertFrom-Json
+    Assert-Runner ($diagnostic.completed -and !$diagnostic.qualification -and $diagnostic.diagnostic -ceq 'qt5-tts-behavior' -and
+        $diagnostic.diagnostic_arguments -ceq '--tts-behavior') 'TTS output was promoted to qualification or lost its explicit arguments'
+    Assert-Runner ($diagnostic.apk_manifest_bound -and $diagnostic.apk_relative -ceq 'apk/multimedia-lab.apk' -and
+        $diagnostic.process_exit_confirmed -and $diagnostic.termination_policy -ceq 'natural') 'TTS bypassed APK binding or natural exit'
+    Assert-Runner ($diagnostic.diagnostic_stdout_sha256 -ceq $diagnostic.stdout_sha256 -and $global:Api10FixtureProcess.HasExited) 'TTS result lost its validated output or owned-tree closure'
+    $global:Api10SpeechReport=$ttsLines -creplace 'speech/short-completion - state=Speaking','speech/short-completion - state=Ready'
+    Expect-RunnerFailure { & $runner @speech | Out-Null } 'Actual metadata validator failed'
+    Assert-Runner (!(Get-Content "$($speech.OutputDirectory)/input-receipt.json" -Raw | ConvertFrom-Json).completed -and
+        $global:Api10FixtureProcess.HasExited) 'False TTS callbacks hid missing behavior or leaked the owned tree'
+    $global:Api10SpeechReport=$ttsLines
+    $global:Api10FixtureMutation='sound-fatal'
+    $global:Api10FixtureCalls.Clear()
+    Expect-RunnerFailure { & $runner @speech | Out-Null } 'Fatal cleanup error'
+    Assert-Runner (!$global:Api10FixtureCalls.Contains('tts-output-validator')) 'TTS phases hid fatal process evidence'
+    $global:Api10FixtureMutation='sound-stdout-cleanup'
+    Expect-RunnerFailure { & $runner @speech | Out-Null } 'TTS behavior stdout changed after validation'
+    Assert-Runner (!(Get-Content "$($speech.OutputDirectory)/input-receipt.json" -Raw | ConvertFrom-Json).completed -and
+        $global:Api10FixtureProcess.HasExited) 'Late changed TTS output hid a failure or bypassed owned shutdown'
+    $global:Api10FixtureMutation=''
+    $starts=$global:Api10FixtureRun
+    $prior=[IO.File]::ReadAllText("$($speech.OutputDirectory)/input-receipt.json")
+    foreach ($argument in '--tts-behavior --selftest','--tts-behavior --tts-behavior','--tts-behavior --sound-cache-teardown') {
+        $mixed=@{}+$speech;$mixed.ApplicationArguments=$argument
+        Expect-RunnerFailure { & $runner @mixed | Out-Null } 'exactly --tts-behavior'
+    }
+    $mixed=@{}+$speech;$mixed.StrictCxx23=$true
+    Expect-RunnerFailure { & $runner @mixed | Out-Null } 'standalone diagnostic'
+    $mixed=@{}+$speech;$mixed.Apk=$sound.Apk
+    Expect-RunnerFailure { & $runner @mixed | Out-Null } 'generation-bound multimedia-lab APK'
+    Assert-Runner ($global:Api10FixtureRun -eq $starts -and
+        [IO.File]::ReadAllText("$($speech.OutputDirectory)/input-receipt.json") -ceq $prior) 'Invalid TTS preflight started a guest or replaced prior evidence'
+    $global:Api10SpeechReport=$null
     Assert-Runner ($global:Api10SerialEmulatorStops -eq 0) 'Serial-based emulator termination was attempted'
-    Write-Output 'PASS: real API10 root/case contention, complete history, bound install/late-cleanup mutations, natural exit metadata, probe routing and sound pre-exit/exit separation'
+    Write-Output 'PASS: real API10 root/case contention, complete history, bound install/late-cleanup mutations, natural exit metadata, probe routing and sound/TTS pre-exit/exit separation'
 } finally {
     if ($caseLock) { $caseLock.Dispose() }
     if ($rootLock) { $rootLock.Dispose() }
@@ -359,5 +418,5 @@ function Invoke-AndroidExitQuery {
     }
     Remove-Variable AndroidOwnedFixture,AndroidOwnedMockControls -Scope Global -ErrorAction SilentlyContinue
     Remove-Variable Api10FixtureRepo,Api10FixtureHome,Api10FixturePython,Api10FixtureCalls,Api10FixtureMutation,Api10FixtureMarker,Api10FixturePackage,Api10FixtureProcess,Api10FixtureRun -Scope Global -ErrorAction SilentlyContinue
-    Remove-Variable Api10SerialEmulatorStops,Api10SoundReport -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable Api10SerialEmulatorStops,Api10SoundReport,Api10SpeechReport -Scope Global -ErrorAction SilentlyContinue
 }

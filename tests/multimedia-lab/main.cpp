@@ -305,6 +305,14 @@ int main(int argc, char **argv)
     SmokeCrashInfo::install();
 #endif
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--tts-behavior"))) {
+#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+        if (app.arguments().size() == 2)
+            return runAndroidSpeechChecks();
+#endif
+        std::fprintf(stderr, "tts-behavior requires Qt5 Android and exactly one diagnostic argument\n");
+        return 2;
+    }
     if (app.arguments().contains("--selftest"))
         return runSelfTest();
 

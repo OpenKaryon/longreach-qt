@@ -34,6 +34,13 @@ $crashHoldDiagnostic=$ApplicationArguments -match '(^|\s)--android-crash-hold(\s
 if ($crashHoldDiagnostic -and ($StrictCxx23 -or $RuntimeProbe -or $CaseName -or $BatchReceipt)) {
     throw 'Post-main crash hold is a standalone diagnostic, not a qualification case'
 }
+$ttsBehavior=$ApplicationArguments -ceq '--tts-behavior'
+if ($ApplicationArguments -match '(^|\s)--tts-behavior(\s|$)' -and !$ttsBehavior) {
+    throw 'TTS behavior requires exactly --tts-behavior'
+}
+if ($ttsBehavior -and ($StrictCxx23 -or $RuntimeProbe -or $CaseName -or $BatchReceipt)) {
+    throw 'TTS behavior is a standalone diagnostic, not a strict/probe/batch qualification case'
+}
 $soundCacheTeardown=$ApplicationArguments -ceq '--sound-cache-teardown'
 if ($ApplicationArguments -match '(^|\s)--sound-cache-teardown(\s|$)' -and !$soundCacheTeardown) {
     throw 'Sound-cache teardown requires exactly --sound-cache-teardown'
@@ -82,7 +89,10 @@ $SystemDirectory = (Resolve-Path -LiteralPath $SystemDirectory).Path
 $output=$roots.Directory
 $adbEndpoint=Get-AndroidAdbEndpoint
 Assert-AndroidCaseInputsSeparate $output @($Apk,$Emulator,$Kernel,$Ramdisk,$SystemDirectory,$AndroidSdk)
-$binding=Get-AndroidApi10ApkBinding -Root $roots.Root -Apk $Apk -Abi $Abi -SdkImageId $SdkImageId -RequireManifest ([bool]$BatchReceipt -or $soundCacheTeardown) -RuntimeProbe ([bool]$RuntimeProbe)
+$binding=Get-AndroidApi10ApkBinding -Root $roots.Root -Apk $Apk -Abi $Abi -SdkImageId $SdkImageId -RequireManifest ([bool]$BatchReceipt -or $soundCacheTeardown -or $ttsBehavior) -RuntimeProbe ([bool]$RuntimeProbe)
+if ($ttsBehavior -and ($binding.apk_relative -cne 'apk/multimedia-lab.apk' -or $Package -cne 'org.longreachqt.examples.multimedialab')) {
+    throw 'TTS behavior requires the generation-bound multimedia-lab APK and package'
+}
 $SdkImageId=$binding.sdk_image_id
 $logMarker=$null
 $receipt = @{
@@ -95,6 +105,7 @@ $receipt = @{
     started_utc=$caseAttempt.StartedUtc; completed=$false
 }
 if ($soundCacheTeardown) { $receipt.diagnostic='qt5-sound-cache-teardown' }
+if ($ttsBehavior) { $receipt.diagnostic='qt5-tts-behavior'; $receipt.diagnostic_arguments=$ApplicationArguments }
 if ($crashHoldDiagnostic) { $receipt.diagnostic='android-post-main-crash-hold' }
 if ($BatchReceipt) {
     $BatchReceipt=(Get-Item -LiteralPath $BatchReceipt).FullName
@@ -234,6 +245,12 @@ try {
         }
         $receipt.diagnostic_stdout_sha256=$soundStdoutHash
     }
+    if ($ttsBehavior) {
+        $ttsStdoutHash=(Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant()
+        Invoke-AndroidTool python @("$repo/scripts/tests/android/require-android-tts.py", "$output/files/$stdoutName")
+        Get-AndroidVerifiedHash "$output/files/$stdoutName" $ttsStdoutHash | Out-Null
+        $receipt.diagnostic_stdout_sha256=$ttsStdoutHash
+    }
     if ($StrictCxx23) {
         Invoke-AndroidTool python @("$repo/scripts/tests/require-modern-cpp.py", "$output/files/$stdoutName")
     }
@@ -285,6 +302,9 @@ if ($BatchReceipt -and (Get-FileHash -LiteralPath $BatchReceipt).Hash.ToLowerInv
 Assert-AndroidApi10ApkBinding $roots.Root $Apk $binding
 Assert-AndroidGuestCpuBinding $output $guestCpu
 $stdoutHash=(Get-FileHash -LiteralPath "$output/files/$stdoutName" -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($ttsBehavior -and $stdoutHash -cne $receipt.diagnostic_stdout_sha256) {
+    throw 'TTS behavior stdout changed after validation'
+}
 if ($soundCacheTeardown -and $stdoutHash -cne $receipt.diagnostic_stdout_sha256) {
     throw 'Sound-cache stdout changed after validation'
 }

@@ -211,3 +211,42 @@ The separate `scripts/run/qt5-android-sound-cache.ps1` driver records twenty
 API10 WAV teardown attempts. Its source/recording coverage does not establish
 real WAV teardown behavior or fix qualification. It has no Make alias and
 requires ready APK/media inputs; no emulator build is performed.
+
+## Explicit Android TTS behavior diagnostic
+
+`multimedia-lab --tts-behavior` runs eight real-service state checks separately
+from its four-check `--selftest` smoke. Use an SDK with patch30 and matching
+newly built client/APK inputs. With the same verified API10 guest media and
+emulator used by the ordinary runner, for example:
+
+```powershell
+$root = (Resolve-Path artifacts/qt5-android-gingerbread-x86).Path
+./scripts/run/qt5-android-gingerbread.ps1 -Abi x86 `
+  -Apk "$root/apk/multimedia-lab.apk" -ArtifactRoot $root `
+  -OutputDirectory "$root/diagnostics/tts-behavior" `
+  -SystemDirectory $media -Emulator $emulator `
+  -Kernel "$media/kernel-qemu" -Ramdisk "$media/ramdisk.img" `
+  -Package org.longreachqt.examples.multimedialab `
+  -ApplicationArguments '--tts-behavior' -AndroidSdk $env:ANDROID_HOME
+```
+
+Use `armeabi-v7a` and its corresponding root/media for ARMv7. The diagnostic
+requires the generation-bound normal multimedia APK and explicit package;
+strict/probe/batch modes and mixed arguments are rejected before launch.
+Its validated stdout is hashed again after cleanup. Natural application exit,
+fatal-log checks and owned host-tree closure remain independent requirements.
+The result is a single-case diagnostic with `qualification=false`.
+
+Checks cover Android readiness/voices, short completion, four repeated short
+completions, stop, a bounded250ms paused observation followed by resume,
+replacement and destruction/recreation of an active engine. State signals
+must arrive on the QObject owner thread. Android Qt5 resume restarts the saved
+utterance; sample-position continuation is not claimed. The250ms windows are
+bounded observations, not proof against arbitrarily late callbacks; deterministic
+host regressions separately exercise stale queued delivery and engine lifetime.
+
+Synthesis volume is zero. Successful states do not establish audible output.
+Source/recording tests or cross-compiled component objects do not qualify an
+actual Android TTS engine; fresh completed guest receipts are still required.
+API21 compilation of the application is supported, but its dedicated runner
+route remains a separate follow-up.

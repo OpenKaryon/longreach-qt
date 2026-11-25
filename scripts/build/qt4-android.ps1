@@ -28,6 +28,14 @@ if ($Abi -ne 'armeabi') {
     & "$PSScriptRoot/qt4-android/api21.ps1" @options
     return
 }
+if ($PSBoundParameters.ContainsKey('Mode') -and $Mode -eq 'sdk') {
+    $options=@{Mode='sdk';ParallelJobs=$ParallelJobs;NoCache=$NoCache;DockerBuildFlagsJson=$DockerBuildFlagsJson}
+    foreach ($name in @('SdkImage','InputDirectory','OutputDirectory')) {
+        if ($PSBoundParameters.ContainsKey($name)) { $options[$name]=$PSBoundParameters[$name] }
+    }
+    & "$PSScriptRoot/qt4-android/api4.ps1" @options
+    return
+}
 foreach ($option in @('Mode','SdkImage','RunName','Profiles','ParallelJobs','NoCache','DockerBuildFlagsJson')) {
     if ($PSBoundParameters.ContainsKey($option)) { throw "-$option is currently supported by the API10/API21 profiles only" }
 }

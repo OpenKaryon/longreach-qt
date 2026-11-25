@@ -148,5 +148,67 @@ RUN --network=none runtime=/opt/longreach-android-api21 && \
     python3 "/opt/qt4-android-${ANDROID_ABI}-llvm/libexec/longreach-export-mkspecs.py" verify \
         --prefix "/opt/qt4-android-${ANDROID_ABI}-llvm" --runtime "$runtime"
 
+# API4 retains its original configured static/raster profile. The producer's
+# source trees and JNI checks stay in this stage, never in the installed image.
+FROM tools AS api4-built
+ENV ANDROID_ABI=armeabi ANDROID_API=4
+COPY scripts/build/qt4-android/build-native.sh \
+     scripts/build/qt4-android/build-qtcore.sh \
+     scripts/build/qt4-android/target-config.sh \
+     scripts/build/qt4-android/prepare-source.py \
+     scripts/build/qt4-android/patch-qtcore.py \
+     scripts/build/qt4-android/armv5-compat.c \
+     scripts/build/qt4-android/crt-donut.c \
+     scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
+COPY patches/android/donut /repo/patches/android/donut
+COPY patches/qt4/all/03-static-gui-animation-registration.patch \
+     patches/qt4/all/04-script-tagged-frame-pointers.patch /repo/patches/qt4/all/
+COPY scripts/tests/qt6-llvm-probes /repo/scripts/tests/qt6-llvm-probes
+COPY tests/common /repo/tests/common
+COPY tests/android-donut /repo/tests/android-donut
+COPY tests/qt-selftest /repo/tests/qt-selftest
+COPY tests/quick-qml-gallery /repo/tests/quick-qml-gallery
+COPY tests/widgets-gallery /repo/tests/widgets-gallery
+COPY tests/graphics-gallery /repo/tests/graphics-gallery
+COPY tests/network-gui /repo/tests/network-gui
+COPY tests/painting-lab /repo/tests/painting-lab
+RUN --network=none \
+    --mount=type=secret,id=longreach-jobs \
+    --mount=type=bind,source=downloads/llvm-project-21.1.8.src.tar.xz,target=/inputs/llvm-project-21.1.8.src.tar.xz \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    --mount=type=bind,from=android-api4-inputs,source=aosp-ndk-r7-api4-arm.tar.gz,target=/inputs/aosp-ndk-r7-api4-arm.tar.gz \
+    export PARALLEL_JOBS="$(cat /run/secrets/longreach-jobs 2>/dev/null || echo 2)" && \
+    mkdir -p /out && bash /repo/scripts/build/qt4-android/build-native.sh
+
+FROM api4-built AS api4-export
+COPY docker/qt4/android/Dockerfile /repo/docker/qt4/android/Dockerfile
+COPY scripts/build/qt4-android/api4-sdk.py \
+     scripts/build/qt4-android/sdk-provenance.py \
+     scripts/build/qt4-android/export-mkspecs.py \
+     scripts/build/qt4-android/install-api4-sdk.sh \
+     scripts/build/qt4-android/api4-clang-wrapper.sh \
+     scripts/build/qt4-android/armv5-compat.c \
+     scripts/build/qt4-android/crt-donut.c \
+     scripts/build/qt4-android/tmpfile-donut.c /repo/scripts/build/qt4-android/
+RUN --network=none \
+    --mount=type=bind,source=downloads/qt-everywhere-opensource-src-4.8.7.tar.gz,target=/inputs/qt-everywhere-opensource-src-4.8.7.tar.gz \
+    bash /repo/scripts/build/qt4-android/install-api4-sdk.sh
+
+FROM tools AS api4-sdk
+ENV ANDROID_ABI=armeabi ANDROID_API=4 \
+    PATH=/opt/qt4-android-armeabi-llvm/bin:${PATH} \
+    QMAKESPEC=/opt/qt4-android-armeabi-llvm/mkspecs/android-longreach-clang
+COPY --from=api4-export /opt/qt4-android-armeabi-llvm /opt/qt4-android-armeabi-llvm
+COPY --from=api4-export /opt/longreach-android-api4 /opt/longreach-android-api4
+LABEL org.openkaryon.longreach-qt.role="android-sdk" \
+      org.openkaryon.longreach-qt.compiler="LLVM 21.1.8" \
+      org.openkaryon.longreach-qt.version="4.8.7" \
+      org.openkaryon.longreach-qt.platform="android-donut-armeabi" \
+      org.openkaryon.longreach-qt.android-api="4"
+WORKDIR /work
+RUN --network=none test ! -e /work/qt4-donut-quick && \
+    python3 /opt/qt4-android-armeabi-llvm/libexec/api4-sdk/api4-sdk.py verify
+
+
 # Historical API4 and Qt5/6 bootstrap callers build only these host tools.
 FROM tools AS default

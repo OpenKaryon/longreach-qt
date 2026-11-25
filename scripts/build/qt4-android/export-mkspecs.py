@@ -11,7 +11,7 @@ import uuid
 SPEC = 'android-longreach-clang'
 RECEIPT = '.longreach-export.json'
 OMIT = {'default', 'default-host', 'linux-donut-host', 'linux-donut-llvm', SPEC, RECEIPT}
-RUNTIMES = {'/opt/longreach-android', '/opt/longreach-android-api21'}
+RUNTIMES = {'/opt/longreach-android', '/opt/longreach-android-api21', '/opt/longreach-android-api4'}
 CONFIG = '''include(../linux-g++/qmake.conf)
 # Preserve named-spec scopes when qmake selects the regular default directory.
 CONFIG += android-longreach-clang

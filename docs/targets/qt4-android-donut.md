@@ -83,6 +83,38 @@ See the [example validation report](../results/qt4-android-donut-examples-202611
 for platform limits and guest results.
 
 
+## Installed SDK producer
+
+The explicit SDK phase exports this same API4/armeabi raster profile:
+
+```powershell
+./scripts/build/qt4-android.ps1 -Abi armeabi -Mode sdk -OutputDirectory artifacts/qt4-android-donut-sdk
+```
+
+It selects the separate `api4-sdk` Docker stage and image
+`longreach-qt4-android-donut-armeabi:llvm21`. The original
+`longreach-qt4-android-donut:llvm21` tag remains reserved for shared host tools;
+the no-mode combined recipe and `qt4-android-arm-legacy` interface stay intact.
+Use a fresh output directory for each SDK generation so failed source captures
+and earlier identities remain available. Custom `-InputDirectory` archives are
+read through a separate BuildKit context.
+
+The installed prefix `/opt/qt4-android-armeabi-llvm` supplies headers, host
+qmake/moc/rcc/uic, eight selected static Qt modules, raster/QML plugins and
+independent mkspecs. `/opt/longreach-android-api4` supplies the sysroot, C/C++
+drivers, static libc++/ABI/unwind/experimental libraries, compiler-rt builtins
+and ARMv5 compatibility/startup objects. The final image contains the installed
+prefixes rather than retained source/build trees. This export preserves the
+profile's disabled modules; it does not enable desktop Qt4 capabilities on API4.
+
+`sdk-generation.json` binds the immutable image ID, producer payload manifest
+and the before/after source/archive capture. Producer recipes must match that
+capture; a successful export is not a guest result. The installed verifier is
+`/opt/qt4-android-armeabi-llvm/libexec/api4-sdk/api4-sdk.py verify`.
+Qualification requires clients built from this installed SDK and their own
+fresh diagnostic receipts. Historical combined-recipe APKs below do not supply
+that evidence.
+
 ## Shared compiler inputs
 
 Android host tools build from the digest-pinned Ubuntu 22.04 image and the

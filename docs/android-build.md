@@ -14,6 +14,7 @@ work without Android tools.
 
 | Qt | make architecture | Android ABI | API |
 | --- | --- | --- | --- |
+| 4 | `arm` | `armeabi` | 4 |
 | 4 | `i386` | `x86` | 10 |
 | 4 | `amd64` | `x86_64` | 21 |
 | 4 | `arm64` | `arm64-v8a` | 21 |
@@ -46,6 +47,13 @@ Qt 6 SDK mode prepares its default native Linux host SDK using the existing
 incremental make target. Selecting `ANDROID_HOST_IMAGE` requires that custom
 host image to exist already. Examples mode never prepares a host SDK.
 Direct PowerShell SDK mode retains its existing ready-host requirement.
+
+Qt 4 API4 uses the configured static/raster installed SDK described in its
+[target guide](targets/qt4-android-donut.md), including its explicit module and
+resident-JNI limits. Prepare the pinned API4 input directory as that guide
+requires; `ANDROID_INPUT` can select it for either SDK or examples mode.
+`qt4-android-arm` uses image `longreach-qt4-android-donut-armeabi:llvm21` and
+`artifacts/qt4-android-donut-sdk`, preserving the producer's existing defaults.
 
 The original Qt 4 API4/`armeabi` recipe remains available separately as
 `make qt4-android-arm-legacy`. It builds native probes and packages APKs
@@ -90,7 +98,7 @@ make build-all-examples BUILD_ALL_ARGS="--only *-android-*"
 python scripts/build/build-all.py --list --only '*-android-i386'
 ```
 
-`build-all` includes the eleven installed-SDK profiles. `--only` and `--skip`
+`build-all` includes the twelve installed-SDK profiles. `--only` and `--skip`
 match their canonical names. SDK-only mode invokes each bare SDK target;
 batch examples explicitly schedule SDK then `-examples`, producing APKs.
 A failed step fails that target. Guests are never launched. Logs and
@@ -120,7 +128,7 @@ Qt versions remain pinned to their existing patch series.
 | `ANDROID_OUTPUT` | Override the existing output directory for an individual invocation; both native and APK stages use it. |
 | `ANDROID_SDK_IMAGE` | Select a ready SDK in examples mode, or its output tag in SDK mode. |
 | `ANDROID_HOST_IMAGE` | Custom ready host SDK for Qt 6 SDK mode; suppresses default host preparation. |
-| `ANDROID_INPUT` | Original API4 legacy input directory only. |
+| `ANDROID_INPUT` | Pinned API4 inputs for installed SDK/examples or the original legacy recipe. |
 
 Output/image overrides are for one profile at a time; do not point several
 batch profiles at the same output or SDK tag. Runner options are passed

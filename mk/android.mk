@@ -48,8 +48,8 @@ $(filter qt6-%,$(ANDROID_TARGETS)): build-qt6-linux-amd64
 endif
 endif
 
-# API4 ARM still compiles and packages together. Do not advertise a false SDK
-# phase or add it to the SDK-only build-all matrix.
+# Preserve the original combined API4 recipe separately from its installed
+# SDK target. The legacy recipe stays outside the SDK-only build-all matrix.
 .PHONY: qt4-android-arm-legacy
 qt4-android-arm-legacy:
 	$(PYTHON) scripts/build/android.py --target "$@" --mode legacy --qt-version "$(QT4_VERSION)" $(ANDROID_OPTIONS) $(ANDROID_SDK_OPTIONS)

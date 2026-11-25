@@ -31,11 +31,11 @@ The Android recipes use LLVM 21.1.8 and the same eight application sources.
 Qt 4 has a static embedded profile; Qt 5 and Qt 6 use shared libraries with
 QtActivity. Android SDK, example, package and emulator phases are documented
 in the target guides; packaging currently runs on Windows with PowerShell 7.
-The [make and build-all interface](docs/android-build.md) exposes the eleven
+The [make and build-all interface](docs/android-build.md) exposes the twelve
 installed-SDK profiles as `qt<N>-android-<arch>` SDK targets and `-examples`
 targets producing ready APKs. Run APKs through the Android runners.
-The original Qt 4 API4 ARM recipe remains an explicitly named legacy
-combined build.
+The Qt 4 API4 ARM SDK uses its configured static/raster profile. Its original
+combined build remains available through the explicit legacy target.
 
 | Qt | Original floor | Additional qualified ABIs |
 | --- | --- | --- |
@@ -77,7 +77,7 @@ and details are on the [target pages](docs/targets/). Make variables tune a
 build (compiler jobs, Qt version, licence profile, deployment target): see
 [getting started](docs/getting-started.md).
 
-Android adds `qt4-android-{i386,amd64,arm64}`,
+Android adds `qt4-android-{arm,i386,amd64,arm64}`,
 `qt5-android-{armv7,i386,amd64,arm64}` and
 `qt6-android-{armv7,i386,amd64,arm64}`. Each has only the SDK target and
 `-examples`, which consumes a ready SDK and produces APKs. Android ABI names

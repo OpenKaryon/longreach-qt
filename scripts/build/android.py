@@ -45,16 +45,17 @@ def command_for(args) -> list[str]:
     if not legacy and target not in ANDROID_TARGETS:
         raise ValueError(f'unknown Android target: {args.target}')
     if not args.mode or legacy != (args.mode == 'legacy'):
-        raise ValueError('API4 ARM has only the explicit legacy recipe; SDK profiles require a phase')
+        raise ValueError('The legacy recipe requires legacy mode; installed SDK profiles require sdk/examples mode')
     qt, abi = (4, 'armeabi') if legacy else ANDROID_TARGETS[target][:2]
+    api4 = legacy or ANDROID_TARGETS[target].api == 4
     if args.license_profile != 'gpl-enabled':
         raise ValueError('Android recipes currently support LICENSE_PROFILE=gpl-enabled only')
     if args.qt_version and args.qt_version != QT_VERSIONS[qt]:
         raise ValueError(f'Android Qt {qt} is pinned to {QT_VERSIONS[qt]} and its patch series')
     if args.parallel_jobs < 1:
         raise ValueError('ANDROID_PARALLEL_JOBS must be positive')
-    if args.input_directory and not legacy:
-        raise ValueError('ANDROID_INPUT is only supported by the API4 legacy recipe')
+    if args.input_directory and not api4:
+        raise ValueError('ANDROID_INPUT is only supported by API4 profiles')
     if args.host_image and (qt != 6 or args.mode != 'sdk'):
         raise ValueError('ANDROID_HOST_IMAGE is only supported by Qt6 SDK mode')
     if legacy and (args.sdk_image or args.no_cache or args.docker_build_flags or args.parallel_jobs != 2):

@@ -172,9 +172,9 @@ void checkAndroidQueueLifecycle(SmokeReporter &r, const QByteArray &nativeId, co
 }
 
 // Some legacy emulator/HAL pairs advertise a magnetometer but use incompatible
-// magnetic message names. Exercise destruction under a verified native producer
-// there, without claiming that the compass produced a heading.
-void checkAndroidCompassTeardown(SmokeReporter &r)
+// magnetic message names or supply a zero magnetic vector. Exercise destruction
+// under a verified native producer without claiming a compass heading.
+void checkAndroidCompassTeardown(SmokeReporter &r, const QString &headingUnavailableReason)
 {
     const QString name = QStringLiteral("sensors/android-compass-queue-lifecycle");
     r.check(name, [&](QString &d) {
@@ -205,7 +205,8 @@ void checkAndroidCompassTeardown(SmokeReporter &r)
             }
             QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
         }
-        d = QStringLiteral("32 compass lifecycles during native acceleration, %1 acceleration readings; heading unavailable (no magnetic samples)").arg(readings);
+        d = QStringLiteral("32 compass lifecycles during native acceleration, %1 acceleration readings; heading unavailable (%2)")
+                .arg(readings).arg(headingUnavailableReason);
         r.observe(name, d);
         return true;
     });
@@ -315,7 +316,8 @@ void checkSensors(SmokeReporter &r)
         }
     }
     r.observe(QStringLiteral("sensors/android-native-inventory"), QStringLiteral("count=%1").arg(nativeSensorCount));
-    bool nativeMagneticReadingsAvailable = false;
+    bool nativeMagneticDirectionAvailable = false;
+    QString headingUnavailableReason = QStringLiteral("no magnetic samples");
     r.check("sensors/android-acceleration-input", [&](QString &d) {
         if (nativeSensorCount == 0) {
             r.skip(d, QStringLiteral("Android native sensor API exposes no sensors (count=0)"));
@@ -343,13 +345,21 @@ void checkSensors(SmokeReporter &r)
         QString accelerationValues("none"), magneticValues("none");
         if (auto reading = accel.reading())
             accelerationValues = QStringLiteral("%1:%2:%3").arg(reading->x(), 0, 'g', 9).arg(reading->y(), 0, 'g', 9).arg(reading->z(), 0, 'g', 9);
-        if (auto reading = magnetic.reading())
+        bool magneticVectorNonzero = false;
+        if (auto reading = magnetic.reading()) {
             magneticValues = QStringLiteral("%1:%2:%3").arg(reading->x(), 0, 'g', 9).arg(reading->y(), 0, 'g', 9).arg(reading->z(), 0, 'g', 9);
+            magneticVectorNonzero = reading->x() != 0.0 || reading->y() != 0.0 || reading->z() != 0.0;
+        }
         d = QStringLiteral("accel start=%1 reads=%2 error=%3 values=%4; magnetic start=%5 reads=%6 error=%7 values=%8")
                 .arg(accelerationStarted).arg(accelerationReadings).arg(int(accel.error())).arg(accelerationValues)
                 .arg(magneticStarted).arg(magneticReadings).arg(int(magnetic.error())).arg(magneticValues);
         r.observe(QStringLiteral("sensors/android-native-inputs"), d);
-        nativeMagneticReadingsAvailable = magneticStarted && magneticReadings > 0;
+        // Tools25's stock ARM64 guest emits zero magnetic samples, and its
+        // console cannot set a magnetic vector. Events alone do not provide
+        // a direction from which the synthetic compass can compute a heading.
+        if (magneticStarted && magneticReadings > 0 && !magneticVectorNonzero)
+            headingUnavailableReason = QStringLiteral("zero magnetic vector");
+        nativeMagneticDirectionAvailable = magneticStarted && magneticReadings > 0 && magneticVectorNonzero;
         // This check qualifies acceleration only. Magnetic availability is
         // recorded above and selects the appropriate compass check below.
         return accelerationStarted && accelerationReadings > 0;
@@ -367,11 +377,11 @@ void checkSensors(SmokeReporter &r)
     } else {
         checkAndroidQueueLifecycle<QAccelerometer>(r, QByteArray("1"),
                                                    QStringLiteral("sensors/android-queue-lifecycle"));
-        if (nativeMagneticReadingsAvailable)
+        if (nativeMagneticDirectionAvailable)
             checkAndroidQueueLifecycle<QCompass>(r, QByteArray("android.synthetic.compass"),
                                                 QStringLiteral("sensors/android-compass-queue-lifecycle"), 5000);
         else
-            checkAndroidCompassTeardown(r);
+            checkAndroidCompassTeardown(r, headingUnavailableReason);
     }
 #endif
     r.check("sensors/real-backend-produces-reading", [&](QString &d) {

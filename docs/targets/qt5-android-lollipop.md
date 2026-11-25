@@ -99,6 +99,12 @@ generation, producer-report, timed-wait, launch-classification and process-exit
 requirements. Historical runs above do not qualify the changed source or
 receipt format; a native refresh is required for changed native observations.
 
+The pinned Tools25 ARM64 guest emits zero magnetic vectors and its console has
+no `sensor` command. Such samples cannot establish a compass heading. The
+extended selftest still exercises 32 compass lifecycles during a verified native
+acceleration stream and records `heading unavailable (zero magnetic vector)`.
+Nonzero magnetic input retains the compass-reading requirement.
+
 Console selftests retain `android.app.background_running=true` as a historical
 suspension workaround; this does not qualify normal Activity pause/resume.
 GUI examples retain normal lifecycle handling.

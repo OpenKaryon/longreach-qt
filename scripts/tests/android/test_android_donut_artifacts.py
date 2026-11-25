@@ -75,6 +75,8 @@ class DonutArtifacts(unittest.TestCase):
             (stage / (profile + '.so')).write_bytes(elf.elf('armeabi', profile.encode()))
             (stage / (profile + '-elf.txt')).write_text('synthetic ELF report/' + profile)
         (stage / 'libQtCore.a').write_bytes(b'!<arch>\nSYNTHETIC')
+        (stage / 'core-qmake.pro').write_text('fixture qmake core project')
+        (stage / 'core-qmake-Makefile.txt').write_text('fixture installed qmake Makefile')
         return stage
 
     def complete_native(self):
@@ -118,6 +120,38 @@ class DonutArtifacts(unittest.TestCase):
         donut.common.write_json(self.root / 'sdk-generation.json', generation)
         (self.root / 'sdk-image-id.txt').write_text(IMAGE + '\n')
         return name
+
+    def test_installed_sdk_requires_both_qmake_client_receipts_before_promotion(self):
+        self.seed_installed_sdk()
+        donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        stage = self.stage_native()
+        for name in ('core-qmake.pro', 'core-qmake-Makefile.txt'):
+            path = stage / name
+            saved = path.read_bytes()
+            path.unlink()
+            with self.subTest(missing=name), self.assertRaises(FileNotFoundError) as failure:
+                donut.finish_native(self.root, self.repo, self.inputs, stage, IMAGE)
+            self.assertEqual(Path(failure.exception.filename).name, name)
+            self.assertTrue((self.root / donut.NATIVE_PENDING).exists())
+            self.assertTrue(stage.is_dir())
+            self.assertFalse((self.root / 'native').exists())
+            path.write_bytes(saved)
+        native = donut.finish_native(self.root, self.repo, self.inputs, stage, IMAGE)
+        self.assertIn('native/core-qmake.pro', native['files'])
+        self.assertIn('native/core-qmake-Makefile.txt', native['files'])
+
+    def test_changed_installed_qmake_receipt_invalidates_completed_native_inputs(self):
+        self.seed_installed_sdk()
+        donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        donut.finish_native(self.root, self.repo, self.inputs, self.stage_native(), IMAGE)
+        for name in ('core-qmake.pro', 'core-qmake-Makefile.txt'):
+            path = self.root / 'native' / name
+            saved = path.read_bytes()
+            path.write_text('changed after the native receipt')
+            with self.subTest(changed=name), self.assertRaisesRegex(ValueError, 'native files/reports changed'):
+                donut.check_native(self.root, require_installed=True)
+            path.write_bytes(saved)
+        self.assertTrue(donut.check_native(self.root, require_installed=True))
 
     def test_installed_sdk_clients_bind_sdk_generation_through_apk_packaging(self):
         self.seed_installed_sdk()

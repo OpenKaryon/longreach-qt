@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Provenance for the combined API4 recipe; not an installed Qt SDK receipt."""
+"""Bind API4 native/APK generations and optional installed-SDK provenance."""
 import argparse
 import hashlib
 import importlib.util
@@ -124,12 +124,15 @@ def begin(root, repo, directory, sdk_image=None):
     return pending
 
 
-def native_snapshot(directory):
+def native_snapshot(directory, installed_sdk=False):
     safe(directory)
     if {p.name for p in directory.glob('*.so')} != {p + '.so' for p in PROFILES}:
         raise ValueError('Expected exactly eight API4 native clients')
     result = {}
-    for name in [p + suffix for p in PROFILES for suffix in ('.so', '-elf.txt')] + ['libQtCore.a']:
+    names = [p + suffix for p in PROFILES for suffix in ('.so', '-elf.txt')] + ['libQtCore.a']
+    if installed_sdk:
+        names += ['core-qmake.pro', 'core-qmake-Makefile.txt']
+    for name in names:
         path = safe(directory / name)
         if not path.is_file() or not path.stat().st_size:
             raise ValueError('Missing API4 native output: ' + name)
@@ -151,7 +154,7 @@ def finish_native(root, repo, directory, stage, image):
     safe(stage)
     if stage.resolve().parent != root.resolve() or not re.fullmatch(r'native-build-[0-9a-f]{32}', stage.name):
         raise ValueError('API4 native staging must be a fresh direct child of the artifact root')
-    files = native_snapshot(stage)
+    files = native_snapshot(stage, 'installed_sdk' in pending)
     native = root / 'native'
     if native.exists():
         safe(native)
@@ -187,7 +190,7 @@ def check_native(root, require_installed=False):
         raise ValueError('API4 clients were not built from the installed SDK')
     if 'installed_sdk' in receipt and receipt['installed_sdk'] != installed_sdk_binding(root, receipt['tool_image_id'], receipt['inputs']):
         raise ValueError('API4 native clients belong to another installed SDK')
-    if receipt['files'] != native_snapshot(root / 'native'):
+    if receipt['files'] != native_snapshot(root / 'native', 'installed_sdk' in receipt):
         raise ValueError('API4 native files/reports changed after completion')
     return receipt
 

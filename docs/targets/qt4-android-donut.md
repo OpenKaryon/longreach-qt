@@ -121,8 +121,13 @@ Use the same output directory for the separate consumer phases:
 
 `examples` compiles all eight JNI diagnostics from installed headers, libraries
 and host tools inside the immutable SDK image. It neither rebuilds Qt nor copies
-the producer's clients. Its native receipt binds the SDK generation, payload and
-source hashes; `package` and `test` require that binding, preserving the existing
+the producer's clients. The QtCore client uses the installed `qmake` and
+`android-longreach-clang` mkspec for its compile and link. The generated
+Makefile must not retain known producer build-tree inputs; `core-qmake.pro` and
+`core-qmake-Makefile.txt` are required hash-bound native evidence for installed
+SDK clients. Historical combined-recipe receipts keep their existing contract.
+The native receipt also binds the SDK generation, payload and source hashes;
+`package` and `test` require that binding, preserving the existing
 APK/JNI, named coverage and owned-process checks. `test -Profiles core,quick`
 selects individual diagnostics; omit `-Profiles` for all eight. API4 uses unique
 per-profile attempt directories rather than `-RunName`.

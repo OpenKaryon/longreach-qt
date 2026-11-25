@@ -19,9 +19,31 @@ link=(-shared -Wl,--gc-sections,-soname,libdonut_probe.so)
 "$cxx" "${compile[@]}" -std=c++23 -I/repo/scripts/tests/qt6-llvm-probes \
     -c "$tests/strict-jni.cpp" -o strict-jni.o
 "$cxx" "${link[@]}" strict-jni.o -o strict.so
-"$cxx" "${compile[@]}" -std=gnu++98 -I"$quick/include" -I"$quick/include/QtCore" \
-    -c "$tests/qtcore-jni.cpp" -o qtcore-jni.o
-"$cxx" "${link[@]}" qtcore-jni.o "$quick/lib/libQtCore.a" -o core.so
+# Exercise the exported qmake and target mkspec, not only their query output.
+mkdir core-client
+cat >core-client/core.pro <<'EOF'
+TEMPLATE = lib
+TARGET = core
+CONFIG += dll release
+CONFIG -= staticlib app_bundle debug debug_and_release
+QT = core
+SOURCES = /repo/tests/android-donut/qtcore-jni.cpp
+QMAKE_CXXFLAGS += -std=gnu++98 -ffunction-sections -fdata-sections
+QMAKE_LFLAGS_SONAME =
+QMAKE_LFLAGS += -Wl,--gc-sections,-soname,libdonut_probe.so
+EOF
+(
+    cd core-client
+    "$quick/bin/qmake" -spec "$quick/mkspecs/android-longreach-clang" core.pro
+    if grep -E '/work/(qt4-donut-quick|qtquick-donut-sdk|donut-bin|runtime-build|sysroot-api4)' Makefile; then
+        echo 'Installed qmake client retained a producer build-tree input' >&2
+        exit 1
+    fi
+    make -j2
+    cp libcore.so ../core.so
+    cp core.pro /out/core-qmake.pro
+    cp Makefile /out/core-qmake-Makefile.txt
+)
 
 "$quick/bin/rcc" -name qml_qt4 /repo/tests/quick-qml-gallery/qml_qt4.qrc -o qml-resources.cpp
 includes=(-I"$quick/include" -I"$quick/include/QtCore" -I"$quick/include/QtGui" -I"$quick/include/QtDeclarative")

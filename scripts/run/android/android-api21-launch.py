@@ -15,6 +15,7 @@ def application_arguments(qt, case, options):
     sound = options.get('diagnostic', 'none') == 'qt5-sound-cache-teardown'
     forward = options.get('diagnostic', 'none') == 'qt5-api10-on-api21'
     speech = options.get('diagnostic', 'none') == 'qt5-tts-behavior'
+    extras = options.get('diagnostic', 'none') == 'qt5-android-extras'
     if forward:
         if qt != 5 or name != 'api10-selftest':
             raise ValueError('API10 forward diagnostic requires exactly its Qt5 selftest case')
@@ -23,6 +24,10 @@ def application_arguments(qt, case, options):
         if qt != 5 or name != 'tts-behavior':
             raise ValueError('TTS diagnostic requires exactly its explicit Qt5 case')
         app, arguments = 'multimedia-lab', '--tts-behavior'
+    elif extras:
+        if qt != 5 or name != 'android-extras':
+            raise ValueError('AndroidExtras requires exactly its explicit Qt5 core case')
+        app, arguments = 'qt-selftest', '--android-extras'
     elif name == 'sound-cache-teardown':
         if qt != 5 or not sound:
             raise ValueError('Sound-cache case requires explicit Qt5 diagnostic mode')
@@ -64,12 +69,14 @@ def validate(run, qt, abi, records):
             options.get('qt_quick_backend') not in ('default', 'software')):
         raise ValueError('Missing or invalid API21 run launch options')
     diagnostic = options.get('diagnostic', 'none')
-    if diagnostic not in ('none', 'qt5-sound-cache-teardown', 'qt5-api10-on-api21', 'qt5-tts-behavior'):
+    if diagnostic not in ('none', 'qt5-sound-cache-teardown', 'qt5-api10-on-api21', 'qt5-tts-behavior', 'qt5-android-extras'):
         raise ValueError('Invalid API21 diagnostic mode')
     if diagnostic == 'qt5-sound-cache-teardown' and (qt != 5 or len(records) != 1 or records[0].get('name') != 'sound-cache-teardown'):
         raise ValueError('Sound diagnostic requires exactly one explicit Qt5 case')
     if diagnostic == 'qt5-tts-behavior' and (qt != 5 or len(records) != 1 or records[0].get('name') != 'tts-behavior'):
         raise ValueError('TTS diagnostic requires exactly one explicit Qt5 case')
+    if diagnostic == 'qt5-android-extras' and (qt != 5 or len(records) != 1 or records[0].get('name') != 'android-extras'):
+        raise ValueError('AndroidExtras requires exactly one explicit Qt5 diagnostic case')
     if diagnostic == 'qt5-api10-on-api21':
         if qt != 5 or abi not in ('x86', 'armeabi-v7a') or len(records) != 1 or records[0].get('name') != 'api10-selftest':
             raise ValueError('API10 forward diagnostic requires one Qt5 ARMv7/x86 selftest')
@@ -97,6 +104,8 @@ def validate(run, qt, abi, records):
         reasons.append('Qt5 sound-cache diagnostic; no full-suite qualification')
     if diagnostic == 'qt5-tts-behavior':
         reasons.append('Qt5 TTS behavior diagnostic; no full-suite or audible-output qualification')
+    if diagnostic == 'qt5-android-extras':
+        reasons.append('Qt5 AndroidExtras diagnostic; no full-suite qualification')
     if diagnostic == 'qt5-api10-on-api21':
         reasons.append('API10 APK on API21 diagnostic; no SDK or full-suite qualification')
     if options['debug_qt_plugins']:

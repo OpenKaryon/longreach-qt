@@ -1,8 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 param([ValidateSet(5,6)][int]$QtMajor = 6, [ValidateSet('armeabi-v7a','arm64-v8a','x86','x86_64')][string]$Abi = 'armeabi-v7a', [string]$RunName='sdk-suite', [ValidateSet('on','mesa')][string]$Gpu='on',
-      [string[]]$CaseNames, [switch]$SoundCacheTeardown, [switch]$SpeechBehavior, [switch]$Api10Compatibility, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
+      [string[]]$CaseNames, [switch]$SoundCacheTeardown, [switch]$SpeechBehavior, [switch]$AndroidExtrasBehavior, [switch]$Api10Compatibility, [switch]$DebugQtPlugins, [ValidateSet('default','software')][string]$QtQuickBackend='default',
       [string]$AndroidSdk=$env:ANDROID_HOME, [string]$OutputDirectory)
 $ErrorActionPreference='Stop'
+if ($AndroidExtrasBehavior) {
+    if ($QtMajor -ne 5 -or $SoundCacheTeardown -or $SpeechBehavior -or $Api10Compatibility -or $PSBoundParameters.ContainsKey('CaseNames')) {
+        throw 'AndroidExtras requires an exclusive QtMajor5 diagnostic without CaseNames'
+    }
+    if (!$PSBoundParameters.ContainsKey('RunName')) { $RunName='android-extras-'+[guid]::NewGuid().ToString('N') }
+    if ($RunName -cnotmatch '^[a-z0-9][a-z0-9-]{0,63}$') { throw 'Invalid AndroidExtras diagnostic run name' }
+}
 if ($SpeechBehavior) {
     if ($QtMajor -ne 5) { throw 'TTS behavior requires QtMajor 5' }
     if ($SoundCacheTeardown -or $Api10Compatibility -or $PSBoundParameters.ContainsKey('CaseNames')) {
@@ -33,6 +40,7 @@ $QtQuickBackend=$QtQuickBackend.ToLowerInvariant()
 . "$PSScriptRoot/android/android-cpu.ps1"
 . "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/android/android-process-exit.ps1"
+if ($AndroidExtrasBehavior) { . "$PSScriptRoot/android/android-extras.ps1" }
 . "$PSScriptRoot/android/android-shell.ps1"
 . "$PSScriptRoot/android/android-shell-status.ps1"
 $repo=(Resolve-Path "$PSScriptRoot/../..").Path
@@ -44,7 +52,7 @@ if (!$OutputDirectory) {
         else { "$repo/artifacts/qt$QtMajor-android-lollipop$suffix" }
 }
 $root=(Resolve-Path -LiteralPath $OutputDirectory).Path
-if (($SoundCacheTeardown -or $SpeechBehavior -or $Api10Compatibility) -and (Test-Path -LiteralPath (Join-Path $root $RunName))) {
+if (($SoundCacheTeardown -or $SpeechBehavior -or $AndroidExtrasBehavior -or $Api10Compatibility) -and (Test-Path -LiteralPath (Join-Path $root $RunName))) {
     throw 'Diagnostic run already exists; preserve it and choose another name'
 }
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
@@ -84,6 +92,8 @@ if ($SoundCacheTeardown) {
     $cases=@(@{App='qt-selftest';Name='sound-cache-teardown';Arguments='--sound-cache-teardown';Strict=$false;Extended=$true})
 } elseif ($SpeechBehavior) {
     $cases=@(@{App='multimedia-lab';Name='tts-behavior';Arguments='--tts-behavior';Strict=$false})
+} elseif ($AndroidExtrasBehavior) {
+    $cases=@(@{App='qt-selftest';Name='android-extras';Arguments='--android-extras';Strict=$false})
 } elseif ($Api10Compatibility) {
     $cases=@(@{App='qt-selftest';Name='api10-selftest';Arguments='--selftest';Strict=$false})
 } elseif ($CaseNames) {
@@ -123,6 +133,7 @@ try {
       debug_qt_plugins=[bool]$DebugQtPlugins;qt_quick_backend=$QtQuickBackend}
     if ($SoundCacheTeardown) { $runOptions.diagnostic='qt5-sound-cache-teardown' }
     if ($SpeechBehavior) { $runOptions.diagnostic='qt5-tts-behavior' }
+    if ($AndroidExtrasBehavior) { $runOptions.diagnostic='qt5-android-extras' }
     if ($Api10Compatibility) { $runOptions.diagnostic='qt5-api10-on-api21'; $runOptions += $forwardCoverage }
     $runOptions | ConvertTo-Json | Set-Content -LiteralPath "$run/run-options.json" -Encoding utf8
     $runOptionsSha=(Get-FileHash -LiteralPath "$run/run-options.json" -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -173,6 +184,7 @@ try {
         $nativeResult = @()
         for ($attempt = 0; $attempt -lt 300; $attempt++) {
             Start-Sleep -Seconds 2
+            if ($AndroidExtrasBehavior) { Observe-AndroidExtrasServices -Adb $adb -Serial $serial -Directory $destination -Package $package -Marker $logMarker }
             $nativeResult = @(Invoke-Adb @('shell','cat',"/data/data/$package/files/selftest-result.txt") -AllowNonzero)
             if ($nativeResult -match '^\s*[0-9]+\s*$') { $complete = $true; break }
             if ($attempt % 5 -eq 0) {
@@ -214,13 +226,17 @@ try {
             & python "$repo/scripts/tests/android/require-android-tts.py" $stdout
             if ($LASTEXITCODE) { throw 'TTS behavior observations failed' }
             Get-AndroidVerifiedHash $stdout $stdoutSha | Out-Null
+        } elseif ($AndroidExtrasBehavior) {
+            & python "$repo/scripts/tests/android/require-android-extras.py" $stdout
+            if ($LASTEXITCODE) { throw 'AndroidExtras observations failed' }
+            Get-AndroidVerifiedHash $stdout $stdoutSha | Out-Null
         } elseif ($case.Strict) {
             & python "$repo/scripts/tests/require-modern-cpp.py" $stdout
             if ($LASTEXITCODE -ne 0) { throw 'C++23 must pass exactly25 checks without SKIP' }
         } elseif (!($report -match '^---- [^:]+: [1-9][0-9]* passed, 0 failed, [0-9]+ skipped ----\s*$')) {
             throw "$($case.Name) has no successful ordinary summary"
         }
-        if (!$SoundCacheTeardown -and !$SpeechBehavior) {
+        if (!$SoundCacheTeardown -and !$SpeechBehavior -and !$AndroidExtrasBehavior) {
             $coverageApi=21; $coverageCase=$case.Name
             if ($Api10Compatibility) {
                 $coverageApi=10; $coverageCase='qt-selftest'
@@ -231,7 +247,7 @@ try {
             if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
         }
         $summary = @($report | Where-Object { $_ -match 'passed,.*failed,.*skipped' })
-        if ($SpeechBehavior) { $summary=@() }
+        if ($SpeechBehavior -or $AndroidExtrasBehavior) { $summary=@() }
         Get-AndroidVerifiedHash $apk $installedApkSha | Out-Null
         Get-AndroidVerifiedHash "$root/apk-manifest.json" $apkManifestSha | Out-Null
         Get-AndroidVerifiedHash "$run/run-options.json" $runOptionsSha | Out-Null
@@ -259,11 +275,12 @@ try {
         $outcomes[-1] | Add-Member -NotePropertyMembers @{
             case_cleanup_raw_logcat_sha256=(Get-FileHash "$destination/logcat-after-cleanup-raw.log" -Algorithm SHA256).Hash.ToLowerInvariant();
             case_cleanup_logcat_sha256=(Get-FileHash "$destination/logcat-after-cleanup.log" -Algorithm SHA256).Hash.ToLowerInvariant()}
-        if ($SoundCacheTeardown -or $SpeechBehavior -or $Api10Compatibility) {
-            $diagnostic=if ($SoundCacheTeardown) { 'qt5-sound-cache-teardown' } elseif ($SpeechBehavior) { 'qt5-tts-behavior' } else { 'qt5-api10-on-api21' }
+        if ($SoundCacheTeardown -or $SpeechBehavior -or $AndroidExtrasBehavior -or $Api10Compatibility) {
+            $diagnostic=if ($SoundCacheTeardown) { 'qt5-sound-cache-teardown' } elseif ($SpeechBehavior) { 'qt5-tts-behavior' } elseif ($AndroidExtrasBehavior) { 'qt5-android-extras' } else { 'qt5-api10-on-api21' }
             $outcomes[-1] | Add-Member -NotePropertyMembers @{scope='single-case';qualification=$false;
                 diagnostic=$diagnostic;diagnostic_stdout_sha256=$stdoutSha}
             if ($Api10Compatibility) { $outcomes[-1] | Add-Member -NotePropertyMembers $forwardCoverage }
+            if ($AndroidExtrasBehavior) { $outcomes[-1] | Add-Member -NotePropertyMembers @{extras_services_sha256=(Get-FileHash -LiteralPath "$destination/extras-services.json").Hash.ToLowerInvariant()} }
         }
         $outcomes | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$run/results.json"
         Write-Output "$($case.Name): $($summary -join ' ')"
@@ -309,7 +326,13 @@ foreach ($outcome in $outcomes) {
     $outcome | Add-Member -NotePropertyMembers @{
         final_logcat_sha256=(Get-FileHash "$run/final-logcat.log" -Algorithm SHA256).Hash.ToLowerInvariant();
         final_logcat_capture_sha256=(Get-FileHash "$run/final-logcat-capture.json" -Algorithm SHA256).Hash.ToLowerInvariant()}
-    if ($SoundCacheTeardown -or $SpeechBehavior -or $Api10Compatibility) { $outcome | Add-Member -NotePropertyName completed -NotePropertyValue $true }
+    if ($AndroidExtrasBehavior) {
+        $extrasCase="$run/$($outcome.name)"
+        Write-AndroidOwnedProcessJson "$extrasCase/extras-case-pending.json" $outcome
+        & python "$PSScriptRoot/android/android-extras-state.py" validate --case $extrasCase --package 'org.longreachqt.examples.qtselftest' --receipt "$extrasCase/extras-case-pending.json" --final-run $run
+        if ($LASTEXITCODE) { throw 'Post-cleanup Service evidence is incomplete' }
+    }
+    if ($SoundCacheTeardown -or $SpeechBehavior -or $AndroidExtrasBehavior -or $Api10Compatibility) { $outcome | Add-Member -NotePropertyName completed -NotePropertyValue $true }
 }
 if ($Api10Compatibility) { Get-AndroidVerifiedHash "$repo/scripts/run/android/android-baselines.json" $forwardCoverage.coverage_policy_sha256 | Out-Null }
 Write-AndroidOwnedProcessJson "$run/results.json" $outcomes
@@ -321,6 +344,9 @@ if ($SoundCacheTeardown) {
 } elseif ($SpeechBehavior) {
     & python "$PSScriptRoot/android/android-api21-tts.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 TTS diagnostic evidence is incomplete' }
+} elseif ($AndroidExtrasBehavior) {
+    & python "$PSScriptRoot/android/android-api21-extras.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
+    if ($LASTEXITCODE) { throw 'API21 AndroidExtras evidence is incomplete' }
 } elseif ($Api10Compatibility) {
     & python "$PSScriptRoot/android/android-api21-forward.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 forward diagnostic evidence is incomplete' }

@@ -34,6 +34,11 @@ $crashHoldDiagnostic=$ApplicationArguments -match '(^|\s)--android-crash-hold(\s
 if ($crashHoldDiagnostic -and ($StrictCxx23 -or $RuntimeProbe -or $CaseName -or $BatchReceipt)) {
     throw 'Post-main crash hold is a standalone diagnostic, not a qualification case'
 }
+$extrasBehavior=$ApplicationArguments -ceq '--android-extras'
+if ($ApplicationArguments -match '(^|\s)--android-extras(\s|$)' -and !$extrasBehavior) { throw 'AndroidExtras requires exactly --android-extras' }
+if ($extrasBehavior -and ($StrictCxx23 -or $RuntimeProbe -or $CaseName -or $BatchReceipt -or $NativeSensorFixture)) {
+    throw 'AndroidExtras is a standalone diagnostic, not a strict/probe/batch qualification case'
+}
 $ttsBehavior=$ApplicationArguments -ceq '--tts-behavior'
 if ($ApplicationArguments -match '(^|\s)--tts-behavior(\s|$)' -and !$ttsBehavior) {
     throw 'TTS behavior requires exactly --tts-behavior'
@@ -64,6 +69,7 @@ $activity=if ($RuntimeProbe) { 'org.longreachqt.donut.ProbeActivity' } else { 'o
 . "$PSScriptRoot/android/android-cpu.ps1"
 . "$PSScriptRoot/android/android-owned-process.ps1"
 . "$PSScriptRoot/android/android-process-exit.ps1"
+if ($extrasBehavior) { . "$PSScriptRoot/android/android-extras.ps1" }
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 . "$PSScriptRoot/android/android-case-state.ps1"
 . "$repo/scripts/build/android-api21/artifact-lock.ps1"
@@ -89,9 +95,12 @@ $SystemDirectory = (Resolve-Path -LiteralPath $SystemDirectory).Path
 $output=$roots.Directory
 $adbEndpoint=Get-AndroidAdbEndpoint
 Assert-AndroidCaseInputsSeparate $output @($Apk,$Emulator,$Kernel,$Ramdisk,$SystemDirectory,$AndroidSdk)
-$binding=Get-AndroidApi10ApkBinding -Root $roots.Root -Apk $Apk -Abi $Abi -SdkImageId $SdkImageId -RequireManifest ([bool]$BatchReceipt -or $soundCacheTeardown -or $ttsBehavior) -RuntimeProbe ([bool]$RuntimeProbe)
+$binding=Get-AndroidApi10ApkBinding -Root $roots.Root -Apk $Apk -Abi $Abi -SdkImageId $SdkImageId -RequireManifest ([bool]$BatchReceipt -or $soundCacheTeardown -or $ttsBehavior -or $extrasBehavior) -RuntimeProbe ([bool]$RuntimeProbe)
 if ($ttsBehavior -and ($binding.apk_relative -cne 'apk/multimedia-lab.apk' -or $Package -cne 'org.longreachqt.examples.multimedialab')) {
     throw 'TTS behavior requires the generation-bound multimedia-lab APK and package'
+}
+if ($extrasBehavior -and ($binding.apk_relative -cne 'apk/qt-selftest.apk' -or $Package -cne 'org.longreachqt.examples.qtselftest')) {
+    throw 'AndroidExtras requires the generation-bound core qt-selftest APK and package'
 }
 $SdkImageId=$binding.sdk_image_id
 $logMarker=$null
@@ -106,6 +115,7 @@ $receipt = @{
 }
 if ($soundCacheTeardown) { $receipt.diagnostic='qt5-sound-cache-teardown' }
 if ($ttsBehavior) { $receipt.diagnostic='qt5-tts-behavior'; $receipt.diagnostic_arguments=$ApplicationArguments }
+if ($extrasBehavior) { $receipt.diagnostic='qt5-android-extras'; $receipt.diagnostic_arguments=$ApplicationArguments }
 if ($crashHoldDiagnostic) { $receipt.diagnostic='android-post-main-crash-hold' }
 if ($BatchReceipt) {
     $BatchReceipt=(Get-Item -LiteralPath $BatchReceipt).FullName
@@ -222,6 +232,7 @@ try {
         Start-Sleep -Seconds 2
         $process.Refresh()
         if ($process.HasExited) { break }
+        if ($extrasBehavior) { Observe-AndroidExtrasServices -Adb $adb -Serial $serial -Directory $output -Package $Package -Marker $logMarker }
         $result = @(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('shell','cat',"/data/data/$Package/files/$completionName") -Directory $output -Name 'native-result' -TimeoutMilliseconds 5000 -AllowNonzero)
         if ($result -match '^\s*[0-9]+\s*$') { $complete = $true; break }
         $logs = @(Get-AndroidCaseRawLog -Adb $adb -Serial $serial -Directory $output -Name 'native-progress' -TimeoutMilliseconds 5000)
@@ -250,6 +261,11 @@ try {
         Invoke-AndroidTool python @("$repo/scripts/tests/android/require-android-tts.py", "$output/files/$stdoutName")
         Get-AndroidVerifiedHash "$output/files/$stdoutName" $ttsStdoutHash | Out-Null
         $receipt.diagnostic_stdout_sha256=$ttsStdoutHash
+    }
+    if ($extrasBehavior) {
+        $receipt.diagnostic_stdout_sha256=(Get-FileHash -LiteralPath "$output/files/$stdoutName").Hash.ToLowerInvariant()
+        Invoke-AndroidTool python @("$repo/scripts/tests/android/require-android-extras.py", "$output/files/$stdoutName")
+        $receipt.extras_services_sha256=(Get-FileHash -LiteralPath "$output/extras-services.json").Hash.ToLowerInvariant()
     }
     if ($StrictCxx23) {
         Invoke-AndroidTool python @("$repo/scripts/tests/require-modern-cpp.py", "$output/files/$stdoutName")
@@ -311,6 +327,12 @@ if ($soundCacheTeardown -and $stdoutHash -cne $receipt.diagnostic_stdout_sha256)
 if ($NativeSensorFixture -and $receipt.native_sensor_fixture_sha256 -cne
         (Get-FileHash -LiteralPath "$output/native-sensor-inputs.json").Hash.ToLowerInvariant()) {
     throw 'Native sensor input record changed during the run'
+}
+if ($extrasBehavior) {
+    if ($stdoutHash -cne $receipt.diagnostic_stdout_sha256) { throw 'AndroidExtras stdout changed after validation' }
+    $receipt.stdout_sha256=$stdoutHash
+    Write-AndroidCaseReceipt $output $receipt
+    Invoke-AndroidTool python @("$PSScriptRoot/android/android-extras-state.py",'validate','--case',$output,'--package',$Package,'--receipt',"$output/input-receipt.json")
 }
 $receipt.completed=$true
 $receipt.stdout_sha256=$stdoutHash

@@ -24,6 +24,10 @@
 #endif
 #include <QFile>
 #include <QTextStream>
+#include <cstring>
+#ifdef SMOKE_ANDROID_EXTRAS_DIAGNOSTIC
+#include "../android/android-extras-behavior.h"
+#endif
 
 #include "../common/crashinfo.h"
 #include "../android/atomic-cow.h"
@@ -128,6 +132,17 @@ void runExtendedChecks(SmokeReporter &r)
 
 int main(int argc, char *argv[])
 {
+    // A QtService needs its own QCoreApplication, before GUI initialization.
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--android-extras-service") == 0) {
+#ifdef SMOKE_ANDROID_EXTRAS_DIAGNOSTIC
+            return SmokeAndroidExtras::runService(argc, argv);
+#else
+            std::fprintf(stderr, "AndroidExtras service requires Qt5 Android core profile\n");
+            return 2;
+#endif
+        }
+    }
 #if defined(LONGREACH_ANDROID_APK) && defined(__i386__) && SMOKE_QT5
     // Run before QGuiApplication: a bad emulator must fail without entering
     // the Android dispatcher that a false CAS can leave suspended forever.
@@ -179,6 +194,16 @@ int main(int argc, char *argv[])
         return SmokeSoundCacheTeardown::run();
 #else
         QTextStream(stdout) << "FAIL: sound-cache-teardown requires Qt5 Android extended or full profile\n";
+        return 2;
+#endif
+    }
+
+    if (app.arguments().contains(QStringLiteral("--android-extras"))) {
+        if (app.arguments().size() != 2) return 2;
+#ifdef SMOKE_ANDROID_EXTRAS_DIAGNOSTIC
+        return SmokeAndroidExtras::runClient();
+#else
+        QTextStream(stdout) << "FAIL: AndroidExtras requires Qt5 Android core profile\n";
         return 2;
 #endif
     }

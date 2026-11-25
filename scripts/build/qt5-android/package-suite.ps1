@@ -40,6 +40,7 @@ foreach ($item in $deployments) {
     $app=$item.App
     $deployment="$root/$($item.Directory)"
     $pluginOptions=@{}
+    if ($app -ceq 'qt-selftest' -and $item.ApkDirectory -ceq 'apk') { $pluginOptions.AndroidExtrasBehavior=$true }
     if ($Abi -in @('armeabi-v7a','x86') -and $app -eq 'quick-qml-gallery') {
         # Bionic API10 has only 96 DSO slots. PNG is built in; the shared
         # gallery uses GIF/JPEG/SVG, not the remaining desktop image handlers.

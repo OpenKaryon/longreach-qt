@@ -13,6 +13,7 @@ param(
     [string[]] $ImageFormats,
     [string] $Package = 'org.longreachqt.examples.probe',
     [string] $DeploymentDirectory,
+    [switch] $AndroidExtrasBehavior,
     $JavaTools
 )
 
@@ -38,6 +39,7 @@ if (!$appName.StartsWith('lib') -or !$appName.EndsWith("_$Abi")) {
     throw "Expected lib<application>_$Abi.so."
 }
 $appName = $appName.Substring(3, $appName.Length - 3 - ("_$Abi").Length)
+if ($AndroidExtrasBehavior -and $appName -cne 'qt-selftest') { throw 'AndroidExtras components require the core qt-selftest APK' }
 $apk = Join-Path $OutputDirectory "$appName.apk"
 if (Test-Path -LiteralPath $apk) {
     if ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($apk)) -ne $OutputDirectory) {
@@ -109,6 +111,25 @@ try {
     $permissionEntries = @($permissions | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object {
         '<uses-permission android:name="' + [Security.SecurityElement]::Escape($_) + '"/>'
     })
+    $extrasComponents=''
+    if ($AndroidExtrasBehavior) {
+        if (!(Test-Path -LiteralPath "$work/lib/$Abi/libQt5AndroidExtras_$Abi.so")) {
+            throw 'AndroidExtras diagnostic requires the deployed AndroidExtras native module'
+        }
+        $extrasComponents=@"
+        <activity android:name="org.longreachqt.examples.ExtrasResultActivity" android:exported="false"/>
+        <service android:name="org.qtproject.qt5.android.bindings.LongreachExtrasService"
+            android:process=":longreach_extras" android:exported="false">
+            <meta-data android:name="android.app.lib_name" android:value="$appName"/>
+            <meta-data android:name="android.app.qt_libs_resource_id" android:resource="@array/qt_libs"/>
+            <meta-data android:name="android.app.bundled_libs_resource_id" android:resource="@array/bundled_libs"/>
+            <meta-data android:name="android.app.load_local_libs_resource_id" android:resource="@array/load_local_libs"/>
+            <meta-data android:name="android.app.use_local_qt_libs" android:value="1"/>
+            <meta-data android:name="android.app.bundle_local_qt_libs" android:value="1"/>
+            <meta-data android:name="android.app.extract_android_style" android:value="none"/>
+        </service>
+"@
+    }
     $manifest = @"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="$Package" android:versionCode="1" android:versionName="1.0">
@@ -131,11 +152,16 @@ try {
             $exampleMetadata
             <meta-data android:name="android.app.extract_android_style" android:value="none"/>
         </activity>
+        $extrasComponents
     </application>
 </manifest>
 "@
     [IO.File]::WriteAllText("$work/AndroidManifest.xml", $manifest)
     $javaSources = @("$PSScriptRoot/../../../tests/android/java/SmokeActivity.java")
+    if ($AndroidExtrasBehavior) {
+        $javaSources+=@("$PSScriptRoot/../../../tests/android/java/LongreachExtrasService.java",
+            "$PSScriptRoot/../../../tests/android/java/ExtrasResultActivity.java")
+    }
     $javaSources += @(Get-ChildItem "$QtSdk/src/android/java/src" -Recurse -Filter '*.java' -File | Select-Object -ExpandProperty FullName)
     $aidlRoot = (Resolve-Path -LiteralPath "$QtSdk/src/android/java/src").Path
     foreach ($aidl in Get-ChildItem $aidlRoot -Recurse -Filter '*.aidl' -File) {

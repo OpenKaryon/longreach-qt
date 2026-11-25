@@ -253,3 +253,39 @@ host compiler. These host checks do not qualify an Android SDK/guest by themselv
 The owned-host `frontend_signaled` field means a signaled Windows process handle
 after wait, not a delivered shutdown signal; the receipt states its passive
 grace/Job-termination policy explicitly.
+
+## Qt5 AndroidExtras behavior
+
+Build the current core `qt-selftest` APK before running this explicit diagnostic.
+Its normal smoke counters stay separate. The core APK includes AndroidExtras,
+a result Activity and a QtService in the `:longreach_extras` process; the
+extended APK does not provide this diagnostic.
+
+For API10, use the ordinary `qt5-android-gingerbread.ps1` guest/media arguments,
+the generation-bound `apk/qt-selftest.apk`, and package
+`org.longreachqt.examples.qtselftest`. Set
+`-ApplicationArguments '--android-extras'`, choose a fresh output directory,
+and omit `-CaseName`, `-BatchReceipt`, strict/probe and sensor-fixture options.
+The APK manifest binding is mandatory. For API21, with `$root` pointing to the
+completed target generation:
+
+```powershell
+./scripts/run/android-api21-suite.ps1 -QtMajor 5 -Abi arm64-v8a -OutputDirectory $root -AndroidExtrasBehavior -RunName extras-arm64-01
+```
+
+The eight checks exercise context/UI dispatch, Intent byte/variant values,
+Activity result, cross-process service binding, Parcel/Binder echoes, reverse
+Binder callbacks, unbind/destruction and restart in a new service process.
+Two processes perform sixteen echo requests and sixteen reverse callbacks.
+Each service waits while the host records its live PID, command and birth
+identity; after unbind the host requires matching natural-death logs and two
+absent-process snapshots before acknowledging completion. Service native0 and
+onDestroy files remain separate requirements. A client transcript alone is
+insufficient, and a failed observation never releases a success ACK.
+
+The shared observer/evidence verifier lives under `scripts/run/android/`.
+`extras-services.json` binds the two host observations; pulled
+`files/extras-service-<pid>/` directories preserve the native service reports.
+API21 publishes `android-extras-result.json` inside the run. Both entry points
+keep `qualification=false`; full suites, controlled Activity metadata A/B,
+permissions, physical devices and hardware behavior are separate qualifications.

@@ -295,3 +295,13 @@ if(NOT SMOKE_ANDROID_SELFTEST_PROFILE STREQUAL "full")
     target_compile_definitions(qt-selftest PRIVATE SMOKE_ANDROID_SELFTEST_${smoke_android_profile})
     message(STATUS "qt-selftest: Android ${SMOKE_ANDROID_SELFTEST_PROFILE} profile; shared sources")
 endif()
+
+# Keep the explicit Service/Binder diagnostic in the smaller Android core APK.
+# Desktop/Qt6 and the extended API10 profile do not gain this dependency.
+if(ANDROID AND QT_VERSION_MAJOR EQUAL 5 AND
+        NOT SMOKE_ANDROID_SELFTEST_PROFILE STREQUAL "extended")
+    find_package(Qt5 REQUIRED COMPONENTS AndroidExtras)
+    target_link_libraries(qt-selftest PRIVATE Qt5::AndroidExtras)
+    target_compile_definitions(qt-selftest PRIVATE SMOKE_ANDROID_EXTRAS_DIAGNOSTIC)
+    target_sources(qt-selftest PRIVATE ../android/android-extras-behavior.h)
+endif()

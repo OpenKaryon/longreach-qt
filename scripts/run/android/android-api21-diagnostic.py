@@ -22,8 +22,13 @@ def module(name, path):
 base = module('diagnostic_api21_base', REPO / 'scripts/build/android-api21/collect-results.py')
 protocol = module('sound_api21_protocol', REPO / 'scripts/tests/android/require-android-sound-cache.py')
 tts_protocol = module('tts_api21_protocol', REPO / 'scripts/tests/android/require-android-tts.py')
+extras_protocol = module('extras_api21_protocol', REPO / 'scripts/tests/android/require-android-extras.py')
+extras_state = module('extras_api21_state', Path(__file__).with_name('android-extras-state.py'))
 _identity = base._identity
 SPECS = {
+    'extras': {'name': 'android-extras', 'app': 'qt-selftest', 'apk': 'apk/qt-selftest.apk',
+               'arguments': '--android-extras', 'diagnostic': 'qt5-android-extras',
+               'output': 'android-extras-result.json', 'history': 'android-extras-previous-'},
     'tts': {'name': 'tts-behavior', 'app': 'multimedia-lab', 'apk': 'apk/multimedia-lab.apk',
             'arguments': '--tts-behavior', 'diagnostic': 'qt5-tts-behavior',
             'output': 'tts-behavior-result.json', 'history': 'tts-behavior-previous-'},
@@ -103,6 +108,8 @@ def validate(root, name, abi, kind):
         protocol.validate(text)
     elif kind == 'tts':
         tts_protocol.validate(text)
+    elif kind == 'extras':
+        extras_protocol.validate(text)
     else:
         base._baselines.require(5, 10, abi, 'qt-selftest', text)
         summaries = [line for line in text.splitlines() if re.fullmatch(r'---- [^\n:]+: \d+ passed, \d+ failed, \d+ skipped ----\s*', line)]
@@ -128,6 +135,9 @@ def validate(root, name, abi, kind):
     report.update(cpu)
     report.update(host)
     report.update(final)
+    if kind == 'extras':
+        package = 'org.longreachqt.examples.qtselftest'
+        report.update(extras_state.validate(case, package, record, run))
     return report
 
 

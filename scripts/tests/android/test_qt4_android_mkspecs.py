@@ -231,7 +231,7 @@ class ShellMetadata(unittest.TestCase):
 
     def test_final_sdk_stage_verifies_real_installed_metadata_for_all_abis(self):
         text = (ROOT / 'docker/qt4/android/Dockerfile').read_text()
-        fragment = text.split('FROM ${ANDROID_ABI}-sdk AS sdk\n', 1)[1].split('\n\n# Historical', 1)[0]
+        fragment = text.split('FROM ${ANDROID_ABI}-sdk AS sdk\n', 1)[1].split('\nFROM ', 1)[0]
         self.assertTrue(fragment.startswith('RUN --network=none '))
         fragment = fragment.removeprefix('RUN --network=none ')
         for abi, settings in TARGETS.items():

@@ -130,6 +130,23 @@ per-profile attempt directories rather than `-RunName`.
 Qualification still requires fresh completed diagnostic receipts. Historical
 combined-recipe APKs below do not supply evidence for the installed SDK.
 
+### ARMv5 atomic coverage in the installed SDK strict client
+
+The API4-only strict client calls all eight exported compatibility symbols
+directly: barrier,32-bit CAS/add/sub/AND/exchange and8-bit CAS/exchange. Byte
+operations check all four byte lanes and preserve neighboring bits. Four
+pthreads perform1024 word increments each,then1024 exchanges per byte lane.
+The `ARMV5_ATOMIC:` transcript records kernel helper version and ten exact
+direct/contended observations alongside the unchanged25C++23 checks.
+
+Installed-SDK diagnostics require both transcripts and retain independent
+resident JNI/owned-tree cleanup checks. A nonzero strict JNI result still
+saves its report before rejection. Historical combined-recipe receipts keep
+their original contract. This probe covers the configured32-bit/8-bit paths
+on the recorded guest;64-bit,generic large-object atomics and physical SMP
+memory ordering need their own evidence. Component compile/partial-link and
+recorded report fixtures are not an Android runtime result.
+
 ## Shared compiler inputs
 
 Android host tools build from the digest-pinned Ubuntu 22.04 image and the

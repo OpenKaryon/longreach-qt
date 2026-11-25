@@ -98,6 +98,40 @@ class DonutState(unittest.TestCase):
         self.save(run, record)
         return run, record
 
+    def test_installed_sdk_strict_requires_atomic_results_beside_unchanged_cpp23(self):
+        from test_armv5_atomic import fixture
+        run, record = self.attempt('strict')
+        native = {'inputs': {'android_jar_sha256': state.common.digest(self.jar)},
+                  'installed_sdk': {'sdk_image_id': 'sha256:' + 'a' * 64}}
+        with patch.object(state.artifacts, 'check_native', return_value=native):
+            with self.assertRaisesRegex(ValueError, 'helper version'):
+                state.verify(self.root, run, completing=True)
+            self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
+            stdout = run / 'strict-cxx23-guest.stdout'
+            modern = stdout.read_text()
+            stdout.write_text(fixture() + modern)
+            record['case_outputs'][stdout.name] = state.common.digest(stdout)
+            self.save(run, record)
+            result = state.verify(self.root, run, completing=True)
+            self.assertTrue(result['completed'])
+            self.assertFalse(result['qualification'])
+
+    def test_rebound_atomic_failures_cannot_hide_behind_25_cpp23_passes(self):
+        from test_armv5_atomic import fixture
+        run, record = self.attempt('strict')
+        stdout = run / 'strict-cxx23-guest.stdout'
+        modern = stdout.read_text()
+        native = {'inputs': {'android_jar_sha256': state.common.digest(self.jar)}, 'installed_sdk': {}}
+        with patch.object(state.artifacts, 'check_native', return_value=native):
+            for text in (fixture().replace('word-cas=PASS', 'word-cas=FAIL'),
+                         fixture().replace('final=4096', 'final=4095')):
+                stdout.write_text(text + modern)
+                record['case_outputs'][stdout.name] = state.common.digest(stdout)
+                self.save(run, record)
+                with self.assertRaisesRegex(ValueError, 'observations differ'):
+                    state.verify(self.root, run, completing=True)
+                self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
+
     def test_all_eight_diagnostics_require_host_completion_and_stay_unqualified(self):
         for profile in state.artifacts.PROFILES:
             with self.subTest(profile=profile):

@@ -22,6 +22,7 @@ common = artifacts.common
 owned = load('api4_run_owned', Path(__file__).with_name('android-owned-process.py'))
 baselines = load('api4_run_baselines', Path(__file__).with_name('android-baselines.py'))
 modern = load('api4_run_modern', REPO / 'scripts/tests/require-modern-cpp.py')
+atomic = load('api4_run_atomic', REPO / 'scripts/tests/android/require-armv5-atomic.py')
 REPORTS = {'selftest': 'qt-selftest', 'graphics': 'graphics', 'network': 'network-gui', 'painting': 'painting-lab'}
 QUICK = ('qrc and first frame', 'Android tap updates QML and frame',
          'Android pause and resume preserve input and rendering',
@@ -129,6 +130,8 @@ def check_outputs(run, record):
             if 'Classic locale check passed' not in case_log:
                 raise ValueError('API4 classic locale result is missing')
             modern.require_modern_cpp((run / 'strict-cxx23-guest.stdout').read_text(encoding='utf-8-sig'))
+            if 'installed_sdk' in artifacts.check_native(run.parent.parent):
+                atomic.validate((run / 'strict-cxx23-guest.stdout').read_text(encoding='utf-8-sig'))
 
 
 def verify(root, run, completing=False):

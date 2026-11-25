@@ -8,6 +8,10 @@
 #include <sstream>
 #include <unistd.h>
 
+#if defined(__arm__) && __ANDROID_API__ == 4
+#include "armv5-atomic.h"
+#endif
+
 #define main longreachProbeMain
 #include "main.cpp"
 #undef main
@@ -41,7 +45,11 @@ Java_org_longreachqt_donut_ProbeActivity_runProbe(JNIEnv *env, jobject, jstring 
     }
     __android_log_write(ANDROID_LOG_INFO, "LongreachDonut", "Classic locale check passed");
 
-    const int result = longreachProbeMain();
+    bool atomicPassed = true;
+#if defined(__arm__) && __ANDROID_API__ == 4
+    atomicPassed = LongreachArmv5Atomic::run();
+#endif
+    const int result = atomicPassed ? longreachProbeMain() : 2;
     std::fflush(stdout);
     std::FILE *log = std::fopen("strict-cxx23.log", "r");
     if (!log)

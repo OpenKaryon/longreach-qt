@@ -31,6 +31,8 @@ Invoke-DonutCommand python @("$repo/scripts/build/qt4-android/donut-artifacts.py
 $nativeManifestSha=(Get-FileHash -LiteralPath "$output/donut-native-manifest.json" -Algorithm SHA256).Hash.ToLowerInvariant()
 $apkManifestSha=(Get-FileHash -LiteralPath "$output/donut-apk-manifest.json" -Algorithm SHA256).Hash.ToLowerInvariant()
 $apkManifest=Get-Content -LiteralPath "$output/donut-apk-manifest.json" -Raw | ConvertFrom-Json
+$nativeManifest=Get-Content -LiteralPath "$output/donut-native-manifest.json" -Raw | ConvertFrom-Json
+$installedSdk=$null -ne $nativeManifest.PSObject.Properties['installed_sdk']
 function Assert-DonutRunGeneration([string]$Profile) {
     Get-AndroidVerifiedHash "$output/donut-native-manifest.json" $nativeManifestSha | Out-Null
     Get-AndroidVerifiedHash "$output/donut-apk-manifest.json" $apkManifestSha | Out-Null
@@ -217,6 +219,7 @@ function Invoke-DonutRun([string] $Profile) {
                 # Preserve the strict report even when JNI reports a failure.
                 if (!($logs -match 'Classic locale check passed')) { throw 'Classic locale result was absent.' }
                 Invoke-DonutCommand python @("$repo/scripts/tests/require-modern-cpp.py", "$run/strict-cxx23-guest.stdout")
+                if ($installedSdk) { Invoke-DonutCommand python @("$repo/scripts/tests/android/require-armv5-atomic.py", "$run/strict-cxx23-guest.stdout") }
             }
         }
         if ($expected.ContainsKey($Profile) -and !($logs -match [regex]::Escape($expected[$Profile]))) { throw "Expected $Profile probe result was absent." }

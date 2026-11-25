@@ -42,7 +42,11 @@ runs the actual QtActivity, all eight common examples, core and extended
 selftest APKs, and strict C++23 25/25 without skips on the same guest.
 Widgets and QML gallery rendering passed. The clean Docker recipe, isolated
 SDK consumer builds and all 13 runtime profiles passed using the maintained
-scripts; details and platform limits are in the linked report.
+scripts; details and platform limits are in the linked report. The
+[fresh ARMv7 result](results/qt5-api10-armv7-qualification-20261124.md)
+reruns all 13 smoke profiles with current clock/sensor patches and observed
+process-tree termination, and checks the core API10 APK on API21. Three named
+native sensor SKIPs retain the stock guest's unavailable-hardware boundary.
 
 For Qt 6.8.5 the experimental Android floor is Android 5/API21.
 The [target guide](targets/qt6-android-lollipop.md) covers ARMv7, ARM64 and

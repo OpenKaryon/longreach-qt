@@ -87,7 +87,9 @@ the existing Qt check groups to fit Gingerbread's 96-DSO process limit;
 the desktop/full profile still runs their union. All 25 C++23 checks are
 mandatory with zero skips in both Android profiles. These runs use the
 headless emulator serially and save reports and PNGs in app-private storage.
-See the [SDK results](results/qt5-android-gingerbread-sdk-llvm21-20261117.md).
+See the [original SDK results](results/qt5-android-gingerbread-sdk-llvm21-20261117.md)
+and the [fresh ARMv7 result](results/qt5-api10-armv7-qualification-20261124.md)
+with all 13 smoke profiles, clean observed exits and explicit native sensor limits.
 
 Use the same visual and lifecycle checks when an iOS target is available.
 Packaging, launching the app and retrieving its report belong to each

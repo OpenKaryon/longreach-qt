@@ -71,7 +71,8 @@ the old Bionic program-header iterator with frame-header caching disabled;
 concurrent library unloading during unwinding has not been qualified.
 The Docker recipe contains host tools, runtime, OpenSSL, QtBase, complete Qt
 and installed SDK stages. Native source builds run offline against verified
-archives with two jobs. Example builds run one application at a time in a
+archives with two jobs by default (`-ParallelJobs` selects another limit).
+Example builds run one application at a time in a
 container limited to two CPUs and 3 GiB RAM. Stop the emulator before building.
 The suite boots a fresh guest per case. On x86, `atomic-cow` runs first and
 must pass before strict C++23 or the normal applications. ARMv7 starts with
@@ -172,9 +173,14 @@ as API21 export metadata here, not as the API10 compiler/runtime.
 The [sensor lifecycle result](../results/qt5-api10-sensor-queue-lifecycle-20261123.md)
 records a fresh Qt5 x86 SDK, the 14/14 API10 batch and API21 compatibility runs.
 API10 qualifies acceleration and compass teardown; actual compass headings
-were measured on API21. These results do not qualify ARMv7 or other Qt majors. ARMv7 API10 has not
-been rerun with clock/sensor patches28/29, all-ABI atomics, observed timed waits
-and the current process-exit gate. Its earlier reports remain historical.
+were measured on API21. That result qualifies its recorded x86 generation.
+The [fresh ARMv7 result](../results/qt5-api10-armv7-qualification-20261124.md)
+records a new SDK with patches28/29, all-ABI atomics, observed timed waits,
+all 13 API10 smoke profiles and the current exit gates, plus one core API10
+APK compatibility run on API21. Its three native sensor checks are named SKIPs:
+the stock API10 ARM guest cannot open its HAL device and exposes zero sensors
+through both C and Java APIs. Native sensor queues on ARM remain unqualified.
+These measurements do not qualify other ABIs, Qt majors or a full API21 suite.
 The [earlier sound-cache result](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
 retains its [exit-evidence correction](../results/qt5-android-api10-exit-evidence-20261123.md).
 

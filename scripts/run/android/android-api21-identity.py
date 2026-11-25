@@ -47,19 +47,21 @@ def check_launch(root, run, abi, launch, ready, config, avd_index):
         if not same_path(argument(flag), path):
             raise ValueError('API21 emulator uses unexpected media argument: ' + flag)
     cpu, cores, arch = CPU[abi]
+    if argument('-avd') != 'longreach-api21-' + abi:
+        raise ValueError('Unexpected API21 AVD name')
+    index = dict(line.split('=', 1) for line in avd_index.splitlines() if '=' in line)
+    if not same_path(index.get('path', ''), run / 'avd' / ('longreach-api21-' + abi + '.avd')) or index.get('target') != 'android-21':
+        raise ValueError('Unexpected API21 AVD index path/target')
+    values = dict(line.split('=', 1) for line in config.splitlines() if '=' in line)
+    if any(values.get(key) != str(value) for key, value in
+           [('abi.type', abi), ('hw.cpu.model', cpu), ('hw.cpu.ncore', cores), ('hw.cpu.arch', arch)]):
+        raise ValueError('Unexpected API21 AVD CPU configuration')
     if abi == 'armeabi-v7a':
-        if argument('-cpu') != cpu or '-qemu' not in argv or '-engine' in argv or config:
+        if argument('-cpu') != cpu or '-qemu' not in argv or '-engine' in argv:
             raise ValueError('Unexpected API21 classic CPU/engine')
     else:
         if argument('-engine') != 'qemu2' or argument('-accel') != 'off' or argument('-avd') != 'longreach-api21-' + abi:
             raise ValueError('Unexpected API21 engine or acceleration')
-        index = dict(line.split('=', 1) for line in avd_index.splitlines() if '=' in line)
-        if not same_path(index.get('path', ''), run / 'avd' / ('longreach-api21-' + abi + '.avd')) or index.get('target') != 'android-21':
-            raise ValueError('Unexpected API21 AVD index path/target')
-        values = dict(line.split('=', 1) for line in config.splitlines() if '=' in line)
-        if any(values.get(key) != str(value) for key, value in
-               [('abi.type', abi), ('hw.cpu.model', cpu), ('hw.cpu.ncore', cores), ('hw.cpu.arch', arch)]):
-            raise ValueError('Unexpected API21 AVD CPU configuration')
         if abi in ('x86', 'x86_64') and (argument('-cpu') != cpu or '-qemu' not in argv):
             raise ValueError('Unexpected API21 Intel CPU arguments')
     return cpu, cores
@@ -75,16 +77,15 @@ def capture(root, run, abi, repo=None):
     inputs = {}
     # AVD files can be normalized by the emulator after launch. Preserve the
     # exact inputs read before Start-Process, rather than hash later output.
-    if abi != 'armeabi-v7a':
-        source = run / 'avd' / ('longreach-api21-' + abi + '.avd/config.ini')
-        snapshot = run / 'emulator-config-input.ini'
-        shutil.copyfile(source, snapshot)
-        config = snapshot.read_text(encoding='utf-8-sig')
-        inputs[snapshot.name] = media.digest(snapshot)
-        index_snapshot = run / 'emulator-avd-input.ini'
-        shutil.copyfile(run / 'avd' / ('longreach-api21-' + abi + '.ini'), index_snapshot)
-        avd_index = index_snapshot.read_text(encoding='utf-8-sig')
-        inputs[index_snapshot.name] = media.digest(index_snapshot)
+    source = run / 'avd' / ('longreach-api21-' + abi + '.avd/config.ini')
+    snapshot = run / 'emulator-config-input.ini'
+    shutil.copyfile(source, snapshot)
+    config = snapshot.read_text(encoding='utf-8-sig')
+    inputs[snapshot.name] = media.digest(snapshot)
+    index_snapshot = run / 'emulator-avd-input.ini'
+    shutil.copyfile(run / 'avd' / ('longreach-api21-' + abi + '.ini'), index_snapshot)
+    avd_index = index_snapshot.read_text(encoding='utf-8-sig')
+    inputs[index_snapshot.name] = media.digest(index_snapshot)
     cpu, cores = check_launch(root, run, abi, launch, ready, config, avd_index)
     # The disposable data image must start from the recorded pinned userdata.
     if media.digest(run / 'userdata-qemu.img') != ready['files'][ready['roles']['userdata']]:
@@ -112,7 +113,7 @@ def validate(root, run, abi, repo=None, verify_files=True):
             identity.get('emulator_media_sha256') != media.digest(snapshot) or identity.get('arguments') != launch.get('arguments')):
         raise ValueError('API21 emulator identity receipt changed or differs from launch')
     ready = media.validate_ready(read(snapshot), root, abi, repo, verify_files)
-    names = set() if abi == 'armeabi-v7a' else {'emulator-config-input.ini', 'emulator-avd-input.ini'}
+    names = {'emulator-config-input.ini', 'emulator-avd-input.ini'}
     inputs = identity.get('launch_input_sha256', {})
     if set(inputs) != set(names) or any(media.digest(run / name) != sha for name, sha in inputs.items()):
         raise ValueError('API21 launch input snapshot changed')

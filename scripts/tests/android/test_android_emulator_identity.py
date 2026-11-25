@@ -9,6 +9,21 @@ import android_media_fixtures as fixtures
 
 
 class Identity(unittest.TestCase):
+    def test_classic_arm_hardware_state_is_mutable_only_inside_the_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixtures.launch(root, 'armeabi-v7a')
+            run = root / 'fixture-run'
+            avd = run / 'avd/longreach-api21-armeabi-v7a.avd'
+            (avd / 'hardware-qemu.ini').write_text('frontend-generated hardware state')
+            lock = avd / 'hardware-qemu.ini.lock'
+            lock.mkdir()
+            (lock / 'pid').write_text('123')
+            fixtures.identity.validate(root, run, 'armeabi-v7a', root / 'fixture-media-repo')
+            (root / 'media/armeabi-v7a/hardware-qemu.ini').write_text('unexpected media mutation')
+            with self.assertRaisesRegex(ValueError, 'bytes or inventory changed'):
+                fixtures.identity.validate(root, run, 'armeabi-v7a', root / 'fixture-media-repo')
+
     def test_captures_all_abis_and_allows_mutable_runtime_userdata(self):
         for abi in fixtures.media.ABIS:
             with self.subTest(abi=abi), tempfile.TemporaryDirectory() as directory:

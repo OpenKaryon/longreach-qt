@@ -57,14 +57,15 @@ def launch(root, abi, run_name='fixture-run'):
             '-ramdisk', str(root / 'media' / roles['ramdisk']), '-data', str(run / 'userdata-qemu.img'),
             '-initdata', str(root / 'media' / roles['userdata']), '-gpu', gpu]
     cpu, cores, arch = identity.CPU[abi]
+    avd = run / 'avd' / ('longreach-api21-' + abi + '.avd')
+    avd.mkdir(parents=True)
+    (avd.parent / ('longreach-api21-' + abi + '.ini')).write_text(f'path={avd}\ntarget=android-21\n')
+    (avd / 'config.ini').write_text(f'abi.type={abi}\nhw.cpu.arch={arch}\nhw.cpu.model={cpu}\nhw.cpu.ncore={cores}\n')
+    argv += ['-avd', 'longreach-api21-' + abi]
     if abi == 'armeabi-v7a':
         argv += ['-qemu', '-cpu', cpu]
     else:
-        argv += ['-avd', 'longreach-api21-' + abi, '-engine', 'qemu2', '-accel', 'off']
-        avd = run / 'avd' / ('longreach-api21-' + abi + '.avd')
-        avd.mkdir(parents=True)
-        (avd.parent / ('longreach-api21-' + abi + '.ini')).write_text(f'path={avd}\ntarget=android-21\n')
-        (avd / 'config.ini').write_text(f'abi.type={abi}\nhw.cpu.arch={arch}\nhw.cpu.model={cpu}\nhw.cpu.ncore={cores}\n')
+        argv += ['-engine', 'qemu2', '-accel', 'off']
         if abi in ('x86', 'x86_64'):
             argv += ['-qemu', '-cpu', cpu]
     (run / 'emulator-launch.json').write_text(json.dumps({'schema_version': 2, 'abi': abi,

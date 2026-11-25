@@ -28,7 +28,20 @@ Copy-Item -LiteralPath "$media/userdata.img" -Destination "$run/userdata-qemu.im
 $gpuMode = if ($Abi -in @('x86','x86_64')) { 'swiftshader_indirect' } else { $Gpu }
 $arguments = @('-sysdir',$media,'-datadir',$run,'-system',"$media/system.img",'-kernel',"$media/$kernel",'-ramdisk',"$media/ramdisk.img",'-data',"$run/userdata-qemu.img",'-initdata',"$media/userdata.img",'-no-window','-no-audio','-no-snapshot','-no-snapstorage','-skin','480x800','-partition-size','1024','-memory','1024','-gpu',$gpuMode,'-port','5582','-no-boot-anim','-verbose','-show-kernel')
 if ($Abi -eq 'armeabi-v7a') {
-    $arguments += @('-qemu','-cpu','cortex-a8')
+    # Tools24 writes hardware-qemu.ini beside an AVD, or in -sysdir when no
+    # AVD exists. Keep that mutable state out of the sealed media inventory.
+    $sdkRoot = Split-Path (Split-Path -Parent $Emulator) -Parent
+    $avdHome = "$run/avd"
+    $avdName = "longreach-api21-$Abi"
+    $avdPath = "$avdHome/$avdName.avd"
+    New-Item -ItemType Directory -Path $avdPath -Force | Out-Null
+    @('avd.ini.encoding=UTF-8',"path=$avdPath",'target=android-21') |
+        Set-Content -LiteralPath "$avdHome/$avdName.ini" -Encoding ascii
+    @('avd.ini.encoding=UTF-8',"abi.type=$Abi",'hw.cpu.arch=arm',
+      'hw.cpu.model=cortex-a8','hw.cpu.ncore=1','hw.ramSize=1024',
+      'image.sysdir.1=armeabi-v7a','target=android-21') |
+        Set-Content -LiteralPath "$avdPath/config.ini" -Encoding ascii
+    $arguments = @('-avd',$avdName) + $arguments + @('-qemu','-cpu','cortex-a8')
 } else {
     # The QEMU2 frontend needs an AVD to choose the target machine. Keep all
     # configuration and writable guest data within this unique run directory.
@@ -67,10 +80,8 @@ $previousPath = $env:PATH
 $previousAvdHome = $env:ANDROID_AVD_HOME
 $previousSdkRoot = $env:ANDROID_SDK_ROOT
 try {
-    if ($Abi -ne 'armeabi-v7a') {
-        $env:ANDROID_AVD_HOME = $avdHome
-        $env:ANDROID_SDK_ROOT = $sdkRoot
-    }
+    $env:ANDROID_AVD_HOME = $avdHome
+    $env:ANDROID_SDK_ROOT = $sdkRoot
     $env:PATH = "$(Split-Path -Parent $emulator)/lib;" + $previousPath
     $emulatorOwner=Start-AndroidOwnedProcess -Program $emulator -Arguments $arguments -Directory $run -ArtifactRoot $root -ArtifactLease (Get-AndroidArtifactLockStream $root) -AdbEndpoint (Get-AndroidAdbEndpoint)
 } finally {

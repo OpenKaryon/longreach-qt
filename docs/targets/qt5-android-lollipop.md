@@ -109,6 +109,12 @@ Console selftests retain `android.app.background_running=true` as a historical
 suspension workaround; this does not qualify normal Activity pause/resume.
 GUI examples retain normal lifecycle handling.
 
+The shared speech generation guard also covers API21 callbacks. A late
+onDone/onError from a replaced utterance and an onStart after stop are ignored;
+normal onStart/onDone transitions remain listener-driven. The
+[host regression scope](qt5-android-gingerbread.md#implementation-notes-and-current-evidence)
+does not establish Android TTS engine or audible-speech qualification.
+
 ## Focused sound-cache diagnostic
 
 `scripts/run/android-api21-suite.ps1 -QtMajor 5 -SoundCacheTeardown` requires

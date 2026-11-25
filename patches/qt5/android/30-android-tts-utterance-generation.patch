@@ -1,0 +1,428 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
+# Copyright (C) 2026 OpenKaryon
+# Bind speech callbacks to an engine and utterance generation on Qt-thread delivery.
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
+@@ -58,7 +58,9 @@
+     // Native callback functions
+     native public void notifyError(long id);
+     native public void notifyReady(long id);
+-    native public void notifySpeaking(long id);
++    native public void notifyUtterance(long id, long generation, boolean speaking);
++
++    private static final String UTTERANCE_PREFIX = "QtSpeech:";
+ 
+     private TextToSpeech mTts;
+     private final long mId;
+@@ -92,25 +94,19 @@
+             @Override
+             public void onDone(String utteranceId) {
+                 Log.w("UtteranceProgressListener", "onDone");
+-                if (utteranceId.equals("UtteranceId")) {
+-                    notifyReady(mId);
+-                }
++                reportUtterance(utteranceId, false);
+             }
+ 
+             @Override
+             public void onError(String utteranceId) {
+                 Log.w("UtteranceProgressListener", "onError");
+-                if (utteranceId.equals("UtteranceId")) {
+-                    notifyReady(mId);
+-                }
++                reportUtterance(utteranceId, false);
+             }
+ 
+             @Override
+             public void onStart(String utteranceId) {
+                 Log.w("UtteranceProgressListener", "onStart");
+-                if (utteranceId.equals("UtteranceId")) {
+-                    notifySpeaking(mId);
+-                }
++                reportUtterance(utteranceId, true);
+              }
+      });
+     }
+@@ -129,8 +125,7 @@
+             mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
+                 @Override
+                 public void onUtteranceCompleted(String utteranceId) {
+-                    if ("UtteranceId".equals(utteranceId))
+-                        notifyReady(mId);
++                    reportUtterance(utteranceId, false);
+                 }
+             });
+         }
+@@ -153,24 +148,38 @@
+         return 1.0f;
+     }
+ 
+-    public void say(String text)
++    private void reportUtterance(String utteranceId, boolean speaking)
++    {
++        if (utteranceId == null || !utteranceId.startsWith(UTTERANCE_PREFIX))
++            return;
++        final String value = utteranceId.substring(UTTERANCE_PREFIX.length());
++        try {
++            final long generation = Long.parseLong(value);
++            if (generation > 0 && value.equals(Long.toString(generation)))
++                notifyUtterance(mId, generation, speaking);
++        } catch (NumberFormatException ignored) {
++        }
++    }
++
++    public int say(String text, long generation)
+     {
+         Log.w("QtTextToSpeech", text);
+ 
+         int result = -1;
+ 
+         HashMap<String, String> map = new HashMap<String, String>();
+-        map.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "UtteranceId");
++        map.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTTERANCE_PREFIX + Long.toString(generation));
+         map.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, Float.toString(mVolume));
+-        result = mTts.speak(text, TextToSpeech.QUEUE_FLUSH, map);
+-
+-        if (Build.VERSION.SDK_INT < 15) {
+-            if (result == TextToSpeech.SUCCESS)
+-                notifySpeaking(mId);
+-            else
+-                notifyError(mId);
+-        }
++        try {
++            result = mTts.speak(text, TextToSpeech.QUEUE_FLUSH, map);
++        } catch (RuntimeException exception) {
++            Log.w("QtTextToSpeech", "Cannot start utterance", exception);
++            result = TextToSpeech.ERROR;
++        }
++        // Legacy Speaking is emitted by the native caller after this result.
++        // All token-bearing callbacks are queued until that caller returns.
+         Log.w("QtTextToSpeech", "RESULT: " + Integer.toString(result));
++        return result;
+     }
+ 
+     public void stop()
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -37,48 +37,63 @@
+ 
+ #include <jni.h>
+ #include <QtCore/private/qjnihelpers_p.h>
++#include <QtCore/QMutex>
++#include <QtCore/QPointer>
+ 
+ QT_BEGIN_NAMESPACE
+ 
+ static jclass g_qtSpeechClass = 0;
+ 
+ typedef QMap<jlong, QTextToSpeechEngineAndroid *> TextToSpeechMap;
+-Q_GLOBAL_STATIC(TextToSpeechMap, textToSpeechMap)
++struct SpeechBridge
++{
++    SpeechBridge() : nextId(0) {}
++    QMutex mutex;
++    TextToSpeechMap engines;
++    qlonglong nextId;
++};
++Q_GLOBAL_STATIC(SpeechBridge, speechBridge)
++
++static void postEngineState(jlong id, const char *method)
++{
++    if (speechBridge.isDestroyed())
++        return;
++    SpeechBridge *bridge = speechBridge();
++    QMutexLocker locker(&bridge->mutex);
++    QTextToSpeechEngineAndroid *tts = bridge->engines.value(id, nullptr);
++    // Keep lookup/post atomic with destructor removal. Always queue: executing
++    // a stateChanged handler under this mutex could reenter engine destruction.
++    if (tts)
++        QMetaObject::invokeMethod(tts, method, Qt::QueuedConnection);
++}
+ 
+ static void notifyError(JNIEnv *env, jobject thiz, jlong id)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+-
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyError", Qt::AutoConnection);
++    postEngineState(id, "processNotifyError");
+ }
+ 
+ static void notifyReady(JNIEnv *env, jobject thiz, jlong id)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+-
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyReady", Qt::AutoConnection);
+-}
+-
+-static void notifySpeaking(JNIEnv *env, jobject thiz, jlong id)
++    postEngineState(id, "processNotifyReady");
++}
++
++static void notifyUtterance(JNIEnv *env, jobject thiz, jlong id, jlong generation, jboolean speaking)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+-
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifySpeaking", Qt::AutoConnection);
++    if (speechBridge.isDestroyed())
++        return;
++    SpeechBridge *bridge = speechBridge();
++    QMutexLocker locker(&bridge->mutex);
++    QTextToSpeechEngineAndroid *tts = bridge->engines.value(id, nullptr);
++    if (tts)
++        QMetaObject::invokeMethod(tts, "processNotifyUtterance", Qt::QueuedConnection,
++                                  Q_ARG(qlonglong, qlonglong(generation)),
++                                  Q_ARG(bool, speaking != JNI_FALSE));
+ }
+ 
+ Q_DECL_EXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void */*reserved*/)
+@@ -105,7 +120,7 @@
+     static const JNINativeMethod methods[] = {
+         {"notifyError", "(J)V", reinterpret_cast<void *>(notifyError)},
+         {"notifyReady", "(J)V", reinterpret_cast<void *>(notifyReady)},
+-        {"notifySpeaking", "(J)V", reinterpret_cast<void *>(notifySpeaking)}
++        {"notifyUtterance", "(JJZ)V", reinterpret_cast<void *>(notifyUtterance)}
+     };
+ 
+     if (clazz) {
+@@ -122,6 +137,8 @@
+ 
+ QTextToSpeechEngineAndroid::QTextToSpeechEngineAndroid(const QVariantMap &parameters, QObject *parent)
+     : QTextToSpeechEngine(parent)
++    , m_id(0)
++    , m_utterance()
+     , m_speech()
+     , m_state(QTextToSpeech::BackendError)
+     , m_text()
+@@ -129,19 +146,33 @@
+     Q_UNUSED(parameters)
+     Q_ASSERT(g_qtSpeechClass);
+ 
+-    const jlong id = reinterpret_cast<jlong>(this);
+-    // A fast initialization callback may arrive before Java open() returns.
+-    (*textToSpeechMap)[id] = this;
++    {
++        SpeechBridge *bridge = speechBridge();
++        QMutexLocker locker(&bridge->mutex);
++        do {
++            if (bridge->nextId == (std::numeric_limits<qlonglong>::max)())
++                bridge->nextId = 0;
++            m_id = ++bridge->nextId;
++        } while (bridge->engines.contains(m_id));
++        // The id is not an address: delayed callbacks cannot select a new
++        // engine allocated at a deleted engine's address.
++        bridge->engines.insert(m_id, this);
++    }
+     m_speech = QJNIObjectPrivate::callStaticObjectMethod(g_qtSpeechClass,
+                                                          "open",
+                                                          "(Landroid/content/Context;J)Lorg/qtproject/qt5/android/speech/QtTextToSpeech;",
+                                                          QtAndroidPrivate::context(),
+-                                                         id);
++                                                         jlong(m_id));
+ }
+ 
+ QTextToSpeechEngineAndroid::~QTextToSpeechEngineAndroid()
+ {
+-    textToSpeechMap->remove(reinterpret_cast<jlong>(this));
++    m_utterance.invalidate();
++    {
++        SpeechBridge *bridge = speechBridge();
++        QMutexLocker locker(&bridge->mutex);
++        bridge->engines.remove(m_id);
++    }
+     m_speech.callMethod<void>("shutdown");
+ }
+ 
+@@ -150,11 +181,32 @@
+     if (text.isEmpty())
+         return;
+ 
+-    if (m_state == QTextToSpeech::Speaking)
+-        stop();
+-
+-    m_text = text;
+-    m_speech.callMethod<void>("say", "(Ljava/lang/String;)V", QJNIObjectPrivate::fromString(m_text).object());
++    const QString requestedText = text;
++    const QJNIObjectPrivate speech = m_speech;
++    const qlonglong generation = m_utterance.begin();
++    QPointer<QTextToSpeechEngineAndroid> guard(this);
++    if (m_state == QTextToSpeech::Speaking) {
++        speech.callMethod<void>("stop", "()V");
++        if (!guard || !m_utterance.accepts(generation))
++            return;
++        setState(QTextToSpeech::Ready);
++        if (!guard || !m_utterance.accepts(generation))
++            return; // A stateChanged handler stopped or replaced this request.
++    }
++
++    m_text = requestedText;
++    const jint result = speech.callMethod<jint>("say", "(Ljava/lang/String;J)I",
++                         QJNIObjectPrivate::fromString(requestedText).object(), jlong(generation));
++    if (!guard || !m_utterance.accepts(generation))
++        return;
++    if (result != 0) {
++        m_utterance.invalidate();
++        setState(QTextToSpeech::BackendError);
++    } else if (QtAndroidPrivate::androidSdkVersion() < 15) {
++        // Pre-15 engines have no onStart. A fast completion is already queued
++        // and will be delivered only after this successful dispatch returns.
++        setState(QTextToSpeech::Speaking);
++    }
+ }
+ 
+ QTextToSpeech::State QTextToSpeechEngineAndroid::state() const
+@@ -173,36 +225,51 @@
+ 
+ void QTextToSpeechEngineAndroid::processNotifyReady()
+ {
+-    if (m_state != QTextToSpeech::Paused)
++    if (!m_utterance.isActive() && m_state != QTextToSpeech::Paused)
+         setState(QTextToSpeech::Ready);
+ }
+ 
+ void QTextToSpeechEngineAndroid::processNotifyError()
+ {
++    m_utterance.invalidate();
+     setState(QTextToSpeech::BackendError);
+ }
+ 
+-void QTextToSpeechEngineAndroid::processNotifySpeaking()
+-{
+-    setState(QTextToSpeech::Speaking);
++void QTextToSpeechEngineAndroid::processNotifyUtterance(qlonglong generation, bool speaking)
++{
++    if (!m_utterance.accepts(generation))
++        return;
++    if (speaking) {
++        setState(QTextToSpeech::Speaking);
++    } else {
++        m_utterance.finish(generation);
++        processNotifyReady();
++    }
+ }
+ 
+ void QTextToSpeechEngineAndroid::stop()
+ {
+-    if (m_state == QTextToSpeech::Ready)
+-        return;
+-
+-    m_speech.callMethod<void>("stop", "()V");
+-    setState(QTextToSpeech::Ready);
++    const bool wasActive = m_utterance.isActive();
++    const qlonglong generation = m_utterance.invalidate();
++    if (m_state == QTextToSpeech::Ready && !wasActive)
++        return;
++    const QJNIObjectPrivate speech = m_speech;
++    QPointer<QTextToSpeechEngineAndroid> guard(this);
++    speech.callMethod<void>("stop", "()V");
++    if (guard && m_utterance.isCurrent(generation))
++        setState(QTextToSpeech::Ready);
+ }
+ 
+ void QTextToSpeechEngineAndroid::pause()
+ {
++    const qlonglong generation = m_utterance.invalidate();
+     if (m_state == QTextToSpeech::Paused)
+         return;
+-
+-    m_speech.callMethod<void>("stop", "()V");
+-    setState(QTextToSpeech::Paused);
++    const QJNIObjectPrivate speech = m_speech;
++    QPointer<QTextToSpeechEngineAndroid> guard(this);
++    speech.callMethod<void>("stop", "()V");
++    if (guard && m_utterance.isCurrent(generation))
++        setState(QTextToSpeech::Paused);
+ }
+ 
+ void QTextToSpeechEngineAndroid::resume()
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
+@@ -39,6 +39,7 @@
+ 
+ #include "qtexttospeechengine.h"
+ #include "qvoice.h"
++#include "qandroidttsutterance_p.h"
+ 
+ #include <QtCore/private/qjni_p.h>
+ #include <QtCore/QString>
+@@ -77,12 +78,14 @@
+ public Q_SLOTS:
+     void processNotifyReady();
+     void processNotifyError();
+-    void processNotifySpeaking();
++    void processNotifyUtterance(qlonglong generation, bool speaking);
+ 
+ private:
+     void setState(QTextToSpeech::State state);
+     QVoice javaVoiceObjectToQVoice(QJNIObjectPrivate &obj) const;
+ 
++    qlonglong m_id;
++    QAndroidTtsUtterance m_utterance;
+     QJNIObjectPrivate m_speech;
+     QTextToSpeech::State m_state;
+     QString m_text;
+--- /dev/null
++++ b/qtspeech/src/plugins/tts/android/src/qandroidttsutterance_p.h
+@@ -0,0 +1,48 @@
++// SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
++// Copyright (C) 2026 OpenKaryon
++#ifndef QANDROIDTTSUTTERANCE_P_H
++#define QANDROIDTTSUTTERANCE_P_H
++
++#include <limits>
++
++// Owned by the engine's Qt thread. Check tokens on delivery, not on a Binder
++// thread: an old completion may already be queued when the next say starts.
++class QAndroidTtsUtterance
++{
++public:
++    typedef long long Token;
++    QAndroidTtsUtterance() : m_generation(0), m_active(false) {}
++
++    Token begin()
++    {
++        invalidate();
++        m_active = true;
++        return m_generation;
++    }
++
++    Token invalidate()
++    {
++        m_active = false;
++        if (m_generation == (std::numeric_limits<Token>::max)())
++            m_generation = 0;
++        return ++m_generation;
++    }
++
++    bool isCurrent(Token generation) const { return generation == m_generation; }
++    bool accepts(Token generation) const { return m_active && isCurrent(generation); }
++    bool isActive() const { return m_active; }
++
++    bool finish(Token generation)
++    {
++        if (!accepts(generation))
++            return false;
++        m_active = false;
++        return true;
++    }
++
++private:
++    Token m_generation;
++    bool m_active;
++};
++
++#endif

@@ -184,6 +184,15 @@ These measurements do not qualify other ABIs, Qt majors or a full API21 suite.
 The [earlier sound-cache result](../results/qt5-android-gingerbread-x86-sample-cache-fix-20261122.md)
 retains its [exit-evidence correction](../results/qt5-android-api10-exit-evidence-20261123.md).
 
+Patch30 binds each speech callback to an engine identity and utterance generation,
+checked when the event reaches the Qt thread. Replaced, stopped, paused or
+completed utterances cannot change a newer request's state. API10 reports
+Speaking after successful dispatch; API15+ retains its onStart/onDone listener.
+Dispatch failures report BackendError. Host regressions execute the Java
+adapter with recording Android substitutes and the native state methods with
+real QtCore delivery and substituted JNI calls; they do not qualify an Android
+TTS engine or audible speech. Changed SDK/APK generations need a guest refresh.
+
 ## Diagnose an API10 APK on API21
 
 With a complete matching API10 SDK/examples/APK generation:

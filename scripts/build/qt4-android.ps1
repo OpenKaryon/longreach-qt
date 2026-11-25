@@ -28,9 +28,10 @@ if ($Abi -ne 'armeabi') {
     & "$PSScriptRoot/qt4-android/api21.ps1" @options
     return
 }
-if ($PSBoundParameters.ContainsKey('Mode') -and $Mode -eq 'sdk') {
-    $options=@{Mode='sdk';ParallelJobs=$ParallelJobs;NoCache=$NoCache;DockerBuildFlagsJson=$DockerBuildFlagsJson}
-    foreach ($name in @('SdkImage','InputDirectory','OutputDirectory')) {
+if ($PSBoundParameters.ContainsKey('Mode')) {
+    if ($PSBoundParameters.ContainsKey('RunName')) { throw 'API4 diagnostics use unique per-profile attempt directories; omit -RunName' }
+    $options=@{Mode=$Mode;ParallelJobs=$ParallelJobs;NoCache=$NoCache;DockerBuildFlagsJson=$DockerBuildFlagsJson}
+    foreach ($name in @('SdkImage','InputDirectory','OutputDirectory','AndroidSdk','Profiles')) {
         if ($PSBoundParameters.ContainsKey($name)) { $options[$name]=$PSBoundParameters[$name] }
     }
     & "$PSScriptRoot/qt4-android/api4.ps1" @options

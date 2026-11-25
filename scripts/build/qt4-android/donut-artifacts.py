@@ -77,11 +77,47 @@ def validate_inputs(value):
         raise ValueError('Incomplete API4 recipe/archive provenance')
 
 
-def begin(root, repo, directory):
+def installed_sdk_binding(root, image=None, current_inputs=None):
+    if (root / 'api4-sdk-in-progress.json').exists():
+        raise ValueError('API4 installed SDK generation is incomplete')
+    generation = common.read_json(safe(root / 'sdk-generation.json'))
+    image_id = generation.get('sdk_image_id', '')
+    if (generation.get('schema_version') != 1 or generation.get('qt') != '4.8.7' or
+            generation.get('api') != 4 or generation.get('abi') != 'armeabi' or
+            generation.get('guest_qualification') is not False or
+            not re.fullmatch(r'sha256:[0-9a-f]{64}', image_id) or (image and image != image_id) or
+            (root / 'sdk-image-id.txt').read_text(encoding='utf-8-sig').strip() != image_id):
+        raise ValueError('API4 installed SDK generation/image identity differs')
+    files = {'sdk-manifest.json': 'sdk_manifest_sha256',
+             'sdk-source-inputs.json': 'sdk_source_inputs_sha256'}
+    for name, key in files.items():
+        if generation.get(key) != common.digest(safe(root / name)):
+            raise ValueError('API4 installed SDK source/payload receipt changed: ' + name)
+    manifest = common.read_json(root / 'sdk-manifest.json')
+    snapshot = common.read_json(root / 'sdk-source-inputs.json')
+    validate_inputs(snapshot.get('inputs', {}))
+    if (manifest.get('schema_version') != 1 or manifest.get('llvm') != '21.1.8' or
+            manifest.get('runtime_linkage') != 'static'):
+        raise ValueError('API4 installed SDK producer profile differs')
+    spec = importlib.util.spec_from_file_location('donut_installed_sdk', Path(__file__).with_name('api4-sdk.py'))
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    helper.check_source_binding(manifest, snapshot)
+    if current_inputs is not None:
+        helper.check_source_binding(manifest, {'inputs': current_inputs})
+    return {'sdk_image_id': image_id,
+            'sdk_generation_sha256': common.digest(root / 'sdk-generation.json'),
+            **{key: generation[key] for key in files.values()}}
+
+
+def begin(root, repo, directory, sdk_image=None):
     if (root / APK_PENDING).exists():
         raise ValueError('Recover the incomplete API4 APK generation explicitly')
+    captured = inputs(repo, directory)
     pending = dict(schema_version=1, qt_major=4, api=4, abi='armeabi', generation=uuid.uuid4().hex,
-                   inputs=inputs(repo, directory))
+                   inputs=captured)
+    if sdk_image:
+        pending['installed_sdk'] = installed_sdk_binding(root, sdk_image, captured)
     common.create_json(root / NATIVE_PENDING, pending)
     common.invalidate_results(root)
     # Keep previous completed receipts until promotion; the pending marker blocks consumption.
@@ -110,6 +146,8 @@ def finish_native(root, repo, directory, stage, image):
         raise ValueError('API4 recipe/archive inputs changed during the native build')
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', image or ''):
         raise ValueError('Missing immutable API4 tool image identity')
+    if 'installed_sdk' in pending and pending['installed_sdk'] != installed_sdk_binding(root, image, pending['inputs']):
+        raise ValueError('API4 installed SDK changed during client compilation')
     safe(stage)
     if stage.resolve().parent != root.resolve() or not re.fullmatch(r'native-build-[0-9a-f]{32}', stage.name):
         raise ValueError('API4 native staging must be a fresh direct child of the artifact root')
@@ -137,7 +175,7 @@ def finish_native(root, repo, directory, stage, image):
     return result
 
 
-def check_native(root):
+def check_native(root, require_installed=False):
     if (root / NATIVE_PENDING).exists():
         raise ValueError('API4 native generation is incomplete; recover it explicitly')
     receipt = common.read_json(root / NATIVE_MANIFEST)
@@ -145,6 +183,10 @@ def check_native(root):
     validate_inputs(receipt.get('inputs', {}))
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', receipt.get('tool_image_id', '')):
         raise ValueError('Invalid API4 tool image identity')
+    if require_installed and 'installed_sdk' not in receipt:
+        raise ValueError('API4 clients were not built from the installed SDK')
+    if 'installed_sdk' in receipt and receipt['installed_sdk'] != installed_sdk_binding(root, receipt['tool_image_id'], receipt['inputs']):
+        raise ValueError('API4 native clients belong to another installed SDK')
     if receipt['files'] != native_snapshot(root / 'native'):
         raise ValueError('API4 native files/reports changed after completion')
     return receipt
@@ -245,6 +287,8 @@ def main(argv=None):
     parser.add_argument('--input-directory', type=Path)
     parser.add_argument('--native-directory', type=Path)
     parser.add_argument('--tool-image-id')
+    parser.add_argument('--sdk-image-id', help='bind examples to a completed installed SDK')
+    parser.add_argument('--installed-sdk', action='store_true', help='require installed-SDK clients')
     parser.add_argument('--android-sdk', type=Path)
     parser.add_argument('--android-jar', type=Path)
     parser.add_argument('--javac', type=Path)
@@ -257,9 +301,11 @@ def main(argv=None):
             if not args.input_directory or (args.command == 'finish-native' and not args.native_directory):
                 parser.error('API4 native phases require --input-directory and finish requires --native-directory')
             if args.command == 'begin':
-                begin(root, args.repo, args.input_directory)
+                begin(root, args.repo, args.input_directory, args.sdk_image_id)
             else:
                 finish_native(root, args.repo, args.input_directory, args.native_directory, args.tool_image_id)
+        elif args.command == 'check-native':
+            check_native(root, args.installed_sdk)
         elif args.command in ('begin-apks', 'record-apks'):
             if not args.android_sdk or not args.android_jar or not args.javac:
                 parser.error('API4 APK phases require --android-sdk, --android-jar and --javac')

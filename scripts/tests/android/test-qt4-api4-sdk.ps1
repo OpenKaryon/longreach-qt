@@ -5,13 +5,14 @@ param([string]$RepoRoot=(Resolve-Path "$PSScriptRoot/../../..").Path)
 $ErrorActionPreference='Stop'
 $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullName
 $fixture=Join-Path $parent ('api4-sdk-modes-'+[guid]::NewGuid().ToString('N'))
-$state=@{Calls=[Collections.Generic.List[object]]::new();Busy=$false;Changed=$false;Wrong=$false;Root='';Secret='';SourceBytes=''}
+$state=@{Calls=[Collections.Generic.List[object]]::new();Busy=$false;Changed=$false;Wrong=$false;Root='';Secret='';SourceBytes='';RejectNative=$false;ClientBusy=$false}
 function Assert-Api4Sdk([bool]$Value,[string]$Message) { if (!$Value) { throw $Message } }
 function Get-Process { param($Name,$ErrorAction) if ($state.Busy) { [pscustomobject]@{Name='emulator-arm'} } }
 function python {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
     $state.Calls.Add(@('python')+$Arguments)
     $global:LASTEXITCODE=0
+    if ($Arguments[1] -eq 'check-native' -and $state.RejectNative) { $global:LASTEXITCODE=9; return }
     if ($Arguments[1] -eq 'capture-source') {
         $path=$Arguments[[Array]::IndexOf($Arguments,'--snapshot')+1]
         [IO.File]::WriteAllText($path,'{"inputs":{"fixture":"source bytes"},"git_head":"recording fixture"}')
@@ -29,6 +30,7 @@ function docker {
             Assert-Api4Sdk ([IO.File]::ReadAllText($state.Secret).Trim() -eq '3') 'SDK jobs were not forwarded through the normal secret'
         }
         'image' {
+            if ($Arguments -contains '{{.Id}}') { 'sha256:'+('a'*64); return }
             @{Id=('sha256:'+('a'*64));Os='linux';Architecture='amd64';Config=@{Labels=@{
                 'org.openkaryon.longreach-qt.version'='4.8.7';
                 'org.openkaryon.longreach-qt.compiler'='LLVM 21.1.8';
@@ -36,6 +38,7 @@ function docker {
                 'org.openkaryon.longreach-qt.android-api'=$(if($state.Wrong){'21'}else{'4'})
             }}} | ConvertTo-Json -Depth 5 -Compress
         }
+        'ps' { if ($state.ClientBusy) { ('c'*64)+' recorded-api4-client' } }
         'create' { 'b'*64 }
         'cp' {
             if ($Arguments[1] -like '*/api4-sdk.json') {
@@ -95,7 +98,65 @@ try {
     Assert-Api4Sdk ($state.Calls.Count -eq $calls) 'Busy guest reached a build/source boundary'
     $state.Busy=$false
     Fail-Api4Sdk 'reserved' 'bootstrap' @{SdkImage='longreach-qt4-android-donut:llvm21'}
-    Write-Output 'PASS: API4 SDK routing, source stability, image binding, preserved failures and bootstrap isolation (recorded boundaries only)'
+    # These boundaries are replaced only inside the owned fixture. The real
+    # dispatcher runs; no packaging tools, compiler or Android guest execute.
+    $hostFile="$fixture/repo/scripts/build/qt4-android/host.ps1"
+    Add-Content -LiteralPath $hostFile -Value @'
+function Expand-DonutInput { param($Archive,$Hash,$Destination,$Member) return "$Destination/android.jar" }
+function Get-AndroidPackagingJava { return @{javac='/recorded-java/javac.exe';launcher='/recorded-java/java.exe'} }
+function Initialize-DonutSigningKey { param($OutputDirectory,$JavaDirectory) return "$OutputDirectory/local-probe.jks" }
+'@
+    Set-Content -LiteralPath "$fixture/repo/scripts/build/qt4-android/package.ps1" -Value @'
+param($Profile,$NativeDirectory,$OutputDirectory,$AndroidSdk,$AndroidJar,$JavaTools)
+$state.Calls.Add(@('package',$Profile))
+'@
+    Set-Content -LiteralPath "$fixture/repo/scripts/run/qt4-android-donut.ps1" -Value @'
+param($InputDirectory,$OutputDirectory,$AndroidSdk,$Profiles)
+$state.Calls.Add(@('runner')+@($Profiles))
+'@
+    New-Item -ItemType Directory -Path "$fixture/recorded-sdk" | Out-Null
+    function Invoke-Api4ClientMode([string]$Mode,[hashtable]$Extra=@{}) {
+        $options=@{Abi='armeabi';Mode=$Mode;OutputDirectory="$fixture/fresh";
+            InputDirectory="$fixture/custom archives";AndroidSdk="$fixture/recorded-sdk"}
+        foreach ($key in $Extra.Keys) { $options[$key]=$Extra[$key] }
+        & "$fixture/repo/scripts/build/qt4-android.ps1" @options | Out-Null
+    }
+    $before=$state.Calls.Count
+    Invoke-Api4ClientMode 'examples'
+    $calls=@($state.Calls | Select-Object -Skip $before)
+    $compile=@($calls | Where-Object { $_[0] -eq 'docker' -and $_[1] -eq 'run' })
+    Assert-Api4Sdk ($compile.Count -eq 1 -and $compile[0] -contains '/repo/scripts/build/qt4-android/build-api4-examples.sh') 'Examples did not use installed-SDK clients'
+    Assert-Api4Sdk ($compile[0] -contains ('sha256:'+('a'*64))) 'Examples used a mutable image tag'
+    Assert-Api4Sdk (@($calls | Where-Object { $_[0] -eq 'docker' -and $_[1] -eq 'build' }).Count -eq 0) 'Examples rebuilt the native producer'
+    $begin=@($calls | Where-Object { $_[0] -eq 'python' -and $_[2] -eq 'begin' })
+    Assert-Api4Sdk ($begin.Count -eq 1 -and $begin[0] -contains '--sdk-image-id') 'Native reservation missed its SDK binding'
+    Assert-Api4Sdk ($compile[0] -contains '--name') 'Example container has no stable owned slot'
+    $state.ClientBusy=$true
+    $before=$state.Calls.Count
+    try { Invoke-Api4ClientMode 'examples'; throw 'Expected a busy client slot to fail' } catch {
+        Assert-Api4Sdk ($_.Exception.Message -match 'client cache is busy|container slot is still present') "Unexpected busy-slot failure: $_"
+    }
+    $calls=@($state.Calls | Select-Object -Skip $before)
+    Assert-Api4Sdk (@($calls | Where-Object { $_[0] -eq 'python' }).Count -eq 0) 'Busy client reserved a new generation'
+    $state.ClientBusy=$false
+    Invoke-Api4ClientMode 'package'
+    $packages=@($state.Calls | Where-Object { $_[0] -eq 'package' } | ForEach-Object { $_[1] })
+    Assert-Api4Sdk (($packages -join ',') -ceq 'bootstrap,strict,core,quick,selftest,graphics,network,painting') 'Package mode did not include exactly eight profiles'
+    Invoke-Api4ClientMode 'test' @{Profiles=@('core','quick')}
+    $runners=@($state.Calls | Where-Object { $_[0] -eq 'runner' })
+    Assert-Api4Sdk ($runners.Count -eq 1 -and ($runners[0] -join ',') -ceq 'runner,core,quick') 'Test selection did not reach the existing diagnostic runner'
+    $state.RejectNative=$true
+    foreach ($mode in 'package','test') {
+        $before=$state.Calls.Count
+        try { Invoke-Api4ClientMode $mode; throw 'Expected the stale-native boundary to fail' } catch {
+            Assert-Api4Sdk ($_.Exception.Message -match 'exited with code 9') "Unexpected stale native failure: $_"
+        }
+        $calls=@($state.Calls | Select-Object -Skip $before)
+        Assert-Api4Sdk (@($calls | Where-Object { $_[0] -in 'package','runner' }).Count -eq 0) 'Stale clients reached packaging or guest boundaries'
+        Assert-Api4Sdk ($calls[0] -contains '--installed-sdk') 'Explicit phase accepted a legacy combined generation'
+    }
+    Write-Output 'PASS: API4 SDK/examples/package/test routing, immutable SDK binding and retained failure gates (recorded boundaries only)'
+
 } finally {
     $resolved=[IO.Path]::GetFullPath($fixture)
     $boundary=[IO.Path]::GetFullPath($parent)+[IO.Path]::DirectorySeparatorChar

@@ -99,6 +99,83 @@ class DonutArtifacts(unittest.TestCase):
         self.write_apks()
         return donut.record_apks(self.root, self.sdk, self.jar, self.javac)
 
+    def seed_installed_sdk(self):
+        captured = donut.inputs(self.repo, self.inputs)
+        name, sha = next(iter(captured['sources'].items()))
+        manifest = dict(schema_version=1, qt='4.8.7', llvm='21.1.8', api=4, abi='armeabi',
+                        runtime_linkage='static', guest_qualification=False,
+                        recipe_inputs={name: sha}, prepared_source_recipe={'files': {}},
+                        qt_archive_sha256=captured['archives']['downloads/qt-everywhere-opensource-src-4.8.7.tar.gz'],
+                        runtime_source_archives={n: captured['archives'][k] for n, k in (
+                            ('llvm-project-21.1.8.src.tar.xz', 'downloads/llvm-project-21.1.8.src.tar.xz'),
+                            ('aosp-ndk-r7-api4-arm.tar.gz', 'android-inputs/aosp-ndk-r7-api4-arm.tar.gz'))})
+        donut.common.write_json(self.root / 'sdk-manifest.json', manifest)
+        donut.common.write_json(self.root / 'sdk-source-inputs.json', {'inputs': captured, 'git_head': None})
+        generation = dict(schema_version=1, qt='4.8.7', api=4, abi='armeabi', sdk_image_id=IMAGE,
+                          guest_qualification=False,
+                          sdk_manifest_sha256=donut.common.digest(self.root / 'sdk-manifest.json'),
+                          sdk_source_inputs_sha256=donut.common.digest(self.root / 'sdk-source-inputs.json'))
+        donut.common.write_json(self.root / 'sdk-generation.json', generation)
+        (self.root / 'sdk-image-id.txt').write_text(IMAGE + '\n')
+        return name
+
+    def test_installed_sdk_clients_bind_sdk_generation_through_apk_packaging(self):
+        self.seed_installed_sdk()
+        pending = donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        native = donut.finish_native(self.root, self.repo, self.inputs, self.stage_native(), IMAGE)
+        self.assertEqual(native['installed_sdk'], pending['installed_sdk'])
+        self.assertEqual(donut.check_native(self.root, require_installed=True), native)
+        self.start_apks()
+        self.write_apks()
+        donut.record_apks(self.root, self.sdk, self.jar, self.javac)
+        self.assertEqual(donut.check_apks(self.root)['native_manifest_sha256'],
+                         donut.common.digest(self.root / donut.NATIVE_MANIFEST))
+        # Even after rebinding the SDK manifest's outer digest, the native
+        # generation must retain the original SDK generation receipt.
+        manifest = self.root / 'sdk-manifest.json'
+        value = donut.common.read_json(manifest)
+        value['component_fixture_note'] = 'changed producer receipt'
+        donut.common.write_json(manifest, value)
+        generation = self.root / 'sdk-generation.json'
+        value = donut.common.read_json(generation)
+        value['sdk_manifest_sha256'] = donut.common.digest(manifest)
+        donut.common.write_json(generation, value)
+        with self.assertRaisesRegex(ValueError, 'another installed SDK'):
+            donut.check_apks(self.root)
+
+    def test_installed_sdk_rejects_incomplete_generation_wrong_image_and_producer_drift(self):
+        source = self.seed_installed_sdk()
+        marker = self.root / 'api4-sdk-in-progress.json'
+        marker.write_text('{"status":"failed"}')
+        with self.assertRaisesRegex(ValueError, 'SDK generation is incomplete'):
+            donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        marker.unlink()
+        with self.assertRaisesRegex(ValueError, 'SDK generation/image identity'):
+            donut.begin(self.root, self.repo, self.inputs, 'sha256:' + 'e' * 64)
+        (self.repo / source).write_text('changed SDK producer input')
+        with self.assertRaisesRegex(ValueError, 'differs from captured source'):
+            donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        self.assertFalse((self.root / donut.NATIVE_PENDING).exists())
+
+    def test_changed_sdk_cannot_promote_compiled_clients_and_retains_pending(self):
+        self.seed_installed_sdk()
+        donut.begin(self.root, self.repo, self.inputs, IMAGE)
+        stage = self.stage_native()
+        path = self.root / 'sdk-generation.json'
+        value = donut.common.read_json(path)
+        value['note'] = 'changed during client compile'
+        donut.common.write_json(path, value)
+        with self.assertRaisesRegex(ValueError, 'SDK changed during client compilation'):
+            donut.finish_native(self.root, self.repo, self.inputs, stage, IMAGE)
+        self.assertTrue(stage.is_dir())
+        self.assertTrue((self.root / donut.NATIVE_PENDING).exists())
+        self.assertFalse((self.root / 'native').exists())
+
+    def test_legacy_clients_cannot_satisfy_an_explicit_installed_sdk_phase(self):
+        self.complete_native()
+        with self.assertRaisesRegex(ValueError, 'not built from the installed SDK'):
+            donut.check_native(self.root, require_installed=True)
+
     def test_complete_eight_client_generation_and_exact_apk_jni_binding(self):
         receipt = self.complete()
         self.assertEqual(receipt, donut.check_apks(self.root))

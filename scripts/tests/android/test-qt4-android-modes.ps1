@@ -236,8 +236,14 @@ Add-Content $env:LONGREACH_MODE_TEST_LOG "package|$Abi|$Profile"
     ('sha256:'+('c'*64)) | Set-Content "$output/examples-sdk-image-id.txt"
     Expect-Failure ($entry+@{Mode='package'}) 'SDK/example identities differ'
     Reset-Calls
-    Expect-Failure @{Mode='examples';AndroidSdk="$fixture/sdk"} 'API10/API21 profiles only'
-    Assert-Mode (@(Calls).Count -eq 0) 'Explicit API4 mode unexpectedly built an SDK'
+    # API4's real four-phase contracts are exercised by test-qt4-api4-sdk.ps1.
+    # This fixture observes only the public dispatch boundary.
+    @'
+param($Mode,$ParallelJobs,$NoCache,$DockerBuildFlagsJson,$SdkImage,$InputDirectory,$OutputDirectory,$AndroidSdk,$Profiles)
+Add-Content $env:LONGREACH_MODE_TEST_LOG "api4|$Mode|$ParallelJobs"
+'@ | Set-Content "$fixture/scripts/build/qt4-android/api4.ps1"
+    Invoke-Mode @{Mode='examples';AndroidSdk="$fixture/sdk"}
+    Assert-Mode (@(Calls).Count -eq 1 -and @(Calls)[0] -eq 'api4|examples|2') 'Explicit API4 mode missed its own dispatcher'
     $x86=@{} + $entry
     $x86.Abi='x86'
     Reset-Calls

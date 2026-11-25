@@ -111,9 +111,24 @@ profile's disabled modules; it does not enable desktop Qt4 capabilities on API4.
 and the before/after source/archive capture. Producer recipes must match that
 capture; a successful export is not a guest result. The installed verifier is
 `/opt/qt4-android-armeabi-llvm/libexec/api4-sdk/api4-sdk.py verify`.
-Qualification requires clients built from this installed SDK and their own
-fresh diagnostic receipts. Historical combined-recipe APKs below do not supply
-that evidence.
+Use the same output directory for the separate consumer phases:
+
+```powershell
+./scripts/build/qt4-android.ps1 -Abi armeabi -Mode examples -OutputDirectory artifacts/qt4-android-donut-sdk
+./scripts/build/qt4-android.ps1 -Abi armeabi -Mode package -OutputDirectory artifacts/qt4-android-donut-sdk
+./scripts/build/qt4-android.ps1 -Abi armeabi -Mode test -OutputDirectory artifacts/qt4-android-donut-sdk
+```
+
+`examples` compiles all eight JNI diagnostics from installed headers, libraries
+and host tools inside the immutable SDK image. It neither rebuilds Qt nor copies
+the producer's clients. Its native receipt binds the SDK generation, payload and
+source hashes; `package` and `test` require that binding, preserving the existing
+APK/JNI, named coverage and owned-process checks. `test -Profiles core,quick`
+selects individual diagnostics; omit `-Profiles` for all eight. API4 uses unique
+per-profile attempt directories rather than `-RunName`.
+
+Qualification still requires fresh completed diagnostic receipts. Historical
+combined-recipe APKs below do not supply evidence for the installed SDK.
 
 ## Shared compiler inputs
 

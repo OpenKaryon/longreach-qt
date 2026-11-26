@@ -209,11 +209,18 @@ inline RoundResult serviceRound(int round)
     intent.putExtra(QStringLiteral("longreach.nonce"), nonce);
     const bool requested = QtAndroid::bindService(intent, *connection, QtAndroid::BindFlag::AutoCreate);
     bool jniOk = clearException();
-    if (requested && jniOk && waitFor([&] { return connection->connected.load() > 0; }, 20000)) {
+    const bool connected = requested && jniOk && waitFor([&] { return connection->connected.load() > 0; }, 20000);
+    std::printf("OBSERVE: extras/connection round=%d requested=%d jni_ok=%d connected=%d callbacks=%d disconnected=%d\n",
+        round, int(requested), int(jniOk), int(connected), connection->connected.load(), connection->disconnected.load());
+    std::fflush(stdout);
+    if (connected) {
         QSharedPointer<QAndroidBinder> binder;
         { std::lock_guard<std::mutex> lock(connection->mutex);
           binder = connection->binder;
-          result.bound = connection->connected == 1 && connection->component.endsWith("LongreachExtrasService"); }
+          result.bound = connection->connected == 1 && connection->component.endsWith("LongreachExtrasService");
+          std::printf("OBSERVE: extras/component round=%d name=%s bound=%d\n",
+              round, connection->component.toUtf8().constData(), int(result.bound));
+          std::fflush(stdout); }
         result.echo = result.bound;
         for (int index = 0; index < Iterations && result.echo; ++index) {
             QAndroidParcel data, reply;
@@ -221,6 +228,8 @@ inline RoundResult serviceRound(int round)
             data.writeVariant(QVariantMap {{"nonce", nonce}, {"index", index}});
             data.writeBinder(callback);
             const bool transacted = binder->transact(EchoCode, data, &reply);
+            std::printf("OBSERVE: extras/transact round=%d index=%d result=%d\n", round, index, int(transacted));
+            std::fflush(stdout);
             if (!transacted || !clearException()) { result.echo = false; break; }
             const QByteArray echoed = reply.readData();
             const QVariantMap info = reply.readVariant().toMap();

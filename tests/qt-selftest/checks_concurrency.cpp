@@ -150,21 +150,35 @@ void checkConcurrency(SmokeReporter &r)
             bool ran = false;
             void run() override { ran = true; }
         };
-        QScopedPointer<Worker> thread(new Worker);
-        QObject::connect(thread.data(), SIGNAL(finished()), thread.data(), SLOT(deleteLater()));
-        thread->setStackSize(256 * 1024);
-        thread->start();
-        if (!thread->wait(10000)) {
-            detail = QStringLiteral("worker did not finish within 10 seconds");
-            // A timed-out worker only references itself. Keep it alive until
-            // finished()->deleteLater(), without reading its unsynchronized flag.
-            if (thread->isRunning())
-                thread.take();
-            return false;
+#if defined(Q_OS_ANDROID)
+        const unsigned sizes[] = {256u * 1024u, 256u * 1024u + 1u,
+                                  256u * 1024u + 17u, 256u * 1024u + 4095u,
+                                  512u * 1024u + 17u};
+#else
+        const unsigned sizes[] = {256u * 1024u};
+#endif
+        for (const unsigned requested : sizes) {
+            QScopedPointer<Worker> thread(new Worker);
+            QObject::connect(thread.data(), SIGNAL(finished()), thread.data(), SLOT(deleteLater()));
+            thread->setStackSize(requested);
+            thread->start();
+            if (!thread->wait(10000)) {
+                detail = QStringLiteral("worker did not finish within 10 seconds; requested=%1").arg(requested);
+                // A timed-out worker only references itself. Keep it alive until
+                // finished()->deleteLater(), without reading its unsynchronized flag.
+                if (thread->isRunning())
+                    thread.take();
+                return false;
+            }
+            detail = QStringLiteral("finished=%1 ran=%2 requested=%3 property=%4")
+                    .arg(thread->isFinished()).arg(thread->ran).arg(requested).arg(thread->stackSize());
+#if defined(Q_OS_ANDROID)
+            r.observe(QStringLiteral("thread/qthread-explicit-stack"), detail);
+#endif
+            if (!thread->ran || !thread->isFinished() || thread->stackSize() != requested)
+                return false;
         }
-        detail = QStringLiteral("finished=1 ran=%1 stack=%2")
-                .arg(thread->ran).arg(thread->stackSize());
-        return thread->ran && thread->isFinished();
+        return true;
     });
     r.check("thread/threadpool+runnable", [&r](QString &d) {
         QAtomicInt counter(0);

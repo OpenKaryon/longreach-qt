@@ -221,6 +221,10 @@ Qt's automatic-size path. Requests below the native minimum and rounding
 that would overflow `size_t` remain errors; a failed page-size query uses
 the original native request.
 
+The existing `thread/qthread-explicit-stack` check runs one aligned and four
+non-page requests on Android, with start/join and unchanged-request observations
+for each. Its check count stays one; it does not measure effective allocation.
+
 This also applies to the API21 Qt5 profiles. Host adapter tests check 32/64-bit
 size arithmetic and recorded native errors; actual SDK and guest results must
 be tied to a generation that includes this patch revision.

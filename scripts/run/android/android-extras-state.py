@@ -165,6 +165,12 @@ def validate(case, package, receipt, final_run=None):
             raise ValueError('Missing service native0 or onDestroy receipt')
         expected=f'ANDROID_EXTRAS_SERVICE: bound pid={row["pid"]} nonce={row["nonce"]}'
         lines=text(service/'selftest.stdout').splitlines()
+        observations=[line for line in lines if re.fullmatch(r'OBSERVE: extras/service-transaction code=[0-9]+ flags=[0-9]+',line)]
+        if observations:
+            modes=[tuple(map(int,re.findall(r'[0-9]+',line))) for line in observations]
+            if len(modes)!=8 or any(code!=0x5145 or flags & 1 for code,flags in modes):
+                raise ValueError('Service transaction observations differ from eight synchronous calls')
+            lines=[line for line in lines if line not in observations]
         if lines != [expected, 'ANDROID_EXTRAS_SERVICE: finished=0 binds=1 calls=8 callbacks=8 errors=0']:
             raise ValueError('Service native transcript does not match this binding')
         scoped=exit_state.scoped(raw,value['log_marker'])

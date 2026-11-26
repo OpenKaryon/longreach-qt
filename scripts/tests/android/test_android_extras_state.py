@@ -22,6 +22,29 @@ class ExtrasState(unittest.TestCase):
         self.assertTrue(result['service_exits_confirmed'])
         self.assertEqual(state.read(self.case/'extras-0-live.json')['start_ticks'],800)
 
+    def test_service_transport_observations_keep_bound_native_transcript(self):
+        for flags in (0,16):
+            with self.subTest(flags=flags),tempfile.TemporaryDirectory() as directory:
+                case=Path(directory);record=fixture.prepare(case)
+                service=case/'files/extras-service-3010/selftest.stdout'
+                lines=service.read_text().splitlines()
+                observations=[f'OBSERVE: extras/service-transaction code=20805 flags={flags}']*8
+                service.write_text('\n'.join(lines[:1]+observations+lines[1:])+'\n')
+                self.assertTrue(state.validate(case,fixture.PACKAGE,record)['service_exits_confirmed'])
+
+    def test_service_observations_cannot_hide_wrong_mode_count_code_or_native_result(self):
+        for fault in ('oneway','count','code','native','unknown'):
+            with self.subTest(fault=fault),tempfile.TemporaryDirectory() as directory:
+                case=Path(directory);record=fixture.prepare(case)
+                service=case/'files/extras-service-3010/selftest.stdout'
+                lines=service.read_text().splitlines()
+                observation=f'OBSERVE: extras/service-transaction code={20806 if fault=="code" else 20805} flags={17 if fault=="oneway" else 16}'
+                observations=[observation]*(7 if fault=='count' else 8)
+                if fault=='native':lines[-1]=lines[-1].replace('errors=0','errors=1')
+                if fault=='unknown':observations.append('OBSERVE: unrecognized service record')
+                service.write_text('\n'.join(lines[:1]+observations+lines[1:])+'\n')
+                with self.assertRaises(ValueError):state.validate(case,fixture.PACKAGE,record)
+
     def test_eight_native_successes_cannot_replace_independent_host_receipts(self):
         (self.case/'files').mkdir();(self.case/'files/selftest.stdout').write_text(fixture.transcript())
         with self.assertRaises(OSError):state.validate(self.case,fixture.PACKAGE,{})

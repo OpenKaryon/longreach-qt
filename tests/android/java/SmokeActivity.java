@@ -8,6 +8,59 @@ import java.io.File;
 import org.qtproject.qt5.android.bindings.QtActivity;
 
 public class SmokeActivity extends QtActivity {
+    private boolean extrasDiagnostics;
+
+    // Read-only observations for the explicit Extras diagnostic. Normal smoke
+    // does not schedule a watcher or change Activity/Qt state.
+    private void observeExtrasState(String phase) {
+        if (!extrasDiagnostics) return;
+        android.util.Log.i("LongreachLifecycle", "phase=" + phase
+            + " finishing=" + isFinishing() + " focus=" + hasWindowFocus()
+            + " task=" + getTaskId() + " instance=" + System.identityHashCode(this));
+        // Old Dalvik enumerates every declared field and tries to resolve the
+        // unused API11 ClipboardManager type. Keep API10 observation public.
+        if (android.os.Build.VERSION.SDK_INT < 11) return;
+        try {
+            Class<?> nativeClass = Class.forName("org.qtproject.qt5.android.QtNative");
+            java.lang.reflect.Field mutex = nativeClass.getDeclaredField("m_mainActivityMutex");
+            mutex.setAccessible(true);
+            synchronized (mutex.get(null)) {
+                java.lang.reflect.Field paused = nativeClass.getDeclaredField("m_activityPaused");
+                java.lang.reflect.Field actions = nativeClass.getDeclaredField("m_lostActions");
+                java.lang.reflect.Field activity = nativeClass.getDeclaredField("m_activity");
+                paused.setAccessible(true); actions.setAccessible(true); activity.setAccessible(true);
+                android.app.Activity current = (android.app.Activity) activity.get(null);
+                android.util.Log.i("LongreachLifecycle", "phase=" + phase
+                    + " paused=" + paused.getBoolean(null)
+                    + " queued=" + ((java.util.Collection<?>) actions.get(null)).size()
+                    + " activity=" + (current == null ? "null" : current.getClass().getName())
+                    + " finishing=" + (current != null && current.isFinishing()));
+            }
+        } catch (Exception error) {
+            android.util.Log.w("LongreachLifecycle", "Could not observe Qt Activity state", error);
+        }
+    }
+
+    private void watchExtrasCompletion(final File files) {
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            private int polls, samples;
+            @Override public void run() {
+                File result = new File(files, "selftest-result.txt");
+                if (result.isFile() && result.length() > 0) {
+                    observeExtrasState("post-main-" + (++samples));
+                    if (samples == 3) return;
+                }
+                if (++polls < 180) handler.postDelayed(this, 500);
+            }
+        }, 500);
+    }
+
+    @Override public void onPause() { super.onPause(); observeExtrasState("onPause"); }
+    @Override public void onResume() { super.onResume(); observeExtrasState("onResume"); }
+    @Override public void onStop() { super.onStop(); observeExtrasState("onStop"); }
+    @Override public void onDestroy() { observeExtrasState("onDestroy-entry"); super.onDestroy(); observeExtrasState("onDestroy-return"); }
+
     private static void checkActivityBindings() {
         if (android.os.Build.VERSION.SDK_INT >= 11) {
             try {
@@ -39,6 +92,7 @@ public class SmokeActivity extends QtActivity {
 
     @Override
     public void onCreate(Bundle state) {
+        extrasDiagnostics = "--android-extras".equals(getIntent().getStringExtra("applicationArguments"));
         checkActivityBindings();
         File files = getFilesDir();
         new File(files, "selftest-result.txt").delete();
@@ -54,5 +108,6 @@ public class SmokeActivity extends QtActivity {
         if ("16".equals(depth) || "32".equals(depth))
             ENVIRONMENT_VARIABLES += "\tQT_ANDROID_RASTER_IMAGE_DEPTH=" + depth;
         super.onCreate(state);
+        if (extrasDiagnostics) watchExtrasCompletion(files);
     }
 }

@@ -41,6 +41,8 @@ jobs:
         run: python3 scripts/tests/android/qt5-android-tts.py "$RUNNER_TEMP/qt5-tts" --qmake qmake
       - name: Check Android explicit main-return shutdown
         run: python3 scripts/tests/android/qt5-android-activity.py "$RUNNER_TEMP/qt5-activity"
+      - name: Check Android ServiceConnection owner cleanup
+        run: python3 scripts/tests/android/qt5-android-service-connection.py "$RUNNER_TEMP/qt5-service-connection"
       - name: Check API coverage inventory
         run: python3 scripts/tests/check_coverage.py --gate
       - name: Check license matrix

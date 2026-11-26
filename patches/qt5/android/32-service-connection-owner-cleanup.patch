@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+# Copyright (C) 2026 OpenKaryon
+# Detach owned service callbacks without changing the C++ object layout.
+--- a/qtandroidextras/src/androidextras/android/qandroidserviceconnection.cpp
++++ b/qtandroidextras/src/androidextras/android/qandroidserviceconnection.cpp
+@@ -80,7 +80,16 @@
+ 
+ QAndroidServiceConnection::~QAndroidServiceConnection()
+ {
+-    m_handle.callMethod<void>("setId", "(J)V", jlong(this));
++    if (!m_handle.isValid())
++        return;
++    QAndroidJniExceptionCleaner cleaner;
++    QAndroidJniEnvironment env;
++    const jclass connectionClass = env.findClass("org/qtproject/qt5/android/extras/QtAndroidServiceConnection");
++    if (connectionClass && env->IsInstanceOf(m_handle.object(), connectionClass)) {
++        const jmethodID clearId = env->GetMethodID(connectionClass, "clearId", "(J)V");
++        if (clearId)
++            env->CallNonvirtualVoidMethod(m_handle.object(), connectionClass, clearId, jlong(this));
++    }
+ }
+ 
+ /*!
+--- a/qtandroidextras/src/jar/src/org/qtproject/qt5/android/extras/QtAndroidServiceConnection.java
++++ b/qtandroidextras/src/jar/src/org/qtproject/qt5/android/extras/QtAndroidServiceConnection.java
+@@ -58,6 +58,17 @@
+         }
+     }
+ 
++    // Only the native owner may detach this Java callback receiver. A C++
++    // wrapper around an existing Java connection must not detach its owner.
++    void clearId(long expectedId)
++    {
++        synchronized(this)
++        {
++            if (m_id == expectedId)
++                m_id = 0;
++        }
++    }
++
+     @Override
+     public void onServiceConnected(ComponentName name, IBinder service)
+     {

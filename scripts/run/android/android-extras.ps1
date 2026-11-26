@@ -6,6 +6,7 @@ function Observe-AndroidExtrasServices {
     $state="$PSScriptRoot/android-extras-state.py"
     # Functions are dot-sourced; resolve this file's sibling from its saved path.
     if ($script:AndroidExtrasStateScript) { $state=$script:AndroidExtrasStateScript }
+    if ($Package -cnotmatch '^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$') { throw 'Invalid AndroidExtras package' }
     foreach ($round in 0,1) {
         $stem="extras-$round"
         $live="$Directory/$stem-live.json";$exit="$Directory/$stem-exit.json"
@@ -14,6 +15,9 @@ function Observe-AndroidExtrasServices {
             $lines=@(Invoke-AndroidExitQuery -Adb $Adb -Serial $Serial -Directory $Directory -Name "$stem-live-request" `
                 -Command @('shell','cat',"/data/data/$Package/files/extras-service-$round-live.txt") -AllowNonzero)
             if (!$lines.Count) { return }
+            # Gingerbread shell reports ENOENT on stdout and has no test/[ builtin.
+            # Only this exact pending path is optional; other output remains an error.
+            if (($lines -join "`n").Trim() -ceq "/data/data/$Package/files/extras-service-$round-live.txt`: No such file or directory") { return }
             $request=($lines -join "`n").Trim()
             if ($request -cnotmatch '^([1-9][0-9]*) ([0-9a-f]{32})$') { throw 'Invalid service live rendezvous' }
             $serviceNumber=[int]$Matches[1]
@@ -36,6 +40,9 @@ function Observe-AndroidExtrasServices {
         $lines=@(Invoke-AndroidExitQuery -Adb $Adb -Serial $Serial -Directory $Directory -Name "$stem-exit-request" `
             -Command @('shell','cat',"/data/data/$Package/files/extras-service-$round-exit.txt") -AllowNonzero)
         if (!$lines.Count) { return }
+        # Gingerbread shell reports ENOENT on stdout and has no test/[ builtin.
+        # Only this exact pending path is optional; other output remains an error.
+        if (($lines -join "`n").Trim() -ceq "/data/data/$Package/files/extras-service-$round-exit.txt`: No such file or directory") { return }
         $observed=Get-Content -LiteralPath $live -Raw | ConvertFrom-Json
         $timer=[Diagnostics.Stopwatch]::StartNew();$sample=0
         while ($sample -lt 2) {

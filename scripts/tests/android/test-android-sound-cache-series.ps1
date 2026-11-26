@@ -12,6 +12,7 @@ $global:SoundSeriesGuests=0
 $global:SoundSeriesMutation=''
 $global:SoundSeriesContend=$false
 $global:SoundSeriesSawResult=$false
+$savedLocation=(Get-Location).ProviderPath
 $savedEnvironment=@{}
 foreach ($name in @('ADB_SERVER_SOCKET','ANDROID_ADB_SERVER_ADDRESS','ANDROID_ADB_SERVER_PORT')) {
     $savedEnvironment[$name]=[Environment]::GetEnvironmentVariable($name)
@@ -92,7 +93,7 @@ if action == 'prepare':
     (where.parent / 'fixture-options.json').write_text(json.dumps({k: str(v) if isinstance(v, pathlib.Path) else v for k,v in options.items()}))
 elif action == 'case':
     index = int(sys.argv[4])
-    path, record = data.case(where, index)
+    path, record = data.case(where, index, working_directory=pathlib.Path.cwd())
     if sys.argv[5] == 'bad-report':
         (path / 'files/selftest.stdout').write_text('---- qt-selftest: 106 passed, 0 failed, 4 skipped ----')
         record['stdout_sha256'] = record['diagnostic_stdout_sha256'] = data.series.digest(path / 'files/selftest.stdout')
@@ -139,6 +140,8 @@ if ($global:SoundSeriesMutation -eq 'endpoint-after-1' -and $index -eq 1) {
         [Management.Automation.Language.Parser]::ParseFile($script.FullName,[ref]$tokens,[ref]$parseErrors) | Out-Null
         if ($parseErrors.Count) { throw "Fixture $($script.Name): $($parseErrors.Message -join '; ')" }
     }
+    $caller=New-Item -ItemType Directory -Path (Join-Path $fixture 'caller directory with spaces')
+    Set-Location -LiteralPath $caller.FullName
     $driver="$fixture/scripts/run/qt5-android-sound-cache.ps1"
     $entry=New-SeriesEntry 'success'
     $global:SoundSeriesCurrentEntry=$entry
@@ -146,6 +149,8 @@ if ($global:SoundSeriesMutation -eq 'endpoint-after-1' -and $index -eq 1) {
     & $driver @entry | Out-Null
     $directory=Join-Path $entry.ArtifactRoot 'diagnostics/recording-series'
     $report=Get-Content "$directory/series-result.json" -Raw | ConvertFrom-Json
+    $frozen=Get-Content "$directory/series-inputs.json" -Raw | ConvertFrom-Json
+    Assert-Series ($frozen.working_directory -ceq $caller.FullName) 'Series did not freeze the real caller directory with spaces'
     Assert-Series ($global:SoundSeriesGuests -eq 20 -and $report.completed -and !$report.qualification -and $report.completed_processes -eq 20) 'Series did not validate exactly twenty separate diagnostics'
     Assert-Series (@($report.cases | Select-Object -ExpandProperty process_id -Unique).Count -eq 1 -and
         @($report.cases | Select-Object -ExpandProperty host_run_id -Unique).Count -eq 20) 'Repeated Android PID was confused with repeated host ownership'
@@ -181,6 +186,7 @@ if ($global:SoundSeriesMutation -eq 'endpoint-after-1' -and $index -eq 1) {
     Assert-Series ($global:SoundSeriesGuests -eq 0 -and !(Test-Path (Join-Path $entry.ArtifactRoot 'diagnostics'))) 'Bad native generation started work or created a series'
     Write-Output 'PASS: fixed 20 actual-source driver/collector recordings, real root contention, no retries, media/endpoint/generation guards and late-result quarantine; no guests'
 } finally {
+    Set-Location -LiteralPath $savedLocation
     foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name,$savedEnvironment[$name]) }
     Remove-Item Function:python -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $fixture) {

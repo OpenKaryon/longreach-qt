@@ -103,7 +103,7 @@ def file_hashes(paths, optional):
     return result
 
 
-def begin(root, directory, abi, emulator, system_directory, kernel, ramdisk, android_sdk, classic, adb_port):
+def begin(root, directory, abi, emulator, system_directory, kernel, ramdisk, android_sdk, classic, adb_port, working_directory=None):
     root, directory = layout(root, directory)
     if directory.exists():
         raise ValueError('Series directory already exists; preserve it and choose a new run name')
@@ -135,6 +135,8 @@ def begin(root, directory, abi, emulator, system_directory, kernel, ramdisk, and
         'paths': paths, 'optional_files': optional, 'file_sha256': hashes,
         'created_utc': datetime.now(timezone.utc).isoformat(),
     }
+    if working_directory is not None:
+        value['working_directory'] = str(ordinary(working_directory, directory=True))
     # No case or protected SDK/media input may sit below this output directory.
     for path in paths.values():
         if Path(path).resolve().is_relative_to(directory):
@@ -157,6 +159,10 @@ def inputs(directory, full=False, pending=True):
             or not re.fullmatch(r'[0-9a-f]{32}', value.get('series_id', ''))):
         raise ValueError('Invalid sound series input receipt')
     legacy.owned.endpoint.validate(value['adb_endpoint'])
+    if 'working_directory' in value:
+        cwd = Path(value['working_directory'])
+        if not cwd.is_absolute() or str(ordinary(cwd, directory=True)) != value['working_directory']:
+            raise ValueError('Invalid frozen frontend working directory')
     if file_hashes(value['paths'], value['optional_files']) != value['file_sha256']:
         raise ValueError('Sound series inputs changed')
     if any((root / name).exists() for name in ('examples-in-progress.json', 'apk-in-progress.json')):
@@ -231,8 +237,11 @@ def validate_case(value, inputs_sha, index):
                                          arguments=expected['emulator_arguments'], artifact_root=Path(value['root']))
     request, _ = legacy.owned.request(case)
     owner, _ = legacy.owned.read(case / 'host-process-owner.json')
+    # Older receipts without an explicit cwd retain their original per-case
+    # contract. New drivers freeze the caller directory before any guest.
+    expected_cwd = Path(value.get('working_directory', case)).resolve()
     if (Path(request['program']).resolve() != Path(value['paths']['emulator']).resolve()
-            or Path(request['cwd']).resolve() != case or request['adb_endpoint'] != value['adb_endpoint']):
+            or Path(request['cwd']).resolve() != expected_cwd or request['adb_endpoint'] != value['adb_endpoint']):
         raise ValueError('Sound case used another frontend, directory or ADB endpoint')
     power = case / 'power-before.txt'
     if (digest(power) != receipt.get('guest_power_sha256')
@@ -345,7 +354,7 @@ def main():
     parser.add_argument('--directory', type=Path, required=True)
     parser.add_argument('--root', type=Path)
     parser.add_argument('--abi', choices=('x86', 'armeabi-v7a'))
-    for name in ('emulator', 'system-directory', 'kernel', 'ramdisk', 'android-sdk'):
+    for name in ('emulator', 'system-directory', 'kernel', 'ramdisk', 'android-sdk', 'working-directory'):
         parser.add_argument('--' + name, type=Path)
     parser.add_argument('--classic-emulator', action='store_true')
     parser.add_argument('--adb-port', type=int)
@@ -365,7 +374,7 @@ def main():
                 if any(x is None for x in required):
                     raise ValueError('All frozen begin inputs are required')
                 begin(root, directory, args.abi, args.emulator, args.system_directory, args.kernel,
-                      args.ramdisk, args.android_sdk, args.classic_emulator, args.adb_port)
+                      args.ramdisk, args.android_sdk, args.classic_emulator, args.adb_port, args.working_directory)
             elif args.action in ('checkpoint', 'record'):
                 if args.index is None:
                     raise ValueError('Attempt index is required')

@@ -33,6 +33,7 @@ foreach ($path in @($root,(Join-Path $root 'diagnostics'))) {
 }
 $directory=Join-Path (Join-Path $root 'diagnostics') $RunName
 $endpoint=Get-AndroidAdbEndpoint
+$workingDirectory=(Get-Location).ProviderPath
 $rootLock=Enter-AndroidArtifactLock $root
 $started=$false
 $index=0
@@ -45,6 +46,7 @@ try {
     $begin=@('begin','--root',$root,'--directory',$directory,'--abi',$Abi,
         '--emulator',$Emulator,'--system-directory',$SystemDirectory,'--kernel',$Kernel,
         '--ramdisk',$Ramdisk,'--android-sdk',$AndroidSdk,'--adb-port',[string]$endpoint.port,
+        '--working-directory',$workingDirectory,
         '--artifact-lease-held')
     if ($ClassicEmulator) { $begin+='--classic-emulator' }
     Invoke-SoundSeriesTool $begin | Out-Null
@@ -52,6 +54,9 @@ try {
     $inputs=Get-Content -LiteralPath "$directory/series-inputs.json" -Raw | ConvertFrom-Json
     for ($index=1; $index -le 20; $index++) {
         $phase='checkpoint'
+        if ((Get-Location).ProviderPath -cne $workingDirectory) {
+            throw 'Sound series frontend working directory changed before its next attempt'
+        }
         $currentEndpoint=Get-AndroidAdbEndpoint
         if ($currentEndpoint.port -ne $endpoint.port -or $currentEndpoint.socket -cne $endpoint.socket) {
             throw 'Sound series ADB endpoint changed before its next attempt'

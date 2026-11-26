@@ -8,24 +8,26 @@ import java.util.*;
 
 // Actual Java adapter, recording Android substitute; no native bridge or audio.
 class TtsGenerationFixture extends QtTextToSpeech {
+    static int readyCalls, errorCalls;
     final List<String> events = Collections.synchronizedList(new ArrayList<String>());
     TtsGenerationFixture() {
         super(new Context(), 42L);
-        TextToSpeech.last.init.onInit(TextToSpeech.SUCCESS);
+        if (!TextToSpeech.last.started) TextToSpeech.last.finishInit(TextToSpeech.SUCCESS);
         events.clear();
     }
-    @Override public void notifyReady(long id) { require(id == 42L, "init engine id"); }
-    @Override public void notifyError(long id) { require(id == 42L, "error engine id"); }
+    @Override public void notifyReady(long id) { require(id == 42L, "init engine id"); readyCalls++; }
+    @Override public void notifyError(long id) { require(id == 42L, "error engine id"); errorCalls++; }
     @Override public void notifyUtterance(long id, long token, boolean speaking) {
         require(id == 42L, "utterance engine id");
         events.add(token + ":" + speaking);
     }
     static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     public static void main(String[] args) {
-        for (int api : new int[] {10, 21}) {
+        for (int api : new int[] {10, 14, 15, 21}) {
             Build.VERSION.SDK_INT = api;
             TtsGenerationFixture e = new TtsGenerationFixture();
             TextToSpeech t = TextToSpeech.last;
+            require(t.earlyRegistrations == 0, "listener must wait for bound service");
             require((api < 15) == (t.completed != null), "listener API boundary");
             require(e.say("A", 7L) == TextToSpeech.SUCCESS, "successful dispatch");
             require(e.say("B", Long.MAX_VALUE) == TextToSpeech.SUCCESS, "max-token dispatch");
@@ -55,6 +57,19 @@ class TtsGenerationFixture extends QtTextToSpeech {
                 require(e.say("fast", 10L) == TextToSpeech.SUCCESS, "fast dispatch");
                 require(e.events.equals(Arrays.asList("10:false")), "fast callback token");
             }
+            if (api < 15) {
+                TextToSpeech.failRegistration = true;
+                readyCalls = errorCalls = 0;
+                new TtsGenerationFixture();
+                require(readyCalls == 0 && errorCalls == 1, "failed registration must not publish Ready");
+                TextToSpeech.failRegistration = false;
+            }
+            TextToSpeech.synchronousInit = true;
+            readyCalls = errorCalls = 0;
+            new TtsGenerationFixture();
+            require(readyCalls == 1 && errorCalls == 0, "early init callback delivered exactly once after assignment");
+            require(api >= 15 || TextToSpeech.last.completed != null, "early init installed legacy callback");
+            TextToSpeech.synchronousInit = false;
             System.out.println("PASS actual Java adapter API" + api + " token/listener/error/malformed contracts");
         }
     }

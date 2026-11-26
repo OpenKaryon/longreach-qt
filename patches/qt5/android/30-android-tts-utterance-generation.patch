@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
 # Copyright (C) 2026 OpenKaryon
-# Bind speech callbacks to an engine and utterance generation on Qt-thread delivery.
+# Bind speech callbacks to service readiness, engine identity and utterance generation.
 --- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
 +++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt5/android/speech/QtTextToSpeech.java
-@@ -58,7 +58,9 @@
+@@ -58,9 +58,13 @@
      // Native callback functions
      native public void notifyError(long id);
      native public void notifyReady(long id);
@@ -13,8 +13,37 @@
 +    private static final String UTTERANCE_PREFIX = "QtSpeech:";
  
      private TextToSpeech mTts;
++    private boolean mHasPendingInit;
++    private int mPendingInitStatus;
      private final long mId;
-@@ -92,25 +94,19 @@
+     private volatile boolean mInitialized = false;
+     // A QVoice must keep the same identifier semantics for this engine instance.
+@@ -75,42 +79,35 @@
+         @Override
+         public void onInit(int status) {
+             Log.w("QtTextToSpeech", "tts initialized");
+-            if (status == TextToSpeech.SUCCESS) {
+-                mInitialized = true;
+-                notifyReady(mId);
+-            } else {
+-                mInitialized = false;
+-                notifyError(mId);
++            synchronized (QtTextToSpeech.this) {
++                mPendingInitStatus = status;
++                mHasPendingInit = true;
++                if (mTts != null)
++                    finishInitialization();
+             }
+         }
+     };
+ 
+     // Keep the API 15 listener out of instance initialization on old Dalvik.
+-    private void installProgressListener()
+-    {
+-        mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
++    private int installProgressListener()
++    {
++        return mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
              @Override
              public void onDone(String utteranceId) {
                  Log.w("UtteranceProgressListener", "onDone");
@@ -43,17 +72,61 @@
               }
       });
      }
-@@ -129,8 +125,7 @@
-             mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
-                 @Override
-                 public void onUtteranceCompleted(String utteranceId) {
+@@ -122,22 +119,42 @@
+ 
+     QtTextToSpeech(final Context context, final long id) {
+         mId = id;
+-        mTts = new TextToSpeech(context, mTtsChangeListener);
+-        if (Build.VERSION.SDK_INT >= 15) {
+-            installProgressListener();
+-        } else {
+-            mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
+-                @Override
+-                public void onUtteranceCompleted(String utteranceId) {
 -                    if ("UtteranceId".equals(utteranceId))
 -                        notifyReady(mId);
-+                    reportUtterance(utteranceId, false);
-                 }
-             });
+-                }
+-            });
++        synchronized (this) {
++            mTts = new TextToSpeech(context, mTtsChangeListener);
++            finishInitialization();
          }
-@@ -153,24 +148,38 @@
+ 
+         ContentResolver resolver = context.getContentResolver();
+         mPitch = readPercentage(resolver, Settings.Secure.TTS_DEFAULT_PITCH);
+         mRate = readPercentage(resolver, Settings.Secure.TTS_DEFAULT_RATE);
++    }
++
++    // Called under this object's monitor, after both service binding and the
++    // constructor assignment. Gingerbread rejects registration before binding;
++    // it does not retain an early OnUtteranceCompletedListener.
++    private void finishInitialization()
++    {
++        if (!mHasPendingInit)
++            return;
++        mHasPendingInit = false;
++        int status = mPendingInitStatus;
++        if (status == TextToSpeech.SUCCESS) {
++            if (Build.VERSION.SDK_INT >= 15) {
++                status = installProgressListener();
++            } else {
++                status = mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
++                    @Override
++                    public void onUtteranceCompleted(String utteranceId) {
++                        reportUtterance(utteranceId, false);
++                    }
++                });
++            }
++        }
++        mInitialized = status == TextToSpeech.SUCCESS;
++        if (mInitialized)
++            notifyReady(mId);
++        else
++            notifyError(mId);
+     }
+ 
+     private static float readPercentage(ContentResolver resolver, String name)
+@@ -153,24 +170,38 @@
          return 1.0f;
      }
  
@@ -102,6 +175,57 @@
      }
  
      public void stop()
+--- /dev/null
++++ b/qtspeech/src/plugins/tts/android/src/qandroidttsutterance_p.h
+@@ -0,0 +1,48 @@
++// SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
++// Copyright (C) 2026 OpenKaryon
++#ifndef QANDROIDTTSUTTERANCE_P_H
++#define QANDROIDTTSUTTERANCE_P_H
++
++#include <limits>
++
++// Owned by the engine's Qt thread. Check tokens on delivery, not on a Binder
++// thread: an old completion may already be queued when the next say starts.
++class QAndroidTtsUtterance
++{
++public:
++    typedef long long Token;
++    QAndroidTtsUtterance() : m_generation(0), m_active(false) {}
++
++    Token begin()
++    {
++        invalidate();
++        m_active = true;
++        return m_generation;
++    }
++
++    Token invalidate()
++    {
++        m_active = false;
++        if (m_generation == (std::numeric_limits<Token>::max)())
++            m_generation = 0;
++        return ++m_generation;
++    }
++
++    bool isCurrent(Token generation) const { return generation == m_generation; }
++    bool accepts(Token generation) const { return m_active && isCurrent(generation); }
++    bool isActive() const { return m_active; }
++
++    bool finish(Token generation)
++    {
++        if (!accepts(generation))
++            return false;
++        m_active = false;
++        return true;
++    }
++
++private:
++    Token m_generation;
++    bool m_active;
++};
++
++#endif
 --- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
 +++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
 @@ -37,48 +37,63 @@
@@ -375,54 +499,3 @@
      QJNIObjectPrivate m_speech;
      QTextToSpeech::State m_state;
      QString m_text;
---- /dev/null
-+++ b/qtspeech/src/plugins/tts/android/src/qandroidttsutterance_p.h
-@@ -0,0 +1,48 @@
-+// SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
-+// Copyright (C) 2026 OpenKaryon
-+#ifndef QANDROIDTTSUTTERANCE_P_H
-+#define QANDROIDTTSUTTERANCE_P_H
-+
-+#include <limits>
-+
-+// Owned by the engine's Qt thread. Check tokens on delivery, not on a Binder
-+// thread: an old completion may already be queued when the next say starts.
-+class QAndroidTtsUtterance
-+{
-+public:
-+    typedef long long Token;
-+    QAndroidTtsUtterance() : m_generation(0), m_active(false) {}
-+
-+    Token begin()
-+    {
-+        invalidate();
-+        m_active = true;
-+        return m_generation;
-+    }
-+
-+    Token invalidate()
-+    {
-+        m_active = false;
-+        if (m_generation == (std::numeric_limits<Token>::max)())
-+            m_generation = 0;
-+        return ++m_generation;
-+    }
-+
-+    bool isCurrent(Token generation) const { return generation == m_generation; }
-+    bool accepts(Token generation) const { return m_active && isCurrent(generation); }
-+    bool isActive() const { return m_active; }
-+
-+    bool finish(Token generation)
-+    {
-+        if (!accepts(generation))
-+            return false;
-+        m_active = false;
-+        return true;
-+    }
-+
-+private:
-+    Token m_generation;
-+    bool m_active;
-+};
-+
-+#endif

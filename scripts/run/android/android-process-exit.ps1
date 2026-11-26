@@ -106,12 +106,14 @@ function Start-AndroidCaseLogCapture([string]$Adb,[string]$Serial,[string]$Direc
     Invoke-AndroidExitQuery $Adb $Serial @('shell','log','-p','i','-t','LongreachCapture',$ready) $Directory 'logcat-capture-ready-marker' 5000 | Out-Null
     $timer=[Diagnostics.Stopwatch]::StartNew()
     do {
-        $lines=@(Invoke-AndroidExitQuery $Adb $Serial @('shell','cat',$remote) $Directory 'logcat-capture-ready-query' 1000 -AllowNonzero)
+        $remaining=5000-[int]$timer.ElapsedMilliseconds
+        if($remaining -le 0){throw 'Guest log capture did not become ready'}
+        # A single read may consume the remaining existing readiness window;
+        # do not impose a separate one-second transport deadline inside it.
+        $lines=@(Invoke-AndroidExitQuery $Adb $Serial @('shell','cat',$remote) $Directory 'logcat-capture-ready-query' $remaining -AllowNonzero)
+        if($timer.ElapsedMilliseconds -ge 5000){throw 'Guest log capture did not become ready'}
         if(@($lines | Where-Object {$_ -match ('^[VDIWEF]/LongreachCapture\s*\(\s*\d+\):\s*'+$ready+'\s*$')}).Count -eq 1){break}
-        if($timer.ElapsedMilliseconds -ge 5000){
-            throw 'Guest log capture did not become ready'
-        }
-        Start-Sleep -Milliseconds 50
+        Start-Sleep -Milliseconds ([Math]::Min(50,[Math]::Max(1,5000-[int]$timer.ElapsedMilliseconds)))
     } while($true)
     $lines | Set-Content -LiteralPath "$Directory/logcat-capture-ready.log" -Encoding utf8
     $record=@{schema_version=1;serial=$Serial;remote_file=$remote;ready_marker=$ready;

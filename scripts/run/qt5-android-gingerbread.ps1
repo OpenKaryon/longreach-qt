@@ -238,7 +238,14 @@ try {
         $logs = @(Get-AndroidCaseRawLog -Adb $adb -Serial $serial -Directory $output -Name 'native-progress' -TimeoutMilliseconds 5000)
         $current=@(Get-AndroidApi21CaseLog -RawLog $logs -Marker $logMarker)
         $lifecycle=Get-AndroidApplicationLifecycle $current $Package
-        if ($lifecycle -and $lifecycle.death_line) { break }
+        if ($lifecycle -and $lifecycle.death_line) {
+            # The app can write its result and exit between the missing-file
+            # query and the lifecycle query. Observe the terminal value once;
+            # retain the zero-result and independent natural-exit gates below.
+            $result = @(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('shell','cat',"/data/data/$Package/files/$completionName") -Directory $output -Name 'native-result-after-death' -TimeoutMilliseconds 5000 -AllowNonzero)
+            $complete = [bool]($result -match '^\s*[0-9]+\s*$')
+            break
+        }
     }
     Invoke-AndroidTool $adb @('-s', $serial, 'pull', "/data/data/$Package/files", $output)
     if (!$complete -or !($result -match '^\s*0\s*$')) { throw "Example did not return zero: $result" }

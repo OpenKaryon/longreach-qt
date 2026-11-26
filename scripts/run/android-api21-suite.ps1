@@ -209,7 +209,14 @@ try {
                 if ($lifecycle) {
                     $applicationPid=$lifecycle.process_id
                     $applicationPid | Set-Content "$destination/process-id.txt"
-                    if ($lifecycle.death_line) { break }
+                    if ($lifecycle.death_line) {
+                        # Completion can appear after the previous cat but
+                        # before this death observation. Re-read once without
+                        # replacing either the zero-result or natural-exit gate.
+                        $nativeResult = @(Invoke-AndroidExitQuery -Adb $adb -Serial $serial -Command @('shell','cat',"/data/data/$package/files/selftest-result.txt") -Directory $destination -Name 'native-result-after-death' -TimeoutMilliseconds 5000 -AllowNonzero)
+                        $complete = [bool]($nativeResult -match '^\s*[0-9]+\s*$')
+                        break
+                    }
                 }
             }
         }

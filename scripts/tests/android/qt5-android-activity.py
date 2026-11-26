@@ -71,25 +71,29 @@ public class ActivityQuitFixture {
     static void reset(int api,boolean paused){Build.VERSION.SDK_INT=api;Boundary.events.clear();Looper.queue.clear();QtNative.m_lostActions.clear();QtNative.m_activity=new Activity();QtNative.m_activityDelegate=new QtActivityDelegate();QtNative.m_service=null;QtNative.m_activityPaused=paused;QtNative.m_started=true;}
     static void delivered(){Boundary.onUi(new Runnable(){public void run(){while(!Looper.queue.isEmpty())Looper.queue.remove(0).run();}});}
     public static void main(String[] ignored){
-        reset(10,false);final QtActivityDelegate legacy=QtNative.m_activityDelegate;
-        QtNative.quitApp();Boundary.require(Boundary.events.isEmpty(),"native caller must not perform UI cleanup inline");delivered();
         List<String> complete=Arrays.asList("plugin-stop","activity-finish","native-terminate","native-clear","qtthread-exit","system-exit:0");
-        Boundary.require(Boundary.events.equals(complete),"API10 main return must complete existing cleanup without onDestroy");
-        Boundary.onUi(new Runnable(){public void run(){legacy.onDestroy();}});
-        Boundary.require(Boundary.events.equals(complete),"late onDestroy must not clean up twice");
-        System.out.println("PASS API10 explicit main return, UI delivery and late callback idempotence");
-        for(int api:new int[]{11,21}){
-            reset(api,false);final QtActivityDelegate modern=QtNative.m_activityDelegate;
-            QtNative.quitApp();delivered();Boundary.require(Boundary.events.equals(Arrays.asList("plugin-stop","activity-finish")),"modern lifecycle must retain onDestroy boundary");
-            Boundary.onUi(new Runnable(){public void run(){modern.onDestroy();}});Boundary.require(Boundary.events.equals(complete),"modern cleanup order");
+        for(int api:new int[]{10,21}){
+            reset(api,false);final QtActivityDelegate finishing=QtNative.m_activityDelegate;
+            QtNative.quitApp();Boundary.require(Boundary.events.isEmpty(),"native caller must not perform UI cleanup inline");delivered();
+            Boundary.require(Boundary.events.equals(complete),"API"+api+" main return must complete existing cleanup without onDestroy");
+            Boundary.onUi(new Runnable(){public void run(){finishing.onDestroy();}});
+            Boundary.require(Boundary.events.equals(complete),"late onDestroy must not clean up twice onAPI"+api);
         }
-        System.out.println("PASS API11/API21 existing onDestroy cleanup ordering");
+        System.out.println("PASS API10/API21 explicit main return, UI delivery and late callback idempotence");
+        for(int api:new int[]{11,20,22,35}){
+            reset(api,false);final QtActivityDelegate modern=QtNative.m_activityDelegate;
+            QtNative.quitApp();delivered();Boundary.require(Boundary.events.equals(Arrays.asList("plugin-stop","activity-finish")),"other API lifecycle must retain onDestroy boundary");
+            Boundary.onUi(new Runnable(){public void run(){modern.onDestroy();}});Boundary.require(Boundary.events.equals(complete),"other API cleanup order");
+        }
+        System.out.println("PASS API11/API20/API22/API35 existing onDestroy cleanup ordering");
         reset(10,false);final QtActivityDelegate retained=QtNative.m_activityDelegate;retained.m_quitApp=false;
         Boundary.onUi(new Runnable(){public void run(){retained.onDestroy();}});Boundary.require(Boundary.events.isEmpty(),"configuration retention must not terminate native app");
         System.out.println("PASS retained configuration callback");
-        reset(10,true);QtNative.quitApp();delivered();Boundary.require(Boundary.events.isEmpty()&&QtNative.m_lostActions.size()==1,"paused-action path remains separately deferred, not qualified by this fix");
-        reset(10,false);QtNative.m_activity=null;QtNative.m_activityDelegate=null;QtNative.m_service=new Service();QtNative.quitApp();delivered();
-        Boundary.require(Boundary.events.isEmpty()&&QtNative.m_lostActions.size()==1,"service-only dispatch unchanged");
+        for(int api:new int[]{10,21}){
+            reset(api,true);QtNative.quitApp();delivered();Boundary.require(Boundary.events.isEmpty()&&QtNative.m_lostActions.size()==1,"paused-action path remains separately deferred, not qualified by this fix");
+            reset(api,false);QtNative.m_activity=null;QtNative.m_activityDelegate=null;QtNative.m_service=new Service();QtNative.quitApp();delivered();
+            Boundary.require(Boundary.events.isEmpty()&&QtNative.m_lostActions.size()==1,"service-only dispatch unchanged");
+        }
         System.out.println("PASS explicit paused/service scope boundaries; no Android guest claim");
     }
 }

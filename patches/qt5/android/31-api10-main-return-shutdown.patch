@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-or-later
 # Copyright (C) 2026 OpenKaryon
-# Complete existing Qt cleanup after explicit main return on API10.
+# Complete existing Qt cleanup after explicit main return on API10 and API21.
 --- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
 +++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtActivityDelegate.java
 @@ -143,6 +143,7 @@
@@ -25,8 +25,8 @@
 +            terminateApplication();
 +    }
 +
-+    // Called on Android's UI thread, either by onDestroy or after an explicit
-+    // native main return on API10. Keep the existing native/JNI/thread cleanup.
++    // Called on Android's UI thread by onDestroy or explicit native main return.
++    // Keep the existing native/JNI/thread cleanup on affected API10/API21.
 +    public void terminateApplication()
 +    {
 +        if (m_applicationTerminating)
@@ -41,16 +41,17 @@
      public void onPause()
 --- a/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
 +++ b/qtbase/src/android/jar/src/org/qtproject/qt5/android/QtNative.java
-@@ -512,6 +512,13 @@
+@@ -512,6 +512,14 @@
                       m_service.stopSelf();
  
                   m_started = false;
-+                 // API10 can leave an explicitly finishing Activity in
++                 // API10 and API21 can leave an explicitly finishing Activity in
 +                 // STOPPING without delivering onDestroy (also without Qt).
 +                 // Native main already returned: complete our existing cleanup
 +                 // instead of keeping the native exit semaphore waiting forever.
-+                 if (Build.VERSION.SDK_INT < 11 && m_activity != null
-+                         && m_activity.isFinishing() && m_activityDelegate != null)
++                 if ((Build.VERSION.SDK_INT < 11 || Build.VERSION.SDK_INT == 21)
++                         && m_activity != null && m_activity.isFinishing()
++                         && m_activityDelegate != null)
 +                     m_activityDelegate.terminateApplication();
              }
          });

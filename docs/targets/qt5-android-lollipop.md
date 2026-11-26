@@ -88,8 +88,10 @@ existing absolute plugin path of at least 128 encoded bytes. Other loader errors
 remain visible. Newer Android API paths remain guarded by the existing patches.
 
 Physical camera, Bluetooth/NFC, sensors, live audio/GPS and production purchases
-require device validation. QtWebEngine is excluded. Files above 2 GiB are untested
-with this pre-API 24 stdio profile. AndroidExtras native service/Binder/Intent
+require device validation. QtWebEngine is excluded. Separate
+[API21 libc++ large-file observations](qt6-android-lollipop.md#large-files-on-api21)
+cover native stdio/POSIX operations; Qt filesystem API large-file behavior
+requires its own validation. AndroidExtras native service/Binder/Intent
 coverage remains the previously documented gap. Passing these cases does not
 claim exhaustive Qt/C++23 conformance or validation on Android 5.0.0.
 

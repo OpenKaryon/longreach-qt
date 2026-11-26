@@ -165,6 +165,36 @@ class SoundSeries(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             series.failure(self.directory, 20, 'verify', 'must not overwrite failure')
 
+    def test_explicit_caller_directory_with_spaces_is_frozen_for_both_api10_abis(self):
+        caller = self.root.parent / 'caller directory with spaces'
+        caller.mkdir()
+        for abi in ('armeabi-v7a', 'x86'):
+            with self.subTest(abi=abi):
+                root = self.root.parent / (abi + ' artifacts')
+                options = fixture.prepare(root, abi)
+                options.update(classic=abi == 'x86', working_directory=caller)
+                directory = root / 'diagnostics/caller-series'
+                value = series.begin(directory=directory, **options)
+                self.assertEqual(value['working_directory'], str(caller.resolve()))
+                fixture.case(directory, 1, working_directory=caller)
+                series.record(directory, 1)
+
+    def test_another_recorded_cwd_is_rejected_even_with_other_owner_bindings_recomputed(self):
+        caller = self.root.parent / 'caller directory'
+        caller.mkdir()
+        self.options['working_directory'] = caller
+        self.begin()
+        case, receipt = fixture.case(self.directory, 1, working_directory=self.root)
+        with self.assertRaisesRegex(ValueError, 'frontend, directory or ADB'):
+            series.record(self.directory, 1)
+
+    def test_legacy_receipt_without_cwd_keeps_exact_per_case_requirement(self):
+        value = self.begin()
+        self.assertNotIn('working_directory', value)
+        fixture.case(self.directory, 1, working_directory=self.root)
+        with self.assertRaisesRegex(ValueError, 'frontend, directory or ADB'):
+            series.record(self.directory, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

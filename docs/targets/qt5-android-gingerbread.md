@@ -212,6 +212,23 @@ API10 WAV teardown attempts. Its source/recording coverage does not establish
 real WAV teardown behavior or fix qualification. It has no Make alias and
 requires ready APK/media inputs; no emulator build is performed.
 
+## Thread stack allocation
+
+Patch22 rounds a positive Android thread-stack allocation up to the runtime
+page size. `QThread::stackSize()` retains the caller's requested value; it
+is not a measurement of the effective native stack allocation. Zero keeps
+Qt's automatic-size path. Requests below the native minimum and rounding
+that would overflow `size_t` remain errors; a failed page-size query uses
+the original native request.
+
+The existing `thread/qthread-explicit-stack` check runs one aligned and four
+non-page requests on Android, with start/join and unchanged-request observations
+for each. Its check count stays one; it does not measure effective allocation.
+
+This also applies to the API21 Qt5 profiles. Host adapter tests check 32/64-bit
+size arithmetic and recorded native errors; actual SDK and guest results must
+be tied to a generation that includes this patch revision.
+
 ## Explicit Android TTS behavior diagnostic
 
 `multimedia-lab --tts-behavior` runs eight real-service state checks separately

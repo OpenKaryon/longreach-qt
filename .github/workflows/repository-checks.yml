@@ -33,6 +33,8 @@ jobs:
             & $test.FullName
             if (!$?) { throw "Android tooling fixture failed: $($test.Name)" }
           }
+      - name: Check Android thread stack alignment
+        run: python3 scripts/tests/android/qt5-android-thread-stack.py patches/qt5/android/22-android-thread-stack-size.patch "$RUNNER_TEMP/qt5-thread-stack"
       - name: Install host TTS regression dependencies
         run: |
           sudo apt-get update -qq

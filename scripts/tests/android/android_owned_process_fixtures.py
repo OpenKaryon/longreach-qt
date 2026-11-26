@@ -11,11 +11,11 @@ owned = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(owned)
 
 
-def capture(directory, program, arguments, completed=True, supervisor_pid=4242, frontend_pid=4243, artifact_root=None, adb_endpoint=None):
+def capture(directory, program, arguments, completed=True, supervisor_pid=4242, frontend_pid=4243, artifact_root=None, adb_endpoint=None, cwd=None):
     directory, program = Path(directory).resolve(), Path(program).resolve()
     request = {'schema_version': 1, 'run_id': uuid.uuid4().hex, 'owner_pid': 1,
                'owner_creation_filetime': '1', 'program': str(program), 'program_sha256': owned.digest(program),
-               'arguments': arguments, 'cwd': str(directory), 'stdout': 'emulator.stdout', 'stderr': 'emulator.stderr'}
+               'arguments': arguments, 'cwd': str(Path(cwd).resolve() if cwd is not None else directory), 'stdout': 'emulator.stdout', 'stderr': 'emulator.stderr'}
     request['adb_endpoint'] = adb_endpoint or {'schema_version': 1, 'host': 'localhost', 'port': 5037, 'socket': 'tcp:localhost:5037'}
     if artifact_root is not None:
         request['artifact_lease']={'root':str(Path(artifact_root).resolve()),'handle':'123'}

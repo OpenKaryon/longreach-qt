@@ -49,7 +49,7 @@ def emulator_args(value, case):
     return result
 
 
-def case(directory, index):
+def case(directory, index, working_directory=None):
     directory = Path(directory)
     value = json.loads((directory / 'series-inputs.json').read_text())
     path = directory / f'run-{index:02}'
@@ -81,6 +81,7 @@ def case(directory, index):
     record.update(cpu.capture(path, value['abi']))
     record.update(host.capture(path, value['paths']['emulator'], arguments,
                                supervisor_pid=5000 + index, frontend_pid=6000 + index,
-                               artifact_root=value['root'], adb_endpoint=value['adb_endpoint']))
+                               artifact_root=value['root'], adb_endpoint=value['adb_endpoint'],
+                               cwd=working_directory if working_directory is not None else value.get('working_directory', path)))
     (path / 'input-receipt.json').write_text(json.dumps(record))
     return path, record

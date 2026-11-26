@@ -1,13 +1,49 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 --- a/qtbase/src/corelib/thread/qthread_unix.cpp
 +++ b/qtbase/src/corelib/thread/qthread_unix.cpp
-@@ -671,7 +671,8 @@
+@@ -67,6 +67,9 @@
+ 
+ #include <sched.h>
+ #include <errno.h>
++#ifdef Q_OS_ANDROID
++#  include <sys/mman.h> // PAGE_SIZE used by the legacy PTHREAD_STACK_MIN macro.
++#endif
+ 
+ #ifdef Q_OS_BSD4
+ #include <sys/sysctl.h>
+@@ -103,6 +106,24 @@
+ QT_BEGIN_NAMESPACE
+ 
+ #if QT_CONFIG(thread)
++
++#ifdef Q_OS_ANDROID
++// Old Bionic requires a page-aligned allocation; preserve the public request.
++static int qt_android_set_stack_size(pthread_attr_t *attr, size_t requested)
++{
++    const long pageSize = sysconf(_SC_PAGESIZE);
++    if (pageSize <= 0 || requested < PTHREAD_STACK_MIN)
++        return pthread_attr_setstacksize(attr, requested);
++
++    const size_t remainder = requested % size_t(pageSize);
++    const size_t padding = remainder ? size_t(pageSize) - remainder : 0;
++    const size_t rounded = requested + padding;
++    if (rounded < requested)
++        return EINVAL;
++    return pthread_attr_setstacksize(attr, rounded);
++}
++#endif
++
+ 
+ Q_STATIC_ASSERT(sizeof(pthread_t) <= sizeof(Qt::HANDLE));
+ 
+@@ -671,7 +692,9 @@
  
  
      if (d->stackSize > 0) {
 -#if defined(_POSIX_THREAD_ATTR_STACKSIZE) && (_POSIX_THREAD_ATTR_STACKSIZE-0 > 0)
-+// Bionic exposes pthread_attr_setstacksize even when old headers omit the feature macro.
-+#if defined(Q_OS_ANDROID) || (defined(_POSIX_THREAD_ATTR_STACKSIZE) && (_POSIX_THREAD_ATTR_STACKSIZE-0 > 0))
++#if defined(Q_OS_ANDROID)
++        int code = qt_android_set_stack_size(&attr, d->stackSize);
++#elif defined(_POSIX_THREAD_ATTR_STACKSIZE) && (_POSIX_THREAD_ATTR_STACKSIZE-0 > 0)
          int code = pthread_attr_setstacksize(&attr, d->stackSize);
  #else
          int code = ENOSYS; // stack size not supported, automatically fail

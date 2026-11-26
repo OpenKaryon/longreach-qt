@@ -6,6 +6,10 @@ $parent=(New-Item -ItemType Directory -Force "$RepoRoot/build/fixtures").FullNam
 $fixture=Join-Path $parent ('android-log-capture-'+[guid]::NewGuid().ToString('N'))
 $global:CaptureFixtureLines=[Collections.Generic.List[string]]::new()
 $global:CaptureFixtureStalled=$false
+$global:CaptureFixtureReadyDelay=0
+$global:CaptureFixtureReadyOverrun=$false
+$global:CaptureFixtureReadyPending=0
+$global:CaptureFixtureReadyBudgets=[Collections.Generic.List[int]]::new()
 function Start-Process { throw 'Native process launch forbidden in this fixture' }
 function Start-AndroidOwnedLogCapture {
     param($Directory,$Adb,$Serial,$RemoteFile)
@@ -17,7 +21,19 @@ function Invoke-AndroidExitQuery {
     $lines=@()
     if($Command[0] -eq 'shell' -and $Command[1] -eq 'log') {
         if(!$global:CaptureFixtureStalled){$global:CaptureFixtureLines.Add('I/LongreachCapture( 321): '+$Command[-1])}
-    } elseif($Command[0] -eq 'shell' -and $Command[1] -eq 'cat'){$lines=@($global:CaptureFixtureLines.ToArray())}
+    } elseif($Command[0] -eq 'shell' -and $Command[1] -eq 'cat'){
+        if($Name -eq 'logcat-capture-ready-query'){
+            $global:CaptureFixtureReadyBudgets.Add([int]$TimeoutMilliseconds)
+            $delay=if($global:CaptureFixtureReadyOverrun){$TimeoutMilliseconds+75}else{$global:CaptureFixtureReadyDelay}
+            if($delay -gt $TimeoutMilliseconds -and !$global:CaptureFixtureReadyOverrun){
+                Start-Sleep -Milliseconds $TimeoutMilliseconds
+                throw 'Recorded readiness query timed out at its supplied budget'
+            }
+            if($delay -gt 0){Start-Sleep -Milliseconds $delay}
+            if($global:CaptureFixtureReadyPending -gt 0){$global:CaptureFixtureReadyPending--;return @()}
+        }
+        $lines=@($global:CaptureFixtureLines.ToArray())
+    }
     elseif($Command[0] -eq 'shell' -and $Command[1] -eq 'ps'){$lines=@('USER PID PPID NAME','root 1 0 /init')}
     elseif($Command[0] -eq 'logcat'){$lines=@($global:CaptureFixtureLines.ToArray() | Select-Object -Last 100)}
     else {throw 'Unexpected capture query'}
@@ -51,9 +67,37 @@ try {
     if(Test-Path "$fixture/process-exit.json"){throw 'Late fatal capture retained old success'}
     '{}' | Set-Content "$fixture/logcat-capture.json"
     Expect-Failure {Get-AndroidCaseRawLog never-executed emulator-5580 $fixture changed 100} 'differs from its case receipt'
+    # These are recorded ADB boundaries, not native process/device calls.
+    $global:CaptureFixtureLines.Clear();$global:CaptureFixtureReadyBudgets.Clear()
+    $global:CaptureFixtureReadyDelay=1200
+    $delayed=New-Item -ItemType Directory -Path "$fixture/ready-delayed"
+    $hash=Start-AndroidCaseLogCapture never-executed emulator-5580 $delayed.FullName
+    if(!$hash -or $global:CaptureFixtureReadyBudgets.Count -ne 1 -or
+       $global:CaptureFixtureReadyBudgets[0] -lt 1200 -or $global:CaptureFixtureReadyBudgets[0] -gt 5000){throw 'Ready read lost its existing five-second window'}
+
+    $global:CaptureFixtureLines.Clear();$global:CaptureFixtureReadyBudgets.Clear()
+    $global:CaptureFixtureReadyDelay=250;$global:CaptureFixtureReadyPending=2
+    $pending=New-Item -ItemType Directory -Path "$fixture/ready-pending"
+    Start-AndroidCaseLogCapture never-executed emulator-5580 $pending.FullName|Out-Null
+    $budgets=@($global:CaptureFixtureReadyBudgets.ToArray())
+    if($budgets.Count -ne 3 -or $budgets[0] -le $budgets[1] -or $budgets[1] -le $budgets[2] -or
+       @($budgets|Where-Object {$_ -le 0 -or $_ -gt 5000}).Count){throw 'Ready polling reset or exceeded its shared deadline'}
+
+    $global:CaptureFixtureLines.Clear();$global:CaptureFixtureReadyBudgets.Clear()
+    $global:CaptureFixtureReadyDelay=0;$global:CaptureFixtureReadyOverrun=$true
+    $late=New-Item -ItemType Directory -Path "$fixture/ready-late"
+    Expect-Failure {Start-AndroidCaseLogCapture never-executed emulator-5580 $late.FullName} 'did not become ready'
+    if(Test-Path "$($late.FullName)/logcat-capture.json"){throw 'Late ready value published a success receipt'}
+
+    $global:CaptureFixtureLines.Clear();$global:CaptureFixtureReadyBudgets.Clear()
+    $global:CaptureFixtureReadyOverrun=$false;$global:CaptureFixtureStalled=$true
+    $missing=New-Item -ItemType Directory -Path "$fixture/ready-missing"
+    Expect-Failure {Start-AndroidCaseLogCapture never-executed emulator-5580 $missing.FullName} 'did not become ready'
+    if(Test-Path "$($missing.FullName)/logcat-capture.json"){throw 'Missing ready value published a success receipt'}
+    Write-Output 'PASS: delayed ready inside unchanged5s, shrinking shared budget, late/missing ready refused'
     Write-Output 'PASS: rotated ring refused, complete capture proves exit, stale writer and late crash refused'
 } finally {
-    Remove-Variable CaptureFixtureLines,CaptureFixtureStalled -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable CaptureFixtureLines,CaptureFixtureStalled,CaptureFixtureReadyDelay,CaptureFixtureReadyOverrun,CaptureFixtureReadyPending,CaptureFixtureReadyBudgets -Scope Global -ErrorAction SilentlyContinue
     if(Test-Path -LiteralPath $fixture){
         $resolved=(Resolve-Path -LiteralPath $fixture).Path
         if([IO.Path]::GetDirectoryName($resolved) -ne $parent -or [IO.Path]::GetFileName($resolved) -notlike 'android-log-capture-*'){throw 'Unexpected fixture cleanup path'}

@@ -76,7 +76,11 @@ public:
     bool onTransact(int code, const QAndroidParcel &data, const QAndroidParcel &reply,
                     CallType flags) override
     {
-        if (code != EchoCode || flags != CallType::Normal) return false;
+        std::printf("OBSERVE: extras/service-transaction code=%d flags=%d\n", code, int(flags));
+        std::fflush(stdout);
+        // Binder adds transport flags such as TF_ACCEPT_FDS on API10. The
+        // FLAG_ONEWAY bit determines whether this is a synchronous call.
+        if (code != EchoCode || (int(flags) & int(CallType::OneWay)) != 0) return false;
         const QByteArray bytes = data.readData();
         const QVariantMap info = data.readVariant().toMap();
         const QAndroidBinder callback = data.readBinder();
@@ -135,7 +139,10 @@ public:
     {
         const int index = calls.fetch_add(1);
         const QByteArray bytes = data.readData();
-        const bool ok = code == CallbackCode && flags == CallType::Normal && bytes == payload(index);
+        std::printf("OBSERVE: extras/callback-transaction code=%d flags=%d\n", code, int(flags));
+        std::fflush(stdout);
+        const bool ok = code == CallbackCode && (int(flags) & int(CallType::OneWay)) == 0
+                && bytes == payload(index);
         if (!ok) ++errors;
         reply.writeData(bytes + QByteArray("-callback"));
         return ok && clearException();

@@ -1,5 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Observe these two bound QtService processes independently of client assertions.
+function Test-AndroidExtrasPendingFile([string[]]$Lines,[string]$Path) {
+    $message=($Lines -join "`n").Trim()
+    # Exact observed ENOENT formats only: Gingerbread toolbox and API21 shell.
+    return $message -ceq ($Path+': No such file or directory') -or
+        $message -ceq ('/system/bin/sh: cat: '+$Path+': No such file or directory')
+}
 function Observe-AndroidExtrasServices {
     param([string]$Adb,[string]$Serial,[string]$Directory,[string]$Package,[string]$Marker)
     if (Test-Path -LiteralPath "$Directory/extras-services.json") { return }
@@ -17,7 +23,7 @@ function Observe-AndroidExtrasServices {
             if (!$lines.Count) { return }
             # Gingerbread shell reports ENOENT on stdout and has no test/[ builtin.
             # Only this exact pending path is optional; other output remains an error.
-            if (($lines -join "`n").Trim() -ceq "/data/data/$Package/files/extras-service-$round-live.txt`: No such file or directory") { return }
+            if (Test-AndroidExtrasPendingFile $lines "/data/data/$Package/files/extras-service-$round-live.txt") { return }
             $request=($lines -join "`n").Trim()
             if ($request -cnotmatch '^([1-9][0-9]*) ([0-9a-f]{32})$') { throw 'Invalid service live rendezvous' }
             $serviceNumber=[int]$Matches[1]
@@ -42,7 +48,7 @@ function Observe-AndroidExtrasServices {
         if (!$lines.Count) { return }
         # Gingerbread shell reports ENOENT on stdout and has no test/[ builtin.
         # Only this exact pending path is optional; other output remains an error.
-        if (($lines -join "`n").Trim() -ceq "/data/data/$Package/files/extras-service-$round-exit.txt`: No such file or directory") { return }
+        if (Test-AndroidExtrasPendingFile $lines "/data/data/$Package/files/extras-service-$round-exit.txt") { return }
         $observed=Get-Content -LiteralPath $live -Raw | ConvertFrom-Json
         $timer=[Diagnostics.Stopwatch]::StartNew();$sample=0
         while ($sample -lt 2) {

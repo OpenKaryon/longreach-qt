@@ -24,11 +24,12 @@ function Invoke-AndroidExitQuery {
             Assert-Extras ($context.Stage[$index] -eq 1) 'Service exit requested before its live host ACK'
             if ($context.Mode -eq 'wrong-finish') { $number++ }
         }
-        if ($context.Mode -eq 'pending' -and $index -eq 0 -and !$context.PendingSeen.Contains($phase)) {
+        if ($context.Mode -in @('pending','pending-api21') -and $index -eq 0 -and !$context.PendingSeen.Contains($phase)) {
             $context.PendingSeen.Add($phase) | Out-Null
             $remote="/data/data/$($context.Package)/files/extras-service-$index-$phase.txt"
             Assert-Extras ($Command.Count -eq 3 -and $Command[0] -ceq 'shell' -and $Command[1] -ceq 'cat' -and $Command[2] -ceq $remote) 'Pending query changed its exact rendezvous path'
             $value="$remote`: No such file or directory`r`r`n"
+            if ($context.Mode -eq 'pending-api21') { $value='/system/bin/sh: cat: '+$value }
             return Write-ExtrasQuery $Directory $Name $value
         }
         $value="$number $($context.Nonces[$index])`n"
@@ -68,7 +69,7 @@ function Get-AndroidCaseRawLog {
     Write-ExtrasQuery $Directory $Name $value
 }
 try {
-    foreach ($mode in 'ok','pending','malformed','other-missing','permission','transport','birth','command','wrong-finish','late-crash','push-failure') {
+    foreach ($mode in 'ok','pending','pending-api21','malformed','other-missing','permission','transport','birth','command','wrong-finish','late-crash','push-failure') {
         $directory=(New-Item -ItemType Directory -Path "$fixture/$mode").FullName
         $global:ExtrasBoundary=@{Mode=$mode;Package='org.longreachqt.examples.qtselftest';Marker=('BEGIN-'+('f'*32));
             Nonces=@(('c'*32),('d'*32));Stage=@(0,0);PendingSeen=[Collections.Generic.HashSet[string]]::new();Calls=[Collections.Generic.List[string]]::new()}
@@ -78,8 +79,8 @@ try {
                 Observe-AndroidExtrasServices -Adb 'recorded-adb' -Serial 'emulator-5582' -Directory $directory `
                     -Package $global:ExtrasBoundary.Package -Marker $global:ExtrasBoundary.Marker
             }
-        } catch { if ($mode -in @('ok','pending')) { throw }; $failed=$true }
-        if ($mode -in @('ok','pending')) {
+        } catch { if ($mode -in @('ok','pending','pending-api21')) { throw }; $failed=$true }
+        if ($mode -in @('ok','pending','pending-api21')) {
             Assert-Extras (!$failed -and $global:ExtrasBoundary.Stage[0] -eq 2 -and $global:ExtrasBoundary.Stage[1] -eq 2) 'Both host-observed service exits did not complete'
             Assert-Extras (Test-Path -LiteralPath "$directory/extras-services.json") 'Missing sealed host service record'
             $seal=Get-Content "$directory/extras-services.json" -Raw | ConvertFrom-Json
@@ -88,7 +89,7 @@ try {
             Observe-AndroidExtrasServices -Adb 'recorded-adb' -Serial 'emulator-5582' -Directory $directory `
                 -Package $global:ExtrasBoundary.Package -Marker $global:ExtrasBoundary.Marker
             Assert-Extras ($before.Hash -ceq (Get-FileHash "$directory/extras-services.json").Hash) 'Completed observer changed its sealed history'
-            if ($mode -eq 'pending') { Assert-Extras ($global:ExtrasBoundary.PendingSeen.Count -eq 2) 'Both pending live and exit rendezvous were not exercised' }
+            if ($mode -in @('pending','pending-api21')) { Assert-Extras ($global:ExtrasBoundary.PendingSeen.Count -eq 2) 'Both pending live and exit rendezvous were not exercised' }
         } else {
             Assert-Extras $failed "Observer accepted recorded failure: $mode"
             Assert-Extras (!(Test-Path -LiteralPath "$directory/extras-services.json")) 'Failed observer published sealed service success'

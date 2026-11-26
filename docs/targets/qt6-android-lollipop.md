@@ -204,6 +204,19 @@ program. These standalone observations have separate native-exit and owned
 emulator-exit evidence. They do not qualify arbitrary file sizes, API10
 YAFFS, physical filesystems, or a new Qt APK/full-suite generation.
 
+### Dynamic libraries and thread-local state
+
+On API21, keep a dynamic library loaded and retain its `QLibrary` or
+`QPluginLoader` owner until every thread using its code or `thread_local`
+objects has finished, including its thread-local destructors. Call `unload()`
+only after those threads have joined.
+
+Qt5 and Qt6 enable Android's `RTLD_NODELETE` load flag only on API23 and
+newer. `QLibrary::PreventUnloadHint` therefore does not provide the library
+lifetime guarantee on API21. Load-hint interpretation is
+[platform dependent](https://doc.qt.io/qt-6/qlibrary.html#loadHints-prop).
+The supported API21 profile requires the loaded owner to outlive those threads.
+
 ## Shared compiler inputs
 
 Android host tools build from the digest-pinned Ubuntu 22.04 image and the

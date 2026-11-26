@@ -175,7 +175,7 @@ void addSpeechChecks(SmokeReporter &r)
     });
 }
 
-#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR >= 5
 #include <QElapsedTimer>
 #include <QThread>
 #include <QPointer>

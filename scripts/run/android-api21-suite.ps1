@@ -12,7 +12,6 @@ if ($AndroidExtrasBehavior) {
     if ($RunName -cnotmatch '^[a-z0-9][a-z0-9-]{0,63}$') { throw 'Invalid AndroidExtras diagnostic run name' }
 }
 if ($SpeechBehavior) {
-    if ($QtMajor -ne 5) { throw 'TTS behavior requires QtMajor 5' }
     if ($SoundCacheTeardown -or $Api10Compatibility -or $PSBoundParameters.ContainsKey('CaseNames')) {
         throw 'TTS behavior cannot be combined with another diagnostic or CaseNames'
     }
@@ -139,7 +138,7 @@ try {
     $runOptions=@{schema_version=1;qt_major=$QtMajor;abi=$Abi;gpu_requested=$Gpu;
       debug_qt_plugins=[bool]$DebugQtPlugins;qt_quick_backend=$QtQuickBackend}
     if ($SoundCacheTeardown) { $runOptions.diagnostic='qt5-sound-cache-teardown' }
-    if ($SpeechBehavior) { $runOptions.diagnostic='qt5-tts-behavior' }
+    if ($SpeechBehavior) { $runOptions.diagnostic="qt$QtMajor-tts-behavior" }
     if ($AndroidExtrasBehavior) { $runOptions.diagnostic='qt5-android-extras' }
     if ($Api10Compatibility) { $runOptions.diagnostic='qt5-api10-on-api21'; $runOptions += $forwardCoverage }
     Invoke-AndroidApi21Adb -Adb $adb -Parameters @('start-server') | Out-Null
@@ -298,7 +297,7 @@ try {
             case_cleanup_raw_logcat_sha256=(Get-FileHash "$destination/logcat-after-cleanup-raw.log" -Algorithm SHA256).Hash.ToLowerInvariant();
             case_cleanup_logcat_sha256=(Get-FileHash "$destination/logcat-after-cleanup.log" -Algorithm SHA256).Hash.ToLowerInvariant()}
         if ($SoundCacheTeardown -or $SpeechBehavior -or $AndroidExtrasBehavior -or $Api10Compatibility) {
-            $diagnostic=if ($SoundCacheTeardown) { 'qt5-sound-cache-teardown' } elseif ($SpeechBehavior) { 'qt5-tts-behavior' } elseif ($AndroidExtrasBehavior) { 'qt5-android-extras' } else { 'qt5-api10-on-api21' }
+            $diagnostic=if ($SoundCacheTeardown) { 'qt5-sound-cache-teardown' } elseif ($SpeechBehavior) { "qt$QtMajor-tts-behavior" } elseif ($AndroidExtrasBehavior) { 'qt5-android-extras' } else { 'qt5-api10-on-api21' }
             $outcomes[-1] | Add-Member -NotePropertyMembers @{scope='single-case';qualification=$false;
                 diagnostic=$diagnostic;diagnostic_stdout_sha256=$stdoutSha}
             if ($Api10Compatibility) { $outcomes[-1] | Add-Member -NotePropertyMembers $forwardCoverage }
@@ -364,7 +363,7 @@ if ($SoundCacheTeardown) {
     & python "$PSScriptRoot/android/android-api21-sound-cache.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 sound diagnostic evidence is incomplete' }
 } elseif ($SpeechBehavior) {
-    & python "$PSScriptRoot/android/android-api21-tts.py" --root $root --run $RunName --abi $Abi --artifact-lease-held
+    & python "$PSScriptRoot/android/android-api21-tts.py" --root $root --run $RunName --abi $Abi --qt-major $QtMajor --artifact-lease-held
     if ($LASTEXITCODE) { throw 'API21 TTS diagnostic evidence is incomplete' }
 } elseif ($AndroidExtrasBehavior) {
     & python "$PSScriptRoot/android/android-api21-extras.py" --root $root --run $RunName --abi $Abi --artifact-lease-held

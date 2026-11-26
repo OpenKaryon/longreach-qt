@@ -18,17 +18,19 @@ PHASES = ('SOUND_CACHE: protocol=1', 'SOUND_CACHE: wav=pcm-s16le-8000-mono',
 
 def prepare(root, abi='x86_64', name='fixture-run', *, kind='sound'):
     selected = sound._shared.SPECS[kind]
+    qt = selected.get('qt_major', 5)
     profile = selected['name']
     app = selected.get('app', 'qt-selftest')
-    package = 'org.longreachqt.examples.' + app.replace('-', '')
+    package = ('org.longreachqt.examples.qt6.' + app.replace('-', '_') if qt == 6
+               else 'org.longreachqt.examples.' + app.replace('-', ''))
     root = Path(root)
-    data.packaged(root, 5, sound.base._artifacts, abi)
+    data.packaged(root, qt, sound.base._artifacts, abi)
     identity = data.media_fixtures.launch(root, abi, name)
     run = root / name
     launch = json.loads((run / 'emulator-launch.json').read_text())
     host = data.host_fixtures.capture(run, launch['emulator'], launch['arguments'], artifact_root=root)
     cpu_fields = cpu.capture(run, abi)
-    options = {'schema_version': 1, 'qt_major': 5, 'abi': abi, 'gpu_requested': 'on',
+    options = {'schema_version': 1, 'qt_major': qt, 'abi': abi, 'gpu_requested': 'on',
                'debug_qt_plugins': False, 'qt_quick_backend': 'default', 'diagnostic': selected['diagnostic']}
     (run / 'run-options.json').write_text(json.dumps(options))
     (run / 'guest-properties.txt').write_text('[ro.build.version.release]: [5.0.2]\n[ro.build.version.sdk]: [21]\n[ro.product.cpu.abi]: [' + abi + ']\n')
@@ -36,7 +38,7 @@ def prepare(root, abi='x86_64', name='fixture-run', *, kind='sound'):
     case.mkdir()
     (case / 'files').mkdir()
     text = '\n'.join(PHASES) + '\n'
-    if kind == 'tts':
+    if kind in ('tts', 'tts6'):
         from test_android_tts_protocol import fixture
         text = fixture()
     (case / 'files/selftest.stdout').write_text(text)

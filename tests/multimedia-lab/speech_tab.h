@@ -10,7 +10,7 @@ class SmokeReporter;
 
 QWidget *makeSpeechTab();
 void addSpeechChecks(SmokeReporter &reporter);
-#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR == 5
+#if defined(Q_OS_ANDROID) && QT_VERSION_MAJOR >= 5
 int runAndroidSpeechChecks();
 #endif
 

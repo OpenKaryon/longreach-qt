@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Collect explicit Qt5 API21 diagnostics without full-suite qualification."""
+"""Collect explicit API21 diagnostics without full-suite qualification."""
 import argparse
 import importlib.util
 import json
@@ -39,6 +39,7 @@ SPECS = {
                 'arguments': '--selftest', 'diagnostic': 'qt5-api10-on-api21',
                 'output': 'api10-on-api21-result.json', 'history': 'api10-on-api21-previous-'},
 }
+SPECS['tts6'] = {**SPECS['tts'], 'qt_major': 6, 'diagnostic': 'qt6-tts-behavior'}
 
 
 def coverage_binding():
@@ -64,12 +65,13 @@ def run_path(root, name):
 
 def validate(root, name, abi, kind):
     spec = SPECS[kind]
+    qt = spec.get('qt_major', 5)
     if kind == 'forward' and abi not in ('x86', 'armeabi-v7a'):
         raise ValueError('API10 forward diagnostic supports only Qt5 ARMv7/x86 SDKs')
     coverage = coverage_binding() if kind == 'forward' else None
     root, run = run_path(root, name)
-    base._artifacts.check_examples(root, 5, abi)
-    manifest = base._artifacts.check_apks(root, 5, abi)
+    base._artifacts.check_examples(root, qt, abi)
+    manifest = base._artifacts.check_apks(root, qt, abi)
     records = json.loads((run / 'results.json').read_text(encoding='utf-8-sig'))
     if not isinstance(records, list):
         records = [records]
@@ -82,7 +84,7 @@ def validate(root, name, abi, kind):
     required.update(coverage if kind == 'forward' else {'summary': []})
     if any(type(record.get(key)) is not type(value) or record[key] != value for key, value in required.items()):
         raise ValueError('Unexpected API21 diagnostic case/qualification')
-    launch = base._launch.validate(run, 5, abi, records)
+    launch = base._launch.validate(run, qt, abi, records)
     if launch['qualification'] or launch['launch_options'].get('diagnostic') != spec['diagnostic']:
         raise ValueError('API21 diagnostic must be explicitly classified without qualification')
     identity = _identity.validate(root, run, abi)
@@ -106,7 +108,7 @@ def validate(root, name, abi, kind):
     text = stdout.read_text(encoding='utf-8-sig')
     if kind == 'sound':
         protocol.validate(text)
-    elif kind == 'tts':
+    elif kind in ('tts', 'tts6'):
         tts_protocol.validate(text)
     elif kind == 'extras':
         extras_protocol.validate(text)
@@ -118,9 +120,9 @@ def validate(root, name, abi, kind):
         expected = coverage
         if any(launch['launch_options'].get(key) != value for key, value in expected.items()):
             raise ValueError('Forward diagnostic source coverage policy changed')
-    final = base._exit_evidence.validate(root, run, 5, abi, records, host_evidence=host)
+    final = base._exit_evidence.validate(root, run, qt, abi, records, host_evidence=host)
     report = {'schema_version': 1, 'diagnostic': spec['diagnostic'], 'scope': 'single-case',
-              'completed': True, 'qualification': False, 'qt_major': 5, 'api': 21, 'abi': abi, 'run': name,
+              'completed': True, 'qualification': False, 'qt_major': qt, 'api': 21, 'abi': abi, 'run': name,
               'sdk_image_id': manifest['sdk_image_id'], 'generation': manifest['generation'],
               'apk_manifest_sha256': base._artifacts.digest(root / 'apk-manifest.json'),
               'examples_manifest_sha256': base._artifacts.digest(root / 'examples-manifest.json'),

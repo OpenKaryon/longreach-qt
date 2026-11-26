@@ -99,7 +99,7 @@ else:
         root.mkdir(parents=True, exist_ok=True)
         artifacts = load(repo / 'scripts/build/android-api21/artifact-manifest.py')
         fixtures.packaged(root, qt, artifacts, abi)
-        templates = root.parent / ('templates-tts-'+abi)
+        templates = root.parent / ('templates-tts-'+str(qt)+'-'+abi)
         templates.mkdir()
         (templates / 'tts-behavior.txt').write_text(fixture())
     elif action == 'seed-sound':
@@ -155,7 +155,7 @@ function Invoke-AndroidApi21Adb {
             }
             $lines | Set-Content "$target/selftest.stdout"
         } elseif ($global:Api21FixtureCase -eq 'tts-behavior') {
-            $lines=@(Get-Content "$global:Api21FixtureHome/templates-tts-$global:Api21FixtureAbi/tts-behavior.txt")
+            $lines=@(Get-Content "$global:Api21FixtureHome/templates-tts-$global:Api21FixtureQt-$global:Api21FixtureAbi/tts-behavior.txt")
             if ($global:Api21FixtureMutation -eq 'tts-state-order') {
                 $lines=$lines -creplace 'speech/pause-stable-before-resume - state=Paused','speech/pause-stable-before-resume - state=Ready'
             }
@@ -523,18 +523,18 @@ $proof
                 !(Test-Path "$root/final-results.json")) 'Full runner cleared a failed first case and continued'
         }
     }
-    foreach ($abi in 'armeabi-v7a','arm64-v8a','x86','x86_64') {
-        $global:Api21FixtureQt=5;$global:Api21FixtureAbi=$abi;$global:Api21FixtureForward=$false;$global:Api21FixtureMutation=''
+    foreach ($qt in 5,6) { foreach ($abi in 'armeabi-v7a','arm64-v8a','x86','x86_64') {
+        $global:Api21FixtureQt=$qt;$global:Api21FixtureAbi=$abi;$global:Api21FixtureForward=$false;$global:Api21FixtureMutation=''
         $global:Api21FixtureTemplateDirectory=''
-        $global:Api21FixtureRoot=Join-Path $fixture "tts-$abi"
+        $global:Api21FixtureRoot=Join-Path $fixture "tts-$qt-$abi"
         $root=$global:Api21FixtureRoot
-        & $global:Api21FixturePython "$fixture/data.py" seed-tts $RepoRoot $root 5 $abi
+        & $global:Api21FixturePython "$fixture/data.py" seed-tts $RepoRoot $root $qt $abi
         if ($LASTEXITCODE) { throw 'Could not seed API21 TTS metadata' }
-        $entry=@{QtMajor=5;Abi=$abi;AndroidSdk="$fixture/sdk";OutputDirectory=$root;RunName='tts-good';SpeechBehavior=$true}
+        $entry=@{QtMajor=$qt;Abi=$abi;AndroidSdk="$fixture/sdk";OutputDirectory=$root;RunName='tts-good';SpeechBehavior=$true}
         $global:Api21FixtureCalls.Clear()
         & $runner @entry | Out-Null
         $diagnostic=Get-Content "$root/tts-good/tts-behavior-result.json" -Raw | ConvertFrom-Json
-        Assert-Suite ($diagnostic.completed -and !$diagnostic.qualification -and $diagnostic.cases.Count -eq 1 -and
+        Assert-Suite ($diagnostic.completed -and !$diagnostic.qualification -and $diagnostic.qt_major -eq $qt -and $diagnostic.diagnostic -ceq "qt$qt-tts-behavior" -and $diagnostic.cases.Count -eq 1 -and
             $diagnostic.cases[0].apk_relative -ceq 'apk/multimedia-lab.apk' -and
             $diagnostic.cases[0].arguments -ceq '--tts-behavior') 'TTS route lost its explicit app/arguments/classification'
         Assert-Suite ($global:Api21FixtureStopped -and $global:Api21FixtureCalls.Contains('tts-collector') -and
@@ -550,13 +550,13 @@ $proof
             Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/$fault/tts-behavior-result.json")) "Failed TTS $fault bypassed cleanup or kept a result"
         }
         $global:Api21FixtureMutation='';$global:Api21FixtureCalls.Clear()
-        foreach ($field in 'QtMajor','CaseNames','SoundCacheTeardown','Api10Compatibility') {
+        foreach ($field in 'CaseNames','SoundCacheTeardown','Api10Compatibility') {
             $bad=@{}+$entry;$bad.RunName='bad-'+$field.ToLowerInvariant()
-            $bad[$field]=switch ($field) { 'QtMajor' {6} 'CaseNames' {@('network-gui')} default {$true} }
-            Expect-SuiteFailure { & $runner @bad | Out-Null } 'TTS behavior (requires QtMajor 5|cannot be combined)'
+            $bad[$field]=switch ($field) { 'CaseNames' {@('network-gui')} default {$true} }
+            Expect-SuiteFailure { & $runner @bad | Out-Null } 'TTS behavior cannot be combined'
         }
         Assert-Suite ($global:Api21FixtureCalls.Count -eq 0) 'Mixed TTS preflight reached metadata/device boundaries'
-    }
+    } }
     $global:Api21FixtureMutation=''
     Write-Output 'PASS: ordinary full/selected Qt5/Qt6, sound/TTS and API10-forward API21 recordings across four ABIs require per-case cleanup/stdout and owned final capture; no ADB/emulator executes'
 

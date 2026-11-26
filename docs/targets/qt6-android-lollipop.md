@@ -216,3 +216,29 @@ crashes. It does not repair or qualify that helper. All application exit,
 scoped fatal-log, final-capture and owned process-tree checks still apply;
 partial or failed runs cannot qualify the full suite. Without the option the
 runner uses the guest's default `am` command.
+
+
+### Explicit TTS state diagnostic
+
+Build current native examples and APKs against the selected SDK before using
+this route. The ordinary multimedia smoke checks backend/voices only; the
+explicit diagnostic exercises eight real Android service state scenarios:
+short/repeated completion, stop, pause stability, resume, replacement and
+active-object destruction/recreation.
+
+```powershell
+./scripts/run/android-api21-suite.ps1 -QtMajor 6 -Abi arm64-v8a `
+  -SpeechBehavior -RunName tts-state-check -OutputDirectory $root `
+  -AndroidSdk $env:ANDROID_HOME
+```
+
+Use a unique run name and the artifact root containing that SDK's rebuilt
+APKs. The route writes `tts-behavior-result.json` with `qt_major=6` and
+`diagnostic=qt6-tts-behavior`, always `qualification=false`. All eight exact
+state observations, natural application exit, final capture and owned-tree
+closure are required. It cannot publish a full-suite qualification. Qt5
+receipts cannot be relabelled as Qt6 receipts.
+
+Synthesis is muted. These bounded state checks do not qualify audible output,
+sample-position resume or arbitrary delayed callbacks. This describes the
+available diagnostic; a guest PASS requires its own recorded execution.

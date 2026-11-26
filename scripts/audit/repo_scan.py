@@ -39,6 +39,14 @@ ALLOW_FILES = {
         'the PEM marker as a string literal in Qt OPC UA code',
 }
 
+# Preserve the exact public upstream author notice in the hash-pinned fixture.
+# Other lines, addresses and leak kinds in this file remain checked.
+ALLOW_LINES = {
+    ('scripts/tests/android/fixtures/qt5-service-connection/qandroidserviceconnection.cpp',
+     'e-mail', '** Copyright (C) 2017 BogDan Vatra <bogdan@kde.org>'):
+        'unmodified Qt upstream copyright attribution',
+}
+
 TEXT_SUFFIXES = {'', '.c', '.cc', '.cpp', '.h', '.hpp', '.m', '.mm', '.qml', '.js', '.py', '.sh', '.ps1',
                  '.cmake', '.txt', '.md', '.json', '.yml', '.yaml', '.pro', '.pri', '.prf', '.conf',
                  '.patch', '.diff', '.s', '.ui', '.qrc', '.xml', '.html', '.css', '.in', '.toml', '.ini',
@@ -73,7 +81,8 @@ def main():
         for number, line in enumerate(text.splitlines() if name != 'scripts/audit/repo_scan.py' else [], 1):
             for kind, pattern in LEAKS:
                 match = pattern.search(line)
-                if match and not ALLOW.search(line) and (name, kind) not in ALLOW_FILES:
+                if (match and not ALLOW.search(line) and (name, kind) not in ALLOW_FILES
+                        and (name, kind, line) not in ALLOW_LINES):
                     print(f'{name}:{number}: {kind}: {match.group(0)}')
                     problems += 1
         if args.spdx and (path.suffix.lower() in SPDX_SUFFIXES or path.name in ('Dockerfile', 'Makefile')

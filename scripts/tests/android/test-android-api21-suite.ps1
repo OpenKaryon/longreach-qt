@@ -107,7 +107,7 @@ else:
         root.mkdir(parents=True, exist_ok=True)
         artifacts = load(repo / 'scripts/build/android-api21/artifact-manifest.py')
         fixtures.packaged(root, qt, artifacts, abi)
-        templates = root.parent / ('templates-sound-'+abi)
+        templates = root.parent / ('templates-sound-'+str(qt)+'-'+abi)
         templates.mkdir()
         phases = ['SOUND_CACHE: protocol=1','SOUND_CACHE: wav=pcm-s16le-8000-mono',
                   'SOUND_CACHE: ready=1','SOUND_CACHE: playing=1','SOUND_CACHE: destroyed=1','SOUND_CACHE: return=0']
@@ -146,7 +146,7 @@ function Invoke-AndroidApi21Adb {
         $target=$Parameters[-1]
         New-Item -ItemType Directory -Force $target | Out-Null
         if ($global:Api21FixtureCase -eq 'sound-cache-teardown') {
-            $lines=@(Get-Content "$global:Api21FixtureHome/templates-sound-$global:Api21FixtureAbi/sound-cache-teardown.txt")
+            $lines=@(Get-Content "$global:Api21FixtureHome/templates-sound-$global:Api21FixtureQt-$global:Api21FixtureAbi/sound-cache-teardown.txt")
             switch ($global:Api21FixtureMutation) {
                 'sound-old-output' { $lines=@('---- qt-selftest: 106 passed, 0 failed, 4 skipped ----') }
                 'sound-missing-destroy' { $lines=@($lines | Where-Object { $_ -cne 'SOUND_CACHE: destroyed=1' }) }
@@ -390,42 +390,43 @@ $proof
         Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/final-results.json")) 'Focused case claimed full-suite publication'
         Assert-Suite (Test-Path "$root/full/results.json") 'Later refusal destroyed prior full-run evidence'
     }
-    foreach ($abi in @('armeabi-v7a','arm64-v8a','x86','x86_64')) {
-        $global:Api21FixtureQt=5;$global:Api21FixtureAbi=$abi;$global:Api21FixtureMutation=''
-        $global:Api21FixtureRoot=Join-Path $fixture "sound-$abi"
-        $root=$global:Api21FixtureRoot
-        & $global:Api21FixturePython "$fixture/data.py" seed-sound $RepoRoot $root 5 $abi
-        if ($LASTEXITCODE) { throw 'Could not seed API21 sound metadata' }
-        $entry=@{QtMajor=5;Abi=$abi;AndroidSdk="$fixture/sdk";OutputDirectory=$root;RunName='sound-good';SoundCacheTeardown=$true}
-        $global:Api21FixtureCalls.Clear()
-        & $runner @entry | Out-Null
-        $diagnostic=Get-Content "$root/sound-good/sound-cache-result.json" -Raw | ConvertFrom-Json
-        Assert-Suite ($diagnostic.completed -and !$diagnostic.qualification -and $diagnostic.api -eq 21 -and $diagnostic.abi -ceq $abi -and $diagnostic.cases.Count -eq 1) 'Sound route lost explicit single-case classification'
-        Assert-Suite ($diagnostic.cases[0].apk_relative -ceq 'apk/extended/qt-selftest.apk' -and
-            $diagnostic.cases[0].arguments -ceq '--sound-cache-teardown') 'Sound route used core APK or normal arguments'
-        Assert-Suite ($global:Api21FixtureStopped -and $global:Api21FixtureCalls.Contains('sound-collector') -and !$global:Api21FixtureCalls.Contains('full-collector')) 'Sound route bypassed cleanup or used full-suite collector'
-        foreach ($name in $reports) { Assert-Suite (!(Test-Path (Join-Path $root $name))) "Sound route published full-suite $name" }
-        $saved=[IO.File]::ReadAllText("$root/sound-good/sound-cache-result.json")
-        [IO.File]::WriteAllText("$root/final-results.json",'preserve this preflight sentinel')
-        $global:Api21FixtureCalls.Clear()
-        Expect-SuiteFailure { & $runner @entry | Out-Null } 'run already exists'
-        Assert-Suite ($global:Api21FixtureCalls.Count -eq 0 -and [IO.File]::ReadAllText("$root/sound-good/sound-cache-result.json") -ceq $saved -and
-            [IO.File]::ReadAllText("$root/final-results.json") -ceq 'preserve this preflight sentinel') 'Existing sound preflight changed prior evidence'
-        foreach ($fault in @('sound-old-output','sound-missing-destroy','sound-duplicate-return','sound-explicit-failure',
-                'sound-early-fatal','sound-late-debuggerd','sound-late-stdout','sound-capture-owner')) {
-            $global:Api21FixtureMutation=$fault;$global:Api21FixtureStopped=$false
-            $entry.RunName=$fault
-            Expect-SuiteFailure { & $runner @entry | Out-Null } 'Sound-cache pre-exit protocol failed|Fatal cleanup error|Artifact bytes differ|API21 (sound diagnostic evidence|post-cleanup termination evidence) is incomplete'
-            Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/$fault/sound-cache-result.json")) "Failed $fault sound route retained result or bypassed cleanup"
-            foreach ($name in $reports) { Assert-Suite (!(Test-Path (Join-Path $root $name))) "Failed sound $fault kept full-suite $name" }
+    foreach ($qt in @(5,6)) {
+        foreach ($abi in @('armeabi-v7a','arm64-v8a','x86','x86_64')) {
+            $global:Api21FixtureQt=$qt;$global:Api21FixtureAbi=$abi;$global:Api21FixtureMutation=''
+            $global:Api21FixtureRoot=Join-Path $fixture "sound-$qt-$abi"
+            $root=$global:Api21FixtureRoot
+            & $global:Api21FixturePython "$fixture/data.py" seed-sound $RepoRoot $root $qt $abi
+            if ($LASTEXITCODE) { throw 'Could not seed API21 sound metadata' }
+            $entry=@{QtMajor=$qt;Abi=$abi;AndroidSdk="$fixture/sdk";OutputDirectory=$root;RunName='sound-good';SoundCacheTeardown=$true}
+            $global:Api21FixtureCalls.Clear()
+            & $runner @entry | Out-Null
+            $diagnostic=Get-Content "$root/sound-good/sound-cache-result.json" -Raw | ConvertFrom-Json
+            Assert-Suite ($diagnostic.completed -and !$diagnostic.qualification -and $diagnostic.api -eq 21 -and $diagnostic.abi -ceq $abi -and $diagnostic.cases.Count -eq 1) 'Sound route lost explicit single-case classification'
+            Assert-Suite ($diagnostic.qt_major -eq $qt -and $diagnostic.diagnostic -ceq "qt$qt-sound-cache-teardown" -and
+                $diagnostic.cases[0].apk_relative -ceq $(if($qt -eq 5){'apk/extended/qt-selftest.apk'}else{'apk/qt-selftest.apk'}) -and
+                $diagnostic.cases[0].arguments -ceq '--sound-cache-teardown') 'Sound route used core APK or normal arguments'
+            Assert-Suite ($global:Api21FixtureStopped -and $global:Api21FixtureCalls.Contains('sound-collector') -and !$global:Api21FixtureCalls.Contains('full-collector')) 'Sound route bypassed cleanup or used full-suite collector'
+            foreach ($name in $reports) { Assert-Suite (!(Test-Path (Join-Path $root $name))) "Sound route published full-suite $name" }
+            $saved=[IO.File]::ReadAllText("$root/sound-good/sound-cache-result.json")
+            [IO.File]::WriteAllText("$root/final-results.json",'preserve this preflight sentinel')
+            $global:Api21FixtureCalls.Clear()
+            Expect-SuiteFailure { & $runner @entry | Out-Null } 'run already exists'
+            Assert-Suite ($global:Api21FixtureCalls.Count -eq 0 -and [IO.File]::ReadAllText("$root/sound-good/sound-cache-result.json") -ceq $saved -and
+                [IO.File]::ReadAllText("$root/final-results.json") -ceq 'preserve this preflight sentinel') 'Existing sound preflight changed prior evidence'
+            foreach ($fault in @('sound-old-output','sound-missing-destroy','sound-duplicate-return','sound-explicit-failure',
+                    'sound-early-fatal','sound-late-debuggerd','sound-late-stdout','sound-capture-owner')) {
+                $global:Api21FixtureMutation=$fault;$global:Api21FixtureStopped=$false
+                $entry.RunName=$fault
+                Expect-SuiteFailure { & $runner @entry | Out-Null } 'Sound-cache pre-exit protocol failed|Fatal cleanup error|Artifact bytes differ|API21 (sound diagnostic evidence|post-cleanup termination evidence) is incomplete'
+                Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/$fault/sound-cache-result.json")) "Failed $fault sound route retained result or bypassed cleanup"
+                foreach ($name in $reports) { Assert-Suite (!(Test-Path (Join-Path $root $name))) "Failed sound $fault kept full-suite $name" }
+            }
+            $global:Api21FixtureMutation=''
+            $global:Api21FixtureCalls.Clear()
+            $bad=@{}+$entry;$bad.RunName='mixed-case';$bad.CaseNames=@('network-gui')
+            Expect-SuiteFailure { & $runner @bad | Out-Null } 'cannot be combined with CaseNames'
+            Assert-Suite ($global:Api21FixtureCalls.Count -eq 0 -and !(Test-Path "$root/mixed-case")) 'Mixed sound mode reached metadata/device calls'
         }
-        $global:Api21FixtureMutation=''
-        $global:Api21FixtureCalls.Clear()
-        $bad=@{}+$entry;$bad.RunName='unsupported-qt6';$bad.QtMajor=6
-        Expect-SuiteFailure { & $runner @bad | Out-Null } 'requires QtMajor 5'
-        $bad=@{}+$entry;$bad.RunName='mixed-case';$bad.CaseNames=@('network-gui')
-        Expect-SuiteFailure { & $runner @bad | Out-Null } 'cannot be combined with CaseNames'
-        Assert-Suite ($global:Api21FixtureCalls.Count -eq 0 -and !(Test-Path "$root/unsupported-qt6") -and !(Test-Path "$root/mixed-case")) 'Unsupported sound mode reached metadata/device calls'
     }
     foreach ($abi in @('armeabi-v7a','x86')) {
         $global:Api21FixtureQt=5;$global:Api21FixtureAbi=$abi;$global:Api21FixtureForward=$true;$global:Api21FixtureMutation=''

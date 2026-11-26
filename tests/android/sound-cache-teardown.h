@@ -2,7 +2,7 @@
 #ifndef LONGREACH_SOUND_CACHE_TEARDOWN_H
 #define LONGREACH_SOUND_CACHE_TEARDOWN_H
 
-// Included only by the Qt5 Android extended/full selftest. The normal smoke
+// Included only by the Qt5/Qt6 Android extended/full selftest. The normal smoke
 // profiles do not call this diagnostic or acquire an audio device for it.
 #include <cstdio>
 #include <QByteArray>

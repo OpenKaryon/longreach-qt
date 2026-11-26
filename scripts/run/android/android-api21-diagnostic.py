@@ -39,6 +39,8 @@ SPECS = {
                 'arguments': '--selftest', 'diagnostic': 'qt5-api10-on-api21',
                 'output': 'api10-on-api21-result.json', 'history': 'api10-on-api21-previous-'},
 }
+SPECS['sound6'] = {**SPECS['sound'], 'qt_major': 6, 'apk': 'apk/qt-selftest.apk',
+                   'diagnostic': 'qt6-sound-cache-teardown'}
 SPECS['tts6'] = {**SPECS['tts'], 'qt_major': 6, 'diagnostic': 'qt6-tts-behavior'}
 
 
@@ -106,7 +108,7 @@ def validate(root, name, abi, kind):
             or (case / 'files/selftest-result.txt').read_text().strip() != '0'):
         raise ValueError('API21 diagnostic stdout or native return changed')
     text = stdout.read_text(encoding='utf-8-sig')
-    if kind == 'sound':
+    if kind in ('sound', 'sound6'):
         protocol.validate(text)
     elif kind in ('tts', 'tts6'):
         tts_protocol.validate(text)

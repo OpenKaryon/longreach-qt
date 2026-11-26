@@ -242,3 +242,20 @@ receipts cannot be relabelled as Qt6 receipts.
 Synthesis is muted. These bounded state checks do not qualify audible output,
 sample-position resume or arbitrary delayed callbacks. This describes the
 available diagnostic; a guest PASS requires its own recorded execution.
+
+
+### Explicit WAV teardown diagnostic
+
+With current examples/APKs, `-QtMajor 6 -SoundCacheTeardown` uses the normal
+Qt6 selftest APK for one separate silent PCM WAV Ready/play100ms/stop/destroy
+observation. Use a unique `-RunName` and the same `-OutputDirectory` generation.
+The shared API21 runner records `qt6-sound-cache-teardown` and
+`sound-cache-result.json`, always `qualification=false`; it requires the exact
+protocol, natural app exit, final log capture and closed owned process tree.
+Qt5 uses its own extended APK and matching Qt5 classification as before.
+
+This route does not alter the ordinary eleven-case suite. One completed
+diagnostic is not a twenty-run stress result, physical/audible audio proof,
+or a guarantee of all internal native object cleanup. A series must retain
+each distinct completed run and its source/SDK/APK and process identities.
+The documented route alone is not a guest PASS.

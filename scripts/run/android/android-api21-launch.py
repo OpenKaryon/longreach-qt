@@ -12,7 +12,7 @@ def digest(path):
 
 def application_arguments(qt, case, options):
     name = case['name']
-    sound = options.get('diagnostic', 'none') == 'qt5-sound-cache-teardown'
+    sound = options.get('diagnostic', 'none') in ('qt5-sound-cache-teardown', 'qt6-sound-cache-teardown')
     forward = options.get('diagnostic', 'none') == 'qt5-api10-on-api21'
     speech = options.get('diagnostic', 'none') in ('qt5-tts-behavior', 'qt6-tts-behavior')
     extras = options.get('diagnostic', 'none') == 'qt5-android-extras'
@@ -29,8 +29,8 @@ def application_arguments(qt, case, options):
             raise ValueError('AndroidExtras requires exactly its explicit Qt5 core case')
         app, arguments = 'qt-selftest', '--android-extras'
     elif name == 'sound-cache-teardown':
-        if qt != 5 or not sound:
-            raise ValueError('Sound-cache case requires explicit Qt5 diagnostic mode')
+        if qt not in (5, 6) or not sound or options['diagnostic'] != f'qt{qt}-sound-cache-teardown':
+            raise ValueError('Sound-cache case requires explicit matching Qt5/Qt6 diagnostic mode')
         app, arguments = 'qt-selftest', '--sound-cache-teardown'
     elif sound:
         raise ValueError('Sound diagnostic cannot contain ordinary suite cases')
@@ -83,10 +83,10 @@ def validate(run, qt, abi, records):
     elif 'activity_manager_helper_sha256' in options:
         raise ValueError('Default Activity Manager cannot claim an explicit helper witness')
     diagnostic = options.get('diagnostic', 'none')
-    if diagnostic not in ('none', 'qt5-sound-cache-teardown', 'qt5-api10-on-api21', 'qt5-tts-behavior', 'qt6-tts-behavior', 'qt5-android-extras'):
+    if diagnostic not in ('none', 'qt5-sound-cache-teardown', 'qt6-sound-cache-teardown', 'qt5-api10-on-api21', 'qt5-tts-behavior', 'qt6-tts-behavior', 'qt5-android-extras'):
         raise ValueError('Invalid API21 diagnostic mode')
-    if diagnostic == 'qt5-sound-cache-teardown' and (qt != 5 or len(records) != 1 or records[0].get('name') != 'sound-cache-teardown'):
-        raise ValueError('Sound diagnostic requires exactly one explicit Qt5 case')
+    if diagnostic in ('qt5-sound-cache-teardown', 'qt6-sound-cache-teardown') and (qt not in (5, 6) or diagnostic != f'qt{qt}-sound-cache-teardown' or len(records) != 1 or records[0].get('name') != 'sound-cache-teardown'):
+        raise ValueError('Sound diagnostic requires exactly one matching Qt5/Qt6 case')
     if diagnostic in ('qt5-tts-behavior', 'qt6-tts-behavior') and (diagnostic != f'qt{qt}-tts-behavior' or qt not in (5, 6) or len(records) != 1 or records[0].get('name') != 'tts-behavior'):
         raise ValueError('TTS diagnostic requires exactly one matching Qt5/Qt6 case')
     if diagnostic == 'qt5-android-extras' and (qt != 5 or len(records) != 1 or records[0].get('name') != 'android-extras'):
@@ -114,8 +114,8 @@ def validate(run, qt, abi, records):
         if case.get('gpu') != gpu or case.get('launch_arguments') != application_arguments(qt, case, options):
             raise ValueError('Recorded API21 application launch differs from its options: ' + case['name'])
     reasons = []
-    if diagnostic == 'qt5-sound-cache-teardown':
-        reasons.append('Qt5 sound-cache diagnostic; no full-suite qualification')
+    if diagnostic in ('qt5-sound-cache-teardown', 'qt6-sound-cache-teardown'):
+        reasons.append(f'Qt{qt} sound-cache diagnostic; no full-suite qualification')
     if diagnostic in ('qt5-tts-behavior', 'qt6-tts-behavior'):
         reasons.append(f'Qt{qt} TTS behavior diagnostic; no full-suite or audible-output qualification')
     if diagnostic == 'qt5-android-extras':

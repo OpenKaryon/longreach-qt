@@ -14,10 +14,10 @@ sound = fixture.sound
 
 class Api21Sound(unittest.TestCase):
     @contextmanager
-    def ready(self, abi='x86_64'):
+    def ready(self, abi='x86_64', qt=5):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / 'artifacts with spaces'
-            record = fixture.prepare(root, abi)
+            record = fixture.prepare(root, abi, kind='sound' if qt == 5 else 'sound6')
             with patch.object(sound._identity, 'REPO', root / 'fixture-media-repo'):
                 yield root, root / 'fixture-run', record
 
@@ -36,6 +36,34 @@ class Api21Sound(unittest.TestCase):
                 histories = list(run.glob('sound-cache-previous-*.json'))
                 self.assertEqual(len(histories), 1)
                 self.assertEqual(histories[0].read_bytes(), prior)
+
+    def test_qt6_four_abis_use_own_core_apk_and_explicit_matching_version(self):
+        for abi in ('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'):
+            with self.subTest(abi=abi), self.ready(abi, qt=6) as (root, run, record):
+                report = sound.collect(root, run.name, abi, qt_major=6)
+                self.assertEqual(report['qt_major'], 6)
+                self.assertEqual(report['diagnostic'], 'qt6-sound-cache-teardown')
+                self.assertEqual(report['cases'][0]['apk_relative'], 'apk/qt-selftest.apk')
+                self.assertTrue(report['completed'])
+                self.assertFalse(report['qualification'])
+                self.assertFalse((root / 'final-results.json').exists())
+                with self.assertRaises((OSError, ValueError, RuntimeError)):
+                    sound.validate(root, run.name, abi, qt_major=5)
+
+    def test_qt6_diagnostic_refuses_other_major_label_and_extended_apk(self):
+        for fault in ('major-label', 'extended-apk'):
+            with self.subTest(fault=fault), self.ready(qt=6) as (root, run, record):
+                if fault == 'major-label':
+                    options = json.loads((run / 'run-options.json').read_text())
+                    options['diagnostic'] = 'qt5-sound-cache-teardown'
+                    (run / 'run-options.json').write_text(json.dumps(options))
+                    record['run_options_sha256'] = fixture.data.digest(run / 'run-options.json')
+                else:
+                    record['apk_relative'] = 'apk/extended/qt-selftest.apk'
+                fixture.save(run, record)
+                with self.assertRaises((OSError, ValueError, RuntimeError)):
+                    sound.collect(root, run.name, 'x86_64', qt_major=6)
+                self.assertFalse((run / 'sound-cache-result.json').exists())
 
     def test_recheck_does_not_move_a_directory_mistaken_for_report(self):
         with self.ready() as (root, run, record):
@@ -120,7 +148,7 @@ class Api21Sound(unittest.TestCase):
                 with self.assertRaises((OSError, ValueError, RuntimeError)):
                     sound.collect(root, run.name, 'x86_64')
 
-    def test_ordinary_launch_classification_remains_and_qt6_sound_mode_refuses(self):
+    def test_ordinary_launch_classification_remains_and_wrong_qt_sound_mode_refuses(self):
         for qt in (5, 6):
             with tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -131,7 +159,7 @@ class Api21Sound(unittest.TestCase):
             options = json.loads((run / 'run-options.json').read_text())
             options['qt_major'] = 6
             (run / 'run-options.json').write_text(json.dumps(options))
-            with self.assertRaisesRegex(ValueError, 'explicit Qt5'):
+            with self.assertRaisesRegex(ValueError, 'matching Qt5/Qt6'):
                 sound.base._launch.validate(run, 6, 'x86_64', [record])
 
 

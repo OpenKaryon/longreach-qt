@@ -31,7 +31,7 @@
 
 #include "../common/crashinfo.h"
 #include "../android/atomic-cow.h"
-#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR == 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
+#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR >= 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
 #include "../android/sound-cache-teardown.h"
 #endif
 
@@ -190,10 +190,14 @@ int main(int argc, char *argv[])
             QTextStream(stdout) << "FAIL: sound-cache-teardown requires exactly one diagnostic argument\n";
             return 2;
         }
-#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR == 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
+#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR >= 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
         return SmokeSoundCacheTeardown::run();
 #else
+#if QT_VERSION_MAJOR >= 6
+        QTextStream(stdout) << "FAIL: sound-cache-teardown requires Qt5/Qt6 Android extended or full profile\n";
+#else
         QTextStream(stdout) << "FAIL: sound-cache-teardown requires Qt5 Android extended or full profile\n";
+#endif
         return 2;
 #endif
     }

@@ -138,7 +138,7 @@ try {
     <application android:name="org.qtproject.qt5.android.bindings.QtApplication"
         android:label="$appName" android:debuggable="true">
         <activity android:name="org.longreachqt.examples.SmokeActivity" android:exported="true"
-            android:configChanges="orientation|keyboard|keyboardHidden|screenLayout|uiMode"
+            android:configChanges="orientation|keyboard|keyboardHidden|screenLayout|screenSize|uiMode"
             android:screenOrientation="landscape">
             <intent-filter><action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/></intent-filter>

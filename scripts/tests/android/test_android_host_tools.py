@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Java provenance fixtures; JVMs, compilers and Android tools are not run."""
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -36,6 +38,13 @@ def output(command, **kwargs):
 
 
 class HostTools(unittest.TestCase):
+    def setUp(self):
+        # These fixtures cover portable provenance independently of Windows
+        # release policy. The policy has its own real file comparisons below.
+        policy = patch.object(host, 'is_windows_host', return_value=False)
+        policy.start()
+        self.addCleanup(policy.stop)
+
     def test_explicit_api4_platform_jar_needs_no_android35_platform(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -121,6 +130,90 @@ class HostTools(unittest.TestCase):
             self.assertEqual(snapshots[0]['tool_sha256'], snapshots[1]['tool_sha256'])
             self.assertNotEqual(snapshots[0]['tool_roots'], snapshots[1]['tool_roots'])
             self.assertTrue(all(key.startswith(('android-sdk/', 'jdk/', 'launcher/')) for key in snapshots[0]['tool_sha256']))
+
+
+class WindowsHostProfile(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.java, self.android = jdk(self.root/'jdk'), sdk(self.root/'sdk')
+        for name in ('platform-tools/adb.exe','platform-tools/AdbWinApi.dll','platform-tools/AdbWinUsbApi.dll',
+                     'build-tools/36.0.0/aapt.exe','build-tools/36.0.0/lib/d8.jar',
+                     'build-tools/36.0.0/lib/apksigner.jar'):
+            path = self.android/name
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text('fixture/'+name)
+        self.profile = {'schema_version':1,'host':'windows-x64',
+            'build_tools_revision':'36.0.0','platform_tools_revision':'37.0.1',
+            'javac_version':'javac 21.0.0','jdk_runtime_version':'fixture',
+            'sdk_files':{p.relative_to(self.android).as_posix():host.digest(p)
+                         for p in self.android.rglob('*') if p.is_file() and 'platforms' not in p.parts},
+            'jdk_files':{p.relative_to(self.java).as_posix():host.digest(p)
+                         for p in self.java.rglob('*') if p.is_file() and p.name!='src.zip'}}
+        self.policy_path = self.root/'profile.json'
+        self.write_profile()
+        for context in (patch.object(host,'WINDOWS_PROFILE',self.policy_path),
+                        patch.object(host,'is_windows_host',return_value=True),
+                        patch.object(host.subprocess,'check_output',side_effect=output),
+                        patch.object(host.shutil,'which',return_value=None),
+                        patch.dict(host.os.environ,{'JAVA_HOME':str(self.java)})):
+            context.start()
+            self.addCleanup(context.stop)
+
+    def write_profile(self):
+        self.policy_path.write_text(json.dumps(self.profile))
+
+    def test_complete_pinned_inputs_are_bound_to_packaging_and_adb(self):
+        snapshot = host.snapshot(self.android,self.java/'bin/javac.exe')
+        adb = host.verify_adb(self.android/'platform-tools/adb.exe')
+        expected = hashlib.sha256(self.policy_path.read_bytes()).hexdigest()
+        self.assertEqual(snapshot['windows_host_profile']['sha256'],expected)
+        self.assertEqual(adb['profile_sha256'],expected)
+        self.assertEqual(snapshot['tool_sha256']['android-sdk/platform-tools/adb.exe'],adb['adb_sha256'])
+
+    def test_matching_version_text_cannot_hide_different_tool_bytes(self):
+        for relative in ('build-tools/36.0.0/lib/d8.jar','platform-tools/AdbWinApi.dll'):
+            with self.subTest(relative=relative):
+                path = self.android/relative
+                original = path.read_bytes()
+                path.write_bytes(original+b'changed')
+                with self.assertRaisesRegex(ValueError,'Pinned Windows Android SDK input differs'):
+                    host.snapshot(self.android,self.java/'bin/javac.exe')
+                path.write_bytes(original)
+        path = self.java/'lib/modules'
+        path.write_bytes(b'different compiler runtime with unchanged version')
+        with self.assertRaisesRegex(ValueError,'Pinned Windows JDK input differs'):
+            host.snapshot(self.android,self.java/'bin/javac.exe')
+
+    def test_adb_companion_dll_mismatch_refuses_without_running_adb(self):
+        (self.android/'platform-tools/AdbWinApi.dll').write_bytes(b'different release')
+        with patch.object(host.subprocess,'check_output',side_effect=AssertionError('No tool should execute')):
+            with self.assertRaisesRegex(ValueError,'Pinned Windows platform-tools input differs'):
+                host.verify_adb(self.android/'platform-tools/adb.exe')
+
+    def test_unpinned_java_home_and_compiler_version_are_refused(self):
+        other = jdk(self.root/'another-java')
+        (other/'lib/modules').write_text('another runtime')
+        with patch.dict(host.os.environ,{'JAVA_HOME':str(other)}):
+            with self.assertRaisesRegex(ValueError,'Pinned Windows JDK input differs'):
+                host.snapshot(self.android,self.java/'bin/javac.exe')
+        self.profile['javac_version']='javac another-release'
+        self.write_profile()
+        with self.assertRaisesRegex(ValueError,'Pinned Windows javac version differs'):
+            host.snapshot(self.android,self.java/'bin/javac.exe')
+
+    def test_incomplete_policy_cannot_silently_turn_pinning_off(self):
+        for fault in ('empty','missing-adb'):
+            with self.subTest(fault=fault):
+                saved = dict(self.profile['sdk_files'])
+                if fault=='empty':self.profile['sdk_files']={}
+                else:del self.profile['sdk_files']['platform-tools/adb.exe']
+                self.write_profile()
+                with self.assertRaises(ValueError):
+                    host.verify_adb(self.android/'platform-tools/adb.exe')
+                self.profile['sdk_files']=saved
+                self.write_profile()
 
 
 if __name__ == '__main__':

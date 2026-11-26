@@ -12,6 +12,14 @@ $owner=$null
 $control=$null
 $global:AndroidBootFixturePwsh=(Get-Command pwsh).Source
 $global:AndroidBootFixtureStub=$null
+$script:BootPolicyReject=$false
+$script:BootPolicyCalls=0
+$script:BootQueryCalls=0
+function Assert-AndroidPinnedAdb([string]$Adb) {
+    $script:BootPolicyCalls++
+    if ($script:BootPolicyReject) { throw 'Recorded boot tool profile mismatch' }
+}
+
 function Start-BootFixtureProcess([string]$Stdout,[string]$Stderr) {
     $options=@{FilePath=$global:AndroidBootFixturePwsh;
         ArgumentList=@('-NoProfile','-File',('"'+$global:AndroidBootFixtureStub+'"'));PassThru=$true}
@@ -21,6 +29,7 @@ function Start-BootFixtureProcess([string]$Stdout,[string]$Stderr) {
 }
 function Start-Process {
     param($FilePath,[string[]]$ArgumentList,$WindowStyle,[switch]$PassThru,$RedirectStandardOutput,$RedirectStandardError)
+    $script:BootQueryCalls++
     if ($FilePath -cne $global:AndroidBootFixtureStub -or
             ($ArgumentList -join '|') -cne '-H|localhost|-P|5037|-s|emulator-5582|shell|getprop|sys.boot_completed') {
         throw 'Unexpected boot-query invocation'
@@ -57,8 +66,18 @@ if ($env:LONGREACH_BOOT_STUB_MODE -in @('ready','nonzero')) {
 
     $ready=(New-Item -ItemType Directory "$fixture/ready").FullName
     $env:LONGREACH_BOOT_STUB_MODE='ready'
+    $script:BootPolicyReject=$true
+    Expect-ReadyFailure {Wait-AndroidBoot @options -RunDirectory $ready} 'Recorded boot tool profile mismatch'
+    Assert-Ready ($script:BootPolicyCalls -eq 1 -and $script:BootQueryCalls -eq 0 -and !(Test-Path "$ready/boot-ready.json")) 'Boot queried an unpinned client or kept readiness'
+    $script:BootPolicyReject=$false
     Wait-AndroidBoot @options -RunDirectory $ready
     Assert-Ready (Test-Path "$ready/boot-ready.json") 'A successful query was not recorded'
+    $queriesBefore=$script:BootQueryCalls
+    $script:BootPolicyReject=$true
+    Expect-ReadyFailure {Wait-AndroidBoot @options -RunDirectory $ready} 'Recorded boot tool profile mismatch'
+    Assert-Ready (!(Test-Path "$ready/boot-ready.json") -and $script:BootQueryCalls -eq $queriesBefore) 'Tool refusal retained stale readiness or started a query'
+    $script:BootPolicyReject=$false
+
 
     $nonzero=(New-Item -ItemType Directory "$fixture/nonzero").FullName
     $env:LONGREACH_BOOT_STUB_MODE='nonzero'

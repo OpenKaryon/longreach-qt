@@ -178,14 +178,16 @@ class Qt4Artifacts(unittest.TestCase):
                 'tests/android-donut/java/ProbeActivity.java', 'tests/android-donut/java/AndroidManifest.xml',
                 'scripts/build/qt4-android/package.ps1', 'scripts/build/qt4-android/host.ps1',
                 'scripts/build/qt4-android/api21.ps1', 'scripts/build/qt4-android/artifact-manifest.py',
-                'scripts/build/android-api21/artifact-manifest.py')]
+                'scripts/build/android-api21/artifact-manifest.py',
+                'scripts/fetch/locks/android-windows-host-tools.json')]
             files += [sdk / 'platforms/android-35/android.jar', sdk / 'build-tools/36.0.0/d8.bat',
                       jdk / 'bin/javac.exe', jdk / 'bin/keytool.exe', jdk / 'bin/java.exe', jdk / 'release', jdk / 'lib/modules']
             for path in files:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('original')
             common = artifacts.common
-            with patch.object(common, 'REPO', repo), patch.object(common.shutil, 'which', return_value=None), \
+            # Synthetic provenance inputs; Windows release enforcement is tested separately.
+            with patch.object(common._host_tools, 'is_windows_host', return_value=False), patch.object(common, 'REPO', repo), patch.object(common.shutil, 'which', return_value=None), \
                     patch.object(common.subprocess, 'check_output', return_value=f'java.home = {jdk}\njavac fixture\n'), \
                     patch.dict(common.os.environ, {'JAVA_HOME': str(jdk)}):
                 initial = common.packaging_inputs(4, sdk, jdk / 'bin/javac.exe')

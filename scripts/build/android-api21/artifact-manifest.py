@@ -263,6 +263,7 @@ def packaging_inputs(qt, android_sdk, javac=None):
     if qt != 4:
         path = android_sdk / 'platforms/android-35/framework.aidl'
         snapshot['tool_sha256']['android-sdk/platforms/android-35/framework.aidl'] = digest(path)
+    sources.append(REPO / 'scripts/fetch/locks/android-windows-host-tools.json')
     snapshot['source_sha256'] = {p.relative_to(REPO).as_posix(): digest(p) for p in sources}
     return snapshot
 

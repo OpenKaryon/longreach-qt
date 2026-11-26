@@ -15,6 +15,15 @@ $global:AdbFixtureClientId=0
 $global:AdbFixtureClientBirth=''
 $global:AdbFixtureCalls=[Collections.Generic.List[object]]::new()
 $control=$null;$pipeChild=$null
+$script:AdbFixturePolicyReject=$false
+$script:AdbFixturePolicyCalls=0
+# The child is Python at the recorded executable boundary, not an installed
+# Android tool. Actual release bytes are covered by the host-policy fixtures.
+function Assert-AndroidPinnedAdb([string]$Adb) {
+    $script:AdbFixturePolicyCalls++
+    if ($script:AdbFixturePolicyReject) { throw 'Recorded Windows tool profile mismatch' }
+}
+
 function Assert-Adb([bool]$Condition,[string]$Message) { if (!$Condition) { throw $Message } }
 function Refuse-Adb([scriptblock]$Action,[string]$Pattern) {
     try { & $Action | Out-Null } catch { Assert-Adb ($_.Exception.Message -match $Pattern) "Unexpected ADB failure: $_";return }
@@ -61,6 +70,22 @@ else:
     print(json.dumps(arguments,ensure_ascii=False))
     print('stderr warning is not a result',file=sys.stderr)
 '@ | Set-Content "$fixture/client with spaces.py"
+    $toolDirectory=(New-Item -ItemType Directory -Path "$fixture/platform-tools").FullName
+    $pinned=@{}
+    foreach($name in @('adb.exe','AdbWinApi.dll','AdbWinUsbApi.dll')) {
+        [IO.File]::WriteAllText("$toolDirectory/$name",'fixture/'+$name)
+        $pinned['platform-tools/'+$name]=(Get-FileHash "$toolDirectory/$name").Hash.ToLowerInvariant()
+    }
+    $profile=(@{schema_version=1;host='windows-x64';sdk_files=$pinned}|ConvertTo-Json|ConvertFrom-Json)
+    Confirm-AndroidPinnedAdbFiles "$toolDirectory/adb.exe" $profile
+    [IO.File]::AppendAllText("$toolDirectory/AdbWinApi.dll",'other-version')
+    Refuse-Adb { Confirm-AndroidPinnedAdbFiles "$toolDirectory/adb.exe" $profile } 'Pinned Windows platform-tools input differs'
+    $profile.sdk_files.PSObject.Properties.Remove('platform-tools/adb.exe')
+    Refuse-Adb { Confirm-AndroidPinnedAdbFiles "$toolDirectory/adb.exe" $profile } 'lacks an ADB runtime role'
+    $script:AdbFixturePolicyReject=$true
+    Refuse-Adb { Invoke-AndroidAdb -Adb data-only-adb.exe -Arguments @('devices') } 'Recorded Windows tool profile mismatch'
+    Assert-Adb ($global:AdbFixtureClientId -eq 0 -and $script:AdbFixturePolicyCalls -eq 1) 'Tool policy did not refuse before client creation'
+    $script:AdbFixturePolicyReject=$false
     $arguments=@('-s','emulator-5580','push','two words','embedded"quote','trailing\','кириллица')
     $text=Invoke-AndroidAdb -Adb data-only-adb.exe -Arguments $arguments -TimeoutMilliseconds 5000
     Assert-Adb ((($text -join "`n" | ConvertFrom-Json) -join [char]0) -ceq ($arguments -join [char]0)) 'Bounded client changed Windows arguments or mixed stderr'

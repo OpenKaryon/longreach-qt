@@ -38,6 +38,7 @@ function Wait-AndroidBoot {
     }
     while($timer.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
         Assert-BootGuest
+        Assert-AndroidPinnedAdb $Adb
         $attempt++
         $query=$null
         try {

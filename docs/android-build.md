@@ -116,6 +116,30 @@ Android currently supports only `LICENSE_PROFILE=gpl-enabled`; direct
 targets reject other profiles and build-all excludes them with an explanation.
 Qt versions remain pinned to their existing patch series.
 
+## Pinned Windows host tools
+
+Windows packaging and ADB clients use the profile in
+[`android-windows-host-tools.json`](../scripts/fetch/locks/android-windows-host-tools.json):
+Build Tools36.0.0, platform-tools37.0.1 and Eclipse Temurin21.0.11+10 x64.
+The profile records versioned official archive URLs, archive SHA256 and the
+expected347 installed runtime/compiler files. SDK-generated `package.xml`
+and the JDK source archive are outside that executable input set.
+
+Install/extract those releases into the selected Android SDK and JDK homes.
+Set both `JAVA_HOME` and the compiler/runtime entries on `PATH` accordingly;
+wrappers remain recorded, and every actual selected JDK home must match the
+profile. No command silently installs, updates or replaces host tools.
+Packaging refuses different JDK/Build Tools/platform-tools bytes even when
+version text or directory names match. The profile itself is bound to APK
+provenance. Docker's Linux SDK compiler JDK is a separate pinned build input.
+
+Boot queries and the shared ADB client constructor check the pinned ADB
+bundle in-process, including its companion DLLs, before launching a client.
+The existing command/output deadlines and owned-process cleanup remain.
+This version/content precondition does not qualify a guest or replace its
+functional tests. To change a supported host release, update the archive
+and file identities together and repeat the affected qualification.
+
 ## Make settings
 
 | Variable | Meaning |

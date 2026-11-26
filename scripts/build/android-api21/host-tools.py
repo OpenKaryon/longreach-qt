@@ -4,15 +4,66 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import shutil
 import subprocess
+from pathlib import PurePosixPath
 
 
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+WINDOWS_PROFILE = Path(__file__).resolve().parents[2] / 'fetch/locks/android-windows-host-tools.json'
+
+
+def is_windows_host():
+    return platform.system() == 'Windows'
+
+
+def windows_profile():
+    data = WINDOWS_PROFILE.read_bytes()
+    profile = json.loads(data)
+    if profile.get('schema_version') != 1 or profile.get('host') != 'windows-x64':
+        raise ValueError('Invalid pinned Windows host tool profile')
+    for field in ('sdk_files', 'jdk_files'):
+        files = profile.get(field)
+        if not isinstance(files, dict) or not files:
+            raise ValueError('Empty pinned Windows tool input set: ' + field)
+        for name, sha in files.items():
+            path = PurePosixPath(name)
+            if (not name or path.is_absolute() or '..' in path.parts or '\\' in name or
+                    path.as_posix() != name or not isinstance(sha, str) or not re.fullmatch('[0-9a-f]{64}', sha)):
+                raise ValueError('Invalid pinned Windows tool input')
+    required_sdk = ('platform-tools/adb.exe','platform-tools/AdbWinApi.dll','platform-tools/AdbWinUsbApi.dll', 'build-tools/' + profile['build_tools_revision'] + '/aapt.exe',
+                    'build-tools/' + profile['build_tools_revision'] + '/lib/d8.jar',
+                    'build-tools/' + profile['build_tools_revision'] + '/lib/apksigner.jar')
+    if (not all(name in profile['sdk_files'] for name in required_sdk) or
+            not all(name in profile['jdk_files'] for name in ('release','bin/java.exe','bin/javac.exe','bin/keytool.exe','lib/modules'))):
+        raise ValueError('Pinned Windows tool profile lacks required compiler/packaging/ADB roles')
+    return profile, hashlib.sha256(data).hexdigest()
+
+
+def verify_files(root, expected, kind):
+    for name, sha in expected.items():
+        path = root / name
+        if not path.is_file() or digest(path) != sha:
+            raise ValueError('Pinned Windows ' + kind + ' input differs: ' + name)
+
+
+def verify_adb(adb):
+    profile, profile_sha = windows_profile()
+    adb = Path(adb).resolve(strict=True)
+    if adb.name.lower() != 'adb.exe' or adb.parent.name.lower() != 'platform-tools':
+        raise ValueError('Pinned Windows ADB must come from its platform-tools directory')
+    files = {name.removeprefix('platform-tools/'): sha for name, sha in profile['sdk_files'].items()
+             if name.startswith('platform-tools/')}
+    verify_files(adb.parent, files, 'platform-tools')
+    return {'profile_sha256':profile_sha, 'platform_tools_revision':profile['platform_tools_revision'],
+            'adb_sha256':files['adb.exe']}
 
 
 def executable(home, name):
@@ -102,18 +153,37 @@ def snapshot(android_sdk, javac=None, *, android_jar=None):
             labels[f'jdk/{index}/' + path.relative_to(home).as_posix()] = digest(path)
     for role, path in launchers.items():
         labels['launcher/' + role] = digest(path)
-    return {'schema_version': 2, 'tool_sha256': labels,
+    result = {'schema_version': 2, 'tool_sha256': labels,
             'tool_roots': {'android-sdk': str(android_sdk), **{f'jdk/{index}': str(home) for index, home in enumerate(roots)}},
             'launcher_paths': {role: str(path) for role, path in launchers.items()},
             'java_selection': selection, 'javac_version': compiler['javac_version']}
+    if is_windows_host():
+        profile, profile_sha = windows_profile()
+        if compiler['javac_version'] != profile['javac_version']:
+            raise ValueError('Pinned Windows javac version differs')
+        verify_files(android_sdk, profile['sdk_files'], 'Android SDK')
+        for index, home in enumerate(roots):
+            verify_files(home, profile['jdk_files'], 'JDK')
+        for name in profile['sdk_files']:
+            labels['android-sdk/' + name] = digest(android_sdk/name)
+        result['windows_host_profile'] = {'sha256':profile_sha,
+            'build_tools_revision':profile['build_tools_revision'],
+            'platform_tools_revision':profile['platform_tools_revision'],
+            'jdk_runtime_version':profile['jdk_runtime_version']}
+    return result
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('java-home',))
+    parser.add_argument('action', choices=('java-home','verify-adb'))
     parser.add_argument('--javac', type=Path)
+    parser.add_argument('--adb', type=Path)
     args = parser.parse_args(argv)
-    print(json.dumps(java_toolchain(args.javac)))
+    if args.action == 'verify-adb':
+        if args.adb is None: parser.error('verify-adb requires --adb')
+        print(json.dumps(verify_adb(args.adb)))
+    else:
+        print(json.dumps(java_toolchain(args.javac)))
 
 
 if __name__ == '__main__':

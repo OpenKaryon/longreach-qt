@@ -231,7 +231,20 @@ try {
             }
             throw "$($case.Name) did not complete with zero: $nativeResult"
         }
-        $exitProof=Wait-AndroidApplicationExit -Adb $adb -Serial $serial -Directory $destination -Package $package -Marker $logMarker
+        try {
+            $exitProof=Wait-AndroidApplicationExit -Adb $adb -Serial $serial -Directory $destination -Package $package -Marker $logMarker
+        } catch {
+            $exitError=$_
+            # Native zero precedes Qt/JNI teardown. Keep the reports when the
+            # process-exit gate fails, before owned cleanup powers down the guest.
+            try {
+                Invoke-AndroidApi21Adb -Adb $adb -Serial $serial -Parameters @('pull',"/data/data/$package/files","$destination/files") `
+                    -AllowNonzero -TimeoutMilliseconds 15000 | Set-Content -LiteralPath "$destination/failure-pull.log"
+            } catch {
+                $_ | Out-String | Set-Content -LiteralPath "$destination/failure-pull.log"
+            }
+            throw $exitError
+        }
         $log=@(Get-Content -LiteralPath "$destination/logcat.log")
         Invoke-Adb @('pull',"/data/data/$package/files","$destination/files") | Set-Content -LiteralPath "$destination/pull.log"
         if ($log -match 'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting') { throw "$($case.Name) crashed; see logcat.log" }

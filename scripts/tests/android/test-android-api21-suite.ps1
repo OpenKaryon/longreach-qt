@@ -142,7 +142,7 @@ function Invoke-AndroidApi21Adb {
             [IO.File]::WriteAllBytes($Parameters[-1],$helper)
             return 'helper pulled'
         }
-        if ($global:Api21FixtureMutation -in @('pull-failure','native-return-pull-failure')) { throw 'ADB report pull failed: fixture' }
+        if ($global:Api21FixtureMutation -in @('pull-failure','native-return-pull-failure','exit-observation-pull-failure')) { throw 'ADB report pull failed: fixture' }
         $target=$Parameters[-1]
         New-Item -ItemType Directory -Force $target | Out-Null
         if ($global:Api21FixtureCase -eq 'sound-cache-teardown') {
@@ -254,6 +254,7 @@ function Get-FixtureExitLog {
 . "$global:Api21FixtureRepo/scripts/run/android/android-process-exit.ps1"
 function Invoke-AndroidExitQuery {
     param($Adb,$Serial,[string[]]$Command,$Directory,$Name,$TimeoutMilliseconds,[switch]$AllowNonzero)
+    if ($global:Api21FixtureMutation -like 'exit-observation*' -and $Name -eq 'process-exit-logcat-query') { throw 'Recorded process-exit observation failure' }
     if ($Command[0] -eq 'logcat') { return (Get-FixtureExitLog -AfterCleanup:($Name -eq 'case-cleanup-logcat')) }
     if ($Command[0] -eq 'shell' -and $Command[1] -eq 'ps') { return @('USER PID PPID NAME','root 1 0 /init') }
     throw 'Unexpected recorded API21 exit query'
@@ -382,6 +383,20 @@ $proof
                     [IO.File]::ReadAllText("$root/$mutation/network-gui/files/selftest-result.txt") -ceq '1') 'Nonzero result reports were not copied before shutdown'
             } else {
                 Assert-Suite ([IO.File]::ReadAllText("$root/$mutation/network-gui/failure-pull.log") -match 'ADB report pull failed') 'Failed report pull replaced the native failure or lost diagnostics'
+            }
+        }
+        foreach ($mutation in @('exit-observation-failure','exit-observation-pull-failure')) {
+            $global:Api21FixtureMutation=$mutation;$global:Api21FixtureStopped=$false
+            $entry.RunName=$mutation;$entry.CaseNames=@('network-gui')
+            Expect-SuiteFailure { & $runner @entry | Out-Null } 'Recorded process-exit observation failure'
+            Assert-Suite ($global:Api21FixtureStopped -and !(Test-Path "$root/final-results.json")) 'Unconfirmed process exit bypassed cleanup or retained success'
+            $case="$root/$mutation/network-gui"
+            Assert-Suite (Test-Path "$case/failure-pull.log") 'Exit failure lost report-pull diagnostics'
+            if ($mutation -eq 'exit-observation-failure') {
+                Assert-Suite ((Test-Path "$case/files/selftest.stdout") -and
+                    [IO.File]::ReadAllText("$case/files/selftest-result.txt") -ceq '0') 'Native-zero reports were not copied before shutdown'
+            } else {
+                Assert-Suite ([IO.File]::ReadAllText("$case/failure-pull.log") -match 'ADB report pull failed') 'Report pull failure hid the original process-exit error'
             }
         }
         $global:Api21FixtureMutation=''

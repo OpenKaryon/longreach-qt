@@ -1,5 +1,32 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 . "$PSScriptRoot/android-adb-endpoint.ps1"
+$script:AndroidPinnedHostToolsProfile=Join-Path $PSScriptRoot '../../fetch/locks/android-windows-host-tools.json'
+function Confirm-AndroidPinnedAdbFiles([string]$Adb,$Profile) {
+    if ($Profile.schema_version -ne 1 -or $Profile.host -cne 'windows-x64') { throw 'Invalid pinned Windows host tool profile' }
+    $tool=(Get-Item -LiteralPath $Adb).FullName
+    $directory=[IO.Path]::GetDirectoryName($tool)
+    if ([IO.Path]::GetFileName($tool) -ine 'adb.exe' -or [IO.Path]::GetFileName($directory) -ine 'platform-tools') {
+        throw 'Pinned Windows ADB must come from its platform-tools directory'
+    }
+    foreach ($name in @('adb.exe','AdbWinApi.dll','AdbWinUsbApi.dll')) {
+        if (!$Profile.sdk_files.PSObject.Properties['platform-tools/'+$name]) { throw 'Pinned Windows profile lacks an ADB runtime role' }
+    }
+    $prefix='platform-tools/'
+    foreach ($entry in $Profile.sdk_files.PSObject.Properties | Where-Object { $_.Name.StartsWith($prefix,[StringComparison]::Ordinal) }) {
+        $path=Join-Path $directory $entry.Name.Substring($prefix.Length)
+        if ($entry.Value -cnotmatch '^[0-9a-f]{64}$' -or !(Test-Path -LiteralPath $path -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.Value) {
+            throw "Pinned Windows platform-tools input differs: $($entry.Name)"
+        }
+    }
+}
+function Assert-AndroidPinnedAdb([string]$Adb) {
+    if (!$IsWindows) { return }
+    # Keep this preflight in-process: a new interpreter must not create an
+    # unbounded child wait ahead of the existing ADB command deadline.
+    $profile=Get-Content -LiteralPath $script:AndroidPinnedHostToolsProfile -Raw | ConvertFrom-Json
+    Confirm-AndroidPinnedAdbFiles $Adb $profile
+}
 # Bounded ADB client calls. The daemon is shared and is never killed here.
 function Get-AndroidAdbTimeoutMilliseconds([string[]]$Arguments) {
     $index=0
@@ -17,6 +44,7 @@ function Get-AndroidAdbTimeoutMilliseconds([string[]]$Arguments) {
     return 15000
 }
 function New-AndroidAdbClientStartInfo([string]$Adb,[string[]]$Arguments,$Endpoint) {
+    Assert-AndroidPinnedAdb $Adb
     $info=[Diagnostics.ProcessStartInfo]::new($Adb)
     $info.UseShellExecute=$false;$info.CreateNoWindow=$true
     $info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true

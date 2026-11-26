@@ -295,14 +295,16 @@ class ArtifactTests(unittest.TestCase):
             javac = root / 'jdk/bin/javac.exe'
             keytool = root / 'jdk/bin/keytool.exe'
             modules = root / 'jdk/lib/modules'
-            for p in (java, script, jar, tool, javac, keytool, modules, root / 'jdk/release', root / 'jdk/bin/java.exe', sdk / 'platforms/android-35/framework.aidl'):
+            policy = repo / 'scripts/fetch/locks/android-windows-host-tools.json'
+            for p in (java, script, policy, jar, tool, javac, keytool, modules, root / 'jdk/release', root / 'jdk/bin/java.exe', sdk / 'platforms/android-35/framework.aidl'):
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text('original')
             # The setup-wide packaging mock is bypassed for this direct snapshot test.
             real = PACKAGING_INPUTS
-            with patch.object(artifacts, 'REPO', repo), patch.object(artifacts.subprocess, 'check_output', return_value=f'java.home = {root / "jdk"}\njavac 21\n'), patch.object(artifacts.shutil, 'which', return_value=None), patch.dict(artifacts.os.environ, {'JAVA_HOME': str(root / 'jdk')}):
+            # Synthetic provenance inputs are independent of the tested Windows release.
+            with patch.object(artifacts._host_tools, 'is_windows_host', return_value=False), patch.object(artifacts, 'REPO', repo), patch.object(artifacts.subprocess, 'check_output', return_value=f'java.home = {root / "jdk"}\njavac 21\n'), patch.object(artifacts.shutil, 'which', return_value=None), patch.dict(artifacts.os.environ, {'JAVA_HOME': str(root / 'jdk')}):
                 initial = real(6, sdk, javac)
-                for p in (java, script, jar, tool, javac, keytool, modules):
+                for p in (java, script, policy, jar, tool, javac, keytool, modules):
                     p.write_text('changed')
                     self.assertNotEqual(initial, real(6, sdk, javac), str(p))
                     p.write_text('original')

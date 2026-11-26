@@ -9,6 +9,8 @@ $ErrorActionPreference='Stop'
 . "$RepoRoot/scripts/run/android/android-owned-process.ps1"
 $parent=[IO.Path]::GetTempPath().TrimEnd('\','/')
 $fixture=Join-Path $parent ('longreach-adb-endpoint-'+[guid]::NewGuid())
+# No tool executes in this endpoint fixture; release validation has separate tests.
+function Assert-AndroidPinnedAdb([string]$Adb) { }
 $control=$null
 $previousContext=$global:LongreachAndroidAdbContext
 $previousEnvironment=@{}

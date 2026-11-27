@@ -221,8 +221,14 @@ public:
 
     bool ready()
     {
-        return wait([this] { return speech.state() == QTextToSpeech::Ready
+        QElapsedTimer timer;
+        timer.start();
+        const bool initialized = wait([this] { return speech.state() == QTextToSpeech::Ready
                                   && !speech.availableVoices().isEmpty(); }, 10000);
+        reporter.observe(phase, QStringLiteral("ready=%1 elapsed_ms=%2 state=%3 voices=%4 callback_thread_ok=%5")
+            .arg(initialized).arg(timer.elapsed()).arg(stateName(speech.state()))
+            .arg(speech.availableVoices().size()).arg(!wrongThread.load()));
+        return initialized;
     }
 
     void begin(const QString &name)

@@ -1,0 +1,197 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Register Android speech engines before early initialization callbacks
+
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -4,13 +4,43 @@
+ 
+ #include <QtCore/qcoreapplication.h>
+ #include <QtCore/qoperatingsystemversion.h>
++#include <QtCore/qmutex.h>
++#include <limits>
+ 
+ QT_BEGIN_NAMESPACE
+ 
+ static jclass g_qtSpeechClass = 0;
+ 
+-typedef QMap<jlong, QTextToSpeechEngineAndroid *> TextToSpeechMap;
+-Q_GLOBAL_STATIC(TextToSpeechMap, textToSpeechMap)
++struct TextToSpeechRegistry
++{
++    QMutex mutex;
++    QMap<jlong, QTextToSpeechEngineAndroid *> objects;
++    jlong nextId = 0;
++};
++Q_GLOBAL_STATIC(TextToSpeechRegistry, textToSpeechRegistry)
++
++static jlong registerTextToSpeech(QTextToSpeechEngineAndroid *tts)
++{
++    QMutexLocker locker(&textToSpeechRegistry->mutex);
++    if (textToSpeechRegistry->nextId == std::numeric_limits<jlong>::max())
++        qFatal("Android text-to-speech identifier exhausted");
++    const jlong id = ++textToSpeechRegistry->nextId;
++    textToSpeechRegistry->objects.insert(id, tts);
++    return id;
++}
++
++template <typename Function>
++static void dispatchTextToSpeech(jlong id, Function function)
++{
++    QMutexLocker locker(&textToSpeechRegistry->mutex);
++    auto *tts = textToSpeechRegistry->objects.value(id, nullptr);
++    if (!tts)
++        return;
++
++    // Enqueue while the registry protects the receiver's lifetime. Never run
++    // an initialization callback inline before its Java constructor returns.
++    QMetaObject::invokeMethod(tts, [tts, function] { function(tts); }, Qt::QueuedConnection);
++}
+ 
+ Q_DECLARE_JNI_CLASS(Locale, "java/util/Locale")
+ 
+@@ -19,12 +49,7 @@
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyError", Qt::AutoConnection,
+-                              Q_ARG(int, reason));
++    dispatchTextToSpeech(id, [reason](auto *tts) { tts->processNotifyError(int(reason)); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyError)
+ 
+@@ -33,11 +58,7 @@
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyReady", Qt::AutoConnection);
++    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifyReady(); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyReady)
+ 
+@@ -46,11 +67,7 @@
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifySpeaking", Qt::AutoConnection);
++    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifySpeaking(); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifySpeaking)
+ 
+@@ -59,12 +76,9 @@
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyRangeStart", Qt::AutoConnection,
+-        Q_ARG(int, start), Q_ARG(int, end), Q_ARG(int, frame));
++    dispatchTextToSpeech(id, [start, end, frame](auto *tts) {
++        tts->processNotifyRangeStart(start, end, frame);
++    });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyRangeStart)
+ 
+@@ -72,18 +86,12 @@
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+-
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+ 
+     QAudioFormat format;
+     format.setSampleRate(sampleRateInHz);
+     format.setSampleFormat(QAudioFormat::SampleFormat(audioFormat));
+     format.setChannelCount(channelCount);
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyBeginSynthesis", Qt::AutoConnection,
+-        Q_ARG(QAudioFormat, format));
++    dispatchTextToSpeech(id, [format](auto *tts) { tts->processNotifyBeginSynthesis(format); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyBeginSynthesis)
+ 
+@@ -91,16 +99,10 @@
+ {
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    const auto sz = env->GetArrayLength(bytes);
+-    QByteArray byteArray(sz, Qt::Initialization::Uninitialized);
+-    env->GetByteArrayRegion(bytes, 0, sz, reinterpret_cast<jbyte *>(byteArray.data()));
+-
+-    QMetaObject::invokeMethod(tts, "processNotifyAudioAvailable", Qt::AutoConnection,
+-        Q_ARG(QByteArray, byteArray));
++    const auto size = env->GetArrayLength(bytes);
++    QByteArray audio(size, Qt::Initialization::Uninitialized);
++    env->GetByteArrayRegion(bytes, 0, size, reinterpret_cast<jbyte *>(audio.data()));
++    dispatchTextToSpeech(id, [audio](auto *tts) { tts->processNotifyAudioAvailable(audio); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyAudioAvailable)
+ 
+@@ -109,13 +111,8 @@
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    QTextToSpeechEngineAndroid *const tts = (*textToSpeechMap)[id];
+-    if (!tts)
+-        return;
+-
+-    // Queued so that pending processNotifyAudioAvailable
+-    // invocations get processed first.
+-    QMetaObject::invokeMethod(tts, "processNotifyReady", Qt::QueuedConnection);
++    // Queued behind preceding audio events for the same receiver.
++    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifyReady(); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyEndSynthesis)
+ 
+@@ -166,15 +163,18 @@
+ 
+     const QString engine = parameters.value("androidEngine").toString();
+ 
+-    const jlong id = reinterpret_cast<jlong>(this);
++    // TextToSpeech.onInit can run before the Java constructor returns.
++    m_id = registerTextToSpeech(this);
+     m_speech = QJniObject::construct<QtJniTypes::QtTextToSpeech>(QNativeInterface::QAndroidApplication::context(),
+-                                                                 id, QJniObject::fromString(engine).object<jstring>());
+-    (*textToSpeechMap)[id] = this;
++                                                                 m_id, QJniObject::fromString(engine).object<jstring>());
+ }
+ 
+ QTextToSpeechEngineAndroid::~QTextToSpeechEngineAndroid()
+ {
+-    textToSpeechMap->remove(reinterpret_cast<jlong>(this));
++    {
++        QMutexLocker locker(&textToSpeechRegistry->mutex);
++        textToSpeechRegistry->objects.remove(m_id);
++    }
+     m_speech.callMethod<void>("shutdown");
+ }
+ 
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
+@@ -59,6 +59,7 @@
+     void setError(QTextToSpeech::ErrorReason reason, const QString &string);
+     QVoice javaVoiceObjectToQVoice(QJniObject &obj) const;
+ 
++    jlong m_id = 0;
+     QJniObject m_speech;
+     QTextToSpeech::State m_state = QTextToSpeech::Error;
+     QTextToSpeech::ErrorReason m_errorReason = QTextToSpeech::ErrorReason::Initialization;

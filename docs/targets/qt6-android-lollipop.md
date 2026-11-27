@@ -216,3 +216,46 @@ crashes. It does not repair or qualify that helper. All application exit,
 scoped fatal-log, final-capture and owned process-tree checks still apply;
 partial or failed runs cannot qualify the full suite. Without the option the
 runner uses the guest's default `am` command.
+
+
+### Explicit TTS state diagnostic
+
+Build current native examples and APKs against the selected SDK before using
+this route. The ordinary multimedia smoke checks backend/voices only; the
+explicit diagnostic exercises eight real Android service state scenarios:
+short/repeated completion, stop, pause stability, resume, replacement and
+active-object destruction/recreation.
+
+```powershell
+./scripts/run/android-api21-suite.ps1 -QtMajor 6 -Abi arm64-v8a `
+  -SpeechBehavior -RunName tts-state-check -OutputDirectory $root `
+  -AndroidSdk $env:ANDROID_HOME
+```
+
+Use a unique run name and the artifact root containing that SDK's rebuilt
+APKs. The route writes `tts-behavior-result.json` with `qt_major=6` and
+`diagnostic=qt6-tts-behavior`, always `qualification=false`. All eight exact
+state observations, natural application exit, final capture and owned-tree
+closure are required. It cannot publish a full-suite qualification. Qt5
+receipts cannot be relabelled as Qt6 receipts.
+
+Synthesis is muted. These bounded state checks do not qualify audible output,
+sample-position resume or arbitrary delayed callbacks. This describes the
+available diagnostic; a guest PASS requires its own recorded execution.
+
+
+### Explicit WAV teardown diagnostic
+
+With current examples/APKs, `-QtMajor 6 -SoundCacheTeardown` uses the normal
+Qt6 selftest APK for one separate silent PCM WAV Ready/play100ms/stop/destroy
+observation. Use a unique `-RunName` and the same `-OutputDirectory` generation.
+The shared API21 runner records `qt6-sound-cache-teardown` and
+`sound-cache-result.json`, always `qualification=false`; it requires the exact
+protocol, natural app exit, final log capture and closed owned process tree.
+Qt5 uses its own extended APK and matching Qt5 classification as before.
+
+This route does not alter the ordinary eleven-case suite. One completed
+diagnostic is not a twenty-run stress result, physical/audible audio proof,
+or a guarantee of all internal native object cleanup. A series must retain
+each distinct completed run and its source/SDK/APK and process identities.
+The documented route alone is not a guest PASS.

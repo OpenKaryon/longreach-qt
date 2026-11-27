@@ -48,9 +48,20 @@ eight-diagnostic result and producer identities above.
 | Qt5 TTS at the API10 native floor | Eight muted functional checks and natural exit on ARMv7/x86 | API21 provider behavior is separate; no audible-output guarantee |
 | Qt5 WAV20 at the API10 native floor | Twenty distinct successful native/natural/owned runs on ARMv7 and on x86 | All 20 retain OpenSLES engine Destroy ignored/two-active-object warnings; no leak-freedom claim |
 | Qt5 API10 APK forward Extras on API21 | x86 functional8/native0 and two natural service exits/16RPC verified separately | Both overall controls FAILED on observer timeouts; parent natural exit unproven. ARMv7 has no completed functional summary. Core-only forward compatibility does not imply Extras qualification |
-| Native sensor input | API10 x86 has recorded acceleration/compass queue teardown; API21 ARM64 stock32 supplies nonzero magnetic input and 32 Qt compass callbacks | API10 ARMv7 stock inventory is zero; ARM64 numeric azimuth/calibration and physical accuracy remain unqualified |
+| Native sensor input and compass | API10 x86 queue teardown; API21 ARM64 stock32 nonzero input/32 callbacks, plus five input-controlled directions with 25 measured Qt samples and five natural exits | API10 ARMv7 stock inventory is zero; physical calibration/accuracy, compass timestamps and raw-angle range remain unqualified |
 | Library TLS lifetime | Keep QLibrary/QPluginLoader alive until all using threads and TLS destructors complete; bounded QLibrary controls on recorded API10 ARMv7/API21 ARM64+x64 | No live-TLS unload or callback after unmapping; other ABI/plugin scenarios need separate evidence |
 | API21 files larger than 2 GiB | POSIX64 passes on all four ABIs; native C/C++ stdio also passes on 64-bit |32-bit fstream seek fails; use POSIX64. API10/YAFFS, arbitrary sizes and Qt filesystem APIs require separate validation |
+
+The separate Qt5 ARM64 compass run reuses native SDK `80f28520`/`f25be055`
+with fresh `8c214a8` clients/APKs. All five known directions pass four checks
+and five consecutive input-matched samples each: 20 PASS, 0 FAIL, 0 SKIP.
+Observed raw angles are `0`, `45`, `90`, `-180`, `-90` for expected directions
+`0`, `45`, `90`, `180`, `270`; errors modulo a turn are zero in these samples.
+The first runner attempt failed before checks on a multiword `am` extra;
+its native return 2, logs and disks remain failed. Quoting was corrected with the
+existing shell helper, without changing the SDK/APKs or original reports.
+All 25 native compass timestamps are zero, so timestamp/rate behavior and
+physical calibration accuracy are not qualified by this direction result.
 
 WAV stress is independent of the full suites and muted TTS probes. The current
 Qt6 x86 whole series passed all twenty fresh guest/app runs, with independently

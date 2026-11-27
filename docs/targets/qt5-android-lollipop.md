@@ -148,6 +148,18 @@ natural application exit, final log capture and owned host-tree closure.
 Source/build success alone is not numeric guest qualification. The check does
 not establish a raw-angle range, physical calibration accuracy or device coverage.
 
+The recorded API21 ARM64 stock32 run reuses SDK `80f28520`/`f25be055` with
+fresh `8c214a8` clients/APKs: five directions, 25 measured samples, 20 PASS,
+0 FAIL and 0 SKIP. Native return, natural app exit, post-release/final logs and
+owned-tree closure were independently rechecked. Raw readings `-180` and
+`-90` are retained for expected `180` and `270` degrees. All 25 native compass
+timestamps are 0; this result does not establish timestamp/rate conformance.
+The first focused runner attempt returned 2 before checks because the multiword
+`am` extra was unquoted. Its logs/disks remain failed; the corrected runner
+uses the existing [shell argument helper](../../scripts/run/android/android-shell.ps1)
+to keep `applicationArguments` as one value, and the same SDK/APK generation.
+See the [shared result snapshot](../results/android-qualification-20261127.md).
+
 ## Focused sound-cache diagnostic
 
 `scripts/run/android-api21-suite.ps1 -QtMajor 5 -SoundCacheTeardown` requires

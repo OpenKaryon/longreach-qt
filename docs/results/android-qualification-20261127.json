@@ -3481,6 +3481,591 @@
         "GPS",
         "audible WAV/TTS output"
       ]
+    },
+    "Qt5_ARM64_numeric_compass": {
+      "overall": "PASS bounded five-direction stock32 profile",
+      "SDK_producer_commit": "80f28520948768edf7c1cdfaebbbe07993a286a8",
+      "APK_producer_commit": "8c214a8825781ed9677d5321e1e0f900e1f7b94e",
+      "runner_source_commit": "8c214a8825781ed9677d5321e1e0f900e1f7b94e",
+      "sdk_image_id": "sha256:f25be055bb4fe5758ac79457050ceefc82c8dd046e874304c877151e44541aad",
+      "apk_manifest_sha256": "62654d7822eee0c7fcc4793e996a8d2173cd09f6887b94ff371f2f6b70f9fbc0",
+      "extended_APK_sha256": "810251f61070d15aa00fbd02b56a302b2d7340222e29936ba9943a1377dcc897",
+      "native_manifest_sha256": "3ea7986404a40edc1bf40f8f29fa6e7ac3511799ff712e654d660fabcfba03b5",
+      "SDK_rebuilt": false,
+      "directions_completed": 5,
+      "total_passed_checks": 20,
+      "total_failed_checks": 0,
+      "total_skipped_checks": 0,
+      "total_input_matched_Qt_samples": 25,
+      "maximum_observed_angular_error_degrees": 0.0,
+      "comparison": "Direction modulo360, tolerance2 degrees; raw negative angles retained",
+      "acceleration_fixture_meters_per_second_squared": [
+        0,
+        0,
+        9.81
+      ],
+      "magnetic_fixtures_microteslas": {
+        "0": [
+          0,
+          20,
+          -40
+        ],
+        "45": [
+          -20,
+          20,
+          -40
+        ],
+        "90": [
+          -20,
+          0,
+          -40
+        ],
+        "180": [
+          0,
+          -20,
+          -40
+        ],
+        "270": [
+          20,
+          0,
+          -40
+        ]
+      },
+      "cases": [
+        {
+          "expected_direction_degrees": 0,
+          "samples": [
+            {
+              "expected": 0,
+              "raw_azimuth_degrees": 0.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 854,
+              "native_stamp": 0
+            },
+            {
+              "expected": 0,
+              "raw_azimuth_degrees": 0.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1662,
+              "native_stamp": 0
+            },
+            {
+              "expected": 0,
+              "raw_azimuth_degrees": 0.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1662,
+              "native_stamp": 0
+            },
+            {
+              "expected": 0,
+              "raw_azimuth_degrees": 0.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2462,
+              "native_stamp": 0
+            },
+            {
+              "expected": 0,
+              "raw_azimuth_degrees": 0.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2462,
+              "native_stamp": 0
+            }
+          ],
+          "counts": {
+            "acceleration_samples": 4,
+            "magnetic_samples": 4,
+            "compass_samples": 5,
+            "consecutive_samples": 5
+          },
+          "native_return": 0,
+          "natural_application_exit_verified": true
+        },
+        {
+          "expected_direction_degrees": 45,
+          "samples": [
+            {
+              "expected": 45,
+              "raw_azimuth_degrees": 45.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 838,
+              "native_stamp": 0
+            },
+            {
+              "expected": 45,
+              "raw_azimuth_degrees": 45.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1636,
+              "native_stamp": 0
+            },
+            {
+              "expected": 45,
+              "raw_azimuth_degrees": 45.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1636,
+              "native_stamp": 0
+            },
+            {
+              "expected": 45,
+              "raw_azimuth_degrees": 45.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2436,
+              "native_stamp": 0
+            },
+            {
+              "expected": 45,
+              "raw_azimuth_degrees": 45.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2436,
+              "native_stamp": 0
+            }
+          ],
+          "counts": {
+            "acceleration_samples": 4,
+            "magnetic_samples": 4,
+            "compass_samples": 5,
+            "consecutive_samples": 5
+          },
+          "native_return": 0,
+          "natural_application_exit_verified": true
+        },
+        {
+          "expected_direction_degrees": 90,
+          "samples": [
+            {
+              "expected": 90,
+              "raw_azimuth_degrees": 90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 848,
+              "native_stamp": 0
+            },
+            {
+              "expected": 90,
+              "raw_azimuth_degrees": 90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 1636,
+              "native_stamp": 0
+            },
+            {
+              "expected": 90,
+              "raw_azimuth_degrees": 90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 1637,
+              "native_stamp": 0
+            },
+            {
+              "expected": 90,
+              "raw_azimuth_degrees": 90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 2435,
+              "native_stamp": 0
+            },
+            {
+              "expected": 90,
+              "raw_azimuth_degrees": 90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                -2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 2435,
+              "native_stamp": 0
+            }
+          ],
+          "counts": {
+            "acceleration_samples": 4,
+            "magnetic_samples": 4,
+            "compass_samples": 5,
+            "consecutive_samples": 5
+          },
+          "native_return": 0,
+          "natural_application_exit_verified": true
+        },
+        {
+          "expected_direction_degrees": 180,
+          "samples": [
+            {
+              "expected": 180,
+              "raw_azimuth_degrees": -180.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                -2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 923,
+              "native_stamp": 0
+            },
+            {
+              "expected": 180,
+              "raw_azimuth_degrees": -180.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                -2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1702,
+              "native_stamp": 0
+            },
+            {
+              "expected": 180,
+              "raw_azimuth_degrees": -180.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                -2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 1702,
+              "native_stamp": 0
+            },
+            {
+              "expected": 180,
+              "raw_azimuth_degrees": -180.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                -2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2521,
+              "native_stamp": 0
+            },
+            {
+              "expected": 180,
+              "raw_azimuth_degrees": -180.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                0.0,
+                -2e-05,
+                -4e-05
+              ],
+              "elapsed_ms": 2521,
+              "native_stamp": 0
+            }
+          ],
+          "counts": {
+            "acceleration_samples": 4,
+            "magnetic_samples": 4,
+            "compass_samples": 5,
+            "consecutive_samples": 5
+          },
+          "native_return": 0,
+          "natural_application_exit_verified": true
+        },
+        {
+          "expected_direction_degrees": 270,
+          "samples": [
+            {
+              "expected": 270,
+              "raw_azimuth_degrees": -90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 889,
+              "native_stamp": 0
+            },
+            {
+              "expected": 270,
+              "raw_azimuth_degrees": -90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 1685,
+              "native_stamp": 0
+            },
+            {
+              "expected": 270,
+              "raw_azimuth_degrees": -90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 1685,
+              "native_stamp": 0
+            },
+            {
+              "expected": 270,
+              "raw_azimuth_degrees": -90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 2494,
+              "native_stamp": 0
+            },
+            {
+              "expected": 270,
+              "raw_azimuth_degrees": -90.0,
+              "angular_error_degrees": 0.0,
+              "calibration_level": 0.5,
+              "acceleration": [
+                0.0,
+                0.0,
+                9.81000041962
+              ],
+              "magnetic_teslas": [
+                2e-05,
+                0.0,
+                -4e-05
+              ],
+              "elapsed_ms": 2494,
+              "native_stamp": 0
+            }
+          ],
+          "counts": {
+            "acceleration_samples": 4,
+            "magnetic_samples": 4,
+            "compass_samples": 5,
+            "consecutive_samples": 5
+          },
+          "native_return": 0,
+          "natural_application_exit_verified": true
+        }
+      ],
+      "natural_application_exits_verified": 5,
+      "final_capture_verified": true,
+      "owned_host_tree_closed": true,
+      "evidence_summary_sha256": "38c62e812515865f33b0b3b2265ae2769ed5e5a8432ceac5c7c7cb0afecf5ab5",
+      "original_quoting_failure_preserved": {
+        "overall": "FAILED",
+        "completed_directions": 0,
+        "native_return": 2,
+        "observation": "Unquoted multiword am extra left0 as a package argument. Existing shell quoting fixed only the focused runner; original guest/logs/disks retained, SDK/APKs unchanged.",
+        "evidence_summary_sha256": "d5b40b91aaec0aeed382ae369d7d749e311ab68c99c4b985d9a22e06a97bb2f4"
+      },
+      "limits": [
+        "Emulator fixtures only; no physical compass/calibration accuracy claim",
+        "All25 native compass timestamps are0; timestamp/rate conformance is unqualified",
+        "Raw azimuth range is unqualified: observed -180 and -90 are retained and compared modulo360",
+        "Other ABI/native sensor/lifetime/Activity/audio requirements remain separate",
+        "Original full13 and callback-only32-cycle results keep their original source/SDK/APK identities"
+      ]
     }
   },
   "source_runtime_boundary": "SDK producers and APK/runner commits remain separate. In particular, the original Qt4 native SDKs were reused only with reviewed unchanged native inputs and fresh clients; they were not renamed as new SDK builds."

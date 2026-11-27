@@ -171,9 +171,8 @@ guarded in the common examples. C++17 builds the SDK; example clients require
 C++23 plus `-fexperimental-library`, including jthread/stop_token behavior.
 This is behavior coverage, not full standard-library conformance.
 
-Large files above 2 GiB with this pre-API24 stdio profile, physical device
-cameras/audio/Bluetooth/NFC/XR were not validated. Intel validation is tracked
-separately in the x86 and x86_64 result reports.
+Physical device cameras/audio/Bluetooth/NFC/XR remain unvalidated. Intel
+validation is tracked separately in the x86 and x86_64 result reports.
 API21/22 long bundled-library paths use a basename retry after
 the original load fails, preserving the application native-library search path.
 This target uses QtActivity and shared Qt libraries; applications
@@ -181,6 +180,42 @@ must preserve applicable Qt/libc++/platform licences when distributed.
 
 See the [build and emulator evidence](../results/qt6-android-lollipop-armeabi-v7a-llvm21-20261118.md).
 
+
+### Large files on API21
+
+For 32-bit API21 (`armeabi-v7a` and `x86`), C++ `ifstream`/`fstream` seeking
+above 2 GiB is outside the supported stdio profile. Use explicit POSIX64
+operations (`open` with `O_LARGEFILE`, `lseek64`, `fstat64`, `read`/`write`)
+for these offsets. Both `long` and `off_t` are 32-bit; a 64-bit
+`std::streamoff` does not remove the underlying stdio limit. The native
+`fseeko64` symbol was absent in all four tested API21 guests.
+
+Standalone native checks on 2026-11-26 used the API21 libc++ SDKs produced
+from source `1a8be766bcb44c92177fcfae5f2edafa96c3a2b4`. Each created a sparse
+file, sought to 2 GiB + 4096 bytes, and checked four-byte markers:
+
+| ABI | POSIX64 seek/read/write | C stdio and C++ streams |
+| --- | --- | --- |
+| ARMv7, x86 | Passed at the tested offset | C++ stream seek failed with `EINVAL`; beyond-width `fseek`/`fseeko` calls were omitted |
+| ARM64, x86_64 | Passed at the tested offset | `fseek`/`fseeko`, C++ seek/read/write and marker verification passed |
+
+Each file occupied 4096 physical bytes and was closed/unlinked by its own
+program. These standalone observations have separate native-exit and owned
+emulator-exit evidence. They do not qualify arbitrary file sizes, API10
+YAFFS, physical filesystems, or a new Qt APK/full-suite generation.
+
+### Dynamic libraries and thread-local state
+
+On API21, keep a dynamic library loaded and retain its `QLibrary` or
+`QPluginLoader` owner until every thread using its code or `thread_local`
+objects has finished, including its thread-local destructors. Call `unload()`
+only after those threads have joined.
+
+Qt5 and Qt6 enable Android's `RTLD_NODELETE` load flag only on API23 and
+newer. `QLibrary::PreventUnloadHint` therefore does not provide the library
+lifetime guarantee on API21. Load-hint interpretation is
+[platform dependent](https://doc.qt.io/qt-6/qlibrary.html#loadHints-prop).
+The supported API21 profile requires the loaded owner to outlive those threads.
 
 ## Shared compiler inputs
 

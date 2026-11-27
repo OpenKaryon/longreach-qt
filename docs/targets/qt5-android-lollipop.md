@@ -88,8 +88,10 @@ existing absolute plugin path of at least 128 encoded bytes. Other loader errors
 remain visible. Newer Android API paths remain guarded by the existing patches.
 
 Physical camera, Bluetooth/NFC, sensors, live audio/GPS and production purchases
-require device validation. QtWebEngine is excluded. Files above 2 GiB are untested
-with this pre-API 24 stdio profile. AndroidExtras native service/Binder/Intent
+require device validation. QtWebEngine is excluded. Separate
+[API21 libc++ large-file observations](qt6-android-lollipop.md#large-files-on-api21)
+cover native stdio/POSIX operations; Qt filesystem API large-file behavior
+requires its own validation. AndroidExtras native service/Binder/Intent
 coverage remains the previously documented gap. Passing these cases does not
 claim exhaustive Qt/C++23 conformance or validation on Android 5.0.0.
 
@@ -146,3 +148,12 @@ defines the same bounded state, muted synthesis and resume-restart scope. Use
 the appropriate ABI and complete artifact root for another target. A successful
 diagnostic remains `qualification=false`; it does not establish audible output
 or replace the ordinary full suite. Source/fixture tests are not a guest result.
+
+
+## Dynamic libraries and thread-local state
+
+On API21, keep the library loaded and its `QLibrary`/`QPluginLoader` owner
+alive until all threads using its code or `thread_local` objects have finished
+their destructors and joined. Do not unload it earlier or rely on
+`PreventUnloadHint` for retention. See the shared
+[API21 library-lifetime boundary](qt6-android-lollipop.md#dynamic-libraries-and-thread-local-state).

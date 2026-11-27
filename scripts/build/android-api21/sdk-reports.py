@@ -15,7 +15,8 @@ INVENTORY = 'sdk-report-inventory.json'
 SOURCE = 'sdk-report-source.json'
 CONTROL = {INVENTORY, SOURCE, 'sdk-image-id.txt'}
 NAMED = {'qt-sdk-config.summary', 'qt-patch-state.json', 'runtime-sha256.txt', 'runtime-elf.txt',
-         'runtime-atomic-exports.txt', 'platform-input-provenance.json', 'runtime-input-provenance.json'}
+         'runtime-atomic-exports.txt', 'platform-input-provenance.json', 'runtime-input-provenance.json',
+         'qt-sdk-build.log'}
 
 
 def digest(path):
@@ -81,7 +82,9 @@ def policy(record, qt, abi):
             not isinstance(names, dict) or not re.fullmatch(r'[0-9a-f]{64}', record.get('producer_source_sha256', ''))):
         raise ValueError('Missing or mismatched SDK producer inventory')
     audit = {name for name in names if name.startswith('sdk-java-audit/')}
-    if (set(names) != required(qt, abi) | audit or
+    # Original sealed SDKs have no full build log; newer Qt6 producers include it.
+    native_logs = {'qt-sdk-build.log'} & set(names) if qt == 6 else set()
+    if (set(names) != required(qt, abi) | audit | native_logs or
             (qt == 6 and (len(audit) != 10 or any(not name.endswith('.jar') or len(PurePosixPath(name).parts) != 2 for name in audit))) or
             (qt != 6 and audit)):
         raise ValueError('SDK producer report set differs from the target policy')

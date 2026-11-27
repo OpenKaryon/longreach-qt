@@ -39,6 +39,23 @@ class Reports(unittest.TestCase):
                     if qt == 6:
                         self.assertEqual(len([name for name in result if name.startswith('sdk-java-audit/')]), 10)
 
+    def test_optional_qt6_full_build_log_is_sealed_exported_and_rechecked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = fixtures.producer(root / 'source', 6, 'armeabi-v7a')
+            log = b'[1/2] compile\ncompiler diagnostic\n[2/2] link\ninstall complete\n'
+            (source / 'qt-sdk-build.log').write_bytes(log)
+            reports.seal(source, 6, 'armeabi-v7a')
+            output = root / 'output'
+            output.mkdir()
+            exported = reports.export(source, output, 6, 'armeabi-v7a', fixtures.SDK)
+            self.assertIn('qt-sdk-build.log', exported)
+            self.assertEqual((output / 'qt-sdk-build.log').read_bytes(), log)
+            self.assertEqual(reports.verify_export(output, 6, 'armeabi-v7a', fixtures.SDK), exported)
+            (output / 'qt-sdk-build.log').write_bytes(log + b'changed')
+            with self.assertRaisesRegex(ValueError, 'report bytes changed'):
+                reports.verify_export(output, 6, 'armeabi-v7a', fixtures.SDK)
+
     def test_atomic_export_report_required_for_all_installed_sdk_targets(self):
         for qt in (4, 5, 6):
             for abi in (('x86', 'x86_64', 'arm64-v8a') if qt == 4 else ('armeabi-v7a', 'x86', 'x86_64', 'arm64-v8a')):

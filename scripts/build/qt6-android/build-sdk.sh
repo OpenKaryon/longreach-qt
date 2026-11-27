@@ -55,8 +55,32 @@ fi
 if [[ "$phase" == configure ]]; then
     exit 0
 fi
-cmake --build "$build" --parallel "${PARALLEL_JOBS:-2}"
-cmake --install "$build"
 mkdir -p /out
+native_log=/out/qt-sdk-build.log
+# Keep the complete compiler/install output in the sealed producer reports.
+# Limit console progress so repeated warnings cannot exhaust BuildKit's log cap.
+native_failure_log() {
+    tail -n 120 "$native_log"
+    echo LONGREACH_QT6_NATIVE_LOG_GZIP_BASE64_BEGIN
+    gzip -c "$native_log" | base64
+    echo LONGREACH_QT6_NATIVE_LOG_GZIP_BASE64_END
+    sha256sum "$native_log"
+}
+if ! cmake --build "$build" --parallel "${PARALLEL_JOBS:-2}" 2>&1 | tee "$native_log" | python3 -u -c '
+import re, sys
+for line in sys.stdin:
+    match = re.match(r"^\[([0-9]+)/([0-9]+)\] ", line)
+    if match and (int(match[1]) == 1 or int(match[1]) % 100 == 0 or match[1] == match[2]):
+        sys.stdout.write(line)
+        sys.stdout.flush()
+'; then
+    native_failure_log
+    exit 1
+fi
+if ! cmake --install "$build" >>"$native_log" 2>&1; then
+    native_failure_log
+    exit 1
+fi
+echo "Qt native build and installation completed; full log: $native_log"
 cp "$build/config.summary" /out/qt-sdk-config.summary
 find "$prefix/lib" -maxdepth 1 -type f -name 'libQt6*.so' -printf '%f\n' | sort > /out/sdk-modules.txt

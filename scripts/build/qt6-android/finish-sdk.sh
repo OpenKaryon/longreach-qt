@@ -12,6 +12,7 @@ report=/out/sdk-reports
 rm -rf -- "$report"
 mkdir -p "$report"
 cp "$build/config.summary" "$report/qt-sdk-config.summary"
+cp /out/qt-sdk-build.log "$report/qt-sdk-build.log"
 cp /work/api21/qt-src/.longreach-patches.json "$report/qt-patch-state.json"
 find "$prefix/lib" -maxdepth 1 -type f -name 'libQt6*.so' -printf '%f\n' | sort > "$report/sdk-modules.txt"
 python3 /repo/scripts/build/qt6-android/validate-api21-elf.py "$prefix" --abi "$abi" --report "$report/sdk-api21-elf.json"

@@ -189,6 +189,10 @@ function Invoke-DonutRun([string] $Profile) {
                 if ($check -notin $report.Trim()) { throw "Missing Quick test result: $check" }
             }
             $report | Write-Output
+            foreach ($png in 'qml-gallery.png','widgets-gallery.png') {
+                Invoke-DonutAdb @('-s',$serial,'pull',
+                    "/data/data/org.longreachqt.donut.quick/files/$png",(Join-Path $run $png)) -TimeoutMilliseconds 10000 | Out-Null
+            }
         } elseif ($suites.ContainsKey($Profile)) {
             $suite = $suites[$Profile]
             Invoke-DonutAdb @('-s', $serial, 'shell', 'am', 'start', '-n', 'org.longreachqt.donut/.ProbeActivity')
@@ -237,7 +241,7 @@ function Invoke-DonutRun([string] $Profile) {
         $outputNames=@('case-logcat.log')
         if ($suites.ContainsKey($Profile)) { $outputNames+="$($suites[$Profile])-guest.stdout" }
         elseif ($Profile -eq 'strict') { $outputNames+='strict-cxx23-guest.stdout' }
-        elseif ($Profile -eq 'quick') { $outputNames+=@('instrumentation.log','quick-smoke-guest.txt') }
+        elseif ($Profile -eq 'quick') { $outputNames+=@('instrumentation.log','quick-smoke-guest.txt','qml-gallery.png','widgets-gallery.png') }
         $runReceipt.case_outputs=[ordered]@{}
         foreach ($name in $outputNames) { $runReceipt.case_outputs[$name]=(Get-FileHash -LiteralPath (Join-Path $run $name)).Hash.ToLowerInvariant() }
         Write-DonutRunReceipt $run $runReceipt

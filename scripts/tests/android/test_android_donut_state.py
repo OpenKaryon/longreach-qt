@@ -96,6 +96,8 @@ class DonutState(unittest.TestCase):
         elif profile == 'strict':
             (run / 'strict-cxx23-guest.stdout').write_text(reports.stdout(4, 4, 'armeabi', 'strict'))
         elif profile == 'quick':
+            for name in state.QUICK_PNGS:
+                (run / name).write_bytes(reports.png())
             (run / 'instrumentation.log').write_text('INSTRUMENTATION_CODE: -1\n')
             (run / 'quick-smoke-guest.txt').write_text('\n'.join('PASS: ' + name for name in state.QUICK) + '\n')
         record['case_outputs'] = {name: state.common.digest(run / name) for name in state.report_files(record)}
@@ -279,6 +281,34 @@ class DonutState(unittest.TestCase):
             with self.subTest(fault=fault), self.assertRaises((ValueError, OSError)):
                 state.verify(self.root, run, completing=True)
             self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
+
+    def test_missing_gallery_png_cannot_complete_quick(self):
+        for name in state.QUICK_PNGS:
+            run, _ = self.attempt('quick')
+            (run / name).unlink()
+            with self.subTest(name=name), self.assertRaises((OSError, ValueError)):
+                state.verify(self.root, run, completing=True)
+            self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
+
+    def test_rebound_invalid_or_small_gallery_png_cannot_complete_quick(self):
+        import struct
+        for name, data in ((state.QUICK_PNGS[0], b'not a PNG'),
+                           (state.QUICK_PNGS[1], reports.png()[:16] + struct.pack('>II', 1, 1) + reports.png()[24:])):
+            run, record = self.attempt('quick')
+            (run / name).write_bytes(data)
+            record['case_outputs'][name] = state.common.digest(run / name)
+            self.save(run, record)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'gallery PNG'):
+                state.verify(self.root, run, completing=True)
+            self.assertFalse(state.common.read_json(run / 'run-inputs.json')['completed'])
+
+    def test_gallery_png_change_after_completion_is_rejected(self):
+        run, _ = self.attempt('quick')
+        state.verify(self.root, run, completing=True)
+        with (run / state.QUICK_PNGS[0]).open('ab') as stream:
+            stream.write(b'changed after capture')
+        with self.assertRaisesRegex(ValueError, 'output changed'):
+            state.verify(self.root, run)
 
     def test_cleanup_replacement_of_report_and_final_log_changes_is_rejected(self):
         run, _ = self.attempt('selftest')

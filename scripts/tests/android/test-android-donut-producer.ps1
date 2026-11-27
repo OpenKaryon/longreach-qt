@@ -275,6 +275,7 @@ directory=home/'reports';directory.mkdir()
 for profile,label in {'strict':'strict','selftest':'qt-selftest','graphics':'graphics','network':'network-gui','painting':'painting-lab'}.items():
     (directory/(profile+'.txt')).write_text(reports.stdout(4,4,'armeabi',profile,label))
 (directory/'quick.txt').write_text('\n'.join('PASS: '+name for name in reports.QUICK_CHECKS)+'\n')
+(directory/'gallery.png').write_bytes(reports.png())
 '@ | Set-Content "$fixture/reports.py" -Encoding utf8
     & $context.Python "$fixture/reports.py" $RepoRoot $fixture
     if ($LASTEXITCODE) { throw 'Could not seed synthetic API4 reports' }
@@ -354,6 +355,14 @@ function Invoke-AndroidAdb {
             'ro.product.cpu.abi' { return 'armeabi' }
             default { throw 'Unexpected API4 property' }
         }
+    }
+    if ($values[0] -eq 'pull') {
+        if ($values.Count -ne 3 -or $TimeoutMilliseconds -ne 10000 -or $values[1] -notin @('/data/data/org.longreachqt.donut.quick/files/qml-gallery.png','/data/data/org.longreachqt.donut.quick/files/widgets-gallery.png')) { throw 'Unexpected gallery PNG transfer' }
+        $destination=[IO.Path]::GetFullPath($values[2])
+        $prefix=[IO.Path]::GetFullPath($context.Root).TrimEnd([IO.Path]::DirectorySeparatorChar)+[IO.Path]::DirectorySeparatorChar
+        if (!$destination.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)) { throw 'Gallery destination left its fixture root' }
+        Copy-Item -LiteralPath "$($context.Home)/reports/gallery.png" -Destination $destination
+        return 'recorded gallery transfer'
     }
     if ($values[0] -eq 'push') {
         if ($context.Mode -eq 'push-timeout') { throw 'Recorded push timeout' }

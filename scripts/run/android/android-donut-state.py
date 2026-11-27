@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 from pathlib import Path
 import re
+import struct
 import sys
 import zipfile
 
@@ -28,6 +29,7 @@ QUICK = ('qrc and first frame', 'Android tap updates QML and frame',
          'Android pause and resume preserve input and rendering',
          'shared Qt Quick Gallery renders and navigates',
          'shared Widgets Gallery toggles a checkbox and changes tabs')
+QUICK_PNGS = ('qml-gallery.png', 'widgets-gallery.png')
 FATAL = re.compile(r'FATAL EXCEPTION|Fatal signal|exiting due to signal|terminated by signal|VM aborting|\*\*\*\s+\*\*\*\s+\*\*\*|>>>\s*org\.longreachqt\.donut(?:\.quick)?\s*<<<')
 
 
@@ -104,7 +106,7 @@ def report_files(record):
     elif profile == 'strict':
         names.append('strict-cxx23-guest.stdout')
     elif profile == 'quick':
-        names.extend(('instrumentation.log', 'quick-smoke-guest.txt'))
+        names.extend(('instrumentation.log', 'quick-smoke-guest.txt') + QUICK_PNGS)
     return names
 
 
@@ -124,6 +126,13 @@ def check_outputs(run, record):
         outcomes = re.findall(r'^(PASS|FAIL|SKIP): (.+?)\s*$', (run / 'quick-smoke-guest.txt').read_text(encoding='utf-8-sig'), re.M)
         if any(status == 'FAIL' for status, _ in outcomes) or any([item for item in outcomes if item[1] == name] != [('PASS', name)] for name in QUICK):
             raise ValueError('API4 Quick required behavior did not pass exactly once')
+        for name in QUICK_PNGS:
+            data = artifacts.safe(run / name).read_bytes()
+            if len(data) < 24 or data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR':
+                raise ValueError('Invalid API4 gallery PNG: ' + name)
+            width, height = struct.unpack('>II', data[16:24])
+            if width < 200 or height < 200:
+                raise ValueError('API4 gallery PNG is too small: ' + name)
     else:
         case_log = (run / 'case-logcat.log').read_text(encoding='utf-8-sig')
         code = '42' if profile == 'bootstrap' else '0'

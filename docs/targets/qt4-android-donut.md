@@ -83,7 +83,15 @@ completed native/APK manifests. These remain resident-JNI diagnostics with
 `qualification: false`. A completed diagnostic requires a verified owned
 host-tree shutdown, unchanged inputs/reports and successful final log capture.
 It does not claim normal Android application-process termination.
-Use `-Profiles quick` to rerun both gallery checks. Native libraries,
+Use `-Profiles quick` to rerun both gallery checks. After successful
+instrumentation, the runner pulls the existing `qml-gallery.png` and
+`widgets-gallery.png` files into the attempt directory and binds their SHA256
+values in `case_outputs`. Current completion requires both PNG headers and
+dimensions of at least 200 by 200, as well as all five interaction checks.
+Older receipts without exported images remain historical; they do not acquire
+new visual evidence automatically. Resident JNI completion remains distinct
+from natural application-process termination.
+Native libraries,
 QtCore's static archive and ELF reports are under `native/`. Qt Quick
 Gallery and Widgets Gallery each appear in the Android launcher after
 installing `quick.apk`.

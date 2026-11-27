@@ -305,3 +305,25 @@ if(ANDROID AND QT_VERSION_MAJOR EQUAL 5 AND
     target_compile_definitions(qt-selftest PRIVATE SMOKE_ANDROID_EXTRAS_DIAGNOSTIC)
     target_sources(qt-selftest PRIVATE ../android/android-extras-behavior.h)
 endif()
+
+# Opt-in positive plugin/TLS diagnostic. Baseline suites keep their APKs and
+# dependency counts; only this profile builds the independently loaded probe.
+option(SMOKE_ANDROID_PLUGIN_TLS_OWNER "Build positive Android QPluginLoader/TLS diagnostic" OFF)
+if(SMOKE_ANDROID_PLUGIN_TLS_OWNER)
+    if(NOT ANDROID OR NOT QT_VERSION_MAJOR EQUAL 5 OR
+            SMOKE_ANDROID_SELFTEST_PROFILE STREQUAL "extended")
+        message(FATAL_ERROR "Plugin/TLS owner diagnostic requires Qt5 Android core/full profile")
+    endif()
+    add_library(longreach_tls_owner_probe MODULE
+        ../android/tls-owner-plugin.cpp ../android/tls-owner-interface.h)
+    set_target_properties(longreach_tls_owner_probe PROPERTIES
+        AUTOMOC ON CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tls-owner"
+        OUTPUT_NAME "longreach_tls_owner_probe" SUFFIX ".so")
+    target_link_libraries(longreach_tls_owner_probe PRIVATE Qt5::Core)
+    add_dependencies(qt-selftest longreach_tls_owner_probe)
+    target_compile_definitions(qt-selftest PRIVATE SMOKE_ANDROID_PLUGIN_TLS_OWNER)
+    target_sources(qt-selftest PRIVATE ../android/plugin-tls-owner.h)
+    find_package(Qt5 REQUIRED COMPONENTS AndroidExtras)
+    target_link_libraries(qt-selftest PRIVATE Qt5::AndroidExtras)
+endif()

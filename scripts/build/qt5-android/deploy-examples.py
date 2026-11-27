@@ -95,6 +95,17 @@ def main():
             "--aux-mode", "--verbose",
         ], check=True)
 
+        # Extract this fixture beside the app, but do not add it to libs.xml:
+        # QPluginLoader must be its only loaded owner during the diagnostic.
+        plugin_owner_enabled = app == "qt-selftest" and (
+            "SMOKE_ANDROID_PLUGIN_TLS_OWNER:BOOL=ON"
+            in (args.build / "CMakeCache.txt").read_text().splitlines())
+        if plugin_owner_enabled:
+            probe = args.build / "qt-selftest/tls-owner/liblongreach_tls_owner_probe.so"
+            if not probe.is_file():
+                raise FileNotFoundError(probe)
+            shutil.copy2(probe, libraries / probe.name)
+
 
 if __name__ == "__main__":
     main()

@@ -200,3 +200,21 @@ alive until all threads using its code or `thread_local` objects have finished
 their destructors and joined. Do not unload it earlier or rely on
 `PreventUnloadHint` for retention. See the shared
 [API21 library-lifetime boundary](qt6-android-lollipop.md#dynamic-libraries-and-thread-local-state).
+
+
+### Positive plugin/TLS owner diagnostic
+
+Configure the Qt5 Android core/full selftest with
+`-DSMOKE_ANDROID_PLUGIN_TLS_OWNER=ON`, build `qt-selftest`, and stage it with
+the regular Qt5 deployer. The APK additionally contains a small Qt plugin;
+it is absent from `libs.xml` and is loaded only by the explicit
+`--plugin-tls-owner` mode. Default builds keep this diagnostic disabled.
+
+The mode checks plugin metadata and interface, calls the plugin from one
+`std::thread`, joins through its nontrivial TLS destructor, and only then
+unloads the retained `QPluginLoader`. It expects return value 43, exactly one
+TLS destructor before unload, and deletion of the plugin object at unload.
+It does not unload live TLS or call code after unload. Logical loader unload
+does not prove removal of the operating system mapping. The fixture's source
+alone is not an Android runtime qualification; actual SDK/APK/guest evidence
+must be recorded separately.

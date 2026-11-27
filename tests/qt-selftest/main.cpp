@@ -16,6 +16,9 @@
 
 #include "../common/smokecheck.h"
 #include "checks.h"
+#ifdef SMOKE_ANDROID_PLUGIN_TLS_OWNER
+#include "../android/plugin-tls-owner.h"
+#endif
 
 #if SMOKE_QT5
 #include <QGuiApplication>
@@ -186,6 +189,16 @@ int main(int argc, char *argv[])
             QTextStream(stdout) << "smoke\n";
         }
         return 0;
+    }
+
+    if (app.arguments().contains(QStringLiteral("--plugin-tls-owner"))) {
+        if (app.arguments().size() != 2) return 2;
+#ifdef SMOKE_ANDROID_PLUGIN_TLS_OWNER
+        return SmokePluginTlsOwner::run();
+#else
+        QTextStream(stdout) << "FAIL: plugin-tls-owner requires opt-in Qt5 Android core/full profile\n";
+        return 2;
+#endif
     }
 
     if (app.arguments().contains(QStringLiteral("--compass-heading"))) {

@@ -49,7 +49,7 @@ eight-diagnostic result and producer identities above.
 | Qt5 WAV20 at the API10 native floor | Twenty distinct successful native/natural/owned runs on ARMv7 and on x86 | All 20 retain OpenSLES engine Destroy ignored/two-active-object warnings; no leak-freedom claim |
 | Qt5 API10 APK forward Extras on API21 | x86 functional8/native0 and two natural service exits/16RPC verified separately | Both overall controls FAILED on observer timeouts; parent natural exit unproven. ARMv7 has no completed functional summary. Core-only forward compatibility does not imply Extras qualification |
 | Native sensor input and compass | API10 x86 queue teardown; API21 ARM64 stock32 nonzero input/32 callbacks, plus five input-controlled directions with 25 measured Qt samples and five natural exits | API10 ARMv7 stock inventory is zero; physical calibration/accuracy, compass timestamps and raw-angle range remain unqualified |
-| Library TLS lifetime | Keep QLibrary/QPluginLoader alive until all using threads and TLS destructors complete; bounded QLibrary controls on recorded API10 ARMv7/API21 ARM64+x64 | No live-TLS unload or callback after unmapping; other ABI/plugin scenarios need separate evidence |
+| Library TLS lifetime | Retained QLibrary controls on API10 ARMv7/API21 ARM64+x64; positive Qt5 API21 ARM64 QPluginLoader: six checks, one worker43, TLS destructor1 before unload, plugin object deleted after join; natural/final/owned exit | Keep owner loaded through every using thread/TLS destructor. Other ABI/Qt6/concurrency and OS unmapping remain unqualified; no live-TLS unload or callback after unmapping |
 | API21 files larger than 2 GiB | POSIX64 passes on all four ABIs; native C/C++ stdio also passes on 64-bit |32-bit fstream seek fails; use POSIX64. API10/YAFFS, arbitrary sizes and Qt filesystem APIs require separate validation |
 
 The separate Qt5 ARM64 compass run reuses native SDK `80f28520`/`f25be055`
@@ -62,6 +62,16 @@ its native return 2, logs and disks remain failed. Quoting was corrected with th
 existing shell helper, without changing the SDK/APKs or original reports.
 All 25 native compass timestamps are zero, so timestamp/rate behavior and
 physical calibration accuracy are not qualified by this direction result.
+
+The separate positive Qt5 ARM64/API21 plugin control reuses native SDK
+`80f28520`/`f25be055` with a fresh opt-in `cc752474` core client and real Qt
+plugin. All six checks pass. One worker call returns 43, with exactly one TLS
+destructor completed by `std::thread::join` while the loaded owner and plugin
+object remain alive. Only then is the loader unloaded and the object deleted.
+The compiled/deployed/packaged native bytes, absence of eager loading, native
+return, natural application exit, final capture and owned process closure were
+independently verified. This does not qualify another ABI/Qt generation,
+arbitrary concurrency or operating-system mapping removal.
 
 WAV stress is independent of the full suites and muted TTS probes. The current
 Qt6 x86 whole series passed all twenty fresh guest/app runs, with independently

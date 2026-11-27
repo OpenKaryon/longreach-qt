@@ -218,3 +218,10 @@ It does not unload live TLS or call code after unload. Logical loader unload
 does not prove removal of the operating system mapping. The fixture's source
 alone is not an Android runtime qualification; actual SDK/APK/guest evidence
 must be recorded separately.
+
+The separately recorded ARM64/API21 run of source `cc752474` passed all six
+checks using the original SDK `80f28520`/`f25be055`. One worker returned 43;
+one TLS destructor completed before unload, and the plugin object was deleted
+after join. Natural application exit, final logs and owned process closure
+were independently verified. See the [qualification snapshot](../results/android-qualification-20261127.md).
+Other ABIs, Qt6 and arbitrary plugin concurrency remain separately unqualified.

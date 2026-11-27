@@ -4066,6 +4066,45 @@
         "Other ABI/native sensor/lifetime/Activity/audio requirements remain separate",
         "Original full13 and callback-only32-cycle results keep their original source/SDK/APK identities"
       ]
+    },
+    "Qt5_ARM64_positive_plugin_TLS_owner": {
+      "overall": "PASS bounded real-plugin owner through TLS destruction",
+      "Qt_version": "5.15.19",
+      "API": 21,
+      "ABI": "arm64-v8a",
+      "SDK_producer_commit": "80f28520948768edf7c1cdfaebbbe07993a286a8",
+      "APK_producer_commit": "cc752474aa78bf51dc4d35b58055126c84ce471d",
+      "runner_source_commit": "cc752474aa78bf51dc4d35b58055126c84ce471d",
+      "sdk_image_id": "sha256:f25be055bb4fe5758ac79457050ceefc82c8dd046e874304c877151e44541aad",
+      "SDK_rebuilt": false,
+      "APK_sha256": "e84b3c4b3ed8d57056c1524e9a5d262dcbd840aa688a9b1dd6d7b4d77b95d649",
+      "native_selftest_sha256": "02d4ba8e7d0a3cc8b77e5062a5fbc1d5ade55d67a82c66c3a81ba0efece426ed",
+      "native_plugin_sha256": "7424f71daa5fe73aa1dce3e61341205ad4fd0f21425d083d2b246e9815d3f9b6",
+      "fixture_absent_from_main_DT_NEEDED_and_Java_preload": true,
+      "packaged_native_bytes_equal_compiled_deployment": true,
+      "passed_checks": 6,
+      "failed_checks": 0,
+      "skipped_checks": 0,
+      "native_return": 0,
+      "worker_calls": 1,
+      "worker_return_value": 43,
+      "TLS_destructors_before_unload": 1,
+      "plugin_object_destructors_before_unload": 0,
+      "plugin_object_destructors_after_unload": 1,
+      "loader_alive_and_loaded_until_join_and_TLS_destruction": true,
+      "logical_unload_after_join": true,
+      "natural_application_exit_verified": true,
+      "final_log_capture_verified": true,
+      "owned_host_tree_closed": true,
+      "independent_runtime_audit_sha256": "a57ad86ce09e0f15980fb9c3b6cede7389f761c307023263e08454b404fc55f9",
+      "source_CI": "https://github.com/OpenKaryon/longreach-qt/actions/runs/46079119659",
+      "scope": "Opt-in core selftest, one Qt plugin and one std::thread; does not replace baseline full13 or relabel other Qt/ABI generations",
+      "limits": [
+        "Other ABIs/Qt6 and arbitrary plugin concurrency remain separately unqualified",
+        "Logical QPluginLoader unload and QObject deletion do not prove operating-system mapping removal",
+        "No live-TLS unload or callback after unmapping executed",
+        "Physical-device behavior unqualified"
+      ]
     }
   },
   "source_runtime_boundary": "SDK producers and APK/runner commits remain separate. In particular, the original Qt4 native SDKs were reused only with reviewed unchanged native inputs and fresh clients; they were not renamed as new SDK builds."

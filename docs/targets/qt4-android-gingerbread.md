@@ -1,5 +1,12 @@
 # Qt 4.8.7 for Android API 10 x86
 
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records twelve fresh `e990bd1e` JNI clients/APKs against the sealed original
+`1a8be766` SDK, with all twelve API10 cases passing: 383 PASS, 0 FAIL and
+138 named SKIPs, two reviewed PNGs, resident release/cleanup and owned closure.
+The SDK producer identity is retained; this is not a new native SDK build or
+a natural Android app-process exit claim.
+
 The [make and build-all interface](../android-build.md) provides SDK and ready-APK
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.

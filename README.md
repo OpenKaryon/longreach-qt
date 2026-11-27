@@ -44,6 +44,11 @@ combined build remains available through the explicit legacy target.
 | [6.8.5](docs/targets/qt6-android-lollipop.md) | Android 5/API21, armeabi-v7a | API21 ARM64, x86 and x86_64 |
 
 Each ABI has its own runtime evidence and limitations in the linked guides.
+The [2026-11-27 Android snapshot](docs/results/android-qualification-20261127.md)
+binds all twelve recorded profiles to their SDK/client identities, APK hashes,
+full per-case counts and named SKIPs. Separate TTS/WAV/lifecycle diagnostics
+and physical-device requirements remain explicit; passing a suite does not
+qualify those other behaviors.
 Strict C++23 requires 25 PASS, 0 FAIL and 0 SKIP; ordinary device/module
 limitations remain explicit. Further ABI experiments are not qualified by
 these results.

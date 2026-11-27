@@ -15,6 +15,18 @@ Android platform integration. The eight applications use the existing
 `tests/` sources; Android adds only a common native entry wrapper and a thin
 QtActivity subclass.
 
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records the refreshed thirteen-case ARMv7 and fourteen-case x86 generations,
+plus separate TTS8, AndroidExtras8 and whole WAV20 at each API10 native floor.
+Each recorded suite has natural application exits and closed owned host trees.
+Both WAV20 series retain OpenSLES teardown warnings; they do not establish
+leak freedom or audible output. Exact SDK/client/runner identities and named
+SKIPs are preserved in the snapshot.
+
+Core-only API10 APK compatibility on API21 has separate evidence. The forward
+Extras controls do not qualify that wider behavior: ARMv7 stops at an observer
+timeout, and x86 passes functional/service checks without proving parent exit.
+
 ## Inputs and tools
 
 Use Docker Desktop with Linux containers, PowerShell 7, Python 3.11+, a JDK with
@@ -115,8 +127,11 @@ Android application targets are shared libraries, loaded by QtActivity.
   classes QtPurchasing uses Qt's generic backend, not real purchases.
 - Later Android APIs are guarded at runtime. Android's accessibility-node
   bridge requires API 18; in-process Qt accessibility remains available.
-- Nine AndroidExtras classes remain a declared API test-coverage gap; the
-  Activity suite does not exercise native service/Binder/Intent interfaces.
+- A separate bounded AndroidExtras diagnostic now covers context/UI dispatch,
+  Intent/activity results and two native service/Binder rounds, with sixteen
+  calls/callbacks and natural parent/service exits at the recorded API10 floor.
+  It does not qualify every AndroidExtras class/API or arbitrary concurrent
+  wrapper destruction; the ordinary Activity suite is not its substitute.
 - Passing ordinary module/value checks does not establish working camera,
   Bluetooth, NFC, sensors, GPS, audio capture or other absent guest hardware.
 

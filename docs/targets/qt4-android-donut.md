@@ -1,5 +1,13 @@
 # Experimental Qt 4.8.7 for Android 1.6
 
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records the installed static/raster SDK produced at `6982f194`, fresh
+`e990bd1e` clients/APKs and all eight resident diagnostics: 185 PASS, 0 FAIL
+and 124 named SKIPs. The embedded SDK seal passes before and after native
+client compilation; an exported-qmake QtCore client actually links. This is
+the configured eight-module/five-plugin profile. Five GUI interaction checks
+pass, but API4 PNG export/visual review and physical coverage remain open.
+
 The [make interface](../android-build.md) exposes this original combined recipe
 as `qt4-android-arm-legacy`. It remains separate from installed-SDK batch targets.
 

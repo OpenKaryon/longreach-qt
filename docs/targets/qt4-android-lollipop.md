@@ -1,5 +1,12 @@
 # Experimental Qt 4.8.7 for Android API 21 x86_64 and ARM64
 
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records fresh `e990bd1e` clients/APKs against the original sealed `1a8be766`
+SDKs on ARM64 and x86_64. Each ABI passes twelve cases: 383 PASS, 0 FAIL and
+138 named SKIPs, with two reviewed PNGs, resident JNI release/cleanup and
+owned host closure. Original SDK producers remain distinct from the fresh
+consumers; resident completion is not natural Android process termination.
+
 The [make and build-all interface](../android-build.md) provides SDK and ready-APK
 `-examples` targets. The individual PowerShell phases below remain available;
 use the Android runners to launch saved APKs.

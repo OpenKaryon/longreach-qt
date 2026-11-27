@@ -1,0 +1,3461 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-11-27",
+  "whole_android_complete": false,
+  "scope": "Recorded emulator generations and separate behavior probes. Later source edits and other devices require their own evidence. Full suites do not imply TTS/WAV/physical coverage.",
+  "LLVM": "21.1.8",
+  "targets": [
+    {
+      "qt_major": 4,
+      "minimum_api": 4,
+      "guest_api": 4,
+      "abi": "armeabi",
+      "SDK_producer_commit": "6982f1943a3af7ef42c480632eff206d257b2e4f",
+      "APK_producer_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "runner_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "sdk_image_id": "sha256:43b0b06e853252954f1270423811b2d61227dff2dd301822a687f2c2311b5bf4",
+      "apk_manifest_sha256": "0ee71be39d35c683744e4f71e2c56fc8eebf53d63dc68e8575d353b64b75593d",
+      "APK_files": {
+        "bootstrap.apk": {
+          "sha256": "8759ed41bf6d34ef68002a85b8cfb40d71f66ae880e6d53f64585f924be0fc04",
+          "bytes": 5108
+        },
+        "strict.apk": {
+          "sha256": "1dc39f481d6e5d58cff1f439acb919782b527616b45df4e966de04eaae1d4f68",
+          "bytes": 292525
+        },
+        "core.apk": {
+          "sha256": "d877cbc2919e870ac0ee3102bc0b2e7f1faea1aabf7430c1a60fd64231977846",
+          "bytes": 1373140
+        },
+        "quick.apk": {
+          "sha256": "57ce89980c4a370e41264f67ffce0d9482473d5c08aa8c52e9562551677d5bdf",
+          "bytes": 9162032
+        },
+        "selftest.apk": {
+          "sha256": "50608aae99bf88e0af7665ca57793d854044ab5c6df543d733609c33ab152d05",
+          "bytes": 7749713
+        },
+        "graphics.apk": {
+          "sha256": "363b4a875b618528d5e63f5908a20d472ee4c3b4687bab6c967516419ff4c68c",
+          "bytes": 6138842
+        },
+        "network.apk": {
+          "sha256": "6c28746b4c68c01c0591e41a48b16991cced4be39ab8cf5d5cfc2c7584e3e11e",
+          "bytes": 6413063
+        },
+        "painting.apk": {
+          "sha256": "e2edab9eee7154005c8874b59e31efee0d794e34b4a30e8d779585fc8f5b3e99",
+          "bytes": 6137725
+        }
+      },
+      "evidence_kind": "configured-static-raster-eight-resident-diagnostics",
+      "required_cases": 8,
+      "counts": {
+        "passed": 185,
+        "failed": 0,
+        "skipped": 124
+      },
+      "cases": [
+        {
+          "name": "bootstrap",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 42
+        },
+        {
+          "name": "core",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "graphics",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "network",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2,
+          "native_return": 0
+        },
+        {
+          "name": "painting",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "quick",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": null
+        },
+        {
+          "name": "selftest",
+          "passed": 103,
+          "failed": 0,
+          "skipped": 122,
+          "native_return": 0
+        },
+        {
+          "name": "strict",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        }
+      ],
+      "named_skips": {
+        "bootstrap": [],
+        "core": [],
+        "graphics": [],
+        "network": [
+          "network/websocket-server-construct - QtWebSockets is Qt 5 and later",
+          "ssl/supported - this SDK was built without SSL"
+        ],
+        "painting": [],
+        "quick": [],
+        "selftest": [
+          "core/regularexpression - QRegularExpression arrived in Qt 5; QRegExp is checked separately",
+          "core/versionnumber - QVersionNumber arrived in Qt 5",
+          "core/commandlineparser - QCommandLineParser arrived in Qt 5",
+          "core/debug-message-helpers - QDebugStateSaver and QMessageLogger arrived in Qt 5",
+          "core/property-signal - Qt 4 has no functor QObject::connect overload",
+          "time/timezone - QTimeZone arrived in Qt 5",
+          "time/deadlinetimer - QDeadlineTimer arrived in Qt 5",
+          "collator/sort - QCollator arrived in Qt 5",
+          "io/savefile-atomic - QSaveFile arrived in Qt 5",
+          "io/standardpaths - QStandardPaths arrived in Qt 5",
+          "io/mimedatabase - QMimeDatabase arrived in Qt 5",
+          "io/storageinfo - QStorageInfo arrived in Qt 5",
+          "io/fileselector - QFileSelector arrived in Qt 5",
+          "io/lockfile - QLockFile arrived in Qt 5",
+          "json/roundtrip - Qt JSON classes arrived in Qt 5",
+          "cbor/value-roundtrip - CBOR support arrived in Qt 5",
+          "image/ico - plugin not built",
+          "image/webp - plugin not built",
+          "image/svg - plugin not built",
+          "image/gif - Qt 4 GIF handler is decoder-only despite advertising write support",
+          "model/persistent-transpose - QTransposeProxyModel arrived in Qt 5",
+          "process/run - Qt runs in the Android Activity process",
+          "net/tls-loopback-handshake - Qt 4 SDK was built without SSL",
+          "network/ssl-value-types - Qt 4 SDK was built without SSL",
+          "xmlpatterns/xquery-eval - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "websocket/module - QtWebSockets has no Qt 4 module",
+          "webchannel/module - QtWebChannel has no Qt 4 module",
+          "networkauth/module - QtNetworkAuth has no Qt 4 module",
+          "serialport/module - QtSerialPort has no Qt 4 module",
+          "serialbus/canbus - QtSerialBus has no Qt 4 module",
+          "serialbus/modbus - QtSerialBus has no Qt 4 module",
+          "scxml/module - QtScxml has no Qt 4 module",
+          "remoteobjects/module - QtRemoteObjects has no Qt 4 module",
+          "shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "script/engine-debugger - this SDK was built without QtScriptTools",
+          "xmlpatterns/extras - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "regex/match-and-iterator - QRegularExpression match/iterator arrived in Qt 5",
+          "opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "opcua/node-management-items - QtOpcUa is not in this SDK",
+          "opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "mqtt/client-configuration - QtMqtt is not in this SDK",
+          "coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "coap/client-replies-and-security - QtCoap is not in this SDK",
+          "httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "core/bindable-property-system - the bindable property system is Qt 6 only",
+          "core/container-metatypes - the container metatypes are Qt 6 only",
+          "core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "dbus/value-types-and-message - QtDBus is not in this SDK",
+          "dbus/argument-marshalling - QtDBus is not in this SDK",
+          "dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "platform/native-extras - the X11/Vulkan platform sweep starts with Qt 5",
+          "rhi/null-backend-resources - QRhi is Qt 6 only",
+          "rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "rhi/shader-value-types - QShader is Qt 6 only",
+          "serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "opengl/version-functions-factory - QtOpenGL is not in this SDK",
+          "platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "qml/managed-value - QJSManagedValue is Qt 6 only",
+          "location/module - QtLocation has no Qt 4 module in this SDK",
+          "multimedia/audio-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/sound-effects - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/player-playlist - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/camera-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/radio - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/video-surface-filter - Qt 4 multimedia value types are covered by multimedia-lab",
+          "sensors/module - QtSensors has no Qt 4 module in this SDK",
+          "connectivity/bluetooth-classic - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/bluetooth-low-energy - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/nfc - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "gamepad/module - QtGamepad is not in this Qt 4 SDK",
+          "texttospeech/module - QtTextToSpeech has no Qt 4 module",
+          "purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "platform/animation-driver-ndef - the animation driver and QtNfc sweep starts with Qt 5",
+          "multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK",
+          "location/service-chain - QtLocation has no Qt 4 module in this SDK",
+          "qml/declarative-core - Qt 4 QtQuick 1 is covered by quick-qml-gallery",
+          "multimedia/value-types2 - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/abstract-audio-backend - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/audio-selector-role-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/camera-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/playback-recording-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/radio-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/video-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/service-provider-interfaces - the Qt 5 multimedia service/control API has no Qt 4 counterpart here"
+        ],
+        "strict": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": false,
+      "resident_JNI_release_cleanup_verified": true,
+      "screenshots": {},
+      "evidence_summary_sha256": "28fe336999aa745a04368495558919fc43534b3b9f4786017dd1e0f9b927975f",
+      "configured_Qt_modules": 8,
+      "configured_static_plugins": 5,
+      "ARMv5_atomic_observations": 10,
+      "API4_PNG_visual_review_available": false
+    },
+    {
+      "qt_major": 4,
+      "minimum_api": 10,
+      "guest_api": 10,
+      "abi": "x86",
+      "SDK_producer_commit": "1a8be766bcb44c92177fcfae5f2edafa96c3a2b4",
+      "APK_producer_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "runner_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "sdk_image_id": "sha256:6634cc1782d2b24eaf9db8972df6d6746bac4a909d8d7205dbd081a44ade8f0c",
+      "apk_manifest_sha256": "40347e6371f80a408a1b7bfa84ee58898ff59bc34413a583aa35eaac1de8af65",
+      "APK_files": {
+        "bootstrap.apk": {
+          "sha256": "2a664792f575d8e5eb68009226effdd97179ff82250dd831e12b88011685fb52",
+          "bytes": 578729
+        },
+        "core.apk": {
+          "sha256": "07d07cf3bdc6ffdd8bdd2a2b6225e628d2a5c644471e56caf3c17e1576acd834",
+          "bytes": 1901597
+        },
+        "gl.apk": {
+          "sha256": "368baa88ed0ea652b8829bb94e470b03718de8259e52555b306947959f38c35c",
+          "bytes": 7251453
+        },
+        "graphics.apk": {
+          "sha256": "4104c2da9fd92b0ac19fc3538d38accd78168e26a22e1cd1ab8805ce29fcbc3d",
+          "bytes": 7086397
+        },
+        "multimedia.apk": {
+          "sha256": "808c5823e7b1c2b7feb8b5172a5f322b83bc31c5f4d0097f4f9596c0295adfcd",
+          "bytes": 7080282
+        },
+        "network.apk": {
+          "sha256": "cbe546cf3dad7bd1693ece6be0d0aa41f3fbe1246ff61e79e812e9ab985ff3f9",
+          "bytes": 7460004
+        },
+        "painting.apk": {
+          "sha256": "5697ff952e7bbc18c23509cf6a6820958cf1027cb23d21e36b3170f97cff3711",
+          "bytes": 7085617
+        },
+        "qml.apk": {
+          "sha256": "50bfe0727e7a242b9f831a85090affa8f0df44cc890344d5e75b07c517d0ee1f",
+          "bytes": 11128350
+        },
+        "quick.apk": {
+          "sha256": "928889bdbf210886f7fb883344189e8f42dacf6e233cb19102d9ec7a04167903",
+          "bytes": 11413543
+        },
+        "selftest.apk": {
+          "sha256": "68517fd58e982af9779250e5fcbb2f34eb0bd06e1305f2943ad8f77e3a524717",
+          "bytes": 10454536
+        },
+        "strict.apk": {
+          "sha256": "8b0588888d2c1cda8ddc786b6bf37e05996eecb8142785ac6f1e1eb0cf94dee8",
+          "bytes": 642671
+        },
+        "widgets.apk": {
+          "sha256": "fd91c079e2448e7992e96c701e3f9e4472aa08f9232645435dd438f7920ed9ca",
+          "bytes": 9392326
+        }
+      },
+      "evidence_kind": "full12-resident-JNI",
+      "required_cases": 12,
+      "counts": {
+        "passed": 383,
+        "failed": 0,
+        "skipped": 138
+      },
+      "cases": [
+        {
+          "name": "bootstrap",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 42
+        },
+        {
+          "name": "strict",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "core",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "selftest",
+          "passed": 114,
+          "failed": 0,
+          "skipped": 120,
+          "native_return": 0
+        },
+        {
+          "name": "widgets",
+          "passed": 135,
+          "failed": 0,
+          "skipped": 12,
+          "native_return": 0
+        },
+        {
+          "name": "graphics",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "painting",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "multimedia",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3,
+          "native_return": 0
+        },
+        {
+          "name": "gl",
+          "passed": 13,
+          "failed": 0,
+          "skipped": 1,
+          "native_return": 0
+        },
+        {
+          "name": "qml",
+          "passed": 30,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "network",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2,
+          "native_return": 0
+        },
+        {
+          "name": "quick",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": null
+        }
+      ],
+      "named_skips": {
+        "selftest": [
+          "core/regularexpression - QRegularExpression arrived in Qt 5; QRegExp is checked separately",
+          "core/versionnumber - QVersionNumber arrived in Qt 5",
+          "core/commandlineparser - QCommandLineParser arrived in Qt 5",
+          "core/debug-message-helpers - QDebugStateSaver and QMessageLogger arrived in Qt 5",
+          "core/property-signal - Qt 4 has no functor QObject::connect overload",
+          "time/timezone - QTimeZone arrived in Qt 5",
+          "time/deadlinetimer - QDeadlineTimer arrived in Qt 5",
+          "collator/sort - QCollator arrived in Qt 5",
+          "io/savefile-atomic - QSaveFile arrived in Qt 5",
+          "io/standardpaths - QStandardPaths arrived in Qt 5",
+          "io/mimedatabase - QMimeDatabase arrived in Qt 5",
+          "io/storageinfo - QStorageInfo arrived in Qt 5",
+          "io/fileselector - QFileSelector arrived in Qt 5",
+          "io/lockfile - QLockFile arrived in Qt 5",
+          "json/roundtrip - Qt JSON classes arrived in Qt 5",
+          "cbor/value-roundtrip - CBOR support arrived in Qt 5",
+          "image/ico - plugin not built",
+          "image/webp - plugin not built",
+          "image/svg - decode-only (no encoder)",
+          "image/gif - Qt 4 GIF handler is decoder-only despite advertising write support",
+          "model/persistent-transpose - QTransposeProxyModel arrived in Qt 5",
+          "process/run - Qt runs in the Android Activity process",
+          "net/tls-loopback-handshake - Qt 4 SDK was built without SSL",
+          "network/ssl-value-types - Qt 4 SDK was built without SSL",
+          "websocket/module - QtWebSockets has no Qt 4 module",
+          "webchannel/module - QtWebChannel has no Qt 4 module",
+          "networkauth/module - QtNetworkAuth has no Qt 4 module",
+          "serialport/module - QtSerialPort has no Qt 4 module",
+          "serialbus/canbus - QtSerialBus has no Qt 4 module",
+          "serialbus/modbus - QtSerialBus has no Qt 4 module",
+          "scxml/module - QtScxml has no Qt 4 module",
+          "remoteobjects/module - QtRemoteObjects has no Qt 4 module",
+          "shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "script/engine-debugger - this SDK was built without QtScriptTools",
+          "regex/match-and-iterator - QRegularExpression match/iterator arrived in Qt 5",
+          "opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "opcua/node-management-items - QtOpcUa is not in this SDK",
+          "opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "mqtt/client-configuration - QtMqtt is not in this SDK",
+          "coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "coap/client-replies-and-security - QtCoap is not in this SDK",
+          "httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "core/bindable-property-system - the bindable property system is Qt 6 only",
+          "core/container-metatypes - the container metatypes are Qt 6 only",
+          "core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "dbus/value-types-and-message - QtDBus is not in this SDK",
+          "dbus/argument-marshalling - QtDBus is not in this SDK",
+          "dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "platform/native-extras - the X11/Vulkan platform sweep starts with Qt 5",
+          "rhi/null-backend-resources - QRhi is Qt 6 only",
+          "rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "rhi/shader-value-types - QShader is Qt 6 only",
+          "serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "opengl/version-functions-factory - QtOpenGL is not in this SDK",
+          "platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "qml/managed-value - QJSManagedValue is Qt 6 only",
+          "location/module - QtLocation has no Qt 4 module in this SDK",
+          "multimedia/audio-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/sound-effects - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/player-playlist - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/camera-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/radio - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/video-surface-filter - Qt 4 multimedia value types are covered by multimedia-lab",
+          "sensors/module - QtSensors has no Qt 4 module in this SDK",
+          "connectivity/bluetooth-classic - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/bluetooth-low-energy - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/nfc - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "gamepad/module - QtGamepad is not in this Qt 4 SDK",
+          "texttospeech/module - QtTextToSpeech has no Qt 4 module",
+          "purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "platform/animation-driver-ndef - the animation driver and QtNfc sweep starts with Qt 5",
+          "multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK",
+          "location/service-chain - QtLocation has no Qt 4 module in this SDK",
+          "qml/declarative-core - Qt 4 QtQuick 1 is covered by quick-qml-gallery",
+          "multimedia/value-types2 - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/abstract-audio-backend - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/audio-selector-role-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/camera-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/playback-recording-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/radio-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/video-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/service-provider-interfaces - the Qt 5 multimedia service/control API has no Qt 4 counterpart here"
+        ],
+        "widgets": [
+          "macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "printing/printer-and-page-setup - QPdfWriter/QPageLayout/QPageSize are Qt 5 and later",
+          "widgets/system-tray - no system tray in this desktop session",
+          "events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "multimediawidgets/module-available - QtMultimediaWidgets is Qt 5 and later",
+          "accessibility/not-built - Qt was configured without accessibility",
+          "qt4/accessibility-interfaces - Accessibility disabled in this Qt build",
+          "platform4/mac-native-embedding - QMacCocoaViewContainer/QMacNativeWidget need a Q_WS_MAC build",
+          "platform4/windows-native-styles - QWindowsXPStyle/QWindowsVistaStyle need a Q_WS_WIN build",
+          "platform4/windows-mime - QWindowsMime needs a Q_WS_WIN build",
+          "platform4/x11-embedding - QX11Embed* need a Q_WS_X11 build"
+        ],
+        "graphics": [],
+        "painting": [],
+        "multimedia": [
+          "multimedia4/audio-device-info - this machine reports no audio output device",
+          "multimedia4/audio-output-construct - this machine reports no audio output device",
+          "multimedia4/audio-input-construct - this machine reports no audio input device"
+        ],
+        "gl": [
+          "qgl/pixel-buffer - the OpenGL driver has no pixel buffers"
+        ],
+        "qml": [],
+        "network": [
+          "network/websocket-server-construct - QtWebSockets is Qt 5 and later",
+          "ssl/supported - this SDK was built without SSL"
+        ]
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": false,
+      "resident_JNI_release_cleanup_verified": true,
+      "screenshots": {
+        "integrated-qt4-api10-x86-20261127/quick/files/qml-gallery.png": {
+          "sha256": "00f0557bcd78bdc21194200ff62bd9c16c7c68ecaa99d60a6b2a912d70d53132",
+          "visually_reviewed": true
+        },
+        "integrated-qt4-api10-x86-20261127/quick/files/widgets-gallery.png": {
+          "sha256": "8d778b0fb57f92dfc209e5d05014835cb58ba27a56e8f7f6b08ea74900c9492a",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "6f95c0b12f24e2059d0cd5168a692dec9af0c19fda7ecd4ce57db766e0856d88"
+    },
+    {
+      "qt_major": 4,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "arm64-v8a",
+      "SDK_producer_commit": "1a8be766bcb44c92177fcfae5f2edafa96c3a2b4",
+      "APK_producer_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "runner_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "sdk_image_id": "sha256:d3ed268c36d74dab9c5d2a6409d5ddeac4f2a24c0a41634c12c45dc92f2d6340",
+      "apk_manifest_sha256": "6ebb86299e3a253cc7de172039d63307437f0ffaeac1b4d90b6d9fd4c6cf6004",
+      "APK_files": {
+        "bootstrap.apk": {
+          "sha256": "2124169a7f1ca2a79488c96dfbcd8c65e442e591c6bee3eee0e388c89706ad15",
+          "bytes": 637294
+        },
+        "core.apk": {
+          "sha256": "ecda930d564a72533db73947d9931616db91edeb4c61d0be1f3c1248783f2850",
+          "bytes": 1932463
+        },
+        "gl.apk": {
+          "sha256": "f5fd3c75713574de4c66216bfaad9a1fb899a5858c36a04bca15bd58e6942d80",
+          "bytes": 7036809
+        },
+        "graphics.apk": {
+          "sha256": "cdfebfa9906a9e64648bb5ff0fd20120aa27a8f58bbb8870f6a3739779e71e41",
+          "bytes": 6883505
+        },
+        "multimedia.apk": {
+          "sha256": "38357344d5806a34b05ff47ebd4dd7652d645c45b2810e692c0a26f5a5488eec",
+          "bytes": 6880350
+        },
+        "network.apk": {
+          "sha256": "9a3084b501abd8a81cef21e9048a7178bfb66230eb5fbf34ca5f0946fa2cb6e5",
+          "bytes": 7240077
+        },
+        "painting.apk": {
+          "sha256": "ff150f6b295ac2bd862779b874103cf07498e6eac1d3560f3dfa7281b350fd38",
+          "bytes": 6881933
+        },
+        "qml.apk": {
+          "sha256": "51c2a74d7ae0d606a7ea3b26973d5ee21a1883037272d10795550bb1f727cb79",
+          "bytes": 10889995
+        },
+        "quick.apk": {
+          "sha256": "6f6bb5964733b7b8b67c902245b511f39cbbab63b2f3bfef639d91d9aa7f2c48",
+          "bytes": 11166350
+        },
+        "selftest.apk": {
+          "sha256": "2ebd8c888579094af8460d631e285fa72e9647bb3b79fc99cc272d25a42ef67b",
+          "bytes": 10223247
+        },
+        "strict.apk": {
+          "sha256": "b6aac5d853639136ff08bca7f33f8f28b2f3fe5773955b9bfce418497a74d5e0",
+          "bytes": 702193
+        },
+        "widgets.apk": {
+          "sha256": "126043248f80f1b20d8e7616b1b6d7922acc2ff4b2910a453b989cfa55ca2335",
+          "bytes": 9109381
+        }
+      },
+      "evidence_kind": "full12-resident-JNI",
+      "required_cases": 12,
+      "counts": {
+        "passed": 383,
+        "failed": 0,
+        "skipped": 138
+      },
+      "cases": [
+        {
+          "name": "bootstrap",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 42
+        },
+        {
+          "name": "strict",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "core",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "selftest",
+          "passed": 114,
+          "failed": 0,
+          "skipped": 120,
+          "native_return": 0
+        },
+        {
+          "name": "widgets",
+          "passed": 135,
+          "failed": 0,
+          "skipped": 12,
+          "native_return": 0
+        },
+        {
+          "name": "graphics",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "painting",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "multimedia",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3,
+          "native_return": 0
+        },
+        {
+          "name": "gl",
+          "passed": 13,
+          "failed": 0,
+          "skipped": 1,
+          "native_return": 0
+        },
+        {
+          "name": "qml",
+          "passed": 30,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "network",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2,
+          "native_return": 0
+        },
+        {
+          "name": "quick",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": null
+        }
+      ],
+      "named_skips": {
+        "selftest": [
+          "core/regularexpression - QRegularExpression arrived in Qt 5; QRegExp is checked separately",
+          "core/versionnumber - QVersionNumber arrived in Qt 5",
+          "core/commandlineparser - QCommandLineParser arrived in Qt 5",
+          "core/debug-message-helpers - QDebugStateSaver and QMessageLogger arrived in Qt 5",
+          "core/property-signal - Qt 4 has no functor QObject::connect overload",
+          "time/timezone - QTimeZone arrived in Qt 5",
+          "time/deadlinetimer - QDeadlineTimer arrived in Qt 5",
+          "collator/sort - QCollator arrived in Qt 5",
+          "io/savefile-atomic - QSaveFile arrived in Qt 5",
+          "io/standardpaths - QStandardPaths arrived in Qt 5",
+          "io/mimedatabase - QMimeDatabase arrived in Qt 5",
+          "io/storageinfo - QStorageInfo arrived in Qt 5",
+          "io/fileselector - QFileSelector arrived in Qt 5",
+          "io/lockfile - QLockFile arrived in Qt 5",
+          "json/roundtrip - Qt JSON classes arrived in Qt 5",
+          "cbor/value-roundtrip - CBOR support arrived in Qt 5",
+          "image/ico - plugin not built",
+          "image/webp - plugin not built",
+          "image/svg - decode-only (no encoder)",
+          "image/gif - Qt 4 GIF handler is decoder-only despite advertising write support",
+          "model/persistent-transpose - QTransposeProxyModel arrived in Qt 5",
+          "process/run - Qt runs in the Android Activity process",
+          "net/tls-loopback-handshake - Qt 4 SDK was built without SSL",
+          "network/ssl-value-types - Qt 4 SDK was built without SSL",
+          "websocket/module - QtWebSockets has no Qt 4 module",
+          "webchannel/module - QtWebChannel has no Qt 4 module",
+          "networkauth/module - QtNetworkAuth has no Qt 4 module",
+          "serialport/module - QtSerialPort has no Qt 4 module",
+          "serialbus/canbus - QtSerialBus has no Qt 4 module",
+          "serialbus/modbus - QtSerialBus has no Qt 4 module",
+          "scxml/module - QtScxml has no Qt 4 module",
+          "remoteobjects/module - QtRemoteObjects has no Qt 4 module",
+          "shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "script/engine-debugger - this SDK was built without QtScriptTools",
+          "regex/match-and-iterator - QRegularExpression match/iterator arrived in Qt 5",
+          "opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "opcua/node-management-items - QtOpcUa is not in this SDK",
+          "opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "mqtt/client-configuration - QtMqtt is not in this SDK",
+          "coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "coap/client-replies-and-security - QtCoap is not in this SDK",
+          "httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "core/bindable-property-system - the bindable property system is Qt 6 only",
+          "core/container-metatypes - the container metatypes are Qt 6 only",
+          "core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "dbus/value-types-and-message - QtDBus is not in this SDK",
+          "dbus/argument-marshalling - QtDBus is not in this SDK",
+          "dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "platform/native-extras - the X11/Vulkan platform sweep starts with Qt 5",
+          "rhi/null-backend-resources - QRhi is Qt 6 only",
+          "rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "rhi/shader-value-types - QShader is Qt 6 only",
+          "serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "opengl/version-functions-factory - QtOpenGL is not in this SDK",
+          "platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "qml/managed-value - QJSManagedValue is Qt 6 only",
+          "location/module - QtLocation has no Qt 4 module in this SDK",
+          "multimedia/audio-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/sound-effects - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/player-playlist - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/camera-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/radio - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/video-surface-filter - Qt 4 multimedia value types are covered by multimedia-lab",
+          "sensors/module - QtSensors has no Qt 4 module in this SDK",
+          "connectivity/bluetooth-classic - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/bluetooth-low-energy - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/nfc - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "gamepad/module - QtGamepad is not in this Qt 4 SDK",
+          "texttospeech/module - QtTextToSpeech has no Qt 4 module",
+          "purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "platform/animation-driver-ndef - the animation driver and QtNfc sweep starts with Qt 5",
+          "multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK",
+          "location/service-chain - QtLocation has no Qt 4 module in this SDK",
+          "qml/declarative-core - Qt 4 QtQuick 1 is covered by quick-qml-gallery",
+          "multimedia/value-types2 - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/abstract-audio-backend - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/audio-selector-role-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/camera-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/playback-recording-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/radio-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/video-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/service-provider-interfaces - the Qt 5 multimedia service/control API has no Qt 4 counterpart here"
+        ],
+        "widgets": [
+          "macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "printing/printer-and-page-setup - QPdfWriter/QPageLayout/QPageSize are Qt 5 and later",
+          "widgets/system-tray - no system tray in this desktop session",
+          "events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "multimediawidgets/module-available - QtMultimediaWidgets is Qt 5 and later",
+          "accessibility/not-built - Qt was configured without accessibility",
+          "qt4/accessibility-interfaces - Accessibility disabled in this Qt build",
+          "platform4/mac-native-embedding - QMacCocoaViewContainer/QMacNativeWidget need a Q_WS_MAC build",
+          "platform4/windows-native-styles - QWindowsXPStyle/QWindowsVistaStyle need a Q_WS_WIN build",
+          "platform4/windows-mime - QWindowsMime needs a Q_WS_WIN build",
+          "platform4/x11-embedding - QX11Embed* need a Q_WS_X11 build"
+        ],
+        "graphics": [],
+        "painting": [],
+        "multimedia": [
+          "multimedia4/audio-device-info - this machine reports no audio output device",
+          "multimedia4/audio-output-construct - this machine reports no audio output device",
+          "multimedia4/audio-input-construct - this machine reports no audio input device"
+        ],
+        "gl": [
+          "qgl/pixel-buffer - the OpenGL driver has no pixel buffers"
+        ],
+        "qml": [],
+        "network": [
+          "network/websocket-server-construct - QtWebSockets is Qt 5 and later",
+          "ssl/supported - this SDK was built without SSL"
+        ]
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": false,
+      "resident_JNI_release_cleanup_verified": true,
+      "screenshots": {
+        "integrated-qt4-api21-arm64-v8a-20261127/quick/files/qml-gallery.png": {
+          "sha256": "d49b82fd33166d176777f939ae6f1bd29fe1638b13ee10668de8e907b3cda09a",
+          "visually_reviewed": true
+        },
+        "integrated-qt4-api21-arm64-v8a-20261127/quick/files/widgets-gallery.png": {
+          "sha256": "770a5f5e60e17ca5efd0a8accf8bfad97b6dd5d18b08434debcedc2fc09d6e03",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "a9c125f5aa50df9032bf5ea70f8fae6d1e084785d38906f1d42476b9e09b8275"
+    },
+    {
+      "qt_major": 4,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "x86_64",
+      "SDK_producer_commit": "1a8be766bcb44c92177fcfae5f2edafa96c3a2b4",
+      "APK_producer_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "runner_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+      "sdk_image_id": "sha256:5277aa06c21a5a84e02ddb7db525ab6b668b99169e1241f9ed2c183966629a7a",
+      "apk_manifest_sha256": "a4119a9a937d36656e2686e4728ae6ed88f22a2c9acf1a2dc99009965a050bf5",
+      "APK_files": {
+        "bootstrap.apk": {
+          "sha256": "e15d6c0e1a8352c4088c3235ac634719f2e1b57859f17a71bd5f358f7d7d70c0",
+          "bytes": 624429
+        },
+        "core.apk": {
+          "sha256": "6514bad491673a4b2e8f665a4e6177d197600393114900db69d42f8a0cd34b91",
+          "bytes": 1937998
+        },
+        "gl.apk": {
+          "sha256": "da5289dddbbffa4612da531fd89f56f333c8897fba23874af1c951ef5b8d4f9c",
+          "bytes": 7274355
+        },
+        "graphics.apk": {
+          "sha256": "355e4d371c0cf4517ee87cb65171e5c5a2b3e15d34d9e3b8bcf52474048ae19a",
+          "bytes": 7117315
+        },
+        "multimedia.apk": {
+          "sha256": "9c0d7d64ffa24b465d0cb184c2a6a0ef25b9b3a2ece61ad5b6d35e6109861813",
+          "bytes": 7112452
+        },
+        "network.apk": {
+          "sha256": "e93f69fd6c62e8e088c1a1ddf3d6ba3e2b17ac9f5befd1aca7e2938c7a970d78",
+          "bytes": 7473086
+        },
+        "painting.apk": {
+          "sha256": "64baeaf4cc4928cf825775f53fad7d3cdf65124cb7b22f15e33045f5998bab88",
+          "bytes": 7115878
+        },
+        "qml.apk": {
+          "sha256": "7c756aa161255e98d9efcca17d520dc195e4d83d3ecf202da5fbfde6bac7d604",
+          "bytes": 11151561
+        },
+        "quick.apk": {
+          "sha256": "39954429b27b74e8e66165e6a3d3b2014766311744771a6e38c79f3637423956",
+          "bytes": 11434312
+        },
+        "selftest.apk": {
+          "sha256": "eb7b6990f6dba8b460bbec3af48525d42e41e946d3723f57fedfe3ca40fa2dd6",
+          "bytes": 10464702
+        },
+        "strict.apk": {
+          "sha256": "4f0022d2ecda49271906ee628332c7e557315a1ef39f0b3ed8b6929bf2baaa24",
+          "bytes": 689261
+        },
+        "widgets.apk": {
+          "sha256": "f834c7a05b99af0e0096650f64e166873d92da431be3231f6c0c71b83ad222c5",
+          "bytes": 9410930
+        }
+      },
+      "evidence_kind": "full12-resident-JNI",
+      "required_cases": 12,
+      "counts": {
+        "passed": 383,
+        "failed": 0,
+        "skipped": 138
+      },
+      "cases": [
+        {
+          "name": "bootstrap",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 42
+        },
+        {
+          "name": "strict",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "core",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "selftest",
+          "passed": 114,
+          "failed": 0,
+          "skipped": 120,
+          "native_return": 0
+        },
+        {
+          "name": "widgets",
+          "passed": 135,
+          "failed": 0,
+          "skipped": 12,
+          "native_return": 0
+        },
+        {
+          "name": "graphics",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "painting",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "multimedia",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 3,
+          "native_return": 0
+        },
+        {
+          "name": "gl",
+          "passed": 13,
+          "failed": 0,
+          "skipped": 1,
+          "native_return": 0
+        },
+        {
+          "name": "qml",
+          "passed": 30,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": 0
+        },
+        {
+          "name": "network",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 2,
+          "native_return": 0
+        },
+        {
+          "name": "quick",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "native_return": null
+        }
+      ],
+      "named_skips": {
+        "selftest": [
+          "core/regularexpression - QRegularExpression arrived in Qt 5; QRegExp is checked separately",
+          "core/versionnumber - QVersionNumber arrived in Qt 5",
+          "core/commandlineparser - QCommandLineParser arrived in Qt 5",
+          "core/debug-message-helpers - QDebugStateSaver and QMessageLogger arrived in Qt 5",
+          "core/property-signal - Qt 4 has no functor QObject::connect overload",
+          "time/timezone - QTimeZone arrived in Qt 5",
+          "time/deadlinetimer - QDeadlineTimer arrived in Qt 5",
+          "collator/sort - QCollator arrived in Qt 5",
+          "io/savefile-atomic - QSaveFile arrived in Qt 5",
+          "io/standardpaths - QStandardPaths arrived in Qt 5",
+          "io/mimedatabase - QMimeDatabase arrived in Qt 5",
+          "io/storageinfo - QStorageInfo arrived in Qt 5",
+          "io/fileselector - QFileSelector arrived in Qt 5",
+          "io/lockfile - QLockFile arrived in Qt 5",
+          "json/roundtrip - Qt JSON classes arrived in Qt 5",
+          "cbor/value-roundtrip - CBOR support arrived in Qt 5",
+          "image/ico - plugin not built",
+          "image/webp - plugin not built",
+          "image/svg - decode-only (no encoder)",
+          "image/gif - Qt 4 GIF handler is decoder-only despite advertising write support",
+          "model/persistent-transpose - QTransposeProxyModel arrived in Qt 5",
+          "process/run - Qt runs in the Android Activity process",
+          "net/tls-loopback-handshake - Qt 4 SDK was built without SSL",
+          "network/ssl-value-types - Qt 4 SDK was built without SSL",
+          "websocket/module - QtWebSockets has no Qt 4 module",
+          "webchannel/module - QtWebChannel has no Qt 4 module",
+          "networkauth/module - QtNetworkAuth has no Qt 4 module",
+          "serialport/module - QtSerialPort has no Qt 4 module",
+          "serialbus/canbus - QtSerialBus has no Qt 4 module",
+          "serialbus/modbus - QtSerialBus has no Qt 4 module",
+          "scxml/module - QtScxml has no Qt 4 module",
+          "remoteobjects/module - QtRemoteObjects has no Qt 4 module",
+          "shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "script/engine-debugger - this SDK was built without QtScriptTools",
+          "regex/match-and-iterator - QRegularExpression match/iterator arrived in Qt 5",
+          "opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "opcua/node-management-items - QtOpcUa is not in this SDK",
+          "opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "mqtt/client-configuration - QtMqtt is not in this SDK",
+          "coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "coap/client-replies-and-security - QtCoap is not in this SDK",
+          "httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "core/bindable-property-system - the bindable property system is Qt 6 only",
+          "core/container-metatypes - the container metatypes are Qt 6 only",
+          "core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "dbus/value-types-and-message - QtDBus is not in this SDK",
+          "dbus/argument-marshalling - QtDBus is not in this SDK",
+          "dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "platform/native-extras - the X11/Vulkan platform sweep starts with Qt 5",
+          "rhi/null-backend-resources - QRhi is Qt 6 only",
+          "rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "rhi/shader-value-types - QShader is Qt 6 only",
+          "serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "opengl/version-functions-factory - QtOpenGL is not in this SDK",
+          "platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "qml/managed-value - QJSManagedValue is Qt 6 only",
+          "location/module - QtLocation has no Qt 4 module in this SDK",
+          "multimedia/audio-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/sound-effects - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/player-playlist - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/camera-value-types - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/radio - Qt 4 multimedia value types are covered by multimedia-lab",
+          "multimedia/video-surface-filter - Qt 4 multimedia value types are covered by multimedia-lab",
+          "sensors/module - QtSensors has no Qt 4 module in this SDK",
+          "connectivity/bluetooth-classic - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/bluetooth-low-energy - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "connectivity/nfc - QtBluetooth and QtNfc have no Qt 4 modules in this SDK",
+          "gamepad/module - QtGamepad is not in this Qt 4 SDK",
+          "texttospeech/module - QtTextToSpeech has no Qt 4 module",
+          "purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "platform/animation-driver-ndef - the animation driver and QtNfc sweep starts with Qt 5",
+          "multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK",
+          "location/service-chain - QtLocation has no Qt 4 module in this SDK",
+          "qml/declarative-core - Qt 4 QtQuick 1 is covered by quick-qml-gallery",
+          "multimedia/value-types2 - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/abstract-audio-backend - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/audio-selector-role-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/camera-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/playback-recording-controls - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/radio-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/video-control-suite - the Qt 5 multimedia service/control API has no Qt 4 counterpart here",
+          "multimedia/service-provider-interfaces - the Qt 5 multimedia service/control API has no Qt 4 counterpart here"
+        ],
+        "widgets": [
+          "macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "printing/printer-and-page-setup - QPdfWriter/QPageLayout/QPageSize are Qt 5 and later",
+          "widgets/system-tray - no system tray in this desktop session",
+          "events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "multimediawidgets/module-available - QtMultimediaWidgets is Qt 5 and later",
+          "accessibility/not-built - Qt was configured without accessibility",
+          "qt4/accessibility-interfaces - Accessibility disabled in this Qt build",
+          "platform4/mac-native-embedding - QMacCocoaViewContainer/QMacNativeWidget need a Q_WS_MAC build",
+          "platform4/windows-native-styles - QWindowsXPStyle/QWindowsVistaStyle need a Q_WS_WIN build",
+          "platform4/windows-mime - QWindowsMime needs a Q_WS_WIN build",
+          "platform4/x11-embedding - QX11Embed* need a Q_WS_X11 build"
+        ],
+        "graphics": [],
+        "painting": [],
+        "multimedia": [
+          "multimedia4/audio-device-info - this machine reports no audio output device",
+          "multimedia4/audio-output-construct - this machine reports no audio output device",
+          "multimedia4/audio-input-construct - this machine reports no audio input device"
+        ],
+        "gl": [
+          "qgl/pixel-buffer - the OpenGL driver has no pixel buffers"
+        ],
+        "qml": [],
+        "network": [
+          "network/websocket-server-construct - QtWebSockets is Qt 5 and later",
+          "ssl/supported - this SDK was built without SSL"
+        ]
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": false,
+      "resident_JNI_release_cleanup_verified": true,
+      "screenshots": {
+        "integrated-qt4-api21-x86-64-20261127/quick/files/qml-gallery.png": {
+          "sha256": "622808c37926591224e1a34472f33f4c001470b3feee4df5c8b8411092a72280",
+          "visually_reviewed": true
+        },
+        "integrated-qt4-api21-x86-64-20261127/quick/files/widgets-gallery.png": {
+          "sha256": "770a5f5e60e17ca5efd0a8accf8bfad97b6dd5d18b08434debcedc2fc09d6e03",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "5f15c4abf306a01fe5c4e7a0263f2a9cf6c25af23ce9f5fef1bfaf4669e1b0d8"
+    },
+    {
+      "qt_major": 5,
+      "minimum_api": 10,
+      "guest_api": 10,
+      "abi": "armeabi-v7a",
+      "SDK_producer_commit": "e796a0993d8928c4eabddaae613dd5e11053e39b",
+      "APK_producer_commit": "807c113191e0bf0fd93036b0eb0763ea883b1750",
+      "runner_commit": "e6b8ae34cf551aaa3b160dfe4bbb1744f0f4d73c",
+      "sdk_image_id": "sha256:f58612b1c4ba1912279e8ab85e5a993bfa7ca45765474c0e735770ea447fa9a6",
+      "apk_manifest_sha256": "196692d1473fef6104f2c905cc708263bd15ddfacc2d4b484cdeb535e8bad9b0",
+      "APK_files": {
+        "apk/extended/qt-selftest.apk": {
+          "sha256": "bcc4bd3948c2d5346ef060714143df53f5890e9a6a35dc6451223903bd61999e",
+          "bytes": 15821119
+        },
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "b4761ee5e77502933d75914ebeb1ddc779f3ed9295acf09cc511811c03cc0711",
+          "bytes": 19579618
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "83da8a18662199a62ebf4b3ddf6007365957d44cf65ca5a8b1aef04d71261144",
+          "bytes": 9136137
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "880d94f257522437cb329318aba7b0a189d181e2e25c34db93b93194729284e6",
+          "bytes": 12403481
+        },
+        "apk/network-gui.apk": {
+          "sha256": "6a1acbc473358488029dfd4467996f0e62c994a8424f3b432c0cc50f4bfd67f2",
+          "bytes": 11766495
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "c5e36ecbc8fdb44ce8f6e11cbbb3a926880a371d3ed4f55efa14c4d057caa81c",
+          "bytes": 9281084
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "af3a38efff62dff5e1e8320669134bf592bfd9eae871c6bb1a9f74d97bdeb4cf",
+          "bytes": 17439827
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "32eba47583c0ffc63f6976e2e0c65f4ffbc40b2a70c16dfe26f04f6ba7490143",
+          "bytes": 18681680
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "19b35e9d02d915c5fcad4cd4573003b39461b9f085fbb40c774f8455777da0f5",
+          "bytes": 12754623
+        }
+      },
+      "evidence_kind": "full-installed-SDK-suite",
+      "required_cases": 13,
+      "counts": {
+        "passed": 599,
+        "failed": 0,
+        "skipped": 97
+      },
+      "cases": [
+        {
+          "name": "qt-selftest",
+          "passed": 213,
+          "failed": 0,
+          "skipped": 63,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 8,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 14,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23-extended",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest-extended",
+          "passed": 106,
+          "failed": 0,
+          "skipped": 7,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery-render",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery-render",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "qt-selftest": [
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: remoteobjects/custom-server-transport - custom QtRO transports use the Qt 6 extension API",
+          "SKIP: shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "SKIP: opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "SKIP: opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: opcua/node-management-items - QtOpcUa is not in this SDK",
+          "SKIP: opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "SKIP: opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "SKIP: opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "SKIP: opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "SKIP: opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "SKIP: opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "SKIP: grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "SKIP: mqtt/client-configuration - QtMqtt is not in this SDK",
+          "SKIP: coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: coap/client-replies-and-security - QtCoap is not in this SDK",
+          "SKIP: httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: core/bindable-property-system - the bindable property system is Qt 6 only",
+          "SKIP: core/container-metatypes - the container metatypes are Qt 6 only",
+          "SKIP: core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "SKIP: net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "SKIP: net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "SKIP: core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "SKIP: core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/null-backend-resources - QRhi is Qt 6 only",
+          "SKIP: rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "SKIP: rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "SKIP: rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: rhi/shader-value-types - QShader is Qt 6 only",
+          "SKIP: serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "SKIP: serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "SKIP: net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "SKIP: core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "SKIP: gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "SKIP: net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "SKIP: core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "SKIP: core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "SKIP: core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "SKIP: core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "SKIP: core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "SKIP: gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "SKIP: gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "SKIP: gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "SKIP: gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "SKIP: qml/managed-value - QJSManagedValue is Qt 6 only"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "SKIP: qtbase/header-v2-option-and-rhi-widget - QStyleOptionHeaderV2 and QRhiWidget are Qt 6 only"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/quick-aspect-scene2d - Scene2D needs a compatible OpenGL/ES 2 context: no OpenGL context could be created on this machine",
+          "SKIP: charts/color-axis - QColorAxis is Qt 6 only",
+          "SKIP: datavis/graphs - QtDataVisualization needs OpenGL ES 2.0; this context reports 1.0",
+          "SKIP: qt3d/geometry-views - the geometry-view split is Qt 6 only",
+          "SKIP: qt3d/core-aspect-settings-and-picking-proxy - QCoreAspect and QPickingProxy are Qt 6 only",
+          "SKIP: graphs/theme - QtGraphs is not in this SDK",
+          "SKIP: graphs/legend-data - QtGraphs is not in this SDK",
+          "SKIP: graphs/widget-items - QtGraphsWidgets is not in this SDK"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: quick3d/instancing-table - QQuick3DInstancing is Qt 6.2 and later",
+          "SKIP: quick3d/texture-data - QQuick3DTextureData is Qt 6.2 and later",
+          "SKIP: quick3d/render-extension - QQuick3DRenderExtension is Qt 6.6 and later",
+          "SKIP: quick3d/runtime-render-extension-frame - Qt Quick 3D runtime render extensions need Qt 6.7+",
+          "SKIP: scenegraph/renderer-interface - QSGRendererInterface is reached on Qt 6 here",
+          "SKIP: scenegraph/render-target-device-and-configuration - these Qt Quick graphics value types are Qt 6 only",
+          "SKIP: scenegraph/render-node-and-material-shader - QSGRenderNode/QSGMaterialShader are reached on Qt 6 here",
+          "SKIP: scenegraph/dynamic-texture-and-texture-provider - QSGDynamicTexture/QSGTextureProvider are reached on Qt 6 here",
+          "SKIP: quick/rhi-item-and-renderer - QQuickRhiItem arrived in Qt 6.7",
+          "SKIP: quick/text-document-from-textedit - QQuickTextDocument is reached on Qt 6 here",
+          "SKIP: quick/attached-property-propagator - QQuickAttachedPropertyPropagator is Qt 6 only",
+          "SKIP: scenegraph/native-textures - native QSG texture interfaces are Qt 6 only",
+          "SKIP: scenegraph/qt5-engine-renderer - QSGEngine requires the OpenGL scene-graph backend",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "strict-cxx23": [],
+        "strict-cxx23-extended": [],
+        "qt-selftest-extended": [
+          "SKIP: sensors/android-acceleration-input - Android native sensor API exposes no sensors (count=0)",
+          "SKIP: sensors/android-queue-lifecycle - Android native sensor API exposes no sensors (count=0)",
+          "SKIP: sensors/android-compass-queue-lifecycle - Android native sensor API exposes no sensors (count=0)",
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "SKIP: multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "SKIP: spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK"
+        ],
+        "widgets-gallery-render": [],
+        "quick-qml-gallery-render": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gallery-render/files/widgets-gallery-pages.png": {
+          "sha256": "6b408e19ecf49a823e7ec51076483f9b1e58ea3227a80d39c9c1fa5f87e2fa81",
+          "visually_reviewed": true
+        },
+        "quick-qml-gallery-render/files/quick-gallery.png": {
+          "sha256": "52fa9b8e3a1e8e5ebfab384b31ccdb4570ba219c4cd7bfe807b25f7f38e307e0",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "7f97f83bb9fedf96303d63c7bca7bbf41ffa792a8f78223d84cf38ddeb488405"
+    },
+    {
+      "qt_major": 5,
+      "minimum_api": 10,
+      "guest_api": 10,
+      "abi": "x86",
+      "SDK_producer_commit": "e6b8ae34cf551aaa3b160dfe4bbb1744f0f4d73c",
+      "APK_producer_commit": "e6b8ae34cf551aaa3b160dfe4bbb1744f0f4d73c",
+      "runner_commit": "e6b8ae34cf551aaa3b160dfe4bbb1744f0f4d73c",
+      "sdk_image_id": "sha256:0442f5f17ba01d5dcba78dee7149557962763108b2500c97c0e9f943f07b737c",
+      "apk_manifest_sha256": "6d64033876871d87688f363c52814d8b6ebab2ed6005a8517b2a0a76e08b99ee",
+      "APK_files": {
+        "apk/extended/qt-selftest.apk": {
+          "sha256": "f497b9802dba82dc5e3fb3147dbff3e3563b42ae79533c84a6c20a6ec2762e63",
+          "bytes": 17410038
+        },
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "01226500c6248c010ffe64d9b4b6fdd74734904d524727c6f457473698cc25cc",
+          "bytes": 21588111
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "910fb4f2ff08e48950dac775564a167de5b08fd72229efb7e5d2538f54a409ac",
+          "bytes": 10235911
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "30820d187faf7639f1e93919bf6a754304c4c1807c4f9d03b1e7d1d54d3976c9",
+          "bytes": 13662962
+        },
+        "apk/network-gui.apk": {
+          "sha256": "9a27ce9f3f72f1637e250bb7ee722279de5e414749977aa8d95732062509b418",
+          "bytes": 12969016
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "8a20e3864783ff18eca370aa8495bc8bd55f955768f5e32a008a6255d2669f85",
+          "bytes": 10386973
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "f6bbf51075c50e1fc06935454b7344217ea001763961ad51b4c19a1a4a3af4e6",
+          "bytes": 19382077
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "aacf94cd85b8eca77d4246d311b63e9e380a181e7ed5c48e0b5f0f8e31b4d785",
+          "bytes": 20378116
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "6032c2cc6cfd6105bd9ebf6d15043be2d6694d87ad7378774518359ab917a769",
+          "bytes": 14061877
+        }
+      },
+      "evidence_kind": "full-installed-SDK-suite",
+      "required_cases": 14,
+      "counts": {
+        "passed": 605,
+        "failed": 0,
+        "skipped": 94
+      },
+      "cases": [
+        {
+          "name": "atomic-cow",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 213,
+          "failed": 0,
+          "skipped": 63,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 38,
+          "failed": 0,
+          "skipped": 8,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 14,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23-extended",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest-extended",
+          "passed": 109,
+          "failed": 0,
+          "skipped": 4,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery-render",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery-render",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "native_exit": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "atomic-cow": [],
+        "qt-selftest": [
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: remoteobjects/custom-server-transport - custom QtRO transports use the Qt 6 extension API",
+          "SKIP: shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "SKIP: opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "SKIP: opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: opcua/node-management-items - QtOpcUa is not in this SDK",
+          "SKIP: opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "SKIP: opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "SKIP: opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "SKIP: opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "SKIP: opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "SKIP: opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "SKIP: grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "SKIP: mqtt/client-configuration - QtMqtt is not in this SDK",
+          "SKIP: coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: coap/client-replies-and-security - QtCoap is not in this SDK",
+          "SKIP: httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: core/bindable-property-system - the bindable property system is Qt 6 only",
+          "SKIP: core/container-metatypes - the container metatypes are Qt 6 only",
+          "SKIP: core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "SKIP: net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "SKIP: net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "SKIP: core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "SKIP: core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/null-backend-resources - QRhi is Qt 6 only",
+          "SKIP: rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "SKIP: rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "SKIP: rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: rhi/shader-value-types - QShader is Qt 6 only",
+          "SKIP: serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "SKIP: serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "SKIP: net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "SKIP: core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "SKIP: gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "SKIP: net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "SKIP: core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "SKIP: core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "SKIP: core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "SKIP: core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "SKIP: core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "SKIP: gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "SKIP: gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "SKIP: gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "SKIP: gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "SKIP: qml/managed-value - QJSManagedValue is Qt 6 only"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "SKIP: qtbase/header-v2-option-and-rhi-widget - QStyleOptionHeaderV2 and QRhiWidget are Qt 6 only"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/quick-aspect-scene2d - Scene2D needs a compatible OpenGL/ES 2 context: no OpenGL context could be created on this machine",
+          "SKIP: charts/color-axis - QColorAxis is Qt 6 only",
+          "SKIP: datavis/graphs - QtDataVisualization needs OpenGL ES 2.0; this context reports 1.0",
+          "SKIP: qt3d/geometry-views - the geometry-view split is Qt 6 only",
+          "SKIP: qt3d/core-aspect-settings-and-picking-proxy - QCoreAspect and QPickingProxy are Qt 6 only",
+          "SKIP: graphs/theme - QtGraphs is not in this SDK",
+          "SKIP: graphs/legend-data - QtGraphs is not in this SDK",
+          "SKIP: graphs/widget-items - QtGraphsWidgets is not in this SDK"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: quick3d/instancing-table - QQuick3DInstancing is Qt 6.2 and later",
+          "SKIP: quick3d/texture-data - QQuick3DTextureData is Qt 6.2 and later",
+          "SKIP: quick3d/render-extension - QQuick3DRenderExtension is Qt 6.6 and later",
+          "SKIP: quick3d/runtime-render-extension-frame - Qt Quick 3D runtime render extensions need Qt 6.7+",
+          "SKIP: scenegraph/renderer-interface - QSGRendererInterface is reached on Qt 6 here",
+          "SKIP: scenegraph/render-target-device-and-configuration - these Qt Quick graphics value types are Qt 6 only",
+          "SKIP: scenegraph/render-node-and-material-shader - QSGRenderNode/QSGMaterialShader are reached on Qt 6 here",
+          "SKIP: scenegraph/dynamic-texture-and-texture-provider - QSGDynamicTexture/QSGTextureProvider are reached on Qt 6 here",
+          "SKIP: quick/rhi-item-and-renderer - QQuickRhiItem arrived in Qt 6.7",
+          "SKIP: quick/text-document-from-textedit - QQuickTextDocument is reached on Qt 6 here",
+          "SKIP: quick/attached-property-propagator - QQuickAttachedPropertyPropagator is Qt 6 only",
+          "SKIP: scenegraph/native-textures - native QSG texture interfaces are Qt 6 only",
+          "SKIP: scenegraph/qt5-engine-renderer - QSGEngine requires the OpenGL scene-graph backend",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "strict-cxx23": [],
+        "strict-cxx23-extended": [],
+        "qt-selftest-extended": [
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "SKIP: multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "SKIP: spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK"
+        ],
+        "widgets-gallery-render": [],
+        "quick-qml-gallery-render": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gallery-render/files/widgets-gallery-pages.png": {
+          "sha256": "dbd58e92ff4a30cbdacd29a8039ef84f337698393d2427dc02cbf725154a285f",
+          "visually_reviewed": true
+        },
+        "quick-qml-gallery-render/files/quick-gallery.png": {
+          "sha256": "a79586fedb5ad705baad84b378963170337be8bbe9a153b0d46eec2f26a8a573",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "9566285e54f61b3f6483378734117e223ee4a3a7a2eb1769a18543e7a965e195"
+    },
+    {
+      "qt_major": 5,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "arm64-v8a",
+      "SDK_producer_commit": "80f28520948768edf7c1cdfaebbbe07993a286a8",
+      "APK_producer_commit": "2b988e9c2104e0aadd5dc8095a4fa92b2b5c2554",
+      "runner_commit": "2b988e9c2104e0aadd5dc8095a4fa92b2b5c2554",
+      "sdk_image_id": "sha256:f25be055bb4fe5758ac79457050ceefc82c8dd046e874304c877151e44541aad",
+      "apk_manifest_sha256": "c8f6b0b39f86d0610b116945e1ec630227306f5ce81d75454e2838d2a92fa1a1",
+      "APK_files": {
+        "apk/extended/qt-selftest.apk": {
+          "sha256": "a7f64cc17f729d16acef0d91419bed7351b71f1fede8109d2045c69a1dd04f51",
+          "bytes": 18257446
+        },
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "87f7c5cfa95b31bf11379ea553e74de23d0cd962a66419968687fff509906fd6",
+          "bytes": 22542425
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "3744fd093d79fa5f634243ca81dfcd643235b24ea019599d121bc67d37e1ca2e",
+          "bytes": 10777949
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "f222f9330d3605d26a972b66677096044323ca92f2ac395fd8108a9a2b67e02a",
+          "bytes": 14265175
+        },
+        "apk/network-gui.apk": {
+          "sha256": "1c7fa46eab6fbed8dd9ce93925e475eb10251826f903d9cebc0bc6f18c4fe7cc",
+          "bytes": 13527575
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "d04a6d36d8d06ff38155b3ead04baf534cf81cba957e03c4ea236962067a5142",
+          "bytes": 10933264
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "905f1b162847642f9c412070f02325cb0d6e21b831f08be1733da2713501b277",
+          "bytes": 20253480
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "936bb814fb33abdacac310d416d92c684fd5031d17adea91008febdbeb075278",
+          "bytes": 21785308
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "fe0e48c9878e0a1a1ce93aed8b0c89f46c8d4d5174d24327479e9448e7ccfafb",
+          "bytes": 14653804
+        }
+      },
+      "evidence_kind": "full-installed-SDK-suite",
+      "required_cases": 13,
+      "counts": {
+        "passed": 618,
+        "failed": 0,
+        "skipped": 91
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 213,
+          "failed": 0,
+          "skipped": 63,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 53,
+          "failed": 0,
+          "skipped": 6,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 13,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23-extended",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest-extended",
+          "passed": 109,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: remoteobjects/custom-server-transport - custom QtRO transports use the Qt 6 extension API",
+          "SKIP: shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "SKIP: opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "SKIP: opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: opcua/node-management-items - QtOpcUa is not in this SDK",
+          "SKIP: opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "SKIP: opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "SKIP: opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "SKIP: opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "SKIP: opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "SKIP: opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "SKIP: grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "SKIP: mqtt/client-configuration - QtMqtt is not in this SDK",
+          "SKIP: coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: coap/client-replies-and-security - QtCoap is not in this SDK",
+          "SKIP: httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: core/bindable-property-system - the bindable property system is Qt 6 only",
+          "SKIP: core/container-metatypes - the container metatypes are Qt 6 only",
+          "SKIP: core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "SKIP: net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "SKIP: net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "SKIP: core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "SKIP: core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - no Vulkan loader: QVulkanInstance::create() failed",
+          "SKIP: rhi/null-backend-resources - QRhi is Qt 6 only",
+          "SKIP: rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "SKIP: rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "SKIP: rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: rhi/shader-value-types - QShader is Qt 6 only",
+          "SKIP: serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "SKIP: serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "SKIP: net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "SKIP: core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "SKIP: gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "SKIP: net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "SKIP: core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "SKIP: core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "SKIP: core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "SKIP: core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "SKIP: core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "SKIP: gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "SKIP: gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "SKIP: gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "SKIP: gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "SKIP: qml/managed-value - QJSManagedValue is Qt 6 only"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "SKIP: qtbase/header-v2-option-and-rhi-widget - QStyleOptionHeaderV2 and QRhiWidget are Qt 6 only"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: charts/color-axis - QColorAxis is Qt 6 only",
+          "SKIP: qt3d/geometry-views - the geometry-view split is Qt 6 only",
+          "SKIP: qt3d/core-aspect-settings-and-picking-proxy - QCoreAspect and QPickingProxy are Qt 6 only",
+          "SKIP: graphs/theme - QtGraphs is not in this SDK",
+          "SKIP: graphs/legend-data - QtGraphs is not in this SDK",
+          "SKIP: graphs/widget-items - QtGraphsWidgets is not in this SDK"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: quick3d/instancing-table - QQuick3DInstancing is Qt 6.2 and later",
+          "SKIP: quick3d/texture-data - QQuick3DTextureData is Qt 6.2 and later",
+          "SKIP: quick3d/render-extension - QQuick3DRenderExtension is Qt 6.6 and later",
+          "SKIP: quick3d/runtime-render-extension-frame - Qt Quick 3D runtime render extensions need Qt 6.7+",
+          "SKIP: scenegraph/renderer-interface - QSGRendererInterface is reached on Qt 6 here",
+          "SKIP: scenegraph/render-target-device-and-configuration - these Qt Quick graphics value types are Qt 6 only",
+          "SKIP: scenegraph/render-node-and-material-shader - QSGRenderNode/QSGMaterialShader are reached on Qt 6 here",
+          "SKIP: scenegraph/dynamic-texture-and-texture-provider - QSGDynamicTexture/QSGTextureProvider are reached on Qt 6 here",
+          "SKIP: quick/rhi-item-and-renderer - QQuickRhiItem arrived in Qt 6.7",
+          "SKIP: quick/text-document-from-textedit - QQuickTextDocument is reached on Qt 6 here",
+          "SKIP: quick/attached-property-propagator - QQuickAttachedPropertyPropagator is Qt 6 only",
+          "SKIP: scenegraph/native-textures - native QSG texture interfaces are Qt 6 only",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "strict-cxx23-extended": [],
+        "qt-selftest-extended": [
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "SKIP: multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "SKIP: spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK"
+        ],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "de93b55b17c96ef75022a2cac11b6cdc65f03175cb66fc80b66139c445975154",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "54370a48aeca1a0951360b29b1d65478d601774b7841ac65bb973874d623ca25",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "c866d5a4d304fb9986975ba8f4a1248e1e7205c4833b982f6ec16453134470e0"
+    },
+    {
+      "qt_major": 5,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "x86_64",
+      "SDK_producer_commit": "2b988e9c2104e0aadd5dc8095a4fa92b2b5c2554",
+      "APK_producer_commit": "2b988e9c2104e0aadd5dc8095a4fa92b2b5c2554",
+      "runner_commit": "2b988e9c2104e0aadd5dc8095a4fa92b2b5c2554",
+      "sdk_image_id": "sha256:c2060eb2ac4fc6e0099220af9d378c5c5e840439912f2c4d41a44dd7e1784298",
+      "apk_manifest_sha256": "a52805ee315bfc5a6f5333849c56e4194a026386f074ea5e7dca9e437df3b0ee",
+      "APK_files": {
+        "apk/extended/qt-selftest.apk": {
+          "sha256": "18ab1cad43e10a5374cfea33986d8f0889a49e58b30b44436f744ac56e28f0fc",
+          "bytes": 17213652
+        },
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "857c663d584c94df9f45511700915edab67dc0417404054c9f987f7598608162",
+          "bytes": 21201311
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "31a5ce7c9d0645b694274456de4e062d10756b1666b5aa65c1c6e2ef8dee12ad",
+          "bytes": 10168576
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "9f6694dfc5bb89631fc9d610550b42e89b99cb04235ea738047ba7a137499fb7",
+          "bytes": 13578756
+        },
+        "apk/network-gui.apk": {
+          "sha256": "a2632bfc2ac31f23b35fa37c5d5e316d25c887a12ebc09a87c91eaeb1961c9e0",
+          "bytes": 12906626
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "e116186facfbc115ade06d164f9d85c15c7caa65d030a91e2c50cf7e9ff448ea",
+          "bytes": 10316235
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "ed5a11e6783d2fa80a5bd061b2e894f621e241c6e598f21a06dbb4e862c0f2ed",
+          "bytes": 19163450
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "c3362c7ec203391693eb3a42f8b0f6f55118bb75ce1c42e738e996faf0aa87e8",
+          "bytes": 20617222
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "9ea8ddb8a53d4f538127e20aa89bc5616d007dcdc949734a9c283b12b8378177",
+          "bytes": 13958417
+        }
+      },
+      "evidence_kind": "full-installed-SDK-suite",
+      "required_cases": 13,
+      "counts": {
+        "passed": 618,
+        "failed": 0,
+        "skipped": 91
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 213,
+          "failed": 0,
+          "skipped": 63,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 90,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 53,
+          "failed": 0,
+          "skipped": 6,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 13,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "strict-cxx23-extended",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest-extended",
+          "passed": 109,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: remoteobjects/custom-server-transport - custom QtRO transports use the Qt 6 extension API",
+          "SKIP: shadertools/bake-valid-and-invalid - QtShaderTools is not in this SDK",
+          "SKIP: opcua/x509-key-csr-and-gds - QtOpcUa security and GDS headers are not in this SDK",
+          "SKIP: opcua/scalar-value-types - QtOpcUa is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: opcua/node-management-items - QtOpcUa is not in this SDK",
+          "SKIP: opcua/read-write-and-browse-requests - QtOpcUa is not in this SDK",
+          "SKIP: opcua/event-filter-operands - QtOpcUa is not in this SDK",
+          "SKIP: opcua/data-history-and-encoding - QtOpcUa is not in this SDK",
+          "SKIP: opcua/application-and-security-descriptions - QtOpcUa is not in this SDK",
+          "SKIP: opcua/provider-client-and-node - QtOpcUa is not in this SDK",
+          "SKIP: opcua/history-response-and-struct-handler - QtOpcUa is not in this SDK",
+          "SKIP: grpc/module-available - QtGrpc is Qt 6 and later and not in this SDK",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: mqtt/topic-name-and-filter - QtMqtt is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: mqtt/message-and-properties - QtMqtt is not in this SDK",
+          "SKIP: mqtt/client-configuration - QtMqtt is not in this SDK",
+          "SKIP: coap/request-message-and-options - QtCoap is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: coap/client-replies-and-security - QtCoap is not in this SDK",
+          "SKIP: httpserver/routing-without-listening - QtHttpServer is not in this SDK (it has no Qt 5 counterpart)",
+          "SKIP: core/bindable-property-system - the bindable property system is Qt 6 only",
+          "SKIP: core/container-metatypes - the container metatypes are Qt 6 only",
+          "SKIP: core/bytearrayview-recursivemutex-chronotimer - QByteArrayView and QRecursiveMutex are Qt 6 only",
+          "SKIP: net/rest-access-manager-and-ssl-server - QRestAccessManager and QSslServer are Qt 6 only",
+          "SKIP: net/network-information-backend - QNetworkInformation is Qt 6 only",
+          "SKIP: core5compat/sax-reader-and-handlers - QtCore5Compat is not in this SDK",
+          "SKIP: core5compat/regexp-codec-linkedlist - QtCore5Compat is not in this SDK",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - no Vulkan loader: QVulkanInstance::create() failed",
+          "SKIP: rhi/null-backend-resources - QRhi is Qt 6 only",
+          "SKIP: rhi/pipeline-and-render-target - QRhi is Qt 6 only",
+          "SKIP: rhi/offscreen-frame-and-updates - QRhi is Qt 6 only",
+          "SKIP: rhi/backend-init-params-and-native-handles - QRhi is Qt 6 only",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: rhi/shader-value-types - QShader is Qt 6 only",
+          "SKIP: serialbus/modbus-pdu-types - the Modbus PDU types are Qt 6 only",
+          "SKIP: serialbus/modbus-rtu-serial-endpoints - QModbusRtuSerialClient/Server are the Qt 6 names",
+          "SKIP: net/handshake-options-nmea-satellites-oauth-uri - these classes are Qt 6 only",
+          "SKIP: core/mutable-container-iterators - the container iterators are Qt 6 only",
+          "SKIP: gui/page-ranges-pdf-intent-and-pointer-events - these classes are Qt 6 only",
+          "SKIP: net/diffie-hellman-parameters - QSslDiffieHellmanParameters is covered on Qt 6 with SSL",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: virtualkeyboard/input-context-engine-and-dictionaries - no QtVirtualKeyboard with the Qt 6 class names here",
+          "SKIP: core/variant-const-pointer-and-type-coercer - QVariantConstPointer/QVariantTypeCoercer are Qt 6 only",
+          "SKIP: core/property-observer-and-binding-location - the bindable property system is Qt 6 only",
+          "SKIP: core/property-binding-data-and-writing-systems - these are reached on Qt 6 here",
+          "SKIP: core/internal-callback-registry - QInternal's callback registry is checked on Qt 6",
+          "SKIP: core/event-dispatcher-v2 - QAbstractEventDispatcherV2 is Qt 6 only",
+          "SKIP: gui/abstract-undo-item - QAbstractUndoItem is reached on Qt 6 here",
+          "SKIP: gui/accessibility-attribute-hyperlink-selection-interfaces - these accessibility interfaces are Qt 6 only",
+          "SKIP: gui/child-window-event - QChildWindowEvent is Qt 6 only",
+          "SKIP: gui/session-manager - QSessionManager is reached on Qt 6 here",
+          "SKIP: qml/managed-value - QJSManagedValue is Qt 6 only"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: events/qt6-touch-sequences - these QtTest touch sequence types are Qt 6 only",
+          "SKIP: qtbase/header-v2-option-and-rhi-widget - QStyleOptionHeaderV2 and QRhiWidget are Qt 6 only"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: charts/color-axis - QColorAxis is Qt 6 only",
+          "SKIP: qt3d/geometry-views - the geometry-view split is Qt 6 only",
+          "SKIP: qt3d/core-aspect-settings-and-picking-proxy - QCoreAspect and QPickingProxy are Qt 6 only",
+          "SKIP: graphs/theme - QtGraphs is not in this SDK",
+          "SKIP: graphs/legend-data - QtGraphs is not in this SDK",
+          "SKIP: graphs/widget-items - QtGraphsWidgets is not in this SDK"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: quick3d/instancing-table - QQuick3DInstancing is Qt 6.2 and later",
+          "SKIP: quick3d/texture-data - QQuick3DTextureData is Qt 6.2 and later",
+          "SKIP: quick3d/render-extension - QQuick3DRenderExtension is Qt 6.6 and later",
+          "SKIP: quick3d/runtime-render-extension-frame - Qt Quick 3D runtime render extensions need Qt 6.7+",
+          "SKIP: scenegraph/renderer-interface - QSGRendererInterface is reached on Qt 6 here",
+          "SKIP: scenegraph/render-target-device-and-configuration - these Qt Quick graphics value types are Qt 6 only",
+          "SKIP: scenegraph/render-node-and-material-shader - QSGRenderNode/QSGMaterialShader are reached on Qt 6 here",
+          "SKIP: scenegraph/dynamic-texture-and-texture-provider - QSGDynamicTexture/QSGTextureProvider are reached on Qt 6 here",
+          "SKIP: quick/rhi-item-and-renderer - QQuickRhiItem arrived in Qt 6.7",
+          "SKIP: quick/text-document-from-textedit - QQuickTextDocument is reached on Qt 6 here",
+          "SKIP: quick/attached-property-propagator - QQuickAttachedPropertyPropagator is Qt 6 only",
+          "SKIP: scenegraph/native-textures - native QSG texture interfaces are Qt 6 only",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "strict-cxx23-extended": [],
+        "qt-selftest-extended": [
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: multimedia/format-metadata-and-camera-format - QMediaFormat and QMediaMetaData are Qt 6 only",
+          "SKIP: multimedia/capture-sources-and-frame-io - these capture classes are Qt 6 only",
+          "SKIP: spatialaudio/engine-listener-room-and-sounds - QtSpatialAudio is not in this SDK"
+        ],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "38ba5fb69f7235129135cf786dfe8b5e672470cabd1b152bb2c1dc9b76da4598",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "f2e93777fa29a25531e0a30aefac5f15fc0e1b56698d4b039c11fc853bfa750f",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "7631a9a877764abb102231c202212f32d3eea9ae1027fb9a9e9f68b4be4f0923"
+    },
+    {
+      "qt_major": 6,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "arm64-v8a",
+      "SDK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "APK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "runner_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "sdk_image_id": "sha256:e24197b44d6489ce3c2758f3683a38c70ac7de8cab2fa20a66a9be614f9e0447",
+      "apk_manifest_sha256": "ee6c0bdcb175d493620e71e812d8bb868106cf87297cadd0281f0c8284edc95c",
+      "APK_files": {
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "9f7485f461bc851f737a08db3d7f865aa147e476b26ce5be5926a8ecb12d646f",
+          "bytes": 34428650
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "18f1b9e0a69397c15494d11b02fdd235a1b0fb3887e653b4843336d5d7cf657a",
+          "bytes": 22073693
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "6a67cebf3eb726e077202952da9606ba5d866edd723aa098617fc991d4ef53e3",
+          "bytes": 23570996
+        },
+        "apk/network-gui.apk": {
+          "sha256": "0e25f9474d20c6d07c85f957d3a1712824f4a9accc6c5f17217079354955db1b",
+          "bytes": 22710349
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "79e4b56bf7c0255f79695e7820215c3086d59390e28c47e5855d880e1ffac8cc",
+          "bytes": 22062056
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "86fad6e2c86769317d5ce8629ba7f36d415079642bc7d9bb2e786b79f63a2af2",
+          "bytes": 30882990
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "c1838e347b09b2322720e3a1a995c459ace6b9c074ac44f6208fee02b3a5d9ad",
+          "bytes": 35049740
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "ee4de262b500f70c2d44cc94a1478792669806b29b785ac9dfcb32c6c2037fdc",
+          "bytes": 24119747
+        }
+      },
+      "evidence_kind": "full11-installed-SDK-suite",
+      "required_cases": 11,
+      "counts": {
+        "passed": 584,
+        "failed": 0,
+        "skipped": 53
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 297,
+          "failed": 0,
+          "skipped": 43,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 1,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 35,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: core/regexp-legacy - QRegExp moved to Qt5Compat, which this app does not link",
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: qtbase/ipc-primitives-construct - shared memory or system semaphores are not compiled in this Qt SDK",
+          "SKIP: script/engine-eval - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/xquery-eval - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: script/extras - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/extras - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: multimedia/qsound-static-play - Qt 6 removed QSound in favour of QSoundEffect",
+          "SKIP: multimedia/mediacontent-resource - Qt 6 replaced QMediaContent/QMediaResource with a plain QUrl",
+          "SKIP: multimedia/playlist - Qt 6 dropped playlists; a player holds one source",
+          "SKIP: multimedia/serviceproviderhint - Qt 6 removed the media service provider machinery",
+          "SKIP: multimedia/radiotuner-radiodata-construct - Qt 6 dropped the radio API entirely",
+          "SKIP: multimedia/custom-video-filter - Qt 6 removed the QML video-filter extension point",
+          "SKIP: sensors/gesture-manager - Qt 6 dropped the sensor-gesture framework",
+          "SKIP: bluetooth/transfer-manager-request - Qt 6 dropped the Bluetooth OBEX transfer classes",
+          "SKIP: nfc/target-base - QNearFieldTarget is not subclassable in Qt 6",
+          "SKIP: gamepad/device-and-navigation - QtGamepad is not in this SDK (Qt 6 dropped it)",
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "SKIP: nfc/qml-ndef-record - Qt 6 dropped QQmlNdefRecord",
+          "SKIP: multimedia/value-types2 - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/abstract-audio-backend - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/audio-selector-role-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/camera-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/playback-recording-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/radio-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/video-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/service-provider-interfaces - Qt 6 replaced QMediaService and its control interfaces outright"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: qtbase/qgl-and-testlib-shells - Qt was configured without desktop OpenGL"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/core-change-objects - Qt 6's Qt3D has no scene-change API"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: scenegraph/native-texture-vulkan - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-metal - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d11 - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d12 - backend not compiled for this target",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "be5589adfc9450895b6c28c6c70d349a589171ba4e073e2680cdbc6c16d05d75",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "1e788cc0a87207953a3ecbb46a5ed7552e1251b0139239e4411871419bc408cf",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "d2131498a4aea80a4ab612fe8df40aca72b5c0c8d9475676cb7b361e9c24e7aa"
+    },
+    {
+      "qt_major": 6,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "armeabi-v7a",
+      "SDK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "APK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "runner_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "sdk_image_id": "sha256:a49e9448acd86b13f14f1e5730b8c552d3bd8027477f0bdd4fd261444e677fe2",
+      "apk_manifest_sha256": "7e7a0ed3d0172d8b0f5fa81610040553703b7b376d7f4f0fc1a9cdadd595c47b",
+      "APK_files": {
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "3e58a7cb9fce7166c53faf6a8d88ddc6f006c896e6df0509ad845028c57bd5b1",
+          "bytes": 31110955
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "8e0f55e0d872aaab8b5514ee18e6bcbfeedc6b40246131d256ccc24df5672c7c",
+          "bytes": 19771523
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "add0b33f4baa4f58f46a7099e4289fc79fd268ff1a1da2c16875e2d9c305cb93",
+          "bytes": 21198069
+        },
+        "apk/network-gui.apk": {
+          "sha256": "aba99d958bc398417bfe6ebb10bc0474b6eab3bd99ab45433156eec08a7cd4d2",
+          "bytes": 20406813
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "16134a1d9f0186a61292bbec50914073caa8d035af637832510b26aad5a2c03e",
+          "bytes": 19770045
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "04fc3798fdfea01de419be3aa03d55598b0ce4acbe9e6514c15be966abc06bd6",
+          "bytes": 27763344
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "604977279daee2f62e68a49adbbe464bb0133b66f253b0fd1141436f2790bfb1",
+          "bytes": 31614943
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "993bf7b77df7e66bbf738e83a2a9ab743cf390bc1a71b24469944e1eb9f5fb79",
+          "bytes": 21698468
+        }
+      },
+      "evidence_kind": "full11-installed-SDK-suite",
+      "required_cases": 11,
+      "counts": {
+        "passed": 584,
+        "failed": 0,
+        "skipped": 53
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 297,
+          "failed": 0,
+          "skipped": 43,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 1,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 35,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: core/regexp-legacy - QRegExp moved to Qt5Compat, which this app does not link",
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: qtbase/ipc-primitives-construct - shared memory or system semaphores are not compiled in this Qt SDK",
+          "SKIP: script/engine-eval - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/xquery-eval - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: script/extras - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/extras - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: multimedia/qsound-static-play - Qt 6 removed QSound in favour of QSoundEffect",
+          "SKIP: multimedia/mediacontent-resource - Qt 6 replaced QMediaContent/QMediaResource with a plain QUrl",
+          "SKIP: multimedia/playlist - Qt 6 dropped playlists; a player holds one source",
+          "SKIP: multimedia/serviceproviderhint - Qt 6 removed the media service provider machinery",
+          "SKIP: multimedia/radiotuner-radiodata-construct - Qt 6 dropped the radio API entirely",
+          "SKIP: multimedia/custom-video-filter - Qt 6 removed the QML video-filter extension point",
+          "SKIP: sensors/gesture-manager - Qt 6 dropped the sensor-gesture framework",
+          "SKIP: bluetooth/transfer-manager-request - Qt 6 dropped the Bluetooth OBEX transfer classes",
+          "SKIP: nfc/target-base - QNearFieldTarget is not subclassable in Qt 6",
+          "SKIP: gamepad/device-and-navigation - QtGamepad is not in this SDK (Qt 6 dropped it)",
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "SKIP: nfc/qml-ndef-record - Qt 6 dropped QQmlNdefRecord",
+          "SKIP: multimedia/value-types2 - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/abstract-audio-backend - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/audio-selector-role-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/camera-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/playback-recording-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/radio-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/video-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/service-provider-interfaces - Qt 6 replaced QMediaService and its control interfaces outright"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: qtbase/qgl-and-testlib-shells - Qt was configured without desktop OpenGL"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/core-change-objects - Qt 6's Qt3D has no scene-change API"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: scenegraph/native-texture-vulkan - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-metal - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d11 - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d12 - backend not compiled for this target",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "251e536a2759eb0240d10eddf2fbdf4ca7e1eb548ff06c05dc95a58a1db8faec",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "36646c96c3cea4889bfbeb1e1d98326ef7234f31f568adbbe0e2e13930ce83cb",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "de3a8191e51fcf5a79fea5ca43230b3b5d92dc8795693b924b2f93c243474340"
+    },
+    {
+      "qt_major": 6,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "x86",
+      "SDK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "APK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "runner_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "sdk_image_id": "sha256:0aa0740fd365e4b7f76b8ffa227840cb6e9cf9e547d56dbb175f4fd22128efa2",
+      "apk_manifest_sha256": "41aa0640dd7de1b472cccf17465eb3004765c4cf36072f67d5cbe3ef6363cf2c",
+      "APK_files": {
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "78eeb4259835f21ed453000a6796822bcbf28e9f76f70dad1617f8bde23b1ec4",
+          "bytes": 35351752
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "f9befaa436a58cfd5efd0dc1f3cd162ba431cf0fbbb8c3f552af4f2c42ff6358",
+          "bytes": 21382957
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "42a8a04c30bf8f9f6477e15d7b9819d755988bc411a69fc49582229dada27b9b",
+          "bytes": 24591353
+        },
+        "apk/network-gui.apk": {
+          "sha256": "d963dbc61ea09044694e15495f18c6f857905e1e8c3c94bfafbb7c9762f25b8b",
+          "bytes": 23737674
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "811afaf1346ab2c7bdb682eca25ee61aaf901ad3eee0d80f2d8fdd6b9d975785",
+          "bytes": 21372525
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "13e439c4b28f7fe05029979e3b9c8f3cc2802094b3788558c5dd9d2901b3de0e",
+          "bytes": 35283166
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "82696b739082c9604b8c463a8ecff7cee7ee2d457fd0e3872cd49f95aae18d92",
+          "bytes": 35599691
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "b7e0f7d083fbe93524e368be1291a7bd6be81ef50b89a81728a8cdfd6a223167",
+          "bytes": 25160441
+        }
+      },
+      "evidence_kind": "full11-installed-SDK-suite",
+      "required_cases": 11,
+      "counts": {
+        "passed": 584,
+        "failed": 0,
+        "skipped": 53
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 297,
+          "failed": 0,
+          "skipped": 43,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 1,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 35,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: core/regexp-legacy - QRegExp moved to Qt5Compat, which this app does not link",
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: qtbase/ipc-primitives-construct - shared memory or system semaphores are not compiled in this Qt SDK",
+          "SKIP: script/engine-eval - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/xquery-eval - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: script/extras - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/extras - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: multimedia/qsound-static-play - Qt 6 removed QSound in favour of QSoundEffect",
+          "SKIP: multimedia/mediacontent-resource - Qt 6 replaced QMediaContent/QMediaResource with a plain QUrl",
+          "SKIP: multimedia/playlist - Qt 6 dropped playlists; a player holds one source",
+          "SKIP: multimedia/serviceproviderhint - Qt 6 removed the media service provider machinery",
+          "SKIP: multimedia/radiotuner-radiodata-construct - Qt 6 dropped the radio API entirely",
+          "SKIP: multimedia/custom-video-filter - Qt 6 removed the QML video-filter extension point",
+          "SKIP: sensors/gesture-manager - Qt 6 dropped the sensor-gesture framework",
+          "SKIP: bluetooth/transfer-manager-request - Qt 6 dropped the Bluetooth OBEX transfer classes",
+          "SKIP: nfc/target-base - QNearFieldTarget is not subclassable in Qt 6",
+          "SKIP: gamepad/device-and-navigation - QtGamepad is not in this SDK (Qt 6 dropped it)",
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "SKIP: nfc/qml-ndef-record - Qt 6 dropped QQmlNdefRecord",
+          "SKIP: multimedia/value-types2 - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/abstract-audio-backend - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/audio-selector-role-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/camera-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/playback-recording-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/radio-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/video-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/service-provider-interfaces - Qt 6 replaced QMediaService and its control interfaces outright"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: qtbase/qgl-and-testlib-shells - Qt was configured without desktop OpenGL"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/core-change-objects - Qt 6's Qt3D has no scene-change API"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: scenegraph/native-texture-vulkan - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-metal - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d11 - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d12 - backend not compiled for this target",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "4b33c805e6a335c3b37a411b1b5beb2de1000be91321357957ebe29ab99cd359",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "e415948e4a05b26d4f92d76c08da3968e2947f0e15352b4070a22df34a2788f7",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "54d6f6c780f1daa0da0613f5bddccab07553648c04cc6297dea82949739d4db3"
+    },
+    {
+      "qt_major": 6,
+      "minimum_api": 21,
+      "guest_api": 21,
+      "abi": "x86_64",
+      "SDK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "APK_producer_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "runner_commit": "d82ca045d0577770cce7ee6007a56cdc7ae8d225",
+      "sdk_image_id": "sha256:dd9121c8c6c73356cba597e968d6beda0e834f68ed60ca1d849d8568b109e028",
+      "apk_manifest_sha256": "8cd00a6a579895cc8916508d22337f545e3247876cdf7cf29289490b499b0461",
+      "APK_files": {
+        "apk/gl-heavy-gallery.apk": {
+          "sha256": "df1515fd7a7cd078db8190326675a04408ecb8375ddf334b4893626f6e84d25b",
+          "bytes": 32496452
+        },
+        "apk/graphics-gallery.apk": {
+          "sha256": "5a6c4460ea7da6f0b5a5a280a2fcd36b391552cf0970d7d261353cec2230e84f",
+          "bytes": 20780240
+        },
+        "apk/multimedia-lab.apk": {
+          "sha256": "969c2f2d091943bb304235a007a660f5af73b794171fb3148a7ad1ed018f6874",
+          "bytes": 22246300
+        },
+        "apk/network-gui.apk": {
+          "sha256": "7f0a860a7ab76a18925e031cba82664cee5b70fa4819092cac4867311fcb49a6",
+          "bytes": 21433652
+        },
+        "apk/painting-lab.apk": {
+          "sha256": "b39a25ab00c3f11743f82d1c4cb70734e0b646d14ff553c88860dc3a19f626c9",
+          "bytes": 20772741
+        },
+        "apk/qt-selftest.apk": {
+          "sha256": "b6f5ae5361b9868c845955557b94cc9632bb786121d7305691efd6538a081f6b",
+          "bytes": 29067521
+        },
+        "apk/quick-qml-gallery.apk": {
+          "sha256": "6fa53f232c588df87d3e4e4bf43916b03d699f01c6813b8420a35fe0daa41488",
+          "bytes": 33032476
+        },
+        "apk/widgets-gallery.apk": {
+          "sha256": "519f09421d0e89bab18d42ce18627c13baa1b0a252c186d1131d86b748befc7a",
+          "bytes": 22778560
+        }
+      },
+      "evidence_kind": "full11-installed-SDK-suite",
+      "required_cases": 11,
+      "counts": {
+        "passed": 584,
+        "failed": 0,
+        "skipped": 53
+      },
+      "cases": [
+        {
+          "name": "strict-cxx23",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qt-selftest",
+          "passed": 297,
+          "failed": 0,
+          "skipped": 43,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gallery",
+          "passed": 91,
+          "failed": 0,
+          "skipped": 4,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "graphics-gallery",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "painting-lab",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "multimedia-lab",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "gl-heavy-gallery",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 1,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "quick-qml-gallery",
+          "passed": 35,
+          "failed": 0,
+          "skipped": 5,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "network-gui",
+          "passed": 7,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "widgets-gui",
+          "passed": 16,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        },
+        {
+          "name": "qml-gui",
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "result": 0,
+          "process_exit_confirmed": true
+        }
+      ],
+      "named_skips": {
+        "strict-cxx23": [],
+        "qt-selftest": [
+          "SKIP: core/regexp-legacy - QRegExp moved to Qt5Compat, which this app does not link",
+          "SKIP: collator/sort - numeric collation needs ICU; this kit builds -no-icu",
+          "SKIP: image/svg - decode-only (no encoder)",
+          "SKIP: image/gif - decode-only (no encoder)",
+          "SKIP: qtbase/ipc-primitives-construct - shared memory or system semaphores are not compiled in this Qt SDK",
+          "SKIP: script/engine-eval - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/xquery-eval - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: script/extras - QtScript is not in this SDK (Qt 6 dropped it; QJSEngine is the successor)",
+          "SKIP: xmlpatterns/extras - QtXmlPatterns is not in this SDK (Qt 6 dropped XQuery/XSLT/XML Schema)",
+          "SKIP: wayland/module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/shells-module-available - QtWaylandCompositor is Linux-only and not in this SDK",
+          "SKIP: wayland/live-client-and-shells - requires WaylandClient and WaylandCompositor on Linux",
+          "SKIP: dbus/value-types-and-message - QtDBus is not in this SDK",
+          "SKIP: dbus/argument-marshalling - QtDBus is not in this SDK",
+          "SKIP: dbus/connection-and-interfaces - QtDBus is not in this SDK",
+          "SKIP: dbus/pending-call-and-reply - QtDBus is not in this SDK",
+          "SKIP: mac/autorelease-pool - QMacAutoReleasePool is a macOS-only class",
+          "SKIP: x11/qx11info - QtX11Extras is not in this SDK",
+          "SKIP: vulkan/instance-window-and-functions - Qt was configured without Vulkan",
+          "SKIP: rhi/vulkan-native-frame - Qt was built without Vulkan headers/backend",
+          "SKIP: rhi/metal-native-frame - Metal is available only in Apple Qt builds",
+          "SKIP: platform/native-mime-and-application-interfaces - no native application interface on this platform",
+          "SKIP: multimedia/qsound-static-play - Qt 6 removed QSound in favour of QSoundEffect",
+          "SKIP: multimedia/mediacontent-resource - Qt 6 replaced QMediaContent/QMediaResource with a plain QUrl",
+          "SKIP: multimedia/playlist - Qt 6 dropped playlists; a player holds one source",
+          "SKIP: multimedia/serviceproviderhint - Qt 6 removed the media service provider machinery",
+          "SKIP: multimedia/radiotuner-radiodata-construct - Qt 6 dropped the radio API entirely",
+          "SKIP: multimedia/custom-video-filter - Qt 6 removed the QML video-filter extension point",
+          "SKIP: sensors/gesture-manager - Qt 6 dropped the sensor-gesture framework",
+          "SKIP: bluetooth/transfer-manager-request - Qt 6 dropped the Bluetooth OBEX transfer classes",
+          "SKIP: nfc/target-base - QNearFieldTarget is not subclassable in Qt 6",
+          "SKIP: gamepad/device-and-navigation - QtGamepad is not in this SDK (Qt 6 dropped it)",
+          "SKIP: speech/texttospeech-and-voice - live backend and voices are exercised by multimedia-lab",
+          "SKIP: purchasing/in-app-store - QtPurchasing is not in this SDK (Qt 6 dropped it)",
+          "SKIP: nfc/qml-ndef-record - Qt 6 dropped QQmlNdefRecord",
+          "SKIP: multimedia/value-types2 - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/abstract-audio-backend - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/audio-selector-role-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/camera-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/playback-recording-controls - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/radio-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/video-control-suite - Qt 6 replaced QMediaService and its control interfaces outright",
+          "SKIP: multimedia/service-provider-interfaces - Qt 6 replaced QMediaService and its control interfaces outright"
+        ],
+        "widgets-gallery": [
+          "SKIP: macextras/toolbar-and-pasteboard-mime - QtMacExtras is not in this SDK",
+          "SKIP: winextras/module-available - QtWinExtras is Windows-only and not in this SDK",
+          "SKIP: widgets/system-tray - no system tray in this desktop session",
+          "SKIP: qtbase/qgl-and-testlib-shells - Qt was configured without desktop OpenGL"
+        ],
+        "graphics-gallery": [],
+        "painting-lab": [],
+        "multimedia-lab": [],
+        "gl-heavy-gallery": [
+          "SKIP: qt3d/core-change-objects - Qt 6's Qt3D has no scene-change API"
+        ],
+        "quick-qml-gallery": [
+          "SKIP: scenegraph/native-texture-vulkan - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-metal - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d11 - backend not compiled for this target",
+          "SKIP: scenegraph/native-texture-d3d12 - backend not compiled for this target",
+          "SKIP: wayland-quick/module-available - QtWaylandCompositor with Quick support is not in this SDK"
+        ],
+        "network-gui": [],
+        "widgets-gui": [],
+        "qml-gui": []
+      },
+      "all_owned_host_trees_closed": true,
+      "natural_application_exits_verified": true,
+      "resident_JNI_release_cleanup_verified": false,
+      "screenshots": {
+        "widgets-gui/files/widgets-gallery-pages.png": {
+          "sha256": "268e274c4d3125cb980c55a792b0a2f4b8eefe1777f2fdb890d67181c6e4f742",
+          "visually_reviewed": true
+        },
+        "qml-gui/files/quick-gallery.png": {
+          "sha256": "9fdbd975842fda786ca8c0d945eccbfab27e147a265870a3d5a2bcd24920d45f",
+          "visually_reviewed": true
+        }
+      },
+      "evidence_summary_sha256": "c04138df6f0261fc8d7f04454f2fcbcea9b47c72b5b46b46fcacbfa3169aefba"
+    }
+  ],
+  "separate_behaviors": {
+    "Qt6_TTS_API21": {
+      "armeabi-v7a": {
+        "functional_checks": 8,
+        "failed_checks": 0,
+        "native_result": 0,
+        "natural_exit_verified": true,
+        "overall": "PASS"
+      },
+      "x86": {
+        "functional_checks": 8,
+        "failed_checks": 0,
+        "native_result": 0,
+        "natural_exit_verified": true,
+        "overall": "PASS"
+      },
+      "arm64-v8a": {
+        "passed_checks": 1,
+        "failed_checks": 1,
+        "unexecuted_checks": 6,
+        "native_result": 1,
+        "natural_exit_verified": false,
+        "overall": "FAILED",
+        "observation": "AudioTrack -22/no output and system Pico64 shutdown SIGSEGV"
+      },
+      "x86_64": {
+        "functional_checks": 8,
+        "failed_checks": 0,
+        "native_result": 0,
+        "natural_exit_verified": false,
+        "overall": "FAILED",
+        "observation": "System Pico64 shutdown SIGSEGV after the functional checks"
+      }
+    },
+    "Qt5_Extras_native_floor": {
+      "abis": [
+        "API10 armeabi-v7a",
+        "API10 x86",
+        "API21 arm64-v8a",
+        "API21 x86_64"
+      ],
+      "checks_per_ABI": 8,
+      "service_processes_per_ABI": 2,
+      "transactions_per_ABI": 16,
+      "callbacks_per_ABI": 16,
+      "natural_parent_and_service_exits_verified": true,
+      "scope": "Bounded context/UI thread, Intent/activity result and two Binder/service rounds; not the entire AndroidExtras API or arbitrary concurrent wrapper destruction"
+    },
+    "Qt5_API10_to_API21_forward_Extras": {
+      "armeabi-v7a": {
+        "overall": "FAILED",
+        "functional_summary_available": false,
+        "observation": "5s ADB live-request query timeout after guest/parent/service startup"
+      },
+      "x86": {
+        "overall": "FAILED",
+        "functional_checks": 8,
+        "native_result": 0,
+        "service_natural_exits_verified": 2,
+        "transactions": 16,
+        "callbacks": 16,
+        "parent_natural_exit_verified": false,
+        "observation": "Parent present in last successful ps; a subsequent 5s process-exit ps query timed out"
+      }
+    },
+    "Qt6_WAV20": {
+      "armeabi-v7a": {
+        "overall": "FAILED",
+        "completed_processes": 1,
+        "required_processes": 20,
+        "observation": "Second guest failed before Qt with ADB offline/boot timeout"
+      },
+      "x86": {
+        "overall": "PASS",
+        "completed_processes": 20,
+        "required_processes": 20,
+        "whole_series_independently_verified": true,
+        "completed_native_natural_owned_runs": 20,
+        "evidence_summary_sha256": "7e368eb3489f186f1bcacd4d56b0067f382ca2642c444289d2698410ad9f3ff6"
+      },
+      "arm64-v8a": {
+        "overall": "UNQUALIFIED",
+        "observation": "Stock kernel/HAL audio output unavailable"
+      },
+      "x86_64": {
+        "overall": "UNQUALIFIED"
+      }
+    },
+    "Qt5_Extras_evidence_bindings": {
+      "API10-armeabi-v7a": {
+        "sdk_image_id": "sha256:f58612b1c4ba1912279e8ab85e5a993bfa7ca45765474c0e735770ea447fa9a6",
+        "apk_manifest_sha256": "196692d1473fef6104f2c905cc708263bd15ddfacc2d4b484cdeb535e8bad9b0",
+        "evidence_summary_sha256": "0025aaa235f9d4be0e88a6a010846f53f27833e917cabc649bb51ad81eb5e8df"
+      },
+      "API10-x86": {
+        "sdk_image_id": "sha256:0442f5f17ba01d5dcba78dee7149557962763108b2500c97c0e9f943f07b737c",
+        "apk_manifest_sha256": "6d64033876871d87688f363c52814d8b6ebab2ed6005a8517b2a0a76e08b99ee",
+        "evidence_summary_sha256": "9ee4ba8ac765d25d4c3e4e8605675144d8005a4711a14f4eb14b2b754fed0153"
+      },
+      "API21-arm64-v8a": {
+        "sdk_image_id": "sha256:f25be055bb4fe5758ac79457050ceefc82c8dd046e874304c877151e44541aad",
+        "apk_manifest_sha256": "c8f6b0b39f86d0610b116945e1ec630227306f5ce81d75454e2838d2a92fa1a1",
+        "evidence_summary_sha256": "3aabc2cd27c4e60825b051e1da29e73446535ff830dc3b59725b60380abe442e"
+      },
+      "API21-x86_64": {
+        "sdk_image_id": "sha256:c2060eb2ac4fc6e0099220af9d378c5c5e840439912f2c4d41a44dd7e1784298",
+        "apk_manifest_sha256": "a52805ee315bfc5a6f5333849c56e4194a026386f074ea5e7dca9e437df3b0ee",
+        "evidence_summary_sha256": "3c2be95b3f79659de3ff3134d0554de239de09c92bf36ef515b1a349dfff5d10"
+      }
+    },
+    "Qt5_TTS_native_floor": {
+      "armeabi-v7a": {
+        "overall": "PASS",
+        "checks": 8,
+        "native_floor_api": 10,
+        "natural_exit_verified": true,
+        "sdk_image_id": "sha256:f58612b1c4ba1912279e8ab85e5a993bfa7ca45765474c0e735770ea447fa9a6",
+        "apk_manifest_sha256": "196692d1473fef6104f2c905cc708263bd15ddfacc2d4b484cdeb535e8bad9b0",
+        "evidence_summary_sha256": "0025aaa235f9d4be0e88a6a010846f53f27833e917cabc649bb51ad81eb5e8df"
+      },
+      "x86": {
+        "overall": "PASS",
+        "checks": 8,
+        "native_floor_api": 10,
+        "natural_exit_verified": true,
+        "sdk_image_id": "sha256:0442f5f17ba01d5dcba78dee7149557962763108b2500c97c0e9f943f07b737c",
+        "apk_manifest_sha256": "6d64033876871d87688f363c52814d8b6ebab2ed6005a8517b2a0a76e08b99ee",
+        "evidence_summary_sha256": "9ee4ba8ac765d25d4c3e4e8605675144d8005a4711a14f4eb14b2b754fed0153"
+      }
+    },
+    "Qt5_WAV20_native_floor": {
+      "armeabi-v7a": {
+        "overall": "PASS",
+        "completed_processes": 20,
+        "required_processes": 20,
+        "native_floor_api": 10,
+        "sdk_image_id": "sha256:f58612b1c4ba1912279e8ab85e5a993bfa7ca45765474c0e735770ea447fa9a6",
+        "apk_manifest_sha256": "196692d1473fef6104f2c905cc708263bd15ddfacc2d4b484cdeb535e8bad9b0",
+        "evidence_summary_sha256": "5ed77eabf9f51b6b04d3e9c5bc87edfe144f0df0b33c545a8ae27be4e3b1c1b5",
+        "OpenSLES_limit": "All20 retain engine Destroy ignored/two-active-object warnings; no leak-freedom or audible-output claim"
+      },
+      "x86": {
+        "overall": "PASS",
+        "completed_processes": 20,
+        "required_processes": 20,
+        "native_floor_api": 10,
+        "sdk_image_id": "sha256:0442f5f17ba01d5dcba78dee7149557962763108b2500c97c0e9f943f07b737c",
+        "apk_manifest_sha256": "6d64033876871d87688f363c52814d8b6ebab2ed6005a8517b2a0a76e08b99ee",
+        "evidence_summary_sha256": "a790d9a227c3c502325e28c998fb9b3082ceba5b6738bff767bc6c6e4b1bb739",
+        "OpenSLES_limit": "All20 retain engine Destroy ignored/two-active-object warnings; no leak-freedom or audible-output claim"
+      }
+    },
+    "physical_devices": {
+      "available": false,
+      "unqualified": [
+        "physical sensor accuracy",
+        "camera",
+        "Bluetooth/NFC",
+        "GPS",
+        "audible WAV/TTS output"
+      ]
+    }
+  },
+  "source_runtime_boundary": "SDK producers and APK/runner commits remain separate. In particular, the original Qt4 native SDKs were reused only with reviewed unchanged native inputs and fresh clients; they were not renamed as new SDK builds."
+}

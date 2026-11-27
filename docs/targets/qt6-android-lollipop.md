@@ -9,26 +9,27 @@ The [host ownership and completion contract](android-artifacts.md#host-process-o
 applies to new qualification; older runs without those receipts stay historical.
 
 This experimental recipe selects ARMv7 `armeabi-v7a`, ARM64 `arm64-v8a`
-or `x86`/`x86_64` from Android 5/API21. ARMv7 remains the default. All four profiles have
-retained SDK and example runtime evidence, including strict C++23 25/25 without
-SKIP. Those reports are historical; they do not qualify the current source,
-generation/report inventories, observed timed-sync policy or process-exit gates.
-The [ARM64 report](../results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md)
-records all eleven installed-SDK cases. The [x86_64 report](../results/qt6-android-lollipop-x86_64-llvm21-20261120.md)
-records all eleven installed-SDK cases, both gallery GUI captures and strict
-C++23 25/25 without SKIP. The [x86 report](../results/qt6-android-lollipop-x86-llvm21-20261120.md)
-records all eleven cases, CPU evidence without SSE4/AVX and the single-core
-guest workaround. The original ARMv7 evidence verified ten Android patches;
-the current recipe includes eleven, so that report does not qualify the added
-library-path change or a refreshed SDK by implication.
+or `x86`/`x86_64` on Android 5/API21. ARMv7 remains the default.
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records fresh native SDKs, eight clients/APKs and complete eleven-case suites
+on all four ABIs from source `d82ca045`. Each suite has 584 PASS, 0 FAIL and
+53 named SKIPs, including strict C++23 25/25, real timed-wait observations,
+reviewed gallery PNGs, natural app exits and owned host-tree closure.
+Exact SDK/consumer identities and APK hashes are in the linked snapshot.
 
-Commit `9493a97` introduced stronger generation/consumer checks after those runs.
-Current qualification additionally requires the four named timed-sync checks
-with observed waiting, expected selftest floors of 296 (x86=297), verified report
-inventories and real process-exit evidence. Select or refresh a compatible SDK
-explicitly, then rebuild native examples, package and test when authorized.
-Old schema1 receipts are not silently adopted, and repackaging alone cannot
-add the changed native checks. No current guest rerun is claimed here.
+Separate muted TTS8 passes on ARMv7/x86. The ARM64 provider/output check fails;
+x86_64 completes eight functional checks but the stock Pico64 service crashes
+during shutdown. Both 64-bit TTS diagnostics remain FAILED. WAV stress and
+physical/audio coverage are separate from the passing eleven-case suites.
+
+Earlier [ARM64](../results/qt6-android-lollipop-arm64-v8a-llvm21-20261119.md),
+[x86_64](../results/qt6-android-lollipop-x86_64-llvm21-20261120.md) and
+[x86](../results/qt6-android-lollipop-x86-llvm21-20261120.md) reports retain their
+original generations and limits. They are not renamed as fresh SDKs. New native
+observations require compatible rebuilt SDKs and clients; repackaging alone
+cannot add them. Current collectors also require complete producer inventories,
+guest CPU policy and final process-exit evidence.
+
 Qt and applications use upstream LLVM 21.1.8 and one shared libc++ built
 from the matching LLVM sources. NDK r27 supplies platform headers, CRT,
 link stubs and Android helper sources; its compiler and libc++ are not used.

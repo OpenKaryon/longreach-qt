@@ -11,11 +11,16 @@ applies to new qualification; older runs without those receipts stay historical.
 These profiles select `arm64-v8a` or `x86_64` on Android 5/API 21 with upstream
 LLVM 21.1.8.
 The original ARMv7 [API 10 profile](qt5-android-gingerbread.md) remains the default.
-Historical reports for both ABIs record that the standalone probe and both installed-SDK C++23 profiles
-passed 25/25 with no SKIP. The full SDK, eight applications and all thirteen
-emulator cases passed. See the recorded evidence for
-[ARM64](../results/qt5-android-lollipop-arm64-v8a-llvm21-20261119.md) and
-[x86_64](../results/qt5-android-lollipop-x86_64-llvm21-20261120.md).
+The [2026-11-27 qualification snapshot](../results/android-qualification-20261127.md)
+records refreshed ARM64/x86_64 SDK/consumer generations: all thirteen cases
+pass with 618 PASS, 0 FAIL and 91 named SKIPs per ABI, natural application
+exits, two reviewed gallery PNGs and owned host closure. Separate AndroidExtras
+diagnostics pass eight checks, sixteen calls/callbacks and two natural service
+exits plus parent exit per ABI. Exact producer/client identities remain distinct.
+
+Earlier [ARM64](../results/qt5-android-lollipop-arm64-v8a-llvm21-20261119.md) and
+[x86_64](../results/qt5-android-lollipop-x86_64-llvm21-20261120.md) reports retain
+their original generations and limits.
 
 ## Build and run
 
@@ -91,9 +96,11 @@ Physical camera, Bluetooth/NFC, sensors, live audio/GPS and production purchases
 require device validation. QtWebEngine is excluded. Separate
 [API21 libc++ large-file observations](qt6-android-lollipop.md#large-files-on-api21)
 cover native stdio/POSIX operations; Qt filesystem API large-file behavior
-requires its own validation. AndroidExtras native service/Binder/Intent
-coverage remains the previously documented gap. Passing these cases does not
-claim exhaustive Qt/C++23 conformance or validation on Android 5.0.0.
+requires its own validation. The separate AndroidExtras diagnostic covers the
+bounded native service/Binder/Intent paths in the current snapshot; arbitrary
+concurrent wrapper destruction and exhaustive class/API coverage remain open.
+Passing these cases does not claim exhaustive Qt/C++23 conformance or validation
+on Android 5.0.0.
 
 
 See [Android artifacts and coverage](android-artifacts.md) for the current
@@ -105,11 +112,17 @@ The pinned Tools25 ARM64 guest emits zero magnetic vectors and its console has
 no `sensor` command. Such samples cannot establish a compass heading. The
 extended selftest still exercises 32 compass lifecycles during a verified native
 acceleration stream and records `heading unavailable (zero magnetic vector)`.
-Nonzero magnetic input retains the compass-reading requirement.
+Nonzero magnetic input retains the compass-reading requirement. A separate
+recorded stock32 frontend control supplies nonzero magnetic input and 32 actual
+Qt compass callbacks on the refreshed ARM64 SDK. It does not establish numeric
+azimuth/calibration or physical accuracy, and does not change the Tools25 limit.
 
 Console selftests retain `android.app.background_running=true` as a historical
 suspension workaround; this does not qualify normal Activity pause/resume.
-GUI examples retain normal lifecycle handling.
+GUI examples retain normal lifecycle handling. A bounded ARM64 metadata A/B
+pair observed real pause/stop/resume, 83 versus zero background ticks and one
+queued UI callback after resume with identical native/DEX inputs. This does not
+justify removing the workaround or promise arbitrary background behavior.
 
 The shared speech generation guard also covers API21 callbacks. A late
 onDone/onError from a replaced utterance and an onStart after stop are ignored;

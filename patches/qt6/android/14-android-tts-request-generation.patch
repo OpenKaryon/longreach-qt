@@ -1,0 +1,437 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Ignore canceled and completed Android speech request callbacks on delivery
+
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.cpp
+@@ -30,7 +30,7 @@
+ }
+ 
+ template <typename Function>
+-static void dispatchTextToSpeech(jlong id, Function function)
++static void dispatchTextToSpeech(jlong id, jlong generation, Function function, bool terminal = false)
+ {
+     QMutexLocker locker(&textToSpeechRegistry->mutex);
+     auto *tts = textToSpeechRegistry->objects.value(id, nullptr);
+@@ -39,50 +39,54 @@
+ 
+     // Enqueue while the registry protects the receiver's lifetime. Never run
+     // an initialization callback inline before its Java constructor returns.
+-    QMetaObject::invokeMethod(tts, [tts, function] { function(tts); }, Qt::QueuedConnection);
++    QMetaObject::invokeMethod(tts, [tts, generation, function, terminal] {
++        // A canceled callback may already be queued before stop/pause/replace.
++        if (tts->acceptRequestGeneration(generation, terminal))
++            function(tts);
++    }, Qt::QueuedConnection);
+ }
+ 
+ Q_DECLARE_JNI_CLASS(Locale, "java/util/Locale")
+ 
+-static void notifyError(JNIEnv *env, jobject thiz, jlong id, jlong reason)
++static void notifyError(JNIEnv *env, jobject thiz, jlong id, jlong generation, jlong reason)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    dispatchTextToSpeech(id, [reason](auto *tts) { tts->processNotifyError(int(reason)); });
++    dispatchTextToSpeech(id, generation, [reason](auto *tts) { tts->processNotifyError(int(reason)); }, true);
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyError)
+ 
+-static void notifyReady(JNIEnv *env, jobject thiz, jlong id)
++static void notifyReady(JNIEnv *env, jobject thiz, jlong id, jlong generation)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifyReady(); });
++    dispatchTextToSpeech(id, generation, [](auto *tts) { tts->processNotifyReady(); }, true);
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyReady)
+ 
+-static void notifySpeaking(JNIEnv *env, jobject thiz, jlong id)
++static void notifySpeaking(JNIEnv *env, jobject thiz, jlong id, jlong generation)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifySpeaking(); });
++    dispatchTextToSpeech(id, generation, [](auto *tts) { tts->processNotifySpeaking(); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifySpeaking)
+ 
+-static void notifyRangeStart(JNIEnv *env, jobject thiz, jlong id, jint start, jint end, jint frame)
++static void notifyRangeStart(JNIEnv *env, jobject thiz, jlong id, jlong generation, jint start, jint end, jint frame)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+-    dispatchTextToSpeech(id, [start, end, frame](auto *tts) {
++    dispatchTextToSpeech(id, generation, [start, end, frame](auto *tts) {
+         tts->processNotifyRangeStart(start, end, frame);
+     });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyRangeStart)
+ 
+-static void notifyBeginSynthesis(JNIEnv *env, jobject thiz, jlong id, int sampleRateInHz, int audioFormat, int channelCount)
++static void notifyBeginSynthesis(JNIEnv *env, jobject thiz, jlong id, jlong generation, int sampleRateInHz, int audioFormat, int channelCount)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+@@ -91,28 +95,28 @@
+     format.setSampleRate(sampleRateInHz);
+     format.setSampleFormat(QAudioFormat::SampleFormat(audioFormat));
+     format.setChannelCount(channelCount);
+-    dispatchTextToSpeech(id, [format](auto *tts) { tts->processNotifyBeginSynthesis(format); });
++    dispatchTextToSpeech(id, generation, [format](auto *tts) { tts->processNotifyBeginSynthesis(format); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyBeginSynthesis)
+ 
+-static void notifyAudioAvailable(JNIEnv *env, jobject thiz, jlong id, jbyteArray bytes)
++static void notifyAudioAvailable(JNIEnv *env, jobject thiz, jlong id, jlong generation, jbyteArray bytes)
+ {
+     Q_UNUSED(thiz);
+ 
+     const auto size = env->GetArrayLength(bytes);
+     QByteArray audio(size, Qt::Initialization::Uninitialized);
+     env->GetByteArrayRegion(bytes, 0, size, reinterpret_cast<jbyte *>(audio.data()));
+-    dispatchTextToSpeech(id, [audio](auto *tts) { tts->processNotifyAudioAvailable(audio); });
++    dispatchTextToSpeech(id, generation, [audio](auto *tts) { tts->processNotifyAudioAvailable(audio); });
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyAudioAvailable)
+ 
+-static void notifyEndSynthesis(JNIEnv *env, jobject thiz, jlong id)
++static void notifyEndSynthesis(JNIEnv *env, jobject thiz, jlong id, jlong generation)
+ {
+     Q_UNUSED(env);
+     Q_UNUSED(thiz);
+ 
+     // Queued behind preceding audio events for the same receiver.
+-    dispatchTextToSpeech(id, [](auto *tts) { tts->processNotifyReady(); });
++    dispatchTextToSpeech(id, generation, [](auto *tts) { tts->processNotifyReady(); }, true);
+ }
+ Q_DECLARE_JNI_NATIVE_METHOD(notifyEndSynthesis)
+ 
+@@ -186,6 +190,22 @@
+     return QTextToSpeechEngine::capabilities();
+ }
+ 
++bool QTextToSpeechEngineAndroid::acceptRequestGeneration(jlong generation, bool terminal)
++{
++    if (generation != m_requestGeneration)
++        return false;
++    if (terminal)
++        nextRequestGeneration();
++    return true;
++}
++
++jlong QTextToSpeechEngineAndroid::nextRequestGeneration()
++{
++    if (m_requestGeneration == std::numeric_limits<jlong>::max())
++        qFatal("Android text-to-speech request generation exhausted");
++    return ++m_requestGeneration;
++}
++
+ void QTextToSpeechEngineAndroid::say(const QString &text)
+ {
+     if (text.isEmpty())
+@@ -195,7 +215,8 @@
+         stop(QTextToSpeech::BoundaryHint::Default);
+ 
+     m_text = text;
+-    m_speech.callMethod<void>("say", QJniObject::fromString(m_text).object<jstring>());
++    m_speech.callMethod<void>("say", QJniObject::fromString(m_text).object<jstring>(),
++                              nextRequestGeneration());
+ }
+ 
+ void QTextToSpeechEngineAndroid::synthesize(const QString &text)
+@@ -205,7 +226,8 @@
+ 
+     m_errorReason = QTextToSpeech::ErrorReason::NoError;
+     m_text = text;
+-    m_speech.callMethod<int>("synthesize", QJniObject::fromString(m_text).object<jstring>());
++    m_speech.callMethod<int>("synthesize", QJniObject::fromString(m_text).object<jstring>(),
++                             nextRequestGeneration());
+ }
+ 
+ void QTextToSpeechEngineAndroid::processNotifyBeginSynthesis(const QAudioFormat &format)
+@@ -316,9 +338,8 @@
+ void QTextToSpeechEngineAndroid::stop(QTextToSpeech::BoundaryHint boundaryHint)
+ {
+     Q_UNUSED(boundaryHint);
+-    if (m_state == QTextToSpeech::Ready)
+-        return;
+-
++    // Cancel pending speech even if its queued onStart has not arrived yet.
++    nextRequestGeneration();
+     m_speech.callMethod<void>("stop");
+     setState(QTextToSpeech::Ready);
+     m_format = {};
+@@ -327,6 +348,7 @@
+ void QTextToSpeechEngineAndroid::pause(QTextToSpeech::BoundaryHint boundaryHint)
+ {
+     Q_UNUSED(boundaryHint);
++    nextRequestGeneration();
+     if (m_state == QTextToSpeech::Paused)
+         return;
+ 
+@@ -362,7 +384,7 @@
+         pitch += 1.0f;
+ 
+     // 0 == SUCCESS
+-    return m_speech.callMethod<int>("setPitch", float(pitch)) == 0;
++    return m_speech.callMethod<int>("setPitch", float(pitch), m_requestGeneration) == 0;
+ }
+ 
+ // Android API's rate is from [0.5, 2.0[, with 1.0 being normal.
+@@ -380,7 +402,7 @@
+ {
+     rate = 1.0 + (rate >= 0 ? rate : (rate * 0.5));
+     // 0 == SUCCESS
+-    return m_speech.callMethod<int>("setRate", float(rate)) == 0;
++    return m_speech.callMethod<int>("setRate", float(rate), m_requestGeneration) == 0;
+ }
+ 
+ double QTextToSpeechEngineAndroid::volume() const
+--- a/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
++++ b/qtspeech/src/plugins/tts/android/src/qtexttospeech_android.h
+@@ -46,6 +46,8 @@
+     QTextToSpeech::ErrorReason errorReason() const override;
+     QString errorString() const override;
+ 
++    bool acceptRequestGeneration(jlong generation, bool terminal);
++
+ public Q_SLOTS:
+     void processNotifyReady();
+     void processNotifyError(int reason);
+@@ -55,11 +57,13 @@
+     void processNotifyAudioAvailable(const QByteArray &bytes);
+ 
+ private:
++    jlong nextRequestGeneration();
+     void setState(QTextToSpeech::State state);
+     void setError(QTextToSpeech::ErrorReason reason, const QString &string);
+     QVoice javaVoiceObjectToQVoice(QJniObject &obj) const;
+ 
+     jlong m_id = 0;
++    jlong m_requestGeneration = 0;
+     QJniObject m_speech;
+     QTextToSpeech::State m_state = QTextToSpeech::Error;
+     QTextToSpeech::ErrorReason m_errorReason = QTextToSpeech::ErrorReason::Initialization;
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
+@@ -27,14 +27,29 @@
+     private static final String UTTERANCE_ID = "UtteranceId";
+     private static final String SYNTHESIZE_ID = "SynthesizeId";
+ 
++    private static long utteranceGeneration(String utteranceId, String kind)
++    {
++        final String prefix = kind + ":";
++        if (utteranceId == null || !utteranceId.startsWith(prefix))
++            return -1;
++        final String token = utteranceId.substring(prefix.length());
++        try {
++            final long generation = Long.parseLong(token);
++            if (generation > 0 && token.equals(Long.toString(generation)))
++                return generation;
++        } catch (NumberFormatException ignored) {
++        }
++        return -1;
++    }
++
+     // Native callback functions
+-    native void notifyError(long id, long reason);
+-    native void notifyReady(long id);
+-    native void notifySpeaking(long id);
+-    native void notifyRangeStart(long id, int start, int end, int frame);
+-    native void notifyBeginSynthesis(long id, int sampleRateInHz, int audioFormat, int channelCount);
+-    native void notifyAudioAvailable(long id, byte[] bytes);
+-    native void notifyEndSynthesis(long id);
++    native void notifyError(long id, long generation, long reason);
++    native void notifyReady(long id, long generation);
++    native void notifySpeaking(long id, long generation);
++    native void notifyRangeStart(long id, long generation, int start, int end, int frame);
++    native void notifyBeginSynthesis(long id, long generation, int sampleRateInHz, int audioFormat, int channelCount);
++    native void notifyAudioAvailable(long id, long generation, byte[] bytes);
++    native void notifyEndSynthesis(long id, long generation);
+ 
+     private TextToSpeech mTts;
+     private final long mId;
+@@ -87,11 +102,11 @@
+         public void onInit(int status) {
+             if (status == TextToSpeech.SUCCESS) {
+                 mInitialized = true;
+-                notifyReady(mId);
++                notifyReady(mId, 0);
+                 Log.d(TAG, "TTS initialized");
+             } else {
+                 mInitialized = false;
+-                notifyError(mId, 1); // QTextToSpeech::ErrorReason::Initialization
++                notifyError(mId, 0, 1); // QTextToSpeech::ErrorReason::Initialization
+                 Log.w(TAG, "TTS initialization failed");
+             }
+         }
+@@ -103,10 +118,13 @@
+         @Override
+         public void onDone(String utteranceId) {
+             Log.d(utteranceTAG, "onDone");
+-            if (utteranceId.equals(UTTERANCE_ID)) {
+-                notifyReady(mId);
+-            } else if (utteranceId.equals(SYNTHESIZE_ID)) {
+-                notifyEndSynthesis(mId);
++            final long spoken = utteranceGeneration(utteranceId, UTTERANCE_ID);
++            if (spoken > 0) {
++                notifyReady(mId, spoken);
++            } else {
++                final long synthesized = utteranceGeneration(utteranceId, SYNTHESIZE_ID);
++                if (synthesized > 0)
++                    notifyEndSynthesis(mId, synthesized);
+             }
+         }
+ 
+@@ -118,34 +136,34 @@
+         @Override
+         public void onError(String utteranceId, int errorCode) {
+             Log.w(utteranceTAG, "onError");
+-            if (utteranceId.equals(UTTERANCE_ID)) {
+-                switch (errorCode) {
+-                default:
+-                    notifyError(mId, 4);  // QTextToSpeech::ErrorReason::Playback
+-                }
+-            }
++            long generation = utteranceGeneration(utteranceId, UTTERANCE_ID);
++            if (generation < 0)
++                generation = utteranceGeneration(utteranceId, SYNTHESIZE_ID);
++            if (generation > 0)
++                notifyError(mId, generation, 4); // Playback error for this request only.
+         }
+ 
+         @Override
+         public void onStart(String utteranceId) {
+             Log.d(utteranceTAG, "onStart");
+-            if (utteranceId.equals(UTTERANCE_ID)) {
+-                notifySpeaking(mId);
+-            }
++            final long generation = utteranceGeneration(utteranceId, UTTERANCE_ID);
++            if (generation > 0)
++                notifySpeaking(mId, generation);
+         }
+ 
+         @Override
+         public void onRangeStart(String utteranceId, int start, int end, int frame) {
+-            Log.w("UtteranceProgressListener", "onRangeStart");
+-            if (utteranceId.equals("UtteranceId")) {
+-                notifyRangeStart(mId, start, end, frame);
+-            }
++            Log.w(utteranceTAG, "onRangeStart");
++            final long generation = utteranceGeneration(utteranceId, UTTERANCE_ID);
++            if (generation > 0)
++                notifyRangeStart(mId, generation, start, end, frame);
+         }
+ 
+         @Override
+         public void onBeginSynthesis(String utteranceId, int sampleRateInHz, int audioFormat, int channelCount) {
+             Log.d(utteranceTAG, "onBeginSynthesis");
+-            if (utteranceId.equals(SYNTHESIZE_ID)) {
++            final long generation = utteranceGeneration(utteranceId, SYNTHESIZE_ID);
++            if (generation > 0) {
+                 switch (audioFormat) {
+                 case AudioFormat.ENCODING_PCM_8BIT:
+                     audioFormat = 1; // QAudioFormat::UInt8
+@@ -160,15 +178,16 @@
+                     audioFormat = 0; // QAudioFormat::Unknown;
+                 }
+ 
+-                notifyBeginSynthesis(mId, sampleRateInHz, audioFormat, channelCount);
++                notifyBeginSynthesis(mId, generation, sampleRateInHz, audioFormat, channelCount);
+             }
+         }
+ 
+         @Override
+         public void onAudioAvailable(String utteranceId, byte[] bytes) {
+             Log.d(utteranceTAG, "onAudioAvailable");
+-            if (utteranceId.equals(SYNTHESIZE_ID)) {
+-                notifyAudioAvailable(mId, bytes);
++            final long generation = utteranceGeneration(utteranceId, SYNTHESIZE_ID);
++            if (generation > 0) {
++                notifyAudioAvailable(mId, generation, bytes);
+             }
+         }
+     };
+@@ -200,21 +219,21 @@
+         }
+     }
+ 
+-    void say(String text)
++    void say(String text, long generation)
+     {
+         Log.d(TAG, "TTS say(): " + text);
+         int result = -1;
+ 
+         Bundle params = new Bundle();
+         params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, mVolume);
+-        result = mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, UTTERANCE_ID);
++        result = mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, UTTERANCE_ID + ":" + Long.toString(generation));
+ 
+         Log.d(TAG, "TTS say() result: " + Integer.toString(result));
+         if (result == TextToSpeech.ERROR)
+-            notifyError(mId, 3); // QTextToSpeech::ErrorReason::Input
+-    }
+-
+-    int synthesize(String text)
++            notifyError(mId, generation, 3); // QTextToSpeech::ErrorReason::Input
++    }
++
++    int synthesize(String text, long generation)
+     {
+         Log.d(TAG, "TTS synthesize(): " + text);
+         int result = -1;
+@@ -222,11 +241,11 @@
+         Bundle params = new Bundle();
+         params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, mVolume);
+         File file = new File("/dev/null");
+-        result = mTts.synthesizeToFile(text, params, file, SYNTHESIZE_ID);
++        result = mTts.synthesizeToFile(text, params, file, SYNTHESIZE_ID + ":" + Long.toString(generation));
+ 
+         Log.d(TAG, "TTS synthesize() result: " + Integer.toString(result));
+         if (result == TextToSpeech.ERROR)
+-            notifyError(mId, 3); // QTextToSpeech::ErrorReason::Input
++            notifyError(mId, generation, 3); // QTextToSpeech::ErrorReason::Input
+         return -1;
+     }
+ 
+@@ -241,7 +260,7 @@
+         return mPitch;
+     }
+ 
+-    int setPitch(float pitch)
++    int setPitch(float pitch, long generation)
+     {
+         if (Float.compare(pitch, mPitch) == 0)
+             return TextToSpeech.ERROR;
+@@ -250,7 +269,7 @@
+         if (success == TextToSpeech.SUCCESS)
+             mPitch = pitch;
+         else
+-            notifyError(mId, 2); // QTextToSpeech::ErrorReason::Configuration
++            notifyError(mId, generation, 2); // QTextToSpeech::ErrorReason::Configuration
+ 
+         return success;
+     }
+@@ -260,7 +279,7 @@
+         return mRate;
+     }
+ 
+-    int setRate(float rate)
++    int setRate(float rate, long generation)
+     {
+         if (Float.compare(rate, mRate) == 0)
+             return TextToSpeech.ERROR;
+@@ -269,7 +288,7 @@
+         if (success == TextToSpeech.SUCCESS)
+             mRate = rate;
+         else
+-            notifyError(mId, 2); // QTextToSpeech::ErrorReason::Configuration
++            notifyError(mId, generation, 2); // QTextToSpeech::ErrorReason::Configuration
+ 
+         return success;
+     }

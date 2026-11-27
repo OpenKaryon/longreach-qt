@@ -380,6 +380,13 @@ int runAndroidSpeechChecks()
         return true;
     })) return r.summary();
     if (!check("speech/stop-active-request", [&](QString &) {
+#if QT_VERSION_MAJOR >= 6
+        attempt.begin(QStringLiteral("speech/stop-active-request/pending"));
+        attempt.speech.say(QStringLiteral("Pending cancellation."));
+        attempt.speech.stop();
+        if (!attempt.stable(QTextToSpeech::Ready, 250)) return false;
+        attempt.begin(QStringLiteral("speech/stop-active-request"));
+#endif
         if (!attempt.startLong()) return false;
         attempt.speech.stop();
         return attempt.stable(QTextToSpeech::Ready, 250);

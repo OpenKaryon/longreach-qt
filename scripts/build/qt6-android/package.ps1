@@ -29,7 +29,11 @@ $tools = Join-Path $AndroidSdk 'build-tools/36.0.0'
 $androidJar = Join-Path $AndroidSdk "platforms/android-$CompileApi/android.jar"
 . "$PSScriptRoot/../android-api21/packaging-host.ps1"
 if (!$JavaTools) { $JavaTools = Get-AndroidPackagingJava }
-$work = (New-Item -ItemType Directory -Path (Join-Path $OutputDirectory ("package-" + [guid]::NewGuid()))).FullName
+# Windows aapt cannot add native files whose absolute path exceeds MAX_PATH.
+# Stage outside the artifact root so long QML plugin names remain accessible.
+$workParent = [IO.Path]::TrimEndingDirectorySeparator(
+    (Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).Path)
+$work = (New-Item -ItemType Directory -Path (Join-Path $workParent ("lqt6-" + [guid]::NewGuid()))).FullName
 $keyStore = Initialize-AndroidExamplesKey $OutputDirectory $javaTools
 $appName = [IO.Path]::GetFileNameWithoutExtension($NativeLibrary)
 if (!$appName.StartsWith('lib') -or !$appName.EndsWith("_$Abi")) {
@@ -173,7 +177,8 @@ try {
     }
 } finally {
     $resolved = (Resolve-Path -LiteralPath $work).Path
-    if ([IO.Path]::GetDirectoryName($resolved) -eq $OutputDirectory) {
+    if ([IO.Path]::GetDirectoryName($resolved) -eq $workParent -and
+            $resolved -eq [IO.Path]::GetFullPath($work)) {
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
 }

@@ -181,6 +181,9 @@ void addSpeechChecks(SmokeReporter &r)
 #include <QPointer>
 #include <atomic>
 #include <memory>
+#if QT_VERSION_MAJOR >= 6
+#include <QJniObject>
+#endif
 
 namespace {
 
@@ -230,6 +233,61 @@ public:
             .arg(speech.availableVoices().size()).arg(!wrongThread.load()));
         return initialized;
     }
+
+#if QT_VERSION_MAJOR >= 6
+    bool inputErrorAndRecover()
+    {
+        const QString previousPhase = phase;
+        phase = QStringLiteral("speech/input-error-and-recover");
+        int errors = 0;
+        QTextToSpeech::ErrorReason reason = QTextToSpeech::ErrorReason::NoError;
+        const auto errorConnection = QObject::connect(&speech, &QTextToSpeech::errorOccurred,
+            &speech, [&](QTextToSpeech::ErrorReason value, const QString &) {
+                if (QThread::currentThread() != speech.thread()) {
+                    wrongThread.store(true);
+                    return;
+                }
+                reason = value;
+                ++errors;
+            }, Qt::DirectConnection);
+        const int limit = QJniObject::callStaticMethod<jint>("android/speech/tts/TextToSpeech",
+                                                           "getMaxSpeechInputLength", "()I");
+        if (limit < 1 || limit > 65536) {
+            QObject::disconnect(errorConnection);
+            phase = previousPhase;
+            return false;
+        }
+        // Android rejects input beyond this limit before synthesis.
+        // This exercises a normal input error, without depending on audio output.
+        speech.say(QString(limit + 1, QLatin1Char('x')));
+        const bool signaled = wait([&] { return errors > 0; }, 10000);
+        QObject::disconnect(errorConnection);
+        const bool inputError = signaled && errors == 1
+            && speech.state() == QTextToSpeech::Error
+            && reason == QTextToSpeech::ErrorReason::Input
+            && speech.errorReason() == reason && !speech.errorString().isEmpty();
+        reporter.observe(phase, QStringLiteral("input_limit=%1 input_length=%2 state=%3 reason=%4 errors=%5 callback_thread_ok=%6")
+            .arg(limit).arg(limit + 1).arg(stateName(speech.state()))
+            .arg(speech.errorReason() == QTextToSpeech::ErrorReason::Input
+                 ? QStringLiteral("Input") : QString::number(int(speech.errorReason())))
+            .arg(errors).arg(!wrongThread.load()));
+        if (!inputError) {
+            phase = previousPhase;
+            return false;
+        }
+        speech.stop();
+        const bool recovered = ready()
+            && speech.errorReason() == QTextToSpeech::ErrorReason::NoError
+            && speech.errorString().isEmpty();
+        reporter.observe(phase, QStringLiteral("recovered=%1 state=%2 reason=%3 callback_thread_ok=%4")
+            .arg(recovered).arg(stateName(speech.state()))
+            .arg(speech.errorReason() == QTextToSpeech::ErrorReason::NoError
+                 ? QStringLiteral("NoError") : QString::number(int(speech.errorReason())))
+            .arg(!wrongThread.load()));
+        phase = previousPhase;
+        return recovered;
+    }
+#endif
 
     void begin(const QString &name)
     {
@@ -296,7 +354,11 @@ int runAndroidSpeechChecks()
         return r.failed() == 0;
     };
     if (!check("speech/android-ready-and-voices", [&](QString &d) {
-        const bool ok = QTextToSpeech::availableEngines().contains(QStringLiteral("android")) && attempt.ready();
+        bool ok = QTextToSpeech::availableEngines().contains(QStringLiteral("android")) && attempt.ready();
+#if QT_VERSION_MAJOR >= 6
+        if (ok)
+            ok = attempt.inputErrorAndRecover();
+#endif
         d = QStringLiteral("engines=%1 voices=%2 state=%3 callback_thread_ok=%4")
             .arg(QTextToSpeech::availableEngines().join(QStringLiteral(",")))
             .arg(attempt.speech.availableVoices().size()).arg(stateName(attempt.speech.state()))

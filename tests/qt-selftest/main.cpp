@@ -34,6 +34,9 @@
 #if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR >= 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
 #include "../android/sound-cache-teardown.h"
 #endif
+#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR == 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
+#include "../android/compass-heading.h"
+#endif
 
 #if !SMOKE_QT5 && defined(SMOKE_STATIC_QSQLITE)
 #include <QtPlugin>
@@ -183,6 +186,16 @@ int main(int argc, char *argv[])
             QTextStream(stdout) << "smoke\n";
         }
         return 0;
+    }
+
+    if (app.arguments().contains(QStringLiteral("--compass-heading"))) {
+        if (app.arguments().size() != 3 || app.arguments().at(1) != QStringLiteral("--compass-heading")) return 2;
+#if defined(LONGREACH_ANDROID_APK) && SMOKE_QT5 && QT_VERSION_MAJOR == 5 && !defined(SMOKE_ANDROID_SELFTEST_CORE)
+        return SmokeCompassHeading::run(app.arguments().at(2));
+#else
+        QTextStream(stdout) << "FAIL: compass-heading requires Qt5 Android extended/full profile\n";
+        return 2;
+#endif
     }
 
     if (app.arguments().contains(QStringLiteral("--sound-cache-teardown"))) {

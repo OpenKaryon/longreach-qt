@@ -130,6 +130,24 @@ normal onStart/onDone transitions remain listener-driven. The
 [host regression scope](qt5-android-gingerbread.md#implementation-notes-and-current-evidence)
 does not establish Android TTS engine or audible-speech qualification.
 
+## Numeric compass diagnostic
+
+The Qt5 Android extended/full selftest accepts `--compass-heading DEG`, where
+`DEG` is one of `0`, `45`, `90`, `180`, `270`. Apply and read back the native
+emulator inputs before each fresh application launch: acceleration `(0,0,9.81)`
+m/s² and magnetic field `(0,20,-40)`, `(-20,20,-40)`, `(-20,0,-40)`, `(0,-20,-40)`
+or `(20,0,-40)` microteslas respectively. The diagnostic requires five
+consecutive Qt compass callbacks with matching native vector readings,
+angular error at most two degrees modulo a turn and finite calibration in
+`[0,1]`. It records the raw angles, vectors, counts and timestamps, then stops
+all three sensors. Missing native backends/input is a diagnostic failure.
+
+This separate mode does not change the default suite or its historical
+results. It needs independently bound SDK/APK/input identities, native return,
+natural application exit, final log capture and owned host-tree closure.
+Source/build success alone is not numeric guest qualification. The check does
+not establish a raw-angle range, physical calibration accuracy or device coverage.
+
 ## Focused sound-cache diagnostic
 
 `scripts/run/android-api21-suite.ps1 -QtMajor 5 -SoundCacheTeardown` requires

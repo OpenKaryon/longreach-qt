@@ -1,0 +1,27 @@
+SPDX-License-Identifier: LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+Subject: Reject oversized Android TTS input before provider callbacks can race
+
+--- a/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
++++ b/qtspeech/src/plugins/tts/android/jar/src/org/qtproject/qt/android/speech/QtTextToSpeech.java
+@@ -222,4 +222,11 @@
+     void say(String text, long generation)
+     {
++        // API21 can invoke onError before speak() returns ERROR. Validate the
++        // documented input boundary before that binder call so Input is final.
++        if (text.length() > TextToSpeech.getMaxSpeechInputLength()) {
++            notifyError(mId, generation, 3); // QTextToSpeech::ErrorReason::Input
++            return;
++        }
++
+         Log.d(TAG, "TTS say(): " + text);
+         int result = -1;
+@@ -236,4 +243,9 @@
+     int synthesize(String text, long generation)
+     {
++        if (text.length() > TextToSpeech.getMaxSpeechInputLength()) {
++            notifyError(mId, generation, 3); // QTextToSpeech::ErrorReason::Input
++            return TextToSpeech.ERROR;
++        }
++
+         Log.d(TAG, "TTS synthesize(): " + text);
+         int result = -1;

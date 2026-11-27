@@ -52,7 +52,8 @@ def main():
     for name in ('08-android-api21-legacy-tts.patch',
                  '12-android-tts-callback-registration.patch',
                  '13-android-tts-error-state.patch',
-                 '14-android-tts-request-generation.patch'):
+                 '14-android-tts-request-generation.patch',
+                 '15-android-tts-input-length.patch'):
         patch = root / 'patches/qt6/android' / name
         patch_hashes[name] = hashlib.sha256(patch.read_bytes()).hexdigest()
         environment = dict(os.environ, GIT_CEILING_DIRECTORIES=str(output))

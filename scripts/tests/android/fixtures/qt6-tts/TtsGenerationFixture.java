@@ -35,6 +35,20 @@ class TtsGenerationFixture extends QtTextToSpeech {
         t.progress.onBeginSynthesis(synth,16000,android.media.AudioFormat.ENCODING_PCM_16BIT,1);
         t.progress.onAudioAvailable(synth,new byte[]{1,2,3}); t.progress.onDone(synth);
         expected("begin:41:6:16000:2:1","audio:41:6:3","end:41:6");
+        // API21 can deliver onError before a failed speak() returns. Reject
+        // oversized text before calling the provider so Input wins exactly once.
+        final int calls=t.ids.size();
+        final int limit=TextToSpeech.getMaxSpeechInputLength();
+        final String oversized=String.join("",Collections.nCopies(limit+1,"x"));
+        t.result=TextToSpeech.ERROR; t.errorBeforeReturn=true;
+        e.say(oversized,7); expected("error:41:7:3");
+        require(t.ids.size()==calls,"oversized speech reached provider");
+        e.synthesize(oversized,8); expected("error:41:8:3");
+        require(t.ids.size()==calls,"oversized synthesis reached provider");
+        t.result=TextToSpeech.SUCCESS; t.errorBeforeReturn=false;
+        e.say(oversized.substring(1),9);
+        require(t.ids.size()==calls+1,"exact-limit speech rejected");
+        t.progress.onDone(t.ids.get(calls)); expected("ready:41:9");
         for(String bad:new String[]{null,"UtteranceId","UtteranceId:0","UtteranceId:-1","UtteranceId:01","UtteranceId:+1","UtteranceId:9223372036854775808","SynthesizeId:no"}){
             t.progress.onStart(bad);t.progress.onDone(bad);t.progress.onError(bad,-1);
             t.progress.onAudioAvailable(bad,new byte[0]);

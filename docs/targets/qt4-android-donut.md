@@ -7,6 +7,11 @@ and 124 named SKIPs. The embedded SDK seal passes before and after native
 client compilation; an exported-qmake QtCore client actually links. This is
 the configured eight-module/five-plugin profile. Five GUI interaction checks
 pass, but API4 PNG export/visual review and physical coverage remain open.
+The host PNG exporter and ordinary fixture/source CI checks pass at `9e861e2`.
+The first fresh runtime verification passed bootstrap but stopped on strict
+readiness (`pm path android`, ADB timeout 5 seconds) before native execution.
+Quick and PNG export were not reached; the original eight-diagnostic result
+above is unchanged and does not acquire new visual evidence.
 
 The [make interface](../android-build.md) exposes this original combined recipe
 as `qt4-android-arm-legacy`. It remains separate from installed-SDK batch targets.
@@ -232,10 +237,12 @@ logs, final-capture proof and host-tree completion. They take --root and --run,
 acquire the root lease and never launch a guest. Qualification remains false.
 
 Ordinary recording checks cover all eight synthetic profiles, focused/retry
-paths and 25 injected failures, with no actual device, Docker, JVM or native
+paths and 27 injected failures, with no actual device, Docker, JVM or native
 program. The producer and runner now prepare both archived inputs through
 verified extraction receipts, rather than accepting the original marker files.
-Actual native/guest qualification and installed-SDK parity remain unclaimed.
+These recording fixtures alone do not establish native/guest qualification
+or installed-SDK parity. The separate recorded installed-SDK campaign above
+covers only its configured static/raster profile.
 
 ## Prepared API4 media
 
@@ -267,7 +274,7 @@ Six ordinary cache methods exercise tiny ZIPs, warm reuse without extraction,
 old-marker recovery, drift repair/history, interrupted staging, wrong/incomplete
 archives and standalone lease refusal. The complete producer/runner recording
 uses the actual PowerShell archive function and extractor with fixture pins;
-all described binaries remain inert data. Real archived media was only inspected
-for layout, with no extraction, replacement or execution during this review.
+all fixture binaries remain inert data. Actual prepared media and guest
+evidence are recorded separately in the qualification snapshot.
 Older diagnostic receipts missing this prepared-cache chain remain historical;
 do not backfill them or claim a fresh Android result.

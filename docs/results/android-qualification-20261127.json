@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "recorded_date": "2026-11-27",
+  "recorded_date": "2026-11-28",
   "whole_android_complete": false,
   "scope": "Recorded emulator generations and separate behavior probes. Later source edits and other devices require their own evidence. Full suites do not imply TTS/WAV/physical coverage.",
   "LLVM": "21.1.8",
@@ -258,7 +258,26 @@
       "configured_Qt_modules": 8,
       "configured_static_plugins": 5,
       "ARMv5_atomic_observations": 10,
-      "API4_PNG_visual_review_available": false
+      "API4_PNG_visual_review_available": false,
+      "PNG_export_followup": {
+        "overall": "FAILED",
+        "runner_commit": "9e861e259d89971cd8c1bdec9413cae92433d71a",
+        "SDK_producer_commit": "6982f1943a3af7ef42c480632eff206d257b2e4f",
+        "APK_producer_commit": "e990bd1e9bb2b3b8abbbec4096b342d421e9a53a",
+        "sdk_image_id": "sha256:43b0b06e853252954f1270423811b2d61227dff2dd301822a687f2c2311b5bf4",
+        "apk_manifest_sha256": "0ee71be39d35c683744e4f71e2c56fc8eebf53d63dc68e8575d353b64b75593d",
+        "host_export_implemented": true,
+        "ordinary_state_tests_passed": 15,
+        "producer_fixture": "Eight synthetic profiles and27 injected failures PASS; no real native/guest executes",
+        "source_CI": "https://github.com/OpenKaryon/longreach-qt/actions/runs/46068144551",
+        "source_CI_conclusion": "success",
+        "completed_profiles": 1,
+        "required_profiles": 8,
+        "exported_PNG_count": 0,
+        "visual_review_available": false,
+        "evidence_summary_sha256": "c6707b98dbb6008a8e21744bae5ad95731023f233af62487190976d7cacd3b19",
+        "observation": "Bootstrap passed; strict stopped before native on pm-path ADB readiness query timeout5000ms. Quick was not executed. Final capture and closed owned tree verified. No automatic resume/retry; original185/0/124 generation remains separately bound above."
+      }
     },
     {
       "qt_major": 4,
@@ -3379,7 +3398,14 @@
         "observation": "Stock kernel/HAL audio output unavailable"
       },
       "x86_64": {
-        "overall": "UNQUALIFIED"
+        "overall": "FAILED",
+        "completed_processes": 5,
+        "required_processes": 20,
+        "whole_series_independently_verified": false,
+        "completed_native_natural_owned_runs": 5,
+        "evidence_summary_sha256": "6ddb355c2a340718de5d983a80c81223bca8983e42af106ad93b6f0913085067",
+        "observation": "Sixth run stopped on Android AM32 command shutdown SIGSEGV in Binder thread; application launch observed but no sixth WAV/native/natural result. Final log captured and owned host tree closed. No automatic resume or rerun.",
+        "root_cause_attributed_to_Qt_or_Pico": false
       }
     },
     "Qt5_Extras_evidence_bindings": {

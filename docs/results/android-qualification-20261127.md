@@ -1,4 +1,4 @@
-# Android qualification snapshot — 2026-11-27
+# Android qualification snapshot — updated 2026-11-28
 
 The twelve recorded installed-SDK profiles have complete passing emulator
 suites or the explicitly limited API4 resident diagnostics below. Android as
@@ -30,6 +30,12 @@ and closed owned host trees. Qt4 uses resident JNI with explicit release/cleanup
 and owned host closure; it does not claim natural Android process termination.
 Two actual gallery PNGs were reviewed for each profile except API4. API4 has
 five GUI interaction assertions, but no exported PNG/visual-review evidence.
+The host PNG export was added in `9e861e2` and its ordinary fixtures/source CI
+pass. A fresh follow-up using the unchanged SDK6982/e990 native/APKs passed
+bootstrap, then stopped before strict native execution on a 5-second ADB
+readiness query timeout. Quick did not execute and no PNG was exported. This
+failed follow-up leaves API4 visual coverage open and preserves the original
+eight-diagnostic result and producer identities above.
 
 ## Separate behavior coverage
 
@@ -51,7 +57,12 @@ Qt6 x86 whole series passed all twenty fresh guest/app runs, with independently
 reverified native results, natural exits and owned host closure. The current
 Qt6 ARMv7 series stops after one pass and a second pre-Qt boot failure. The x86
 whole 20 status is recorded separately in the JSON snapshot; no failed series
-is resumed or relabeled as 20 PASS. ARM64 output and x64 whole 20 remain unqualified.
+is resumed or relabeled as 20 PASS. The x64 series failed on run six after
+five verified successes: the Android AM32 command crashed in a Binder thread
+at VM shutdown. The application was launched, but no sixth native/WAV/natural
+result was obtained. Final logs and closed owned-tree proof were retained;
+this does not establish a Qt/WAV or Pico root cause. ARM64 output and x64
+whole 20 remain unqualified.
 WAV probes use silent PCM Ready/play for 100 ms/stop/destroy; they do not establish
 audible sound, leak freedom or physical-device behavior.
 

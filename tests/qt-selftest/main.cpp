@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 #ifdef SMOKE_ANDROID_PLUGIN_TLS_OWNER
         return SmokePluginTlsOwner::run();
 #else
-        QTextStream(stdout) << "FAIL: plugin-tls-owner requires opt-in Qt5 Android core/full profile\n";
+        QTextStream(stdout) << "FAIL: plugin-tls-owner requires opt-in Android core/full profile\n";
         return 2;
 #endif
     }

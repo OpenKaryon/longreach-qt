@@ -2,8 +2,12 @@
 #pragma once
 #include "tls-owner-interface.h"
 #include "../common/smokecheck.h"
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QAndroidJniObject>
 #include <QtAndroid>
+#else
+#include <dlfcn.h>
+#endif
 #include <QFileInfo>
 #include <QJsonObject>
 #include <QPluginLoader>
@@ -20,9 +24,18 @@ inline void destroyedTls(void *context)
 inline int run()
 {
     SmokeReporter r("plugin-tls-owner");
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const auto info = QtAndroid::androidActivity().callObjectMethod(
         "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
     const auto directory = info.getObjectField<jstring>("nativeLibraryDir").toString();
+#else
+    // Find this app's own loaded DSO, not a Qt installation prefix or a path
+    // supplied by the host. The fixture is extracted beside that APK library.
+    Dl_info info{};
+    const bool located = dladdr(reinterpret_cast<void *>(&run), &info) && info.dli_fname;
+    const auto directory = located
+        ? QFileInfo(QString::fromLocal8Bit(info.dli_fname)).absolutePath() : QString();
+#endif
     const auto path = directory + QStringLiteral("/liblongreach_tls_owner_probe.so");
     r.check("plugin-owner/packaged-library", [&](QString &d) {
         d = QFileInfo(path).fileName();

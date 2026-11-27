@@ -295,3 +295,18 @@ diagnostic is not a twenty-run stress result, physical/audible audio proof,
 or a guarantee of all internal native object cleanup. A series must retain
 each distinct completed run and its source/SDK/APK and process identities.
 The documented route alone is not a guest PASS.
+
+
+### Positive plugin/TLS owner diagnostic
+
+The Qt6 Android full selftest supports the same explicit
+`-DSMOKE_ANDROID_PLUGIN_TLS_OWNER=ON` / `--plugin-tls-owner` diagnostic as the
+[Qt5 core profile](qt5-android-lollipop.md#positive-plugintls-owner-diagnostic).
+Its small plugin is extracted beside the app library without a Java preload
+entry. Qt6 locates the app's own loaded DSO through `dladdr`; it needs no
+Qt5 AndroidExtras dependency. Default suites keep the diagnostic disabled.
+
+The loaded owner remains alive through the worker's join and TLS destructor;
+only then is the plugin object destroyed at logical unload. No live-TLS unload
+or callback after unmapping is exercised. The passing Qt5 ARM64 result is not
+Qt6 evidence: each Qt6 SDK/native/APK/guest combination needs its own result.

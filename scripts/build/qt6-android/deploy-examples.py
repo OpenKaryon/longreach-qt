@@ -64,4 +64,14 @@ configuration.write_text(json.dumps(settings, indent=2) + '\n')
 subprocess.run([str(Path('/opt/qt6-host-llvm21/bin/androiddeployqt')),
                 '--input', str(configuration), '--output', str(destination),
                 '--android-platform', 'android-35', '--aux-mode', '--verbose'], check=True)
+# Keep the diagnostic fixture extracted but absent from Java's preload lists.
+# QPluginLoader is its only explicit loaded owner during the opt-in control.
+plugin_owner_enabled = args.app == 'qt-selftest' and (
+    'SMOKE_ANDROID_PLUGIN_TLS_OWNER:BOOL=ON'
+    in (args.build / 'CMakeCache.txt').read_text().splitlines())
+if plugin_owner_enabled:
+    probe = args.build / 'qt-selftest/tls-owner/liblongreach_tls_owner_probe.so'
+    if not probe.is_file():
+        raise FileNotFoundError(probe)
+    shutil.copy2(probe, libraries / probe.name)
 print(f'Deployed {args.app} from the generated Qt6 configuration')

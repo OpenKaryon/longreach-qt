@@ -2,9 +2,15 @@
 #pragma once
 #include "tls-owner-interface.h"
 #include "../common/smokecheck.h"
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QAndroidJniObject>
 #include <QtAndroid>
+#else
+#include <QCoreApplication>
+#include <QJniObject>
+#endif
 #include <QFileInfo>
+#include <QDir>
 #include <QJsonObject>
 #include <QPluginLoader>
 #include <QPointer>
@@ -20,13 +26,23 @@ inline void destroyedTls(void *context)
 inline int run()
 {
     SmokeReporter r("plugin-tls-owner");
-    const auto info = QtAndroid::androidActivity().callObjectMethod(
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const auto context = QtAndroid::androidActivity();
+#else
+    const QJniObject context = QNativeInterface::QAndroidApplication::context();
+#endif
+    const auto info = context.callObjectMethod(
         "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
     const auto directory = info.getObjectField<jstring>("nativeLibraryDir").toString();
     const auto path = directory + QStringLiteral("/liblongreach_tls_owner_probe.so");
+    const bool absolute = QDir::isAbsolutePath(directory);
+    const bool present = QFileInfo(path).isFile();
+    std::printf("PLUGIN_TLS_OWNER: path_source=android-application-nativeLibraryDir context_valid=%d info_valid=%d absolute_directory=%d probe_present=%d\n",
+                int(context.isValid()), int(info.isValid()), int(absolute), int(present));
+    std::fflush(stdout);
     r.check("plugin-owner/packaged-library", [&](QString &d) {
         d = QFileInfo(path).fileName();
-        return !directory.isEmpty() && QFileInfo(path).isFile();
+        return context.isValid() && info.isValid() && absolute && present;
     });
     // Both callback destinations outlive the loader, including early failures.
     std::atomic<int> tlsDestructors{0};

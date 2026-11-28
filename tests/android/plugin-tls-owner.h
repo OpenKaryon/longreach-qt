@@ -29,7 +29,7 @@ inline int run()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const auto context = QtAndroid::androidActivity();
 #else
-    const auto context = QNativeInterface::QAndroidApplication::context();
+    const QJniObject context = QNativeInterface::QAndroidApplication::context();
 #endif
     const auto info = context.callObjectMethod(
         "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");

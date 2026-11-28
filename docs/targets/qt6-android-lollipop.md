@@ -317,5 +317,13 @@ The first Qt6 ARMv7 run of source `b6917edb` failed with native return 1:
 the probe was present in the audited APK but not found at the computed DSO
 directory. All six checks failed before any plugin worker or TLS execution;
 this is not evidence of a Qt TLS defect. The failed data and raw logs remain
-retained. The application-info lookup correction needs a fresh generation and
-guest result; neither source changes nor the earlier Qt5 pass qualify it.
+retained. The corrected source `169725a0` was separately built and packaged
+against each original `d82ca045` SDK. All four ABIs passed six native checks.
+ARM64, x86 and x86_64 also passed the complete natural-exit/final-log/owned-tree
+procedure; x86_64 uses the baseline explicit AM32 helper. ARMv7 remains overall
+FAILED/DEFERRED after a host-exit observer timeout despite its functional pass
+and separately observed final PID death. Missing strict exit/APK-release
+receipts are not fabricated or retried. See the per-ABI
+[qualification snapshot](../results/android-qualification-20261127.md).
+These results do not replace the baseline full11 or qualify concurrency,
+OS mapping removal, other launch profiles or physical behavior.

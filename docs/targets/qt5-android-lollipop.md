@@ -230,4 +230,5 @@ checks using the original SDK `80f28520`/`f25be055`. One worker returned 43;
 one TLS destructor completed before unload, and the plugin object was deleted
 after join. Natural application exit, final logs and owned process closure
 were independently verified. See the [qualification snapshot](../results/android-qualification-20261127.md).
-Other ABIs, Qt6 and arbitrary plugin concurrency remain separately unqualified.
+Other Qt5 ABIs and arbitrary plugin concurrency remain separately unqualified.
+Qt6 has its own per-ABI matrix in that snapshot; it is not inferred from Qt5.

@@ -49,7 +49,7 @@ eight-diagnostic result and producer identities above.
 | Qt5 WAV20 at the API10 native floor | Twenty distinct successful native/natural/owned runs on ARMv7 and on x86 | All 20 retain OpenSLES engine Destroy ignored/two-active-object warnings; no leak-freedom claim |
 | Qt5 API10 APK forward Extras on API21 | x86 functional8/native0 and two natural service exits/16RPC verified separately | Both overall controls FAILED on observer timeouts; parent natural exit unproven. ARMv7 has no completed functional summary. Core-only forward compatibility does not imply Extras qualification |
 | Native sensor input and compass | API10 x86 queue teardown; API21 ARM64 stock32 nonzero input/32 callbacks, plus five input-controlled directions with 25 measured Qt samples and five natural exits | API10 ARMv7 stock inventory is zero; physical calibration/accuracy, compass timestamps and raw-angle range remain unqualified |
-| Library TLS lifetime | Retained QLibrary controls on API10 ARMv7/API21 ARM64+x64; positive Qt5 API21 ARM64 QPluginLoader: six checks, one worker43, TLS destructor1 before unload, plugin object deleted after join; natural/final/owned exit | Keep owner loaded through every using thread/TLS destructor. Other ABI/Qt6/concurrency and OS unmapping remain unqualified; no live-TLS unload or callback after unmapping |
+| Library TLS lifetime | Retained QLibrary controls on API10 ARMv7/API21 ARM64+x64; positive Qt5 API21 ARM64 QPluginLoader: six checks, one worker43, TLS destructor1 before unload, plugin object deleted after join; natural/final/owned exit | Keep owner loaded through every using thread/TLS destructor. Other Qt5 ABIs/concurrency and OS unmapping remain unqualified; the separate Qt6 matrix below does not permit live-TLS unload or callback after unmapping |
 | API21 files larger than 2 GiB | POSIX64 passes on all four ABIs; native C/C++ stdio also passes on 64-bit |32-bit fstream seek fails; use POSIX64. API10/YAFFS, arbitrary sizes and Qt filesystem APIs require separate validation |
 
 The separate Qt5 ARM64 compass run reuses native SDK `80f28520`/`f25be055`
@@ -72,6 +72,28 @@ The compiled/deployed/packaged native bytes, absence of eager loading, native
 return, natural application exit, final capture and owned process closure were
 independently verified. This does not qualify another ABI/Qt generation,
 arbitrary concurrency or operating-system mapping removal.
+
+The separate Qt6 API21 plugin matrix uses opt-in source `169725a0` with the
+original `d82ca045` SDK producer. All four ABIs pass six native functional
+checks: an authoritative application native-library directory, real plugin
+metadata/interface, one worker return of 43, exactly one TLS destructor before
+unload, and plugin-object deletion after join.
+
+| Qt6 ABI | Native checks | Whole bounded procedure |
+| --- | --- | --- |
+| `armeabi-v7a` | 6/0/0, return 0 | FAILED/DEFERRED: capped host-exit observer; required strict exit/APK release receipts are incomplete |
+| `arm64-v8a` | 6/0/0, return 0 | PASS: natural application exit, final log capture and owned host closure |
+| `x86` | 6/0/0, return 0 | PASS: natural application exit, final log capture and owned host closure |
+| `x86_64` | 6/0/0, return 0 | PASS with the baseline explicit AM32 helper: natural exit, final capture and owned host closure |
+
+The ARMv7 final log separately records the same PID's natural death, but this
+does not replace missing producer receipts or relabel the original failed
+procedure. It is not retried. Earlier lookup and typed-context compilation
+failures remain preserved. The source-correction budget stays at 9 of 10;
+unchanged-source ABI qualification does not reset it. Neither this matrix nor
+the single x64 AM32 run establishes general helper reliability, arbitrary plugin
+concurrency, OS unmapping, or physical behavior. Baseline full11 identities and
+results remain unchanged.
 
 WAV stress is independent of the full suites and muted TTS probes. The current
 Qt6 x86 whole series passed all twenty fresh guest/app runs, with independently

@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from cmake_cache import cmake_cache_bool
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--app', required=True)
@@ -66,9 +70,8 @@ subprocess.run([str(Path('/opt/qt6-host-llvm21/bin/androiddeployqt')),
                 '--android-platform', 'android-35', '--aux-mode', '--verbose'], check=True)
 # Keep the diagnostic fixture extracted but absent from Java's preload lists.
 # QPluginLoader is its only explicit loaded owner during the opt-in control.
-plugin_owner_enabled = args.app == 'qt-selftest' and (
-    'SMOKE_ANDROID_PLUGIN_TLS_OWNER:BOOL=ON'
-    in (args.build / 'CMakeCache.txt').read_text().splitlines())
+plugin_owner_enabled = args.app == 'qt-selftest' and cmake_cache_bool(
+    args.build, 'SMOKE_ANDROID_PLUGIN_TLS_OWNER')
 if plugin_owner_enabled:
     probe = args.build / 'qt-selftest/tls-owner/liblongreach_tls_owner_probe.so'
     if not probe.is_file():

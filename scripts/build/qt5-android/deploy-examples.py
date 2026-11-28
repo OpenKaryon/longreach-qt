@@ -8,6 +8,10 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from cmake_cache import cmake_cache_bool
 
 
 def main():
@@ -97,9 +101,8 @@ def main():
 
         # Extract this fixture beside the app, but do not add it to libs.xml:
         # QPluginLoader must be its only loaded owner during the diagnostic.
-        plugin_owner_enabled = app == "qt-selftest" and (
-            "SMOKE_ANDROID_PLUGIN_TLS_OWNER:BOOL=ON"
-            in (args.build / "CMakeCache.txt").read_text().splitlines())
+        plugin_owner_enabled = app == "qt-selftest" and cmake_cache_bool(
+            args.build, "SMOKE_ANDROID_PLUGIN_TLS_OWNER")
         if plugin_owner_enabled:
             probe = args.build / "qt-selftest/tls-owner/liblongreach_tls_owner_probe.so"
             if not probe.is_file():

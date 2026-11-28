@@ -97,8 +97,14 @@ require device validation. QtWebEngine is excluded. Separate
 [API21 libc++ large-file observations](qt6-android-lollipop.md#large-files-on-api21)
 cover native stdio/POSIX operations; Qt filesystem API large-file behavior
 requires its own validation. The separate AndroidExtras diagnostic covers the
-bounded native service/Binder/Intent paths in the current snapshot; arbitrary
-concurrent wrapper destruction and exhaustive class/API coverage remain open.
+bounded native service/Binder/Intent paths in the current snapshot.
+For `QAndroidServiceConnection`, callers must ensure that no service callback
+can begin or remain in flight before C++ destruction starts, including the
+derived destructor. Keep the receiver alive until callbacks finish; clearing
+the native handle in the base destructor does not protect an already running
+callback or the derived object. Concurrent callback/destruction and a separate
+asynchronous-close implementation are outside this support contract.
+Exhaustive AndroidExtras class/API coverage remains unqualified.
 Passing these cases does not claim exhaustive Qt/C++23 conformance or validation
 on Android 5.0.0.
 

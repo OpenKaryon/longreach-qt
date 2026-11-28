@@ -130,8 +130,13 @@ Android application targets are shared libraries, loaded by QtActivity.
 - A separate bounded AndroidExtras diagnostic now covers context/UI dispatch,
   Intent/activity results and two native service/Binder rounds, with sixteen
   calls/callbacks and natural parent/service exits at the recorded API10 floor.
-  It does not qualify every AndroidExtras class/API or arbitrary concurrent
-  wrapper destruction; the ordinary Activity suite is not its substitute.
+  For `QAndroidServiceConnection`, callers must ensure that callbacks cannot
+  begin or remain in flight before C++ destruction starts, including the derived
+  destructor. Keep the receiver alive until callbacks finish; base-destructor
+  native-handle cleanup does not protect an active callback or the derived object.
+  Concurrent callback/destruction and a separate asynchronous-close implementation
+  are outside this support contract. Exhaustive AndroidExtras class/API coverage
+  remains unqualified; the ordinary Activity suite is not its substitute.
 - Passing ordinary module/value checks does not establish working camera,
   Bluetooth, NFC, sensors, GPS, audio capture or other absent guest hardware.
 

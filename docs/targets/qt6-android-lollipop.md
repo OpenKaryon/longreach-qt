@@ -303,10 +303,19 @@ The Qt6 Android full selftest supports the same explicit
 `-DSMOKE_ANDROID_PLUGIN_TLS_OWNER=ON` / `--plugin-tls-owner` diagnostic as the
 [Qt5 core profile](qt5-android-lollipop.md#positive-plugintls-owner-diagnostic).
 Its small plugin is extracted beside the app library without a Java preload
-entry. Qt6 locates the app's own loaded DSO through `dladdr`; it needs no
-Qt5 AndroidExtras dependency. Default suites keep the diagnostic disabled.
+entry. Qt6 uses its [Android application context](https://doc.qt.io/qt-6.8/qnativeinterface-qandroidapplication.html#context)
+to obtain `ApplicationInfo.nativeLibraryDir`; it needs no Qt5 AndroidExtras
+dependency. The mode requires a valid context/application info and an absolute
+native directory containing the packaged probe. Default suites keep it disabled.
 
 The loaded owner remains alive through the worker's join and TLS destructor;
 only then is the plugin object destroyed at logical unload. No live-TLS unload
 or callback after unmapping is exercised. The passing Qt5 ARM64 result is not
 Qt6 evidence: each Qt6 SDK/native/APK/guest combination needs its own result.
+
+The first Qt6 ARMv7 run of source `b6917edb` failed with native return 1:
+the probe was present in the audited APK but not found at the computed DSO
+directory. All six checks failed before any plugin worker or TLS execution;
+this is not evidence of a Qt TLS defect. The failed data and raw logs remain
+retained. The application-info lookup correction needs a fresh generation and
+guest result; neither source changes nor the earlier Qt5 pass qualify it.

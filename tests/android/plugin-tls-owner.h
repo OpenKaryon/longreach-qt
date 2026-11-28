@@ -6,9 +6,11 @@
 #include <QAndroidJniObject>
 #include <QtAndroid>
 #else
-#include <dlfcn.h>
+#include <QCoreApplication>
+#include <QJniObject>
 #endif
 #include <QFileInfo>
+#include <QDir>
 #include <QJsonObject>
 #include <QPluginLoader>
 #include <QPointer>
@@ -25,21 +27,22 @@ inline int run()
 {
     SmokeReporter r("plugin-tls-owner");
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const auto info = QtAndroid::androidActivity().callObjectMethod(
+    const auto context = QtAndroid::androidActivity();
+#else
+    const auto context = QNativeInterface::QAndroidApplication::context();
+#endif
+    const auto info = context.callObjectMethod(
         "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
     const auto directory = info.getObjectField<jstring>("nativeLibraryDir").toString();
-#else
-    // Find this app's own loaded DSO, not a Qt installation prefix or a path
-    // supplied by the host. The fixture is extracted beside that APK library.
-    Dl_info info{};
-    const bool located = dladdr(reinterpret_cast<void *>(&run), &info) && info.dli_fname;
-    const auto directory = located
-        ? QFileInfo(QString::fromLocal8Bit(info.dli_fname)).absolutePath() : QString();
-#endif
     const auto path = directory + QStringLiteral("/liblongreach_tls_owner_probe.so");
+    const bool absolute = QDir::isAbsolutePath(directory);
+    const bool present = QFileInfo(path).isFile();
+    std::printf("PLUGIN_TLS_OWNER: path_source=android-application-nativeLibraryDir context_valid=%d info_valid=%d absolute_directory=%d probe_present=%d\n",
+                int(context.isValid()), int(info.isValid()), int(absolute), int(present));
+    std::fflush(stdout);
     r.check("plugin-owner/packaged-library", [&](QString &d) {
         d = QFileInfo(path).fileName();
-        return !directory.isEmpty() && QFileInfo(path).isFile();
+        return context.isValid() && info.isValid() && absolute && present;
     });
     // Both callback destinations outlive the loader, including early failures.
     std::atomic<int> tlsDestructors{0};
